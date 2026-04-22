@@ -1,0 +1,12 @@
+[tools]
+awscli = "latest"
+terraform = "latest"
+ansible = "latest"
+kubectl = "latest"
+k3d = "latest"
+localstack = "latest"
+act = "latest"
+nodejs = "latest"
+usage = "latest"
+k9s = "latest"
+kubectx = "latest"
