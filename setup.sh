@@ -13,8 +13,8 @@ fi
 
 DOTFILES_DIR=$(pwd)
 
-echo "[1/5] 필수 패키지 설치 중 (pipx 포함)..."
-sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv
+echo "[1/5] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
+sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv fd-find
 
 echo "[2/5] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then

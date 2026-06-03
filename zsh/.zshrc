@@ -124,3 +124,11 @@ eval "$(~/.local/bin/mise activate zsh)"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/.local/bin"
+# 🤖 AI Prompt Context Generator (전체 인프라 코드 한 방에 추출하기)
+alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e yaml -e j2 -e sh -e ps1 -e py -e toml -e txt -x sh -c '\''printf "\n# FILE: %s\n" "{}"; cat "{}"'\'' > all_code.txt'
+
+
+# 🔗 로컬 전용 설정 파일이 존재하면 로드 (API 키, 패스워드, 토큰 보안 분리용)
+if [ -f "$HOME/.zshrc.local" ]; then
+    source "$HOME/.zshrc.local"
+fi
