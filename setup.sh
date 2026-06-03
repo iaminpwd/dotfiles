@@ -1,5 +1,5 @@
 #!/bin/bash
-# 🚀 클라우드 인프라 엔지니어 한 방 세팅 (Troubleshooting 완료 버전)
+# 🚀 클라우드 인프라 엔지니어 한 방 세팅 (Troubleshooting 및 AI 브레인 연동 완료 버전)
 
 # 오류 시 중단
 set -e
@@ -48,7 +48,31 @@ fi
 export PATH="$PATH:$HOME/.local/bin"
 
 # PATH를 영구적으로 설정 (.zshrc에 추가)
-echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
+# (주의: stow 연결 후이므로 dotfiles 안의 원본 .zshrc에 기록됨)
+grep -qxF 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc || echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
 
-# Mise 테스트 (주석 제거 및 실행)
+# Mise 테스트
 mise ls
+
+echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 연결 중..."
+# 기본 작업 공간 폴더 지정 (추후 task2, task3 등으로 변경 용이)
+WORKSPACE_DIR="$HOME/task"
+
+# 작업 공간 내부에 .gemini 폴더 안전하게 생성
+mkdir -p "$WORKSPACE_DIR/.gemini"
+
+# 최상위 룰 및 이그노어 링크 연결
+ln -sf "$DOTFILES_DIR/GEMINI.md" "$WORKSPACE_DIR/GEMINI.md"
+ln -sf "$DOTFILES_DIR/.geminiignore" "$WORKSPACE_DIR/.geminiignore"
+
+# 세부 모듈 마크다운 표준 링크 연결
+ln -sf "$DOTFILES_DIR/.gemini/agent-behavior.md" "$WORKSPACE_DIR/.gemini/agent-behavior.md"
+ln -sf "$DOTFILES_DIR/.gemini/terraform-standard.md" "$WORKSPACE_DIR/.gemini/terraform-standard.md"
+ln -sf "$DOTFILES_DIR/.gemini/ansible-standard.md" "$WORKSPACE_DIR/.gemini/ansible-standard.md"
+ln -sf "$DOTFILES_DIR/.gemini/security-compliance.md" "$WORKSPACE_DIR/.gemini/security-compliance.md"
+ln -sf "$DOTFILES_DIR/.gemini/code-review.md" "$WORKSPACE_DIR/.gemini/code-review.md"
+
+echo "========================================================="
+echo "✅ 완벽합니다! 모든 인프라 환경과 AI 브레인 설정이 완료되었습니다."
+echo "💡 적용을 위해 터미널을 다시 열거나 'exec zsh'을 입력하세요."
+echo "========================================================="

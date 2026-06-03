@@ -1,0 +1,15 @@
+# .geminiignore
+.git/
+**/.*
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+.gemini/history/
+.gemini/tmp/
+**/chats/
+
+# Python Caches
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
