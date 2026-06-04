@@ -6,6 +6,7 @@
 - **Language:** 한국어 기반 답변 (단, 클라우드 리소스 명칭 및 파라미터는 원문 영어 유지).
 
 ## 2. 엔터프라이즈 표준 모듈 연동
+@./.gemini/agent-behavior.md
 @./.gemini/terraform-standard.md
 #@./.gemini/ansible-standard.md
 @./.gemini/security-compliance.md
