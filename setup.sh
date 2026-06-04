@@ -55,6 +55,20 @@ grep -qxF 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc || echo 'export PATH="
 mise ls
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 연결 중..."
+
+# .gemini 하위 마크다운 파일들을 중요도 순으로 병합하여 GEMINI.md 동적 생성
+echo "=> .gemini 하위 마크다운 파일들을 중요도 순서대로 합쳐서 GEMINI.md 생성 중..."
+rm -f "$DOTFILES_DIR/GEMINI.md"
+
+# 파일명 정렬 순서대로 순회 (00, 10, 20... 순으로 병합 보장)
+for md_file in $(ls "$DOTFILES_DIR/.gemini/"*.md | sort); do
+  if [ -f "$md_file" ]; then
+    echo "Adding: $(basename "$md_file")"
+    cat "$md_file" >> "$DOTFILES_DIR/GEMINI.md"
+    echo -e "\n\n" >> "$DOTFILES_DIR/GEMINI.md" # 파일 간 명확한 구분을 위해 줄바꿈 2번 추가
+  fi
+done
+
 # 기본 작업 공간 폴더 지정 (추후 task2, task3 등으로 변경 용이)
 WORKSPACE_DIR="$HOME/task"
 
@@ -64,13 +78,6 @@ mkdir -p "$WORKSPACE_DIR/.gemini"
 # 최상위 룰 및 이그노어 링크 연결
 ln -sf "$DOTFILES_DIR/GEMINI.md" "$WORKSPACE_DIR/GEMINI.md"
 ln -sf "$DOTFILES_DIR/.geminiignore" "$WORKSPACE_DIR/.geminiignore"
-
-# 세부 모듈 마크다운 표준 링크 연결
-ln -sf "$DOTFILES_DIR/.gemini/agent-behavior.md" "$WORKSPACE_DIR/.gemini/agent-behavior.md"
-ln -sf "$DOTFILES_DIR/.gemini/terraform-standard.md" "$WORKSPACE_DIR/.gemini/terraform-standard.md"
-ln -sf "$DOTFILES_DIR/.gemini/ansible-standard.md" "$WORKSPACE_DIR/.gemini/ansible-standard.md"
-ln -sf "$DOTFILES_DIR/.gemini/security-compliance.md" "$WORKSPACE_DIR/.gemini/security-compliance.md"
-ln -sf "$DOTFILES_DIR/.gemini/code-review.md" "$WORKSPACE_DIR/.gemini/code-review.md"
 
 echo "========================================================="
 echo "✅ 완벽합니다! 모든 인프라 환경과 AI 브레인 설정이 완료되었습니다."
