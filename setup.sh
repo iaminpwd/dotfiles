@@ -54,30 +54,53 @@ grep -qxF 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc || echo 'export PATH="
 # Mise 테스트
 mise ls
 
-echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 연결 중..."
+echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
-# .gemini 하위 마크다운 파일들을 중요도 순으로 병합하여 GEMINI.md 동적 생성
-echo "=> .gemini 하위 마크다운 파일들을 중요도 순서대로 합쳐서 GEMINI.md 생성 중..."
-rm -f "$DOTFILES_DIR/GEMINI.md"
+# gemini 폴더 경로 변수화
+GEMINI_BASE_DIR="$DOTFILES_DIR/gemini"
 
-# 파일명 정렬 순서대로 순회 (00, 10, 20... 순으로 병합 보장)
-for md_file in $(ls "$DOTFILES_DIR/.gemini/"*.md | sort); do
-  if [ -f "$md_file" ]; then
-    echo "Adding: $(basename "$md_file")"
-    cat "$md_file" >> "$DOTFILES_DIR/GEMINI.md"
-    echo -e "\n\n" >> "$DOTFILES_DIR/GEMINI.md" # 파일 간 명확한 구분을 위해 줄바꿈 2번 추가
+# gemini 폴더 하위의 모든 디렉토리를 순회 (예: cloud, kubernetes, terraform 등)
+for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
+  # 디렉토리가 아닌 경우(glob 실패 등) 건너뜐다
+  [ -d "$TARGET_DIR" ] || continue
+
+  # 맨 뒤의 슬래시(/)를 제거하고 순수 폴더명만 추출 (예: 'cloud')
+  ENV_NAME=$(basename "$TARGET_DIR")
+  
+  echo "=> [$ENV_NAME] 환경 AI 브레인 세팅 진행 중..."
+
+  # 해당 환경의 GEMINI.md 최종 출력 경로
+  MERGED_MD="$TARGET_DIR/GEMINI.md"
+  rm -f "$MERGED_MD"
+
+  # .gemini 폴더가 존재하는 경우에만 병합 수행
+  if [ -d "$TARGET_DIR/.gemini" ]; then
+    # bash의 기본 glob 확장 기능을 활용하여 사전순(00, 10, 20...) 정렬 처리
+    for md_file in "$TARGET_DIR/.gemini/"*.md; do
+      # .md 파일이 없을 경우 literal 문자열이 반환되는 것을 방지
+      [ -f "$md_file" ] || continue
+      
+      echo "   Adding: $(basename "$md_file")"
+      cat "$md_file" >> "$MERGED_MD"
+      echo -e "\n\n" >> "$MERGED_MD"
+    done
   fi
+
+  # 작업 공간(Workspace) 동적 할당 및 생성 (예: ~/cloud, ~/kubernetes)
+  WORKSPACE_DIR="$HOME/$ENV_NAME"
+  mkdir -p "$WORKSPACE_DIR/src"
+
+  # 심볼릭 링크 동적 생성 (파일이 실제로 존재할 때만 생성)
+  if [ -f "$MERGED_MD" ]; then
+    ln -sf "$MERGED_MD" "$WORKSPACE_DIR/GEMINI.md"
+  fi
+  
+  if [ -f "$TARGET_DIR/.aiexclude" ]; then
+    ln -sf "$TARGET_DIR/.aiexclude" "$WORKSPACE_DIR/.aiexclude"
+  fi
+
+  echo "   ✅ [$ENV_NAME] 세팅 완료 및 링크 생성 완료"
 done
-
-# 기본 작업 공간 폴더 지정 (추후 task2, task3 등으로 변경 용이)
-WORKSPACE_DIR="$HOME/task"
-
-# 작업 공간 내부에 .gemini 폴더 안전하게 생성
-mkdir -p "$WORKSPACE_DIR/.gemini"
-
-# 최상위 룰 및 이그노어 링크 연결
-ln -sf "$DOTFILES_DIR/GEMINI.md" "$WORKSPACE_DIR/GEMINI.md"
-ln -sf "$DOTFILES_DIR/.geminiignore" "$WORKSPACE_DIR/.geminiignore"
 
 echo "========================================================="
 echo "✅ 완벽합니다! 모든 인프라 환경과 AI 브레인 설정이 완료되었습니다."
