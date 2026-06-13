@@ -31,16 +31,31 @@ Oh My Zsh의 `robbyrussell` 테마를 기반으로, 인프라 작업에 필수�
 - 문법 강조 활성화 (`syntax on`)
 
 ### 3. 포함된 주요 도구 (`mise/.mise.toml`)
+
+**IaC & Configuration Management**
 - `terraform` (1.5.7)
-- `kubectl` (1.30.1)
 - `ansible` (9.5.1)
+- `terragrunt` (1.0.8)
+- `tflint` (0.63.1)
+
+**Cloud Services**
 - `awscli` (2.15.30)
-- `k3d` (5.6.3)
-- `node` (20.12.2)
-- `k9s` (0.32.4)
+
+**Kubernetes & Containers**
+- `kubectl` (1.30.1)
 - `kubectx` (0.9.5)
+- `k9s` (0.32.4)
+- `docker-cli` (29.5.3)
+- `helm` (4.2.1)
+
+**Local Testing & Mocking**
 - `localstack` (3.4.0)
+- `k3d` (5.6.3)
 - `act` (0.2.62)
+
+**Runtimes / Programming Languages**
+- `node` (20.12.2)
+- `python` (3.14.6)
 
 ### 4. AI 에이전트 지침 및 프롬프트 컨텍스트 (`gemini/cloud/.gemini/`)
 이 dotfiles는 단순 툴 설치를 넘어, AI 에이전트가 인프라 코드를 작성하거나 리뷰할 때 엄격히 준수하도록 설계된 **DevOps 아키텍처 행동 강령**을 파일 형태로 내장하고 있습니다.
@@ -103,7 +118,7 @@ Oh My Zsh의 `robbyrussell` 테마를 기반으로, 인프라 작업에 필수�
 1. 시스템 필수 패키지 및 터미널 생산성 유틸리티(`git`, `curl`, `wget`, `unzip`, `zsh`, `fzf`, `jq`, `stow`, `pipx`, `python3-venv`, `fd-find` 등)를 일괄 설치하고, Oh My Zsh 및 커스텀 플러그인들을 Github에서 클론하여 초기 세팅을 진행합니다.
 2. 기존 설정 파일(`.zshrc`, `.vimrc`, `.mise.toml`)을 백업 후 삭제합니다.
 3. GNU Stow를 사용해 `zsh`, `vim`, `mise` 디렉토리를 홈 디렉토리(`~`)로 맵핑(Symlink)합니다.
-4. `mise`를 설치하고 설정된 인프라 툴체인 버전을 일괄 다운로드 및 활성화합니다. (이 과정에서 `mise`와 `pipx` 구동을 위한 `~/.local/bin` PATH 환경 변수가 원본 `zsh/.zshrc` 파일 하단에 동적으로 자동 기입됩니다.)
+4. `mise`를 설치 및 환경을 신뢰(`mise trust`)하고, 설정된 인프라 툴체인 버전을 일괄 다운로드 및 활성화합니다.
 5. `gemini/` 하위 폴더들을 스캔하여, 각 환경별(예: `cloud`)로 조각난 마크다운들을 결합해 `GEMINI.md`를 생성하고, 홈 디렉토리에 해당 작업 공간(예: `~/cloud/src` 하위 폴더 포함)을 구성한 뒤, `GEMINI.md` 가이드라인과 `.aiexclude` 파일(존재 시)을 동적으로 심볼릭 링크합니다.
 6. 마지막으로 현재 사용자의 기본 쉘(Default Shell)을 `zsh`로 자동 변경합니다.
 
