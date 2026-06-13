@@ -59,7 +59,7 @@ Oh My Zsh의 `robbyrussell` 테마를 기반으로, 인프라 작업에 필수�
 
 ### 4. AI 에이전트 지침 및 프롬프트 컨텍스트 (`gemini/cloud/.gemini/`)
 이 dotfiles는 단순 툴 설치를 넘어, AI 에이전트가 인프라 코드를 작성하거나 리뷰할 때 엄격히 준수하도록 설계된 **DevOps 아키텍처 행동 강령**을 파일 형태로 내장하고 있습니다.
-- **00/10 (Core & Behavior)**: 수석 데브옵스 아키텍트 페르소나 부여, 환각(Hallucination) 엄격 금지, 에러 시 단순 코드 제공 지양 및 근거/원인 기반 트러블슈팅 원칙.
+- **00/10 (Core & Behavior)**: 수석 데브옵스 아키텍트 페르소나 부여, 환각(Hallucination) 엄격 금지, 에러 시 자율 복구(Self-Correction) 및 근거/원인 기반 트러블슈팅 원칙, 레포지토리 외부 산출물(Artifact) 자동 생성 규칙.
 - **20 (Security & Compliance)**: GitOps(ArgoCD) 배포 지향, 자격 증명 하드코딩 영구 차단(Secrets Manager 활용), IAM 최소 권한 원칙(PoLP), 퍼블릭 접근 차단 등 보안/컴플라이언스 표준.
 - **30 (IaC Standard)**: Terraform(인프라 프로비저닝)과 Ansible(OS/App 구성)의 엄격한 역할 분리, 로컬 State 금지(S3/DynamoDB 강제), 동적 인벤토리 사용 표준.
 - **40 (Code Review)**: TFLint, Checkov 등 정적 분석 도구 기준 통과 여부 검토, CI 파이프라인(GitHub Actions) 연동 및 사전 검증(Dry-run, Terratest) 워크플로우 제안 기준.
