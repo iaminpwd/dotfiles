@@ -47,9 +47,6 @@ fi
 # Ansible 등을 위한 pipx 환경 반영
 export PATH="$PATH:$HOME/.local/bin"
 
-# PATH를 영구적으로 설정 (.zshrc에 추가)
-# (주의: stow 연결 후이므로 dotfiles 안의 원본 .zshrc에 기록됨)
-grep -qxF 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc || echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
 
 # Mise 환경 신뢰 설정 및 도구 일괄 설치
 mise trust ~/.mise.toml || true

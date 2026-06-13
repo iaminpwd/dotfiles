@@ -122,8 +122,7 @@ eval "$(~/.local/bin/mise activate zsh)"
 # ------------------------------------
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-export PATH="$PATH:$HOME/.local/bin"
-export PATH="$PATH:$HOME/.local/bin"
+
 # 🤖 AI Prompt Context Generator (전체 인프라 코드 한 방에 추출하기)
 # 확장자 지정 순서를 변경하고 실행 셸을 bash로 명시하여 충돌을 원천 차단한 수정본
 alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e yaml -e j2 -e ps1 -e py -e toml -e txt -e sh -x bash -c '\''printf "\n# FILE: %s\n" "{}"; cat "{}"'\'' > all_code.txt'
