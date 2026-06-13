@@ -51,7 +51,9 @@ export PATH="$PATH:$HOME/.local/bin"
 # (주의: stow 연결 후이므로 dotfiles 안의 원본 .zshrc에 기록됨)
 grep -qxF 'export PATH="$PATH:$HOME/.local/bin"' ~/.zshrc || echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
 
-# Mise 테스트
+# Mise 환경 신뢰 설정 및 도구 일괄 설치
+mise trust ~/.mise.toml || true
+mise install -y
 mise ls
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
