@@ -1,8 +1,8 @@
 #!/bin/bash
 # 🚀 클라우드 인프라 엔지니어 한 방 세팅 (Troubleshooting 및 AI 브레인 연동 완료 버전)
 
-# 오류 시 중단
-set -e
+# 오류 시 중단 (파이프라인 오류 및 미선언 변수 참조 포함)
+set -euo pipefail
 
 # 1. 실행 경로 체크 (윈도우 마운트 경로에서 실행 방지)
 if [[ "$(pwd)" == /mnt/c/* ]]; then
@@ -11,7 +11,8 @@ if [[ "$(pwd)" == /mnt/c/* ]]; then
   exit 1
 fi
 
-DOTFILES_DIR=$(pwd)
+# 스크립트가 실행된 위치와 무관하게 dotfiles 경로를 안전하게 가져옴
+DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/5] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
 sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv fd-find
@@ -25,19 +26,23 @@ ZSH_CUSTOM=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}
 [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions
 [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
 
-sudo chsh -s $(which zsh) $USER
+if [ "$SHELL" != "$(which zsh)" ]; then
+  sudo chsh -s $(which zsh) $USER
+fi
 
 echo "[3/5] Stow 연결을 위한 기존 파일 정리 및 연결..."
 # 백업 추가 (안전성 향상)
 cp ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
 cp ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
 cp ~/.mise.toml ~/.mise.toml.backup 2>/dev/null || true
+cp ~/.gitconfig ~/.gitconfig.backup 2>/dev/null || true
 
 # Stow 충돌 방지를 위해 기존의 실제 파일들을 삭제 (바로가기가 생길 자리를 비워줌)
-rm -f ~/.zshrc ~/.vimrc ~/.mise.toml
+rm -f ~/.zshrc ~/.vimrc ~/.mise.toml ~/.gitconfig
 
 cd "$DOTFILES_DIR"
-stow -R zsh vim mise
+stow -t "$HOME" -R zsh vim mise git
+
 
 echo "[4/5] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
 if ! command -v ~/.local/bin/mise &> /dev/null; then
@@ -45,13 +50,12 @@ if ! command -v ~/.local/bin/mise &> /dev/null; then
 fi
 
 # Ansible 등을 위한 pipx 환경 반영
-export PATH="$PATH:$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
 
-
-# Mise 환경 신뢰 설정 및 도구 일괄 설치
-mise trust ~/.mise.toml || true
-mise install -y
-mise ls
+# Mise 환경 신뢰 설정 및 도구 일괄 설치 (절대 경로 호출로 안정성 확보)
+~/.local/bin/mise trust ~/.mise.toml || true
+~/.local/bin/mise install -y
+~/.local/bin/mise ls
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
@@ -102,6 +106,33 @@ for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
 done
 
 echo "========================================================="
-echo "✅ 완벽합니다! 모든 인프라 환경과 AI 브레인 설정이 완료되었습니다."
+echo "🎉 모든 기본 설치 및 환경 세팅이 백그라운드로 완료되었습니다!"
+echo "마지막으로 사용자 맞춤 설정(선택)을 진행합니다."
+echo "========================================================="
+
+# 로컬 Git 설정
+echo -e "\n[선택] Git 로컬 사용자 설정"
+if [ ! -f ~/.gitconfig.local ]; then
+    exec < /dev/tty
+    echo "💡 입력을 원치 않으시면 아무것도 적지 않고 엔터(Enter)를 누르세요. 안전하게 스킵됩니다."
+    read -p "=> 사용할 Git 이름 (예: Gildong Hong): " GIT_NAME
+    read -p "=> 사용할 Git 이메일 (예: user@example.com): " GIT_EMAIL
+    
+    if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
+        cat << EOF > ~/.gitconfig.local
+[user]
+    name = $GIT_NAME
+    email = $GIT_EMAIL
+EOF
+        echo "✅ ~/.gitconfig.local 파일이 안전하게 생성되었습니다!"
+    else
+        echo "⏭️ 입력값이 없어 Git 설정을 건너뜁니다. 나중에 직접 파일을 만들어도 됩니다."
+    fi
+else
+    echo "✅ 이미 ~/.gitconfig.local 파일이 존재하여 설정을 건너뜁니다."
+fi
+
+echo "========================================================="
+echo "✅ 완벽합니다! 모든 인프라 환경 구성이 진짜 완료되었습니다."
 echo "💡 적용을 위해 터미널을 다시 열거나 'exec zsh'을 입력하세요."
 echo "========================================================="

@@ -1,0 +1,37 @@
+[include]
+    # 개인정보(이름, 이메일)는 Github에 올라가지 않도록
+    # 로컬에만 존재하는 별도 파일을 불러와서 적용합니다.
+    path = ~/.gitconfig.local
+
+[core]
+    editor = vim
+    autocrlf = input
+    # MacOS/Linux 환경에서는 input, Windows에서는 true를 사용합니다.
+
+[color]
+    ui = auto
+
+[credential]
+    # 기존에 입력해둔 깃허브 토큰(비밀번호)을 기억하고 재사용하도록 도와줍니다.
+    helper = store
+
+[alias]
+    # 자주 사용하는 Git 단축어 모음 (프로 엔지니어 표준)
+    st = status
+    co = checkout
+    cb = checkout -b
+    br = branch
+    ci = commit
+    cm = commit -m
+    df = diff
+    # 아주 예쁘고 직관적인 Git 커밋 히스토리 그래프 보기
+    lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+
+[push]
+    default = simple
+
+[pull]
+    rebase = true # Pull 받을 때 불필요한 Merge 커밋 생성을 방지합니다.
+
+[init]
+    defaultBranch = main
