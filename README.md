@@ -15,7 +15,8 @@
 ### 1. Zsh 및 터미널 최적화 (`zsh/.zshrc`)
 - **터미널 보안 및 히스토리 관리 (Pro Feature)**:
   - `HIST_IGNORE_SPACE`: 명령어 앞에 공백을 넣으면 히스토리에 기록되지 않음 (인증키 등 시크릿 타이핑 시 필수 보안 기능)
-  - `HIST_IGNORE_ALL_DUPS`: 동일 명령어 중복 기록 방지
+  - `HIST_IGNORE_ALL_DUPS` 및 `HIST_REDUCE_BLANKS`: 동일 명령어 중복 기록 방지 및 불필요한 공백 제거
+  - `HIST_STAMPS="yyyy-mm-dd"`: 히스토리에 날짜/시간 기록
   - `SHARE_HISTORY`: 여러 터미널 탭 간 실시간 히스토리 공유
 - **인프라/K8s 단축어**: 
   - `k` (kubectl), `kx` (kubectx), `kn` (kubens)
@@ -31,9 +32,10 @@
 
 ### 3. Vim 설정 (`vim/.vimrc`)
 서버 환경에서의 인프라 코드 편집을 위해 직관성과 편의성을 높인 기본 설정이 적용됩니다.
-- 줄 번호 표시 (`set number`)
+- 줄 번호 및 현재 줄 강조 (`set number`, `set cursorline`)
+- 점진적 검색 및 검색어 하이라이트 (`set incsearch`, `set hlsearch`, `set ignorecase`, `set smartcase`)
 - 자동 및 스마트 들여쓰기 (`set ai`, `set si`)
-- 탭을 스페이스 2칸으로 변환 (`set ts=2`, `set sw=2`, `set expandtab`)
+- 탭을 스페이스 2칸으로 변환 및 YAML 파일 특화 탭 간격 고정 (`set ts=2`, `set sw=2`, `set expandtab`)
 - 문법 강조 활성화 (`syntax on`)
 
 ### 4. 포함된 주요 도구 (`mise/.mise.toml`)
@@ -63,9 +65,9 @@
 - `node` (20.12.2)
 - `python` (3.14.6)
 
-### 5. AI 에이전트 지침 및 프롬프트 컨텍스트 (`gemini/cloud/.gemini/`)
+### 5. AI 에이전트 지침 및 프롬프트 컨텍스트 (`gemini/<env>/.gemini/`)
 이 dotfiles는 단순 툴 설치를 넘어, AI 에이전트가 인프라 코드를 작성하거나 리뷰할 때 엄격히 준수하도록 설계된 **DevOps 아키텍처 행동 강령**을 파일 형태로 내장하고 있습니다.
-- **00/10 (Core & Behavior)**: 수석 데브옵스 아키텍트 페르소나 부여, 환각(Hallucination) 엄격 금지, 에러 시 자율 복구(Self-Correction) 및 근거/원인 기반 트러블슈팅 원칙, 레포지토리 외부 산출물(Artifact) 자동 생성 규칙.
+- **00/10 (Core & Behavior)**: 수석 데브옵스 아키텍트 페르소나 부여, 환각(Hallucination) 엄격 금지, 에러 시 자율 복구(Self-Correction), 레포지토리 외부 산출물(Artifact) 자동 생성, 콘솔 작업(ClickOps) 엄격 금지 및 IaC/CLI 스크립트 작성 강제.
 - **20 (Security & Compliance)**: GitOps(ArgoCD) 배포 지향, 자격 증명 하드코딩 영구 차단(Secrets Manager 활용), IAM 최소 권한 원칙(PoLP), 퍼블릭 접근 차단 등 보안/컴플라이언스 표준.
 - **30 (IaC Standard)**: Terraform(인프라 프로비저닝)과 Ansible(OS/App 구성)의 엄격한 역할 분리, 로컬 State 금지(S3/DynamoDB 강제), 동적 인벤토리 사용 표준.
 - **40 (Code Review)**: TFLint, Checkov 등 정적 분석 도구 기준 통과 여부 검토, CI 파이프라인(GitHub Actions) 연동 및 사전 검증(Dry-run, Terratest) 워크플로우 제안 기준.
@@ -103,16 +105,18 @@
 ~/dotfiles
 ├── LICENSE          # 프로젝트 라이선스 파일
 ├── README.md        # 프로젝트 설명서
-├── gemini/          # AI 에이전트(Gemini) 연동 가이드라인
-│   └── cloud/       # 'cloud' 워크스페이스 환경
-│       ├── .aiexclude       # AI 컨텍스트 주입 시 제외할 패턴 목록
-│       ├── .gemini/         # 모듈화된 도메인별 AI 지침 (setup.sh에 의해 결합됨)
-│       │   ├── 00-core.md
-│       │   ├── 10-agent-behavior.md
-│       │   ├── 20-security-compliance.md
-│       │   ├── 30-iac-standard.md
-│       │   └── 40-code-review.md
-│       └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
+├── gemini/          # AI 에이전트(Gemini) 연동 가이드라인 (동적 멀티 환경 지원)
+│   ├── aws/         # 'aws' 전용 워크스페이스 환경
+│   │   ├── .aiexclude       # AI 컨텍스트 주입 시 제외할 패턴 목록
+│   │   ├── .gemini/         # 모듈화된 도메인별 AI 지침 (setup.sh에 의해 결합됨)
+│   │   │   ├── 00-core.md
+│   │   │   ├── 10-agent-behavior.md
+│   │   │   ├── 20-security-compliance.md
+│   │   │   ├── 30-iac-standard.md
+│   │   │   └── 40-code-review.md
+│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
+│   └── multicloud/  # 'multicloud' 등 추가 워크스페이스 (폴더 생성 시 자동 확장)
+│       └── ...
 ├── git/             # .gitconfig (Git 글로벌 설정 및 단축키 파일)
 ├── mise/            # .mise.toml (인프라 도구 버전 관리 매니페스트)
 ├── vim/             # .vimrc (Vim 설정 파일)
@@ -126,7 +130,7 @@
 2. 기존 설정 파일(`.zshrc`, `.vimrc`, `.mise.toml`, `.gitconfig`)을 `.backup` 확장자로 안전하게 백업 후 정리합니다.
 3. GNU Stow를 사용해 `zsh`, `vim`, `mise`, `git` 디렉토리를 홈 디렉토리(`~`)로 맵핑(Symlink)합니다.
 4. `mise`를 설치하고, 설정된 인프라 툴체인 버전을 일괄 다운로드 및 활성화합니다.
-5. `gemini/` 하위 폴더들을 스캔하여 조각난 마크다운들을 결합해 `GEMINI.md`를 생성하고 작업 공간(`~/cloud`)에 심볼릭 링크를 구성합니다.
+5. `gemini/` 하위 폴더들(예: `aws`, `multicloud`)을 스캔하여 조각난 마크다운들을 결합해 각각의 `GEMINI.md`를 생성하고 대응하는 작업 공간(예: `~/aws`, `~/multicloud`)에 심볼릭 링크를 동적으로 구성합니다.
 6. 모든 백그라운드 설치가 끝나면 **대화형(Interactive) 프롬프트**를 띄워 Git 로컬 작성자(이름/이메일) 정보를 `~/.gitconfig.local`에 안전하게 분리 저장합니다.
 
 ## 사용자 정의 (Customization) 및 유지보수
@@ -135,4 +139,4 @@
 
 - **인프라 도구 및 버전 변경**: `mise/.mise.toml`을 열어 원하는 도구(예: `python`, `go` 등)를 추가/수정한 뒤, 터미널에서 `mise install`을 실행하세요.
 - **단축어(Alias) 추가**: `zsh/.zshrc` 하단에 단축어를 추가한 후 터미널에서 `src`를 입력하면 설정이 즉시 새로고침됩니다.
-- **AI 브레인 가이드라인 확장**: `gemini/cloud/.gemini/` 폴더 내에 새로운 지침(`.md`) 파일을 추가하고 `./setup.sh`를 다시 실행하면, 컨텍스트가 `GEMINI.md`로 자동 병합 및 갱신됩니다.
+- **AI 브레인 가이드라인 확장**: `gemini/<원하는_환경_이름>/.gemini/` 형태로 새 폴더와 지침(`.md`) 파일들을 추가하고 `./setup.sh`를 다시 실행하면, 컨텍스트가 해당 환경의 `GEMINI.md`로 자동 병합되며 홈 디렉토리에 워크스페이스가 갱신됩니다.
