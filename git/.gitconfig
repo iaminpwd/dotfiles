@@ -7,6 +7,7 @@
     editor = vim
     autocrlf = input
     # MacOS/Linux 환경에서는 input, Windows에서는 true를 사용합니다.
+    excludesfile = ~/.gitignore_global
 
 [color]
     ui = auto
@@ -23,6 +24,7 @@
     br = branch
     ci = commit
     cm = commit -m
+    amend = commit --amend --no-edit
     df = diff
     # 아주 예쁘고 직관적인 Git 커밋 히스토리 그래프 보기
     lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit

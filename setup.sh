@@ -15,7 +15,7 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/5] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
-sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv fd-find
+sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv fd-find tree bat
 
 echo "[2/5] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -36,9 +36,10 @@ cp ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
 cp ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
 cp ~/.mise.toml ~/.mise.toml.backup 2>/dev/null || true
 cp ~/.gitconfig ~/.gitconfig.backup 2>/dev/null || true
+cp ~/.gitignore_global ~/.gitignore_global.backup 2>/dev/null || true
 
 # Stow 충돌 방지를 위해 기존의 실제 파일들을 삭제 (바로가기가 생길 자리를 비워줌)
-rm -f ~/.zshrc ~/.vimrc ~/.mise.toml ~/.gitconfig
+rm -f ~/.zshrc ~/.vimrc ~/.mise.toml ~/.gitconfig ~/.gitignore_global
 
 cd "$DOTFILES_DIR"
 stow -t "$HOME" -R zsh vim mise git
@@ -56,6 +57,16 @@ export PATH="$HOME/.local/bin:$PATH"
 ~/.local/bin/mise trust ~/.mise.toml || true
 ~/.local/bin/mise install -y
 ~/.local/bin/mise ls
+
+echo "[+] 보안 검증 도구(Checkov, Trufflehog) 추가 설치 중..."
+# Checkov (IaC 보안 취약점 스캐너) - pipx로 격리 설치
+pipx install checkov || echo "Checkov 설치 실패 또는 이미 존재함"
+pipx install pre-commit || echo "pre-commit 설치 실패"
+pipx install yamllint || echo "yamllint 설치 실패"
+pipx ensurepath
+
+# TruffleHog (시크릿 스캐너) - 로컬 bin에 바이너리 다운로드
+curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b ~/.local/bin || echo "Trufflehog 설치 실패"
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
@@ -130,6 +141,23 @@ EOF
     fi
 else
     echo "✅ 이미 ~/.gitconfig.local 파일이 존재하여 설정을 건너뜁니다."
+fi
+
+echo -e "\n[선택] 로컬 시크릿 환경 변수 파일 생성"
+if [ ! -f ~/.zshrc.local ]; then
+    cat << 'EOF' > ~/.zshrc.local
+# =============================================================================
+# 로컬 전용 시크릿 환경 변수 파일 (GitHub에 절대 커밋되지 않습니다)
+# =============================================================================
+# 이곳에 API Key나 보안 토큰을 export 하세요.
+# 
+# export GITHUB_TOKEN="your_github_token"
+# export OPENAI_API_KEY="your_openai_api_key"
+# export TF_VAR_db_password="your_secret_password"
+EOF
+    echo "✅ ~/.zshrc.local 파일이 안전하게 생성되었습니다! (시크릿 보관용)"
+else
+    echo "✅ 이미 ~/.zshrc.local 파일이 존재하여 설정을 건너뜁니다."
 fi
 
 echo "========================================================="

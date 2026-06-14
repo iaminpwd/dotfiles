@@ -1,0 +1,46 @@
+# ==============================================================================
+# Global Git Ignore File (System-wide)
+# Prevents catastrophic leaks of IaC states, secrets, and environment configurations
+# ==============================================================================
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+crash.log
+*.tfvars
+
+# Secrets & Credentials
+*.pem
+*.key
+*.cert
+*.crt
+.env
+.env.local
+.env.*
+secrets.yml
+*.ovpn
+kubeconfig
+.kube/config
+
+# Cloud Providers
+.aws/
+.azure/
+.gcp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs / Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

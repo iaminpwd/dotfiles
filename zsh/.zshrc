@@ -23,6 +23,14 @@ alias e='explorer.exe .'
 alias c='code .'
 alias ll='ls -alF'
 
+# Ubuntu 패키지명 충돌 해결 (사용자 편의성)
+if command -v batcat &> /dev/null; then
+  alias bat='batcat'
+fi
+if command -v fdfind &> /dev/null; then
+  alias fd='fdfind'
+fi
+
 # 2. Kubernetes 관련 (mise로 설치된 도구 연동)
 alias k='kubectl'
 alias kx='kubectx'
@@ -30,11 +38,20 @@ alias kn='kubens'
 alias kgp='kubectl get pod'
 alias kgs='kubectl get svc'
 alias kga='kubectl get all'
+alias kex='kubectl exec -i -t'
+alias klogs='kubectl logs -f'
 alias knet='kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- zsh'
+
+# 2.5. Docker & Helm 관련
+alias d='docker'
+alias dc='docker-compose'
+alias h='helm'
 
 # 3. Terraform 관련
 alias tf='terraform'
 alias tfi='terraform init'
+alias tff='terraform fmt -recursive'
+alias tfv='terraform validate'
 alias tfp='terraform plan'
 alias tfa='terraform apply'
 alias tfd='terraform destroy'
@@ -47,10 +64,10 @@ eval "$(~/.local/bin/mise activate zsh)"
 [ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
 # ------------------------------------
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-
 # 🤖 AI Prompt Context Generator (전체 인프라 코드 한 방에 추출하기)
 # 확장자 지정 순서를 변경하고 실행 셸을 bash로 명시하여 충돌을 원천 차단한 수정본
 alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e yaml -e j2 -e ps1 -e py -e toml -e txt -e sh -x bash -c '\''printf "\n# FILE: %s\n" "{}"; cat "{}"'\'' > all_code.txt'
+# 로컬 환경 변수(GitHub Token, 클라우드 API Key 등 시크릿)를 안전하게 관리하기 위한 분리 파일 로드
+[ -f ~/.zshrc.local ] && source ~/.zshrc.local
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
 alias src='source ~/.zshrc'

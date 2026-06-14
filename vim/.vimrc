@@ -10,6 +10,8 @@ set hlsearch        " 검색어 하이라이트
 set incsearch       " 점진적 검색
 set ignorecase      " 검색 시 대소문자 무시
 set smartcase       " 소문자 검색 시 무시, 대문자 포함 시 구분
+set clipboard=unnamedplus " 시스템 클립보드와 양방향 연동 (터미널 밖 복사/붙여넣기)
+set colorcolumn=80  " 80자 가이드라인 옅은 세로줄 표시
 syntax on           " 구문 강조
 
 " YAML 파일 작성 시 공백 에러 방지를 위한 강제 설정

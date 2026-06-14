@@ -1,4 +1,8 @@
 [tools]
+# Security & Policy Validation
+trivy = "0.71.0"
+conftest = "0.68.2"
+
 # IaC & Configuration Management
 terraform = "1.5.7"
 ansible = "9.5.1"
@@ -16,7 +20,6 @@ docker-cli = "29.5.3"
 helm = "4.2.1"
 
 # Local Testing & Mocking
-localstack = "3.4.0"
 k3d = "5.6.3"
 act = "0.2.62"
 
