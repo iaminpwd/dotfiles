@@ -120,7 +120,7 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 
 ### Step 1. 저장소 클론
 ```bash
-git clone https://github.com/사용자이름/dotfiles.git ~/dotfiles
+git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ```
 
