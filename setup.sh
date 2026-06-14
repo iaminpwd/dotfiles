@@ -62,12 +62,12 @@ echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적
 # gemini 폴더 경로 변수화
 GEMINI_BASE_DIR="$DOTFILES_DIR/gemini"
 
-# gemini 폴더 하위의 모든 디렉토리를 순회 (예: cloud, kubernetes, terraform 등)
+# gemini 폴더 하위의 모든 디렉토리를 순회 (예: aws, kubernetes, terraform 등)
 for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
   # 디렉토리가 아닌 경우(glob 실패 등) 건너뜐다
   [ -d "$TARGET_DIR" ] || continue
 
-  # 맨 뒤의 슬래시(/)를 제거하고 순수 폴더명만 추출 (예: 'cloud')
+  # 맨 뒤의 슬래시(/)를 제거하고 순수 폴더명만 추출 (예: 'aws')
   ENV_NAME=$(basename "$TARGET_DIR")
   
   echo "=> [$ENV_NAME] 환경 AI 브레인 세팅 진행 중..."
@@ -89,7 +89,7 @@ for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
     done
   fi
 
-  # 작업 공간(Workspace) 동적 할당 및 생성 (예: ~/cloud, ~/kubernetes)
+  # 작업 공간(Workspace) 동적 할당 및 생성 (예: ~/aws, ~/kubernetes)
   WORKSPACE_DIR="$HOME/$ENV_NAME"
   mkdir -p "$WORKSPACE_DIR/src"
 
