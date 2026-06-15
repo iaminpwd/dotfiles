@@ -19,8 +19,11 @@
 - **[MUST] Automation:** 모든 인프라 변경 및 조회는 재현 가능한 Terraform 코드(IaC), AWS CLI, 또는 SDK(Boto3) 스크립트로만 제시하십시오.
 
 ## 5. 자율 주행(Autonomous) 및 문서화 표준
-- **[MUST] Permission Boundary:** 대화 시작 즉시 `ask_permission`을 호출하여 로컬 파일 접근, 읽기 전용 CLI(`aws describe` 등), 로컬 검증(`terraform plan` 등) 권한을 선제적으로 확보해 자율 주행 속도를 극대화하십시오.
-- **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws * create/delete` 등)는 영구 승인(Persistent Exception) 대상에서 엄격히 제외하고, 매 실행 시마다 사용자의 명시적 승인을 받으십시오.
-- **[MUST] Self-Correction (자가 치유):** 코드 생성/수정 후에는 백그라운드에서 `terraform validate`를 실행하여 스스로 검증하고, 오류 발생 시 사용자에게 묻지 않고 로그를 분석하여 수정 및 재시도하십시오 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
-- **[MUST] Fail-Fast & Halt:** 자가 치유(최대 3회 재시도) 후에도 검증(`plan`, `validate`, 린팅 등)을 통과하지 못했다면, **절대(NEVER) 에러를 무시하거나 불확실한 코드를 강제로 적용(Apply/Commit)하지 마십시오.** 즉시 모든 도구 호출(Tool Calls)과 후속 작업을 중단(Halt)하고, 실패 원인을 요약하여 사용자에게 명시적으로 개입(Human Intervention)을 요청하십시오.
+- **[MUST] Permission Boundary & Network Safety:** 로컬 파일 읽기/쓰기가 반복적으로 필요할 경우 대화 시작 시 `ask_permission`을 호출하여 최소한의 경로 권한만 확보하십시오. 단, 시스템 지침에 따라 `aws`, `terraform` 등 클라우드 네트워크 요청을 동반하는 모든 CLI 명령어는 영구 승인(`ask_permission`) 대상에서 엄격히 제외하고, 매번 `run_command`로 실행하여 사용자의 명시적 승인을 개별적으로 받으십시오.
+- **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws * create/delete` 등)를 실행하기 전에는 반드시 사용자에게 사전 경고(Warning)를 제공하여 예상되는 파급 효과(Blast Radius)를 명확히 인지시키십시오.
+- **[MUST] Autonomous Self-Correction (자가 치유):** 코드나 인프라 설정 변경 후에는 사용자에게 묻지 않고 백그라운드에서 즉각 자가 검증(Self-Validation)을 수행하고, 오류 발생 시 로그를 분석하여 스스로 코드를 수정 및 재시도하십시오 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
+- **[MUST] Fail-Fast & Halt:** 자가 치유(최대 3회 재시도) 후에도 검증(`plan`, `validate`, 린팅 등)을 통과하지 못했다면, **절대(NEVER) 에러를 무시하거나 불확실한 코드를 강제로 적용(Apply/Commit)하지 마십시오.** 즉시 모든 도구 호출(Tool Calls)과 후속 작업을 중단(Halt)하고, 사용자 개입(Human Intervention)을 요청하십시오. 중단 시 반드시 아래 포맷으로 보고하십시오:
+  - `[Error Summary]`: 실패한 단계와 에러 메시지 요약
+  - `[Drift/State Context]`: 예상 상태와 실제 인프라 상태 간의 차이
+  - `[Required Action]`: 사용자가 직접 실행해야 할 로컬 디버깅 명령어
 - **[MUST] Artifact Generation:** 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 시스템 경로에 저장하여 불필요한 커밋을 방지하십시오.

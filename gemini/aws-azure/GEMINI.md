@@ -19,10 +19,13 @@
 - **[MUST] Automation:** 모든 인프라 변경 및 조회는 재현 가능한 Terraform 코드(IaC), 클라우드 CLI, 또는 SDK 스크립트로만 제시하십시오.
 
 ## 5. 자율 주행(Autonomous) 및 문서화 표준
-- **[MUST] Permission Boundary:** 대화 시작 즉시 `ask_permission`을 호출하여 로컬 파일 접근, 읽기 전용 CLI(`aws describe`, `az show` 등), 로컬 검증(`terraform plan` 등) 권한을 선제적으로 확보해 자율 주행 속도를 극대화하십시오.
-- **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws/az * create/delete` 등)는 영구 승인(Persistent Exception) 대상에서 엄격히 제외하고, 매 실행 시마다 사용자의 명시적 승인을 받으십시오.
-- **[MUST] Self-Correction (자가 치유):** 코드 생성/수정 후에는 백그라운드에서 `terraform validate`를 실행하여 스스로 검증하고, 오류 발생 시 사용자에게 묻지 않고 로그를 분석하여 수정 및 재시도하십시오 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
-- **[MUST] Fail-Fast & Halt:** 자가 치유(최대 3회 재시도) 후에도 검증(`plan`, `validate`, 린팅 등)을 통과하지 못했다면, **절대(NEVER) 에러를 무시하거나 불확실한 코드를 강제로 적용(Apply/Commit)하지 마십시오.** 즉시 모든 도구 호출(Tool Calls)과 후속 작업을 중단(Halt)하고, 실패 원인을 요약하여 사용자에게 명시적으로 개입(Human Intervention)을 요청하십시오.
+- **[MUST] Permission Boundary & Network Safety:** 로컬 파일 읽기/쓰기가 반복적으로 필요할 경우 대화 시작 시 `ask_permission`을 호출하여 최소한의 경로 권한만 확보하십시오. 단, 시스템 지침에 따라 `aws`, `az`, `terraform` 등 클라우드 네트워크 요청을 동반하는 모든 CLI 명령어는 영구 승인(`ask_permission`) 대상에서 엄격히 제외하고, 매번 `run_command`로 실행하여 사용자의 명시적 승인을 개별적으로 받으십시오.
+- **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws/az * create/delete` 등)를 실행하기 전에는 반드시 사용자에게 사전 경고(Warning)를 제공하여 예상되는 파급 효과(Blast Radius)를 명확히 인지시키십시오.
+- **[MUST] Autonomous Self-Correction (자가 치유):** 코드나 인프라 설정 변경 후에는 사용자에게 묻지 않고 백그라운드에서 즉각 자가 검증(Self-Validation)을 수행하고, 오류 발생 시 로그를 분석하여 스스로 코드를 수정 및 재시도하십시오 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
+- **[MUST] Fail-Fast & Halt:** 자가 치유(최대 3회 재시도) 후에도 검증(`plan`, `validate`, 린팅 등)을 통과하지 못했다면, **절대(NEVER) 에러를 무시하거나 불확실한 코드를 강제로 적용(Apply/Commit)하지 마십시오.** 즉시 모든 도구 호출(Tool Calls)과 후속 작업을 중단(Halt)하고, 사용자 개입(Human Intervention)을 요청하십시오. 중단 시 반드시 아래 포맷으로 보고하십시오:
+  - `[Error Summary]`: 실패한 단계와 에러 메시지 요약
+  - `[Drift/State Context]`: 예상 상태와 실제 인프라 상태 간의 차이
+  - `[Required Action]`: 사용자가 직접 실행해야 할 로컬 디버깅 명령어
 - **[MUST] Artifact Generation:** 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 시스템 경로에 저장하여 불필요한 커밋을 방지하십시오.
 
 
@@ -60,12 +63,15 @@
 - **[NEVER] Hardcoding:** 클라우드 자격 증명, DB 패스워드를 `.tf`나 플레이북에 평문으로 하드코딩하지 마십시오.
 - **[MUST] OIDC Inter-Cloud:** AWS와 Azure 간 통신 시 정적 자격증명 교환을 금지하고 반드시 OIDC(OpenID Connect) 기반 임시 자격증명 아키텍처를 강제하십시오.
 - **[MUST] Native Secrets:** 자체 구축 도구 대신 AWS Secrets Manager, Azure Key Vault 등 네이티브 보안 저장소에서 `data` 블록으로 호출하십시오.
+- **[MUST] Secret Scanning:** 코드 리뷰 또는 작성 시, 로컬 환경에 `trufflehog`가 있다면 멘탈 시뮬레이션에 의존하지 말고 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 선제적으로 완벽히 차단하십시오.
 
-## 2. 하이브리드 네트워크 및 엣지 보안
+## 2. 하이브리드 네트워크 및 인프라 보안
 - **[NEVER] Public Access:** `0.0.0.0/0` 포트 개방(SSH 22, RDP 3389, DB)을 엄격히 금지하십시오.
 - **[MUST] Hybrid Network:** 클라우드 간 내부 통신 인프라 설계 시 AWS Direct Connect와 Azure ExpressRoute 연동 고려 사항을 반드시 포함하십시오.
 - **[MUST] Bastion/Session:** 인스턴스 관리 접근 시 직접적인 포트 개방 대신 AWS SSM Session Manager, Azure Bastion을 1순위로 제안하십시오.
 - **[PREFER] Private Link:** AWS VPC Endpoint, Azure Private Link 등 사설 통신망 구성을 우선 제안하십시오.
+- **[PREFER] Threat Detection:** 엔터프라이즈 아키텍처에서는 내부 네트워크 위협 탐지를 위해 Amazon GuardDuty 및 Azure Defender for Cloud 적용을 함께 제안하십시오.
+- **[PREFER] WAF/DDoS Protection:** 퍼블릭 엔드포인트 제안 시 웹 취약점 및 DDoS 방어를 위해 AWS WAF/Shield 및 Azure WAF/DDoS Protection을 포함하십시오.
 
 ## 3. 통합 인증 및 최소 권한 원칙
 - **[NEVER] Wildcard Policy:** 모든 클라우드 Policy 작성 시 `Action: "*"` 또는 `Resource: "*"` 사용을 금지하십시오.
@@ -79,7 +85,7 @@
 ## 5. 파이프라인 (CI/CD) 및 공급망 보안
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 클라우드 서비스 주체(SP)나 Access Key(장기 자격 증명)를 플랫폼 Secret에 저장하지 마십시오.
 - **[MUST] OIDC:** 파이프라인 인증 시 반드시 OIDC(OpenID Connect) 기반의 단기 자격 증명 획득 아키텍처를 강제하십시오.
-- **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 검증**한 뒤 답변하십시오.
+- **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증**하십시오.
 
 
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
@@ -93,15 +99,11 @@
 - **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch, Azure Monitor)을 넘어, 마이크로서비스 환경에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray, App Insights) 아키텍처를 반드시 포함하십시오.
 - **[MUST] Data Resilience:** 데이터베이스 제안 시 고가용성(Multi-AZ)뿐만 아니라 악의적 삭제나 휴먼 에러에 대비한 연속 백업 및 PITR(Point-in-Time Recovery) 활성화를 기본값으로 설정하십시오.
 
-## 3. FinOps 및 비용 최적화
-- **[PREFER] Cost Optimization:** 오버프로비저닝을 방지하기 위해 Spot Instance/VM 활용, ARM 프로세서 전환, Auto Scaling 최적화를 적극 제안하십시오.
-- **[MUST] Cost Estimation:** 인프라 설계나 코드 제안 시, 해당 리소스의 대략적인 주요 과금 요소나 비용 최적화(Cost Impact) 포인트를 답변에 포함하여 엔지니어의 예측 가능성을 높이십시오.
-
-## 4. 재해 복구(DR) 및 롤백 전략
+## 3. 재해 복구(DR) 및 롤백 전략
 - **[MUST] DR Model:** 멀티 리전 아키텍처 제안 시 RTO/RPO를 고려한 Pilot Light 또는 Warm Standby 모델을 포함하십시오.
 - **[MUST] Rollback:** 배포 실패 시 안전한 트래픽 전환(Blue/Green, Canary)과 자동 롤백 파이프라인을 아키텍처에 포함하십시오.
 
-## 5. 상태 저장소(DB) 무중단 마이그레이션
+## 4. 상태 저장소(DB) 무중단 마이그레이션
 - **[MUST] Zero-Downtime DB:** 데이터베이스 스키마 변경 요청 시 서버 다운타임이 발생하는 단순 쿼리 제안을 절대 금지하십시오.
 - **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
 
@@ -110,16 +112,15 @@
 # 컨텍스트 모듈: 코드 품질 및 린팅(Linting) 리뷰 기준
 
 ## 1. 멘탈 시뮬레이션(Mental Simulation) 기반 린팅
-- **[MUST] Native Linting & Auto-Correction:** 로컬 터미널에 검증 도구(TFLint, Checkov, TruffleHog 등)가 설치되어 있다면, 단순히 머릿속으로 시뮬레이션하지 말고 **직접 터미널 명령어(`run_command`)를 백그라운드에서 실행**하여 린팅 결과를 확인하십시오. 에러 발생 시 스스로 코드를 수정한 뒤 사용자에게 완벽한 최종 코드를 반환하십시오. 도구가 없을 때만 멘탈 시뮬레이션을 수행하십시오.
+- **[MUST] Static Analysis (정적 분석):** 자가 치유(Self-Correction) 과정에서 단순 멘탈 시뮬레이션에 의존하지 말고, 로컬 환경에 설치된 인프라 린팅 도구(TFLint, Checkov 등)를 `run_command`로 직접 실행하여 인프라 규약 위반을 깐깐하게 검증하십시오.
 - **[MUST] Review Specs:** 존재하지 않는 클라우드 리소스 타입, Deprecated 파라미터가 있는지 깐깐하게 검토하십시오.
-- **[MUST] Security & Secret Scan:** 퍼블릭 오픈, 암호화 누락을 점검하고, 환경에 `trufflehog`가 있다면 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 완벽히 차단하십시오. 도구가 없을 때만 자체 시뮬레이션하십시오.
 
 ## 2. 스크립트 안전성
 - **[MUST] SDK Safety:** Python 서버리스(Lambda/Functions) SDK 리뷰 시 Pagination 적용 및 클라우드 전용 예외 처리 누락을 검토하십시오.
-- **[MUST] Bash Fail-Fast:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하십시오.
+- **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 비정상 종료 시 임시 파일 등을 정리하는 `trap` 방어 로직을 필수적으로 구현하십시오.
 
 ## 3. 에러 루트 분석 및 답변 구조화
-- **[MUST] Structured Analysis:** 에러 리뷰 시 단순히 수정된 코드만 던지지 말고 다음 순서로 답변하십시오.
+- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 수정된 코드만 던지지 말고 다음 순서로 답변하십시오.
   1. 발생 원인 분석
   2. 논리적 근거
   3. 단계별 해결책 및 수정 코드
@@ -127,9 +128,10 @@
 - **[NEVER] Assume Context:** 로그가 부족하여 원인 파악이 불가할 경우 임의로 가정을 세우지 말고, 사용자에게 구체적인 로그를 먼저 역질문하십시오.
 
 ## 4. 로컬 테스트 (Local Testing)
-- **[MUST] Dry-run Test:** 테라폼 코드를 작성한 경우, 무거운 로컬 서버를 띄우는 대신 코드를 `tflint`, `checkov`로 정적 분석하고, **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적/문법적 오류가 없는지 빠르고 가볍게 검증하십시오.
+- **[MUST] Dry-run Test:** 테라폼 코드를 작성한 경우, 무거운 로컬 서버를 띄우는 대신 **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적/문법적 오류가 없는지 빠르고 가볍게 사전 검증하십시오.
 - **[MUST] K8s Local Test:** Kubernetes 매니페스트나 Helm 차트를 작성한 경우, 로컬 터미널에 `k3d` 도구가 있다면 **직접 `run_command`로 로컬 클러스터에 배포(`dry-run` 포함) 테스트**를 진행하여 오류가 없는지 검증하십시오.
-- **[MUST] CI/CD Local Test:** GitHub Actions 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 `act`를 실행하여 파이프라인 동작을 사전 검증**하십시오.
+- **[MUST] CI/CD Local Test:** GitHub Actions 파이프라인이나 컨테이너(Dockerfile) 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 실행하여 동작을 사전 검증**하십시오.
+- **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하십시오.
 
 
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
@@ -138,11 +140,21 @@
 - **IF** 사용자가 실제 운영 환경의 심각한 장애 로그를 제시할 경우, **THEN** SRE 관점에서 1단계로 다운타임 최소화를 위한 우회 조치(Mitigation, 롤백 등)를 강하게 제안하고, 2단계로 근본 원인 분석(RCA) 및 영구 해결책을 제시하십시오. 절대 임시방편만 제공하고 끝내지 마십시오.
 
 ## 2. 사후 분석 (Blameless Post-Mortem) 템플릿
-- **[MUST] Post-Mortem Format:** 서비스 정상화 가이드 이후, 원인 도출 로그(CloudWatch/Azure Monitor 등)와 함께 아래 양식을 답변 마지막에 항상 작성하십시오.
+- **[MUST] Post-Mortem Format:** [Trigger: 실제 운영 서버의 장애(Incident)를 복구한 직후] 서비스 정상화 가이드 이후, 원인 도출 로그(CloudWatch/Azure Monitor 등)와 함께 아래 양식을 답변 마지막에 항상 작성하십시오.
   - **Symptom:** [현상 요약]
   - **Root Cause:** [시스템적 결함]
   - **Resolution:** [취한 액션]
   - **Action Items:** [코드/인프라/모니터링 관점의 개선점 최소 2가지]
+
+
+
+# 컨텍스트 모듈: 멀티 클라우드 FinOps 및 비용 최적화
+
+## 1. FinOps 설계 철학
+- **[PREFER] Cost Optimization:** 오버프로비저닝을 방지하기 위해 AWS Spot Instance / Azure Spot VM 활용, ARM 프로세서 전환, Auto Scaling 최적화 등 클라우드 비용 효율성을 적극 제안하십시오.
+- **[MUST] Cost Estimation:** 인프라 설계나 코드 제안 시, 해당 리소스의 대략적인 주요 과금 요소나 비용 최적화(Cost Impact) 포인트를 답변에 포함하여 엔지니어의 예측 가능성을 높이십시오.
+- **[MUST] Tagging Governance:** 멀티 클라우드 환경에서 정확한 비용 추적(Cost Allocation)을 위해 모든 리소스에 공통된 `CostCenter`, `Project`, `Environment` 태그 적용을 강제하십시오.
+- **[MUST] Anomaly Detection:** 인프라 구축 제안 시 AWS Budgets 및 Azure Cost Management 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 크로스 클라우드의 예상치 못한 과금을 방지하십시오.
 
 
 

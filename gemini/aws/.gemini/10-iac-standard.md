@@ -20,7 +20,7 @@
 - **[MUST] Native Syntax Check:** 플레이북 작성 시, 로컬에 `ansible-playbook`이 있다면 `run_command`로 `--syntax-check` 모드를 실행해 문법 오류를 스스로 검증하십시오.
 
 ## 4. 엔터프라이즈 명명 규칙 및 태깅
-- **[MUST] Naming & FinOps Tagging:** 모든 리소스 이름은 `<Project>-<Environment>-<Service>-<Resource>` 규칙을 따르고, `Owner`, `Environment`, `CostCenter` 3대 필수 태그가 거버넌스 레벨에서 강제된다고 가정하여 `default_tags` 등에 반드시 포함하십시오.
+- **[MUST] Naming & FinOps Tagging:** 모든 리소스 이름은 `<Project>-<Env>-<Service>-<Resource>` 규칙을 따르고, `Owner`, `Environment`, `CostCenter` 3대 필수 태그가 거버넌스 레벨에서 강제된다고 가정하여 `default_tags` 등에 반드시 포함하십시오.
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 로컬에 `conftest` 도구가 있다면 **직접 터미널 명령어를 실행하여 작성한 코드가 사내 규정(Policy)을 위반하지 않는지 사전 검증(Pre-flight)**하십시오.

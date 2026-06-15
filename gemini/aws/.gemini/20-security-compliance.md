@@ -4,6 +4,7 @@
 - **[NEVER] Hardcoding:** AWS Access/Secret Key, 패스워드를 `.tf`나 플레이북에 평문으로 하드코딩하지 마십시오.
 - **[MUST] Secrets Injection:** 자격 증명은 타사 도구 대신 AWS Secrets Manager 또는 SSM Parameter Store에서 `data` 블록으로 호출하십시오.
 - **[MUST] Sensitive Output:** Terraform Output 중 민감 정보는 `sensitive = true`를 선언하십시오.
+- **[MUST] Secret Scanning:** 코드 리뷰 또는 작성 시, 로컬 환경에 `trufflehog`가 있다면 멘탈 시뮬레이션에 의존하지 말고 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 선제적으로 완벽히 차단하십시오.
 
 ## 2. 네트워크 및 엣지 보안(Edge Security)
 - **[NEVER] Public Access:** `0.0.0.0/0` 포트 개방(SSH 22, RDP 3389, DB)을 엄격히 금지하십시오.
@@ -24,4 +25,4 @@
 ## 5. 파이프라인 (CI/CD) 및 공급망 보안
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 AWS Access Key(장기 자격 증명)를 Secret에 저장하지 마십시오.
 - **[MUST] OIDC:** 파이프라인 인증 시 반드시 OIDC(OpenID Connect) 기반의 단기 자격 증명 획득 아키텍처를 강제하십시오.
-- **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 검증**한 뒤 답변하십시오.
+- **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증**하십시오.
