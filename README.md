@@ -100,7 +100,7 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 │   │   │   ├── 40-code-review.md
 │   │   │   └── 50-incident-response.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
-│   └── multicloud/  # 멀티 클라우드(AWS+Azure) 워크스페이스
+│   └── aws-azure/  # 멀티 클라우드(AWS+Azure) 워크스페이스
 │       └── ...
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)
