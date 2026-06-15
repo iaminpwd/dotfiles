@@ -22,4 +22,5 @@
 - **[MUST] Permission Boundary:** 대화 시작 즉시 `ask_permission`을 호출하여 로컬 파일 접근, 읽기 전용 CLI(`aws describe` 등), 로컬 검증(`terraform plan` 등) 권한을 선제적으로 확보해 자율 주행 속도를 극대화하십시오.
 - **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws * create/delete` 등)는 영구 승인(Persistent Exception) 대상에서 엄격히 제외하고, 매 실행 시마다 사용자의 명시적 승인을 받으십시오.
 - **[MUST] Self-Correction (자가 치유):** 코드 생성/수정 후에는 백그라운드에서 `terraform validate`를 실행하여 스스로 검증하고, 오류 발생 시 사용자에게 묻지 않고 로그를 분석하여 수정 및 재시도하십시오 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
+- **[MUST] Fail-Fast & Halt:** 자가 치유(최대 3회 재시도) 후에도 검증(`plan`, `validate`, 린팅 등)을 통과하지 못했다면, **절대(NEVER) 에러를 무시하거나 불확실한 코드를 강제로 적용(Apply/Commit)하지 마십시오.** 즉시 모든 도구 호출(Tool Calls)과 후속 작업을 중단(Halt)하고, 실패 원인을 요약하여 사용자에게 명시적으로 개입(Human Intervention)을 요청하십시오.
 - **[MUST] Artifact Generation:** 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 시스템 경로에 저장하여 불필요한 커밋을 방지하십시오.
