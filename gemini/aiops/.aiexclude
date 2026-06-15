@@ -1,0 +1,113 @@
+# =================================================================
+# AIOps (AI for IT Operations) 워크스페이스 전용 .aiexclude
+# =================================================================
+# AIOps 환경은 대용량 로그, 트래픽 덤프, 알람 페이로드 원본 파일이
+# 자주 생성되므로, AI 컨텍스트 윈도우 폭발을 막기 위해 아래 파일들을 반드시 차단해야 합니다.
+
+# 0. AIOps 특화 대용량 덤프 및 페이로드 데이터
+**/*.dump
+**/*.pcap
+**/payloads/
+**/events/
+**/*.heapsnapshot
+**/*.core
+**/cloudwatch_logs/
+**/datadog_exports/
+
+# 1. 미디어 및 정적 바이너리 에셋 (텍스트 변환 시 토큰 폭발 방지)
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.ico
+**/*.mp4
+**/*.mov
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.eot
+**/*.pdf
+**/*.jar
+**/*.war
+
+# 2. 대용량 데이터베이스, 로그, ML 모델 가중치 파일 (컨텍스트 오염 방지)
+**/*.log
+**/logs/
+**/*.csv
+**/*.tsv
+**/*.sql
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+**/*.parquet
+**/*.h5
+**/*.pkl
+**/*.pth
+**/*.pt
+**/*.onnx
+**/*.tfstate
+**/*.tfstate.*
+**/*.plan
+**/*.out
+.gemini/history/
+.gemini/tmp/
+**/chats/
+
+# 3. 외부 의존성 및 패키지 디렉터리 (서드파티 라이브러리 및 SDK 차단)
+**/node_modules/
+**/vendor/
+**/venv/
+**/env/
+**/__pycache__/
+**/.pytest_cache/
+**/Pods/
+
+# 4. 패키지 매니저 Lock 파일 및 소스맵 (기계 생성 데이터 토큰 낭비 차단)
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/poetry.lock
+**/.terraform.lock.hcl
+**/*.map
+
+# 5. 빌드 결과물 및 컴파일된 네이티브/웹 아티팩트
+**/dist/
+**/build/
+**/out/
+**/bin/
+**/target/
+**/.next/
+**/.nuxt/
+**/.svelte-kit/
+**/.cache/
+**/.gradle/
+**/*.py[cod]
+**/*.class
+**/*.zip
+**/*.tar.gz
+**/*.so
+**/*.dylib
+**/*.dll
+**/*.o
+**/*.obj
+**/*.wasm
+
+# 6. 보안 및 자격 증명 (하드코딩된 민감정보 파싱 및 유출 방지)
+**/*.env
+**/*.env.*
+**/*.pem
+**/*.key
+**/*.cer
+**/*.crt
+**/.vault_pass
+**/.kube/config
+
+# 7. OS, IDE 및 기타 메타데이터 숨김 파일
+.git/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+**/.terraform/
+**/*.ipynb_checkpoints/

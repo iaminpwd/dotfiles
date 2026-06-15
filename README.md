@@ -74,6 +74,8 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 
 이 레포지토리의 진정한 가치는 `gemini/` 폴더에 내장된 **AI 아키텍트 가이드라인**입니다. AI 에이전트는 이 룰북을 바탕으로 코드를 작성하고 "스스로 로컬에서 검증"합니다.
 
+> **💡 Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용하여 AI의 자율 주행 퀄리티와 문맥 일관성을 극한으로 끌어올립니다.
+
 - **`00-core.md` (자율 검증 강제):** 코드를 작성하면 AI가 무조건 터미널에서 `terraform validate`를 백그라운드로 돌려 무결성을 1차 교정합니다. 단, 전체 디렉토리 대상 `terraform fmt`는 금지하여 의도치 않은 파일 수정을 막습니다. (ClickOps 절대 금지)
 - **`10-iac-standard.md` (아키텍처 표준):** Terraform은 프로비저닝, Ansible은 OS 구성으로 엄격히 분리합니다. `ansible-playbook --syntax-check` 및 `conftest`를 통한 로컬 정책 검증을 수행합니다.
 - **`20-security-compliance.md` (보안 및 권한):** IAM 최소 권한 원칙(PoLP) 준수, OIDC 기반 인증 설계, 그리고 터미널의 `trivy`를 호출하여 컨테이너/IaC 취약점을 스스로 스캔합니다.
@@ -90,6 +92,9 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 ├── README.md        # 프로젝트 설명서 (본 문서)
 ├── setup.sh         # 전체 환경 자동 구성 스크립트
 ├── gemini/          # AI 에이전트(Gemini) 연동 자율 주행 가이드라인
+│   ├── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
+│   │   ├── .aiexclude
+│   │   └── .gemini/ # 전사적 장애 대응, 복원력 설계, FinOps, SRE 봇을 위한 아키텍처 프롬프트
 │   ├── aws/         # AWS 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
