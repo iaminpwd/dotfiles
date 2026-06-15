@@ -12,16 +12,17 @@
 ## 3. 아키텍처 설계 철학
 - **[MUST] Well-Architected:** AWS Well-Architected Framework 6대 원칙을 기반으로 작성하며, 트레이드오프 발생 시 보안과 안정성을 최우선으로 고려하세요.
 - **[PREFER] Cloud-Native First:** Day-2 운영 부하를 최소화하기 위해 직접적인 IaaS(EC2 등) 구축보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안하세요.
+- **[MUST] Respect Constraints:** 단, 사용자가 특정 기술(예: EC2)을 명시적으로 요구한 경우, 억지로 관리형 서비스로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하세요.
 
 ## 4. 엔터프라이즈 운영 원칙
 - **[NEVER] ClickOps:** AWS 콘솔(Web UI)을 클릭하여 설정하는 수동 가이드를 절대 제공하지 마세요.
 - **[MUST] Automation:** 모든 인프라 변경 및 조회는 재현 가능한 Terraform 코드(IaC), AWS CLI, 또는 SDK(Boto3) 스크립트로만 제시하세요.
 
 ## 5. 자율 주행(Autonomous) 및 문서화 표준
-- **[MUST] Auto-Formatting & Validation:** Terraform 코드를 생성/수정한 후에는 **반드시 `run_command`로 `terraform fmt`와 `terraform validate`를 백그라운드에서 실행**하여 포맷팅과 문법적 무결성을 스스로 교정한 뒤 사용자에게 반환하세요.
-- **[MUST] AI Auto-Validation:** 코드를 반환하기 전 다른 컨텍스트 모듈(보안, IaC 등)의 기준을 완벽히 만족하는지 내부적으로 교차 검증(Mental Check)하고, 실행 오류 시 사용자에게 묻지 말고 스스로 로그를 분석하여 수정 및 재시도하세요 (최대 3회).
-- **[MUST] Respect Constraints:** 사용자가 특정 기술(예: EC2)을 명시적으로 요구한 경우, 억지로 Managed Service(Fargate 등)로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하세요.
-- **[MUST] Artifact Generation:** 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하세요. 단, 산출물이 GitHub Repository에 잘못 커밋되는 것을 방지하기 위해, 반드시 소스 코드 작업 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 시스템 경로에 저장하세요.
+- **[MUST] Permission Boundary:** 대화 시작 즉시 `ask_permission`을 호출하여 로컬 파일 접근, 읽기 전용 CLI(`aws describe` 등), 로컬 검증(`terraform plan` 등) 권한을 선제적으로 확보해 자율 주행 속도를 극대화하세요.
+- **[NEVER] Unsafe Auto-Approve:** 실제 클라우드 인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws * create/delete` 등)는 영구 승인(Persistent Exception) 대상에서 엄격히 제외하고, 매 실행 시마다 사용자의 명시적 승인을 받으세요.
+- **[MUST] Self-Correction (자가 치유):** 코드 생성/수정 후에는 백그라운드에서 `terraform validate`를 실행하여 스스로 검증하고, 오류 발생 시 사용자에게 묻지 않고 로그를 분석하여 수정 및 재시도하세요 (최대 3회). 단, 의도치 않은 파일이 포맷팅되어 수정되는 것을 막기 위해 전체 디렉토리에 대한 `terraform fmt` 실행은 엄격히 금지합니다 (필요시 수정한 파일만 개별적으로 포맷팅).
+- **[MUST] Artifact Generation:** 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 시스템 경로에 저장하여 불필요한 커밋을 방지하세요.
 
 
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
@@ -43,6 +44,7 @@
 - **[MUST] Idempotency:** `shell`이나 `command` 모듈 대신 `yum`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하세요.
 - **[MUST] Dynamic Inventory:** 하드코딩된 정적 인벤토리를 금지하고, AWS EC2 Dynamic Inventory Plugin(`aws_ec2.yml`)을 활용하세요.
 - **[MUST] Vault:** 민감한 변수(DB 패스워드 등)는 Ansible Vault로 암호화하세요.
+- **[MUST] Native Syntax Check:** 플레이북 작성 시, 로컬에 `ansible-playbook`이 있다면 `run_command`로 `--syntax-check` 모드를 실행해 문법 오류를 스스로 검증하세요.
 
 ## 4. 엔터프라이즈 명명 규칙 및 태깅
 - **[MUST] Naming & FinOps Tagging:** 모든 리소스 이름은 `<Project>-<Environment>-<Service>-<Resource>` 규칙을 따르고, `Owner`, `Environment`, `CostCenter` 3대 필수 태그가 거버넌스 레벨에서 강제된다고 가정하여 `default_tags` 등에 반드시 포함하세요.
@@ -111,7 +113,7 @@
 ## 1. 멘탈 시뮬레이션(Mental Simulation) 기반 린팅
 - **[MUST] Native Linting & Auto-Correction:** 로컬 터미널에 검증 도구(TFLint, Checkov, TruffleHog 등)가 설치되어 있다면, 단순히 머릿속으로 시뮬레이션하지 말고 **직접 터미널 명령어(`run_command`)를 백그라운드에서 실행**하여 린팅 결과를 확인하세요. 에러 발생 시 스스로 코드를 수정한 뒤 사용자에게 완벽한 최종 코드를 반환하세요. 도구가 없을 때만 멘탈 시뮬레이션을 수행하세요.
 - **[MUST] Review Specs:** 존재하지 않는 클라우드 리소스 타입, Deprecated 파라미터가 있는지 깐깐하게 검토하세요.
-- **[MUST] Security & Secret Scan:** 퍼블릭 오픈, 암호화 누락 여부를 린팅하고, 하드코딩된 인증 키가 없는지 시크릿 스캐닝(TruffleHog 수준)을 자체 시뮬레이션하세요.
+- **[MUST] Security & Secret Scan:** 퍼블릭 오픈, 암호화 누락을 점검하고, 환경에 `trufflehog`가 있다면 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 완벽히 차단하세요. 도구가 없을 때만 자체 시뮬레이션하세요.
 
 ## 2. 스크립트 안전성
 - **[MUST] Boto3 Safety:** Python AWS SDK(Boto3) 코드 리뷰 시, 대량 조회용 `Paginator` 사용 및 `botocore` 예외 처리(ClientError) 누락을 깐깐하게 검토하세요.
@@ -125,8 +127,10 @@
   4. 재발 방지책 (Best Practice)
 - **[NEVER] Assume Context:** 로그가 부족하여 원인 파악이 불가할 경우 임의로 가정을 세우지 말고, 사용자에게 구체적인 로그를 먼저 역질문하세요.
 
-## 4. 사전 검증(Testing)
-- **[MUST] Pre-Validation:** PR 생성 시 CI 파이프라인에서 `terraform plan` 코멘트, `terratest` 또는 Ansible `--check` 모드(Dry-run)를 통한 사전 검증 워크플로우를 권장하세요.
+## 4. 로컬 테스트 (Local Testing)
+- **[MUST] Dry-run Test:** 무거운 로컬 서버(LocalStack 등)를 띄우는 대신, 코드를 `tflint`, `checkov`로 정적 분석하고, **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적/문법적 오류가 없는지 빠르고 가볍게 검증하세요.
+- **[MUST] CI/CD Local Test:** GitHub Actions 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 `act`를 실행하여 파이프라인 동작을 사전 검증**하세요.
+- **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하세요.
 
 
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
