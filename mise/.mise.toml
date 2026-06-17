@@ -2,6 +2,7 @@
 # Security & Policy Validation
 trivy = "0.71.0"
 conftest = "0.68.2"
+cosign = "3.1.1"
 
 # IaC & Configuration Management
 terraform = "1.5.7"
@@ -10,6 +11,7 @@ ansible = "9.5.1"
 terragrunt = "1.0.8"
 tflint = "0.63.1"
 infracost = "0.10.44"
+terraform-docs = "0.24.0"
 
 # Cloud Services
 awscli = "2.15.30"
@@ -21,6 +23,9 @@ kubectx = "0.9.5"
 k9s = "0.32.4"
 docker-cli = "29.5.3"
 helm = "4.2.1"
+kustomize = "5.8.1"
+kube-linter = "0.8.3"
+helm-docs = "1.14.2"
 
 # Local Testing & Mocking
 k3d = "5.6.3"

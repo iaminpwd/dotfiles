@@ -58,6 +58,10 @@ export PATH="$HOME/.local/bin:$PATH"
 ~/.local/bin/mise install -y
 ~/.local/bin/mise ls
 
+echo "[+] Helm 플러그인 설치 중 (helm-diff)..."
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+helm plugin install https://github.com/databus23/helm-diff --verify=false || echo "helm-diff 플러그인이 이미 설치되어 있거나 실패했습니다."
+
 echo "[+] 보안 검증 도구(Checkov, Trufflehog) 추가 설치 중..."
 # Checkov (IaC 보안 취약점 스캐너) - pipx로 격리 설치
 pipx install checkov || echo "Checkov 설치 실패 또는 이미 존재함"
