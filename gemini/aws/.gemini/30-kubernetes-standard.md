@@ -1,0 +1,12 @@
+# 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
+
+## 1. 클러스터 보안 및 인증 (Security & Auth)
+- **[MUST] Least Privilege (IRSA):** EKS 워크로드(Pod)에 권한을 부여할 때 Node IAM Role을 사용하지 말고, 반드시 IAM Roles for Service Accounts (IRSA)를 적용하여 최소 권한을 달성하십시오.
+- **[MUST] Envelope Encryption:** K8s Secret은 평문 저장을 금지하고 AWS KMS와 연동한 봉투 암호화(Envelope Encryption)를 필수 구성하십시오.
+- **[MUST] Zero Trust (mTLS):** 클라우드 내부망이라도 무조건 신뢰하지 마십시오. K8s 아키텍처 설계 시 서비스 매시(Istio, Linkerd) 기반의 **mTLS(상호 TLS)** 통신 적용을 우선순위로 제안하십시오.
+- **[PREFER] Node Security:** 워커 노드의 보안 강화를 위해 일반 Amazon Linux 대신 컨테이너에 최적화된 Bottlerocket OS 사용을 우선 제안하십시오.
+
+## 2. 배포 및 운영 (Deployment & Day-2)
+- **[MUST] GitOps:** Kubernetes 워크로드 배포 시 `kubectl apply`를 통한 수동 개입을 금지하고 ArgoCD 등 GitOps 기반 파이프라인을 설계하십시오.
+- **[Trigger: After Editing K8s Manifest/Helm] K8s Local Test:** Kubernetes 매니페스트나 Helm 차트를 작성 및 수정한 경우, 로컬 터미널에 `k3d`나 `minikube` 도구가 있다면 **직접 `run_command`로 로컬 클러스터에 배포(`dry-run` 포함) 테스트**를 진행하여 오류가 없는지 사전 검증하십시오.
+- **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 통한 우아한 종료(Graceful Shutdown) 구성을 필수화하여 배포 중단(Downtime)을 방지하십시오.

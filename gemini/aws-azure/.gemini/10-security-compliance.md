@@ -19,9 +19,9 @@
 - **[MUST] Least Privilege (Scope):** 정책 작성 시 명확한 클라우드 리소스 레벨(AWS ARN 또는 Azure Scope)을 지정하여 최소 권한의 원칙을 달성하십시오.
 - **[MUST] Federation:** 다중 계정 접근을 위해 파편화된 IAM 계정을 막고 Microsoft Entra ID와 AWS IAM Identity Center 연동 SSO를 제안하십시오.
 
-## 4. 컨테이너 및 제로 트러스트 (Zero Trust)
-- **[MUST] Envelope Encryption:** K8s Secret은 평문 저장을 금지하고 AWS KMS, Azure Key Vault와 연동한 봉투 암호화를 필수 구성하십시오.
-- **[MUST] Zero Trust:** 클라우드 내부망이라도 무조건 신뢰하지 마십시오. K8s 아키텍처 설계 시 서비스 매시(Istio, Linkerd) 기반의 **mTLS(상호 TLS)** 통신 적용을 우선순위로 제안하십시오.
+## 4. 멀티 클라우드 제로 트러스트 (Zero Trust) 아키텍처
+- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 침해되었다고 가정(Assume Breach)하십시오. 멀티 클라우드 간 통신, 인스턴스 간 통신 시 NSG(Network Security Group) 및 Security Group을 통해 최소 권한의 통신 규칙을 구성하십시오.
+- **[MUST] Data in Transit:** 멀티 클라우드 환경의 통신 시나리오에서는 공용 인터넷 구간 통과 가능성이 높으므로, 반드시 엔드투엔드(E2E) TLS 암호화 적용을 강제하십시오.
 
 ## 5. 파이프라인 (CI/CD) 및 공급망 보안
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 클라우드 서비스 주체(SP)나 Access Key(장기 자격 증명)를 플랫폼 Secret에 저장하지 마십시오.
