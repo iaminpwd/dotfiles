@@ -84,7 +84,6 @@ function auto_symlink_gemini_rules() {
 
   local current_dir="$PWD"
   local target_md=""
-  local target_aiexclude=""
   local depth=0
   local max_depth=4
 
@@ -96,7 +95,6 @@ function auto_symlink_gemini_rules() {
     # 상위 폴더에서 GEMINI.md를 찾은 경우
     if [ -f "$current_dir/GEMINI.md" ]; then
       target_md="$current_dir/GEMINI.md"
-      [ -f "$current_dir/.aiexclude" ] && target_aiexclude="$current_dir/.aiexclude"
       break
     fi
   done
@@ -110,11 +108,6 @@ function auto_symlink_gemini_rules() {
     if [ ! -f ".gemini/00-global-rules.md" ]; then
       ln -s "$target_md" .gemini/00-global-rules.md
       echo "🤖 AI 룰북(GEMINI.md) 글로벌-로컬 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
-    fi
-    
-    if [ -n "$target_aiexclude" ] && [ ! -f ".aiexclude" ]; then
-      ln -s "$target_aiexclude" .aiexclude
-      echo "🛡️ AI 제외 규칙(.aiexclude) 글로벌-로컬 자동 상속 완료"
     fi
   fi
 }
