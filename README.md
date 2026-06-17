@@ -36,7 +36,7 @@ AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로�
 본 레포지토리의 AI 프롬프트 연동 시스템은 다음의 시간 순서로 완벽하게 자동화되어 작동합니다.
 
 1. **프롬프트 빌드 (`setup.sh`):** 설치 스크립트를 실행하면 `~/dotfiles/gemini/` 내부의 모듈화된 원본 프롬프트(00~40)들이 `GEMINI.md` 단일 파일로 병합됩니다.
-2. **워크스페이스 분리 및 글로벌 격리:** `setup.sh`가 통합 작업 공간(`~/workspace/aws`, `~/workspace/kubernetes`)을 생성하고, 안전하게 소스를 격리할 수 있도록 하위에 `src/` 폴더를 구성한 뒤 `GEMINI.md`를 심볼릭 링크합니다. 동시에 글로벌 `.gitignore`가 설정되어 보안선이 구축됩니다.
+2. **워크스페이스 분리 및 글로벌 격리:** `setup.sh`가 통합 작업 공간(`~/workspace/aws`, `~/workspace/k8s`)을 생성하고, 안전하게 소스를 격리할 수 있도록 하위에 `src/` 폴더를 구성한 뒤 `GEMINI.md`를 심볼릭 링크합니다. 동시에 글로벌 `.gitignore`가 설정되어 보안선이 구축됩니다.
 3. **레포지토리 진입 (Trigger):** 터미널에서 작업용 Git 레포지토리(예: `cd ~/workspace/aws/src/my-repo`)로 진입합니다.
 4. **Zsh 훅 자동 상속 (Auto-Symlink):** 
    - Zsh에 심어진 백그라운드 훅(`chpwd`)이 이를 감지하고 해당 레포지토리 내부에 `.gemini/00-global-rules.md` 링크를 0.1초 만에 자동 생성합니다.
@@ -112,7 +112,7 @@ exec zsh
 
 ### 1. `mise` & `pipx` 관리 도구
 - **IaC & 설정:** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`
-- **보안 & 규정 준수:** `trivy`, `conftest`, `cosign`, `checkov`, `trufflehog`
+- **보안 & 규정 준수:** `trivy`, `conftest`, `cosign`, `checkov`, `trufflehog`, `pre-commit`, `yamllint`
 - **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `helm`, `helm-diff`, `kube-linter`, `k3d`, `act`
 - **클라우드 CLI:** `awscli`, `azure-cli`
 
@@ -121,7 +121,7 @@ exec zsh
 - **Kubernetes:** `k` (kubectl), `kx` (kubectx), `kn` (kubens), `kgp`/`kgs`/`kga`/`kdp`, `klogs`, `kex`, `knet` (트러블슈팅 컨테이너)
 - **Docker & Helm:** `d` (docker), `dc` (docker-compose), `h` (helm)
 - **Git:** `git lg` (히스토리 그래프), `git amend` (커밋 덮어쓰기), `st/co/cb/br/ci/cm/df`
-- **시스템 편의성:** `src` (`source ~/.zshrc`), `ll` (`ls -alF`), `catcode` (인프라 코드 통째로 병합)
+- **시스템 편의성:** `src` (`source ~/.zshrc`), `ll` (`ls -alF`), `fd` (`fdfind`), `bat` (`batcat`), `c` (`code .`), `e` (`explorer.exe .`), `catcode` (인프라 코드 통째로 병합)
 
 ### 3. 로컬 시크릿 파일 (비밀번호 관리)
 API 키나 토큰을 절대 `.zshrc`에 적지 마세요! 설치가 끝나면 `~/.zshrc.local` 파일이 생성됩니다. 이 파일은 GitHub에 올라가지 않는 여러분만의 로컬 비밀 금고입니다.
