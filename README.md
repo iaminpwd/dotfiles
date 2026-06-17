@@ -19,15 +19,17 @@
 시스템 전역을 더럽히지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치되는 핵심 도구들입니다.
 
 ### 1. `mise` (버전 매니저) 관리 도구
-- **IaC (인프라 프로비저닝):** `terraform`, `ansible`, `terragrunt`, `tflint`
-- **보안 및 규정 준수:** `trivy` (컨테이너/IaC 취약점 스캐너), `conftest` (OPA 정책 검증)
-- **Kubernetes & 컨테이너:** `kubectl`, `kubectx`, `k9s`, `helm`, `docker-cli`
-- **클라우드 CLI:** `awscli`
+- **IaC (인프라 프로비저닝):** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`
+- **보안 및 규정 준수:** `trivy` (컨테이너/IaC 취약점 스캐너), `conftest` (OPA 정책 검증), `cosign` (이미지 서명)
+- **Kubernetes & 컨테이너:** `kubectl`, `kubectx`, `k9s`, `helm`, `docker-cli`, `kustomize`
+- **K8s 검증 및 문서화:** `kube-linter` (매니페스트 정적 분석), `helm-docs` (Helm Chart 문서화)
+- **클라우드 CLI:** `awscli`, `azure-cli`
 - **로컬 시뮬레이션 (Testing):** `k3d` (로컬 K8s 클러스터), `act` (로컬 GitHub Actions 실행기)
-- **런타임 언어:** `node`, `python`
+- **런타임 언어:** `node`, `python`, `go`
 
-### 2. `pipx` & 커스텀 바이너리 도구
+### 2. `pipx`, 셸 스크립트 및 플러그인 도구
 - **보안 스캐닝:** `checkov` (IaC 취약점 정적 분석), `trufflehog` (하드코딩된 시크릿 검출)
+- **K8s 배포 검증:** `helm-diff` (Helm 배포 전 리소스 편차(Drift) 확인 플러그인)
 - **Git Hook & 린팅:** `pre-commit`, `yamllint`
 
 ---
@@ -74,7 +76,7 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 
 이 레포지토리의 진정한 가치는 `gemini/` 폴더에 내장된 **AI 아키텍트 가이드라인**입니다. AI 에이전트는 이 룰북을 바탕으로 코드를 작성하고 "스스로 로컬에서 검증"합니다.
 
-> **💡 Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용하여 AI의 자율 주행 퀄리티와 문맥 일관성을 극한으로 끌어올립니다.
+> **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용하여 AI의 자율 주행 퀄리티와 문맥 일관성을 극한으로 끌어올립니다.
 
 - **`00-core.md` (자율 검증 강제):** 코드를 작성하면 AI가 무조건 터미널에서 `terraform validate`를 백그라운드로 돌려 무결성을 1차 교정합니다. 단, 전체 디렉토리 대상 `terraform fmt`는 금지하여 의도치 않은 파일 수정을 막습니다. (ClickOps 절대 금지)
 - **`10-iac-standard.md` (아키텍처 표준):** Terraform은 프로비저닝, Ansible은 OS 구성으로 엄격히 분리합니다. `ansible-playbook --syntax-check` 및 `conftest`를 통한 로컬 정책 검증을 수행합니다.
@@ -83,28 +85,36 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 - **`40-code-review.md` (자율 시뮬레이션 검증):** 핵심적인 프롬프트입니다. 머릿속으로만 시뮬레이션하지 않고, AI가 **직접 터미널을 제어하여 `tflint`, `checkov`, `trufflehog`, `terraform plan(Dry-run)`, `k3d(로컬 클러스터)`, `act(로컬 CI/CD)`를 실행**합니다. 에러 시 사용자에게 묻지 않고 혼자 로그를 읽어 수정(Self-Correction)한 뒤 완벽한 코드를 반환합니다.
 - **`50-incident-response.md` (SRE 장애 대응):** 사용자가 장애 로그를 던지면, 1단계로 서비스 복구를 위한 '임시 우회 조치(Mitigation)'를 최우선으로 제안합니다. 이후 2단계로 근본 원인(RCA)을 분석하고, 마지막에 항상 **Blameless Post-Mortem(사후 분석 양식)**을 작성하여 재발 방지책을 구조화합니다.
 
+### 신규: K8s 엔터프라이즈 마스터 가이드 (`gemini/k8s/`)
+인프라 코드를 넘어, 클라우드 네이티브의 꽃인 Kubernetes 전 생애주기를 AI가 관장하도록 8단계(00~70) 폭포수 아키텍처로 세팅되었습니다.
+- **00-core & 10-networking:** K8s 선언형 사고방식과 Ingress/Gateway API 표준화.
+- **20-storage & 30-cicd:** Stateful 파드 구성 전략, ArgoCD 기반 GitOps, `kube-linter`와 `helm-diff`를 활용한 배포 전 완벽한 편차(Drift) 및 정적 검증.
+- **40-observability & 50-autoscaling:** Prometheus/OTel 관측성, Karpenter 기반 혼합 인스턴스(Spot) 오토스케일링 및 SRE 장애 대응 자동화.
+- **60-security & 70-platform:** Cosign 이미지 서명, OPA Gatekeeper 제어, Crossplane 기반 사내 내부 개발자 플랫폼(IDP) 진화까지 가이드.
+
 ---
 
 ## 디렉토리 구조 (Folder Structure)
 
 ```text
 ~/dotfiles
+├── .gemini/         # Dotfiles 레포지토리 자체 관리를 위한 메타 AI 프롬프트 (00~40)
 ├── README.md        # 프로젝트 설명서 (본 문서)
 ├── setup.sh         # 전체 환경 자동 구성 스크립트
 ├── gemini/          # AI 에이전트(Gemini) 연동 자율 주행 가이드라인
 │   ├── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
 │   │   ├── .aiexclude
 │   │   └── .gemini/ # 전사적 장애 대응, 복원력 설계, FinOps, SRE 봇을 위한 아키텍처 프롬프트
-│   ├── aws/         # AWS 워크스페이스 환경
+│   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   ├── 00-core.md
-│   │   │   ├── 10-iac-standard.md
-│   │   │   ├── 20-security-compliance.md
-│   │   │   ├── 30-day2-operations.md
-│   │   │   ├── 40-code-review.md
-│   │   │   └── 50-incident-response.md
+│   │   │   └── 00-core.md ~ 80-finops-optimization.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
+│   ├── k8s/         # Kubernetes & Cloud Native 워크스페이스
+│   │   ├── .aiexclude
+│   │   ├── .gemini/
+│   │   │   └── 00-core.md ~ 70-platform-engineering-standard.md
+│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
 │   └── aws-azure/  # 멀티 클라우드(AWS+Azure) 워크스페이스
 │       └── ...
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
