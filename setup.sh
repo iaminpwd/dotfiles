@@ -74,6 +74,19 @@ curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scr
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
+echo "=> [dotfiles] 자체 메타 프롬프트 병합 진행 중..."
+DOTFILES_MERGED_MD="$DOTFILES_DIR/GEMINI.md"
+rm -f "$DOTFILES_MERGED_MD"
+if [ -d "$DOTFILES_DIR/.gemini" ]; then
+  for md_file in "$DOTFILES_DIR/.gemini/"*.md; do
+    [ -f "$md_file" ] || continue
+    echo "   Adding: $(basename "$md_file")"
+    cat "$md_file" >> "$DOTFILES_MERGED_MD"
+    echo -e "\n\n" >> "$DOTFILES_MERGED_MD"
+  done
+  echo "   ✅ [dotfiles] 메타 프롬프트 병합 완료"
+fi
+
 # gemini 폴더 경로 변수화
 GEMINI_BASE_DIR="$DOTFILES_DIR/gemini"
 

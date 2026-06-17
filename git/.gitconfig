@@ -24,8 +24,8 @@
     br = branch
     ci = commit
     cm = commit -m
-    amend = commit --amend --no-edit
     df = diff
+    amend = commit --amend --no-edit
     # 아주 예쁘고 직관적인 Git 커밋 히스토리 그래프 보기
     lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
 

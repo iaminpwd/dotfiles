@@ -44,3 +44,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# AI Context Files (Prevent AI rule pollution in remote repos)
+.gemini/
+.aiexclude

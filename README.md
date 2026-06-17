@@ -6,91 +6,70 @@
 
 ---
 
-## 핵심 철학 (Why this dotfiles?)
+## 핵심 기능 (Core Features)
 
-1. **보안 최우선 (Security First):** `terraform.tfstate`, `.env`, `.pem` 키가 깃허브에 유출되는 사고를 막기 위한 전역(Global) `.gitignore` 강제 적용 및 터미널 시크릿 타이핑 기록 방지.
-2. **도구의 격리 및 선언적 관리:** `apt` 패키지의 얽힘을 방지하기 위해 `mise`와 `pipx`를 활용하여 데브옵스 도구들의 버전을 선언적으로 관리.
-3. **AI 자율 주행 (Closed-Loop AI):** AI 에이전트가 코드를 짜고 끝나는 것이 아니라, 로컬에 설치된 `tflint`, `checkov`, `terraform plan`, `act`, `k3d` 등을 **스스로 백그라운드에서 실행해 보고(Dry-run) 에러를 스스로 고친 뒤 완벽한 코드를 반환**하도록 설계된 프롬프트 세트 내장.
+이 레포지토리의 진정한 가치는 단순 툴 설치가 아닌, 강력한 **"보안"**과 내장된 **"AI 아키텍트 가이드라인"**에 있습니다.
 
----
+### 1. Zero-Trust 보안 및 격리
+- **글로벌 `.gitignore` 강제 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 깃허브에 유출되는 사고를 시스템 전역에서 원천 차단합니다.
+- **도구의 격리:** 시스템 파이프라인 얽힘을 방지하기 위해 `mise`와 `pipx`를 활용하여 데브옵스 도구들을 샌드박스 형태로 격리하여 선언적으로 관리합니다.
+- **시크릿 기록 방지:** 터미널 히스토리 설정(`HIST_IGNORE_SPACE`)을 통해 비밀번호나 API 키가 터미널 히스토리에 남는 것을 방지합니다.
 
-## 포함된 데브옵스 도구 모음 (`mise` & `pipx`)
+### 2. AI 자율 주행 (Closed-Loop AI)
+AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로컬에서 검증" 하도록 설계된 룰북이 내장되어 있습니다. 머릿속으로만 시뮬레이션하지 않고, AI가 **직접 터미널을 제어하여 `tflint`, `checkov`, `trufflehog`, `terraform plan`, `k3d`, `act` 등을 백그라운드에서 실행해 보고 에러를 혼자 고친 뒤 완벽한 코드를 반환**합니다.
 
-시스템 전역을 더럽히지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치되는 핵심 도구들입니다.
+### 3. Shadow AI Architecture (프롬프트 상속 및 격리)
+로컬 개발 환경의 편의성과 팀 협업(Git)의 순수성을 완벽하게 분리하는 독자적인 아키텍처입니다.
+- **프롬프트 자동 상속:** 사용자가 어떤 레포지토리에 진입(`cd`)하든, 눈에 보이지 않게 해당 워크스페이스의 공통 AI 룰북(`GEMINI.md`)과 차단선(`.aiexclude`)을 심볼릭 링크로 꽂아줍니다.
+- **Git 커밋 완전 차단:** 자동 생성된 AI 컨텍스트 파일들은 전역 `.gitignore`에 의해 완벽하게 무시되어 원격 저장소나 팀원의 PC를 절대 오염시키지 않습니다 (Shadow AI).
 
-### 1. `mise` (버전 매니저) 관리 도구
-- **IaC (인프라 프로비저닝):** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`
-- **보안 및 규정 준수:** `trivy` (컨테이너/IaC 취약점 스캐너), `conftest` (OPA 정책 검증), `cosign` (이미지 서명)
-- **Kubernetes & 컨테이너:** `kubectl`, `kubectx`, `k9s`, `helm`, `docker-cli`, `kustomize`
-- **K8s 검증 및 문서화:** `kube-linter` (매니페스트 정적 분석), `helm-docs` (Helm Chart 문서화)
-- **클라우드 CLI:** `awscli`, `azure-cli`
-- **로컬 시뮬레이션 (Testing):** `k3d` (로컬 K8s 클러스터), `act` (로컬 GitHub Actions 실행기)
-- **런타임 언어:** `node`, `python`, `go`
+### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`gemini/` 폴더)
+> **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용합니다.
 
-### 2. `pipx`, 셸 스크립트 및 플러그인 도구
-- **보안 스캐닝:** `checkov` (IaC 취약점 정적 분석), `trufflehog` (하드코딩된 시크릿 검출)
-- **K8s 배포 검증:** `helm-diff` (Helm 배포 전 리소스 편차(Drift) 확인 플러그인)
-- **Git Hook & 린팅:** `pre-commit`, `yamllint`
+- **`00-core.md` ~ `50-incident-response.md`**: 인프라 표준, IAM PoLP 준수 전략, FinOps, SRE 장애 대응(Blameless Post-Mortem) 가이드 포함.
+- **K8s 마스터 가이드 (`k8s/`):** Ingress 표준화, GitOps 배포 전 편차(Drift) 검증, 혼합 인스턴스 오토스케일링 등 클라우드 네이티브 전 생애주기를 관장하는 폭포수 아키텍처.
 
 ---
 
-## 사용 가이드 및 단축어 (Aliases)
+## 작동 논리 및 아키텍처 (How it Works)
 
-작업 효율을 높여주는 필수 단축어와 유틸리티 설정입니다.
+본 레포지토리의 AI 프롬프트 연동 시스템은 다음의 시간 순서로 완벽하게 자동화되어 작동합니다.
 
-### 1. ZSH 주요 단축어 (`.zshrc`)
-- **Terraform:**
-  - `tf` (terraform), `tfi` (init), `tfp` (plan), `tfa` (apply), `tfd` (destroy)
-  - `tff` (`terraform fmt -recursive`): 코드 포맷 자동 정렬
-  - `tfv` (`terraform validate`): 문법 검사
-- **Kubernetes:**
-  - `k` (kubectl), `kx` (kubectx - 클러스터 전환), `kn` (kubens - 네임스페이스 전환)
-  - `kgp` (get pod), `kgs` (get svc), `kga` (get all)
-  - `kex` (`kubectl exec -i -t`): 파드 접속
-  - `klogs` (`kubectl logs -f`): 로그 실시간 추적
-  - `knet`: 트러블슈팅용 netshoot 컨테이너 즉시 실행
-- **Docker & Helm:** `d` (docker), `dc` (docker-compose), `h` (helm)
-- **AI 프롬프트용:** `catcode` (현재 폴더 하위의 모든 인프라 코드를 하나의 `all_code.txt`로 병합)
-- **시스템:** `src` (`source ~/.zshrc`), `ll` (`ls -alF`)
-
-### 2. Git 단축어 및 보안 (`.gitconfig`)
-- **보안 1순위 글로벌 `.gitignore`:** `terraform.tfstate`, `.env`, `.pem` 키 파일 시스템 전역 커밋 차단.
-- **단축어:**
-  - `git lg`: 직관적이고 아름다운 커밋 히스토리 그래프 출력.
-  - `git amend` (`commit --amend --no-edit`): 직전 커밋에 오타를 빠르게 덮어쓰기.
-  - `st` (status), `co` (checkout), `cb` (checkout -b), `br` (branch), `ci` (commit)
-
-### 3. 로컬 시크릿 파일 (비밀번호 관리)
-API 키나 토큰을 절대 `.zshrc`에 적지 마세요!
-설치가 끝나면 `~/.zshrc.local` 파일이 생성되어 있습니다. 이 파일은 GitHub에 올라가지 않는 여러분만의 로컬 비밀 금고입니다. 
-GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모두 `~/.zshrc.local` 안에 `export TOKEN="..."` 형태로 선언해 두시면 터미널 시작 시 자동으로 안전하게 로드됩니다. (단, AWS 인증은 `aws configure`나 `aws sso login`을 사용하는 것이 표준이므로 여기에 적지 마세요.)
-
-### 4. Vim 생산성 최적화 (`.vimrc`)
-- **시스템 클립보드 연동 (`set clipboard=unnamedplus`):** 터미널 밖의 크롬/슬랙과 양방향 복사/붙여넣기 완벽 지원.
-- **YAML 최적화:** 탭 간격 2칸 고정 (`set ts=2 sts=2 sw=2 expandtab`).
-- **가이드라인:** 80자 옅은 세로줄 표시 (`set colorcolumn=80`).
+1. **프롬프트 빌드 (`setup.sh`):** 설치 스크립트를 실행하면 `~/dotfiles/gemini/` 내부의 모듈화된 원본 프롬프트(00~40)들이 `GEMINI.md` 단일 파일로 병합됩니다.
+2. **워크스페이스 분리 및 글로벌 격리:** `setup.sh`가 홈 디렉토리(`~/aws`, `~/kubernetes`)에 별도의 격리된 작업 공간을 만들고 `GEMINI.md`를 심볼릭 링크합니다. 동시에 글로벌 `.gitignore`가 설정되어 보안선이 구축됩니다.
+3. **레포지토리 진입 (Trigger):** 터미널에서 작업용 Git 레포지토리(예: `cd ~/aws/my-repo`)로 진입합니다.
+4. **Zsh 훅 자동 상속 (Auto-Symlink):** 
+   - Zsh에 심어진 백그라운드 훅(`chpwd`)이 이를 감지하고 해당 레포지토리 내부에 `.gemini/00-global-rules.md` 링크를 0.1초 만에 자동 생성합니다.
+   - **주의사항:** 만약 `.zshrc`의 훅 코드를 처음 추가했거나 수정했다면, 열려있는 터미널에 `src` (`source ~/.zshrc`) 명령어를 입력하거나 새 터미널 창을 열어야 이 훅이 활성화됩니다!
+5. **루트 컨텍스트 이중 차단:** 최상단의 `.aiexclude` 설정 덕분에 AI 에이전트는 원본 폴더와 복제본 폴더를 중복으로 읽지 않고 오직 최적화된 빌드 파일(`GEMINI.md`) 하나만 깔끔하게 인식합니다.
 
 ---
 
-## AI 에이전트 연동 (Gemini Brain)
+## 설치 가이드 (Installation)
 
-이 레포지토리의 진정한 가치는 `gemini/` 폴더에 내장된 **AI 아키텍트 가이드라인**입니다. AI 에이전트는 이 룰북을 바탕으로 코드를 작성하고 "스스로 로컬에서 검증"합니다.
+초보자도 단 3번의 명령어로 환경을 구축할 수 있습니다.
 
-> **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용하여 AI의 자율 주행 퀄리티와 문맥 일관성을 극한으로 끌어올립니다.
+> [!WARNING]
+> **지원 OS**: Ubuntu / Debian 기반의 Linux (또는 Windows WSL2 Ubuntu 환경)
+> Windows WSL 사용 시, 저장소를 반드시 `/mnt/c/`가 아닌 리눅스 네이티브 홈 디렉토리(`~/`) 하위에 클론해야 권한 문제가 발생하지 않습니다.
 
-- **`00-core.md` (자율 검증 강제):** 코드를 작성하면 AI가 무조건 터미널에서 `terraform validate`를 백그라운드로 돌려 무결성을 1차 교정합니다. 단, 전체 디렉토리 대상 `terraform fmt`는 금지하여 의도치 않은 파일 수정을 막습니다. (ClickOps 절대 금지)
-- **`10-iac-standard.md` (아키텍처 표준):** Terraform은 프로비저닝, Ansible은 OS 구성으로 엄격히 분리합니다. `ansible-playbook --syntax-check` 및 `conftest`를 통한 로컬 정책 검증을 수행합니다.
-- **`20-security-compliance.md` (보안 및 권한):** IAM 최소 권한 원칙(PoLP) 준수, OIDC 기반 인증 설계, 그리고 터미널의 `trivy`를 호출하여 컨테이너/IaC 취약점을 스스로 스캔합니다.
-- **`30-day2-operations.md` (운영 및 FinOps):** GitOps 선언적 배포, 리소스 생성 전 비용 최적화(Cost Impact) 분석, 무중단 DB 마이그레이션(Expand & Contract) 전략을 수립합니다.
-- **`40-code-review.md` (자율 시뮬레이션 검증):** 핵심적인 프롬프트입니다. 머릿속으로만 시뮬레이션하지 않고, AI가 **직접 터미널을 제어하여 `tflint`, `checkov`, `trufflehog`, `terraform plan(Dry-run)`, `k3d(로컬 클러스터)`, `act(로컬 CI/CD)`를 실행**합니다. 에러 시 사용자에게 묻지 않고 혼자 로그를 읽어 수정(Self-Correction)한 뒤 완벽한 코드를 반환합니다.
-- **`50-incident-response.md` (SRE 장애 대응):** 사용자가 장애 로그를 던지면, 1단계로 서비스 복구를 위한 '임시 우회 조치(Mitigation)'를 최우선으로 제안합니다. 이후 2단계로 근본 원인(RCA)을 분석하고, 마지막에 항상 **Blameless Post-Mortem(사후 분석 양식)**을 작성하여 재발 방지책을 구조화합니다.
+### Step 1. 저장소 클론
+```bash
+git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+```
 
-### 신규: K8s 엔터프라이즈 마스터 가이드 (`gemini/k8s/`)
-인프라 코드를 넘어, 클라우드 네이티브의 꽃인 Kubernetes 전 생애주기를 AI가 관장하도록 8단계(00~70) 폭포수 아키텍처로 세팅되었습니다.
-- **00-core & 10-networking:** K8s 선언형 사고방식과 Ingress/Gateway API 표준화.
-- **20-storage & 30-cicd:** Stateful 파드 구성 전략, ArgoCD 기반 GitOps, `kube-linter`와 `helm-diff`를 활용한 배포 전 완벽한 편차(Drift) 및 정적 검증.
-- **40-observability & 50-autoscaling:** Prometheus/OTel 관측성, Karpenter 기반 혼합 인스턴스(Spot) 오토스케일링 및 SRE 장애 대응 자동화.
-- **60-security & 70-platform:** Cosign 이미지 서명, OPA Gatekeeper 제어, Crossplane 기반 사내 내부 개발자 플랫폼(IDP) 진화까지 가이드.
+### Step 2. 자동 설치 스크립트 실행
+```bash
+./setup.sh
+```
+설치 스크립트는 필수 패키지 설치(`apt`), 도구 격리 설치(`pipx`), 파일 백업 및 심볼릭 링크 연결(`stow`), 프롬프트 병합 등을 일괄 수행합니다.
+
+### Step 3. 터미널 재시작 및 훅 활성화
+```bash
+exec zsh
+# (또는 기존 터미널에서 `src` 입력)
+```
 
 ---
 
@@ -98,10 +77,12 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 
 ```text
 ~/dotfiles
+├── .aiexclude       # 루트 컨텍스트 중복 방지 (원본 .gemini 소스 대신 빌드된 GEMINI.md만 읽도록 AI 강제)
 ├── .gemini/         # Dotfiles 레포지토리 자체 관리를 위한 메타 AI 프롬프트 (00~40)
+├── GEMINI.md        # 병합된 Dotfiles 메인테이너 AI 프롬프트 지침 (setup.sh 자동 생성)
 ├── README.md        # 프로젝트 설명서 (본 문서)
 ├── setup.sh         # 전체 환경 자동 구성 스크립트
-├── gemini/          # AI 에이전트(Gemini) 연동 자율 주행 가이드라인
+├── gemini/          # AI 에이전트 연동 자율 주행 가이드라인 (각 워크스페이스별)
 │   ├── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
 │   │   ├── .aiexclude
 │   │   └── .gemini/ # 전사적 장애 대응, 복원력 설계, FinOps, SRE 봇을 위한 아키텍처 프롬프트
@@ -125,41 +106,33 @@ GitHub Token, OpenAI API Key, 테라폼 민감 변수(`TF_VAR_xxx`) 등은 모�
 
 ---
 
-## 설치 가이드 (Installation)
+## 포함된 데브옵스 도구 및 단축어 (Tools & Aliases)
 
-초보자도 단 3번의 명령어로 환경을 구축할 수 있습니다.
+시스템 전역을 더럽히지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치되는 핵심 도구들입니다.
 
-> [!WARNING]
-> **지원 OS**: Ubuntu / Debian 기반의 Linux (또는 Windows WSL2 Ubuntu 환경)
-> Windows WSL 사용 시, 저장소를 반드시 `/mnt/c/`가 아닌 리눅스 네이티브 홈 디렉토리(`~/`) 하위에 클론해야 권한 문제가 발생하지 않습니다.
+### 1. `mise` & `pipx` 관리 도구
+- **IaC & 설정:** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`
+- **보안 & 규정 준수:** `trivy`, `conftest`, `cosign`, `checkov`, `trufflehog`
+- **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `helm`, `helm-diff`, `kube-linter`, `k3d`, `act`
+- **클라우드 CLI:** `awscli`, `azure-cli`
 
-### Step 1. 저장소 클론
-```bash
-git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-```
+### 2. 주요 단축어 (`.zshrc` & `.gitconfig`)
+- **Terraform:** `tf` (terraform), `tfi` (init), `tfp` (plan), `tfv` (validate), `tff` (fmt -recursive)
+- **Kubernetes:** `k` (kubectl), `kx` (kubectx), `kn` (kubens), `kgp`/`kgs`/`kga`/`kdp`, `klogs`, `kex`, `knet` (트러블슈팅 컨테이너)
+- **Docker & Helm:** `d` (docker), `dc` (docker-compose), `h` (helm)
+- **Git:** `git lg` (히스토리 그래프), `git amend` (커밋 덮어쓰기), `st/co/cb/br/ci/cm/df`
+- **시스템 편의성:** `src` (`source ~/.zshrc`), `ll` (`ls -alF`), `catcode` (인프라 코드 통째로 병합)
 
-### Step 2. 자동 설치 스크립트 실행
-```bash
-./setup.sh
-```
-설치 스크립트는 다음 작업을 자동으로 수행합니다:
-1. `apt` 필수 패키지 설치 (`zsh`, `curl`, `pipx`, `stow` 등)
-2. `pipx`와 `curl`을 이용한 보안 도구(`checkov`, `trufflehog` 등) 격리 설치
-3. 기존 홈 디렉토리의 설정 파일들(`.zshrc` 등)을 `.backup`으로 안전하게 백업
-4. `stow`를 이용해 dotfiles의 설정들을 홈 디렉토리에 심볼릭 링크로 연결
-5. `mise` 패키지 매니저를 설치하고 `.mise.toml`에 명시된 테라폼, K8s 툴들을 한 번에 다운로드
-6. AI 프롬프트(`.gemini`)를 결합하여 워크스페이스를 생성
-7. **(사용자 입력)** Git 커밋에 사용할 이름(Name)과 이메일(Email)을 묻고, 안전한 로컬 파일에 분리 저장
+### 3. 로컬 시크릿 파일 (비밀번호 관리)
+API 키나 토큰을 절대 `.zshrc`에 적지 마세요! 설치가 끝나면 `~/.zshrc.local` 파일이 생성됩니다. 이 파일은 GitHub에 올라가지 않는 여러분만의 로컬 비밀 금고입니다.
 
-### Step 3. 쉘 재시작 및 적용
-```bash
-exec zsh
-```
+### 4. Vim 생산성 최적화 (`.vimrc`)
+- **클립보드 연동:** `set clipboard=unnamedplus` (크롬/슬랙과 양방향 복사)
+- **YAML 최적화:** 탭 간격 2칸 고정
 
 ---
 
-## 커스터마이징 및 유지보수
+## 커스터마이징 (Customization)
 
 본인만의 환경으로 확장하고 싶다면 아래를 참고하세요.
 

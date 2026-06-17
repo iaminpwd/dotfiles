@@ -35,11 +35,12 @@ fi
 alias k='kubectl'
 alias kx='kubectx'
 alias kn='kubens'
-alias kgp='kubectl get pod'
+alias kgp='kubectl get pods'
 alias kgs='kubectl get svc'
 alias kga='kubectl get all'
-alias kex='kubectl exec -i -t'
+alias kdp='kubectl describe pod'
 alias klogs='kubectl logs -f'
+alias kex='kubectl exec -i -t'
 alias knet='kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- zsh'
 
 # 2.5. Docker & Helm 관련
@@ -53,8 +54,6 @@ alias tfi='terraform init'
 alias tff='terraform fmt -recursive'
 alias tfv='terraform validate'
 alias tfp='terraform plan'
-alias tfa='terraform apply'
-alias tfd='terraform destroy'
 
 # 4. 도구 환경 활성화 (Mise)
 eval "$(~/.local/bin/mise activate zsh)"
@@ -71,3 +70,30 @@ alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
 alias src='source ~/.zshrc'
+
+# =============================================================================
+# 🤖 AI 프롬프트 자동 상속 훅 (Auto-Symlink)
+# =============================================================================
+# ~/aws, ~/kubernetes 등 부모 폴더에 GEMINI.md가 존재하는 상태에서,
+# 하위의 Git 레포지토리 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
+function auto_symlink_gemini_rules() {
+  # 1. 상위(부모) 폴더에 GEMINI.md가 존재하고, 현재 폴더가 Git 레포지토리인지 확인
+  if [ -f "../GEMINI.md" ] && [ -d ".git" ]; then
+    # 2. .gemini 폴더가 없으면 생성
+    if [ ! -d ".gemini" ]; then
+      mkdir -p .gemini
+    fi
+    # 3. 글로벌 룰북 심볼릭 링크가 없으면 즉시 생성
+    if [ ! -f ".gemini/00-global-rules.md" ]; then
+      ln -s ../../GEMINI.md .gemini/00-global-rules.md
+      echo "🤖 AI 룰북(GEMINI.md) 글로벌-로컬 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
+    fi
+    # 4. 글로벌 .aiexclude 파일이 부모 폴더에 존재하고, 로컬에 없다면 심볼릭 링크 생성
+    if [ -f "../.aiexclude" ] && [ ! -f ".aiexclude" ]; then
+      ln -s ../.aiexclude .aiexclude
+      echo "🛡️ AI 제외 규칙(.aiexclude) 글로벌-로컬 자동 상속 완료"
+    fi
+  fi
+}
+# 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
+add-zsh-hook chpwd auto_symlink_gemini_rules
