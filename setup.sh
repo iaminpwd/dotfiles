@@ -117,8 +117,8 @@ for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
     done
   fi
 
-  # 작업 공간(Workspace) 동적 할당 및 생성 (예: ~/aws, ~/kubernetes)
-  WORKSPACE_DIR="$HOME/$ENV_NAME"
+  # 단일 워크스페이스(Workspace) 동적 할당 및 생성 (예: ~/workspace/aws)
+  WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
   mkdir -p "$WORKSPACE_DIR/src"
 
   # 심볼릭 링크 동적 생성 (파일이 실제로 존재할 때만 생성)

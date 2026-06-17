@@ -77,20 +77,43 @@ alias src='source ~/.zshrc'
 # ~/aws, ~/kubernetes 등 부모 폴더에 GEMINI.md가 존재하는 상태에서,
 # 하위의 Git 레포지토리 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
 function auto_symlink_gemini_rules() {
-  # 1. 상위(부모) 폴더에 GEMINI.md가 존재하고, 현재 폴더가 Git 레포지토리인지 확인
-  if [ -f "../GEMINI.md" ] && [ -d ".git" ]; then
-    # 2. .gemini 폴더가 없으면 생성
+  # 1. 현재 폴더가 Git 레포지토리 루트인지 먼저 확인
+  if [ ! -d ".git" ]; then
+    return
+  fi
+
+  local current_dir="$PWD"
+  local target_md=""
+  local target_aiexclude=""
+  local depth=0
+  local max_depth=4
+
+  # 2. 홈 디렉토리를 만나거나 최대 4단계 위로 올라갈 때까지 상위 폴더 역추적
+  while [ "$current_dir" != "/" ] && [ "$current_dir" != "$HOME" ] && [ $depth -lt $max_depth ]; do
+    current_dir=$(dirname "$current_dir")
+    depth=$((depth + 1))
+    
+    # 상위 폴더에서 GEMINI.md를 찾은 경우
+    if [ -f "$current_dir/GEMINI.md" ]; then
+      target_md="$current_dir/GEMINI.md"
+      [ -f "$current_dir/.aiexclude" ] && target_aiexclude="$current_dir/.aiexclude"
+      break
+    fi
+  done
+
+  # 3. 타겟을 찾았을 때만 심볼릭 링크(절대 경로 기반) 생성 로직 수행
+  if [ -n "$target_md" ]; then
     if [ ! -d ".gemini" ]; then
       mkdir -p .gemini
     fi
-    # 3. 글로벌 룰북 심볼릭 링크가 없으면 즉시 생성
+    
     if [ ! -f ".gemini/00-global-rules.md" ]; then
-      ln -s ../../GEMINI.md .gemini/00-global-rules.md
+      ln -s "$target_md" .gemini/00-global-rules.md
       echo "🤖 AI 룰북(GEMINI.md) 글로벌-로컬 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
     fi
-    # 4. 글로벌 .aiexclude 파일이 부모 폴더에 존재하고, 로컬에 없다면 심볼릭 링크 생성
-    if [ -f "../.aiexclude" ] && [ ! -f ".aiexclude" ]; then
-      ln -s ../.aiexclude .aiexclude
+    
+    if [ -n "$target_aiexclude" ] && [ ! -f ".aiexclude" ]; then
+      ln -s "$target_aiexclude" .aiexclude
       echo "🛡️ AI 제외 규칙(.aiexclude) 글로벌-로컬 자동 상속 완료"
     fi
   fi
