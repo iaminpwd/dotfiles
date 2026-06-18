@@ -26,8 +26,16 @@ AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로�
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`gemini/` 폴더)
 > **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용합니다.
 
-- **`00-core.md` ~ `50-incident-response.md`**: 인프라 표준, IAM PoLP 준수 전략, FinOps, SRE 장애 대응(Blameless Post-Mortem) 가이드 포함.
-- **K8s 마스터 가이드 (`k8s/`):** Ingress 표준화, GitOps 배포 전 편차(Drift) 검증, 혼합 인스턴스 오토스케일링 등 클라우드 네이티브 전 생애주기를 관장하는 폭포수 아키텍처.
+- **고급 프롬프트 엔지니어링 (Advanced Prompt Architecture) 적용:**
+  - **XML 캡슐화 (Domain Isolation):** `aws`, `k8s` 등 각 도메인 규칙이 섞이는 할루시네이션(Bleeding)을 막기 위해 모든 마크다운을 `<aws_core_guidelines>` 등의 고유 XML 태그로 캡슐화했습니다.
+  - **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령어 실행 전이나 장애 원인 분석 시, 즉시 행동하지 않고 `<thinking>` 태그 내에서 3-Why 기법과 파급 효과를 분석하도록 설계되었습니다.
+  - **원칙 기반 퓨샷 프롬프팅 (Principle-Driven Few-Shot):** 각 워크스페이스의 마지막 모듈(`90-few-shot-examples.md` 등)에 Bad/Good 예시를 주입하여, 추상적인 규칙이 실제 터미널 도구 명령(`run_command`)으로 완벽하게 교정(Self-Correction)되도록 보장합니다.
+
+- **워크스페이스별 특화 모듈:**
+  - **AWS (`aws/`):** IAM PoLP, Serverless 아키텍처, FinOps 등 AWS 전 생애주기 폭포수 아키텍처 (`00` ~ `90`)
+  - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`00` ~ `80`)
+  - **AIOps (`aiops/`):** Blameless Post-Mortem, SRE 에러 분석 워크플로우, SLI/SLO 지표 기반 진단 (`00` ~ `60`)
+  - **Multi-Cloud (`aws-azure/`):** 하이브리드 네트워크 보안 및 워크로드 자격 증명 통합 아키텍처 (`00` ~ `90`)
 
 ---
 
@@ -105,14 +113,18 @@ exec zsh
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   └── 00-core.md ~ 80-finops-optimization.md
+│   │   │   └── 00-core.md ~ 90-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
 │   ├── k8s/         # Kubernetes & Cloud Native 워크스페이스
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   └── 00-core.md ~ 70-platform-engineering-standard.md
+│   │   │   └── 00-core.md ~ 80-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
 │   └── aws-azure/  # 멀티 클라우드(AWS+Azure) 워크스페이스
+│       ├── .aiexclude
+│       ├── .gemini/
+│       │   └── 00-core.md ~ 90-few-shot-examples.md
+│       └── GEMINI.md
 │       └── ...
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)

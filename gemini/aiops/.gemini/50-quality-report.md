@@ -1,3 +1,4 @@
+<aiops_quality_report>
 # DevSecOps 통합 및 Policy-as-Code 컴플라이언스
 
 ## 1. 보안 규정 준수 (Shift-Left Security)
@@ -8,4 +9,5 @@
 
 ## 2. 사후 분석 (Post-Mortem) 자동화
 - **[MUST] Automated Timeline Extraction:** 장애(Incident) 종료 시, AI는 CloudWatch Logs, Slack 커뮤니케이션 히스토리, 변경 관리(Git Commit) 로그를 종합 분석하여 시간대별 사건 전개(Timeline)를 자동 추출해야 합니다.
-- **[MUST] Blameless RCA Generation:** 추출된 타임라인을 바탕으로, 사람의 실수가 아닌 시스템적 예방책(Systemic Remediation)에 초점을 맞춘 '비난 없는 근본 원인 분석 보고서(Blameless RCA Report)' 마크다운을 자동 생성하는 엔드투엔드 파이프라인을 설계하십시오.
+- **[MUST] Blameless RCA Generation:** 추출된 타임라인을 바탕으로, `<thinking>` 태그 안에서 시스템적 약점을 추론(Systemic Remediation)한 후, 비난 없는 근본 원인 분석 보고서(Blameless RCA Report)를 반드시 `post-mortem-report.md` 전용 산출물 파일로 자동 생성하는 엔드투엔드 파이프라인을 설계하십시오.
+</aiops_quality_report>

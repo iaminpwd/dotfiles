@@ -1,3 +1,4 @@
+<k8s_storage_stateful_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 스토리지, 상태 보존(Stateful) 워크로드 및 DR 표준
 
 ## 1. Storage 및 볼륨 프로비저닝 (Storage Provisioning)
@@ -14,3 +15,4 @@
 - **[MUST] Velero for Cluster DR:** K8s 클러스터 전면 장애 시 워크로드를 다른 클러스터로 이전하거나 복원하기 위해, K8s 리소스(YAML 상태)와 PV 스냅샷을 주기적으로 오브젝트 스토리지(S3 등)에 백업하는 **Velero** 솔루션 구성을 재해 복구 표준으로 제안하십시오.
 - **[MUST] Application-Level Backup:** 영구 볼륨 스냅샷만으로는 데이터베이스의 메모리 상태나 트랜잭션 정합성(Consistency)을 보장할 수 없습니다. 단순히 Velero 스냅샷을 제안하는 것을 넘어, 데이터베이스 수준의 덤프(pg_dump 등)나 트랜잭션 로그 백업 아키텍처를 병행 제안하십시오.
 - **[MUST] Ephemeral Storage Limits:** 임시 데이터 처리를 위해 파드의 `emptyDir`을 사용할 때, 무한정 데이터를 쌓아 워커 노드의 디스크 슬래시(`/`) 공간을 고갈(Disk Pressure)시키는 것을 막기 위해 `limits.ephemeral-storage`를 필수로 지정하도록 강제하십시오.
+</k8s_storage_stateful_standard>

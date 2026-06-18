@@ -1,3 +1,4 @@
+<aws_serverless_standards>
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
 ## 1. Serverless 설계 원칙
@@ -12,3 +13,6 @@
 
 ## 3. 배포 및 패키징
 - **[PREFER] Container Image:** 배포 패키징 시 종속성(Dependencies) 용량 초과 문제를 방지하고 로컬 테스트 용이성을 확보하기 위해, Zip 파일 방식보다 **컨테이너 이미지(Container Image) 배포** 방식을 우선 고려하십시오.
+- **[MUST] SAM Local Testing (CLI):** AWS SAM(Serverless Application Model) 기반의 인프라 코드 작성 시 단순 멘탈 시뮬레이션에 의존하지 말고, `run_command`로 `sam validate`를 실행하여 템플릿 문법을 사전 검증하십시오.
+- **[Trigger: After Lambda Code Edit] Local Invoke Trigger:** 람다(Lambda) 함수 코드 변경 시 실제 클라우드에 배포하기 전에 `sam local invoke` 또는 `sam local start-api`를 사용하여 로컬 환경에서 함수 동작을 시뮬레이션하고 에러를 확인하십시오.
+</aws_serverless_standards>

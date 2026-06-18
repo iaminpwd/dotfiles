@@ -1,3 +1,4 @@
+<k8s_cicd_gitops_standard>
 # 컨텍스트 모듈: Enterprise GitOps 및 CI/CD 파이프라인 표준
 
 ## 1. 아키텍처 및 패러다임 (Architecture & Paradigm)
@@ -14,9 +15,11 @@
 ## 3. 지속적 배포 (Continuous Deployment) & GitOps (ArgoCD)
 - **[MUST] Declarative GitOps:** 모든 클러스터의 상태(State)는 Git에 저장된 매니페스트와 100% 일치해야 합니다. ArgoCD를 활용해 Git 저장소를 Single Source of Truth로 삼고 동기화를 수행하십시오.
 - **[MUST] App of Apps / ApplicationSet Pattern:** 수십 개의 마이크로서비스 배포 시 `App of Apps` 패턴이나 `ApplicationSet`을 활용하여 다수 클러스터 및 환경 배포를 자동화하는 구조를 제안하십시오.
-- **[Trigger: Before K8s Apply] Explicit Drift Check (AI Rule):** 파급력이 큰 변경 사항을 로컬 터미널에서 수동 배포(`kubectl apply` 또는 `helm upgrade`)하기 전에는, 즉시 실행하지 말고 반드시 `kubectl diff -f <file>` 또는 `helm diff upgrade`를 사용하여 기존 클러스터 상태와 변경될 상태 간의 **Drift(편차)**를 분석하고 사용자에게 시각적으로 제시하여 안전성을 검증받으십시오.
+- **[Trigger: Before K8s Apply] Explicit Drift Check (AI Rule):** 파급력이 큰 변경 사항을 로컬 터미널에서 수동 배포(`kubectl apply` 또는 `helm upgrade`)하기 전에는 즉시 실행하지 말고 반드시 `kubectl diff -f <file>` 또는 `helm diff upgrade`를 사용하여 기존 클러스터 상태와 변경될 상태 간의 **Drift(편차)**를 분석하고, `<thinking>` 태그 내에서 서비스 영향을 평가한 후 사용자에게 시각적으로 제시하여 안전성을 검증받으십시오.
+- **[Trigger: CI/CD Deployment Completion] Deployment Report:** ArgoCD 동기화나 Helm 배포 등 CI/CD 파이프라인 적용이 완료된 직후, 상태 변경 내역과 파드 정상 기동 여부를 `k8s-deployment-report.md` 전용 산출물 파일에 문서화하십시오.
 
 ## 4. 점진적 배포 및 롤백 (Progressive Delivery)
 - **[MUST] Zero-Downtime Deployment:** K8s 기본 `Deployment`의 RollingUpdate 시 발생하는 미세한 커넥션 드롭을 방지하기 위해 `readinessProbe`와 결합된 안전한 롤아웃 전략을 구성하십시오.
 - **[MUST] Canary & Blue/Green (Argo Rollouts):** 비즈니스 크리티컬 서비스 배포 시, 전체 사용자 동시 배포를 지양하고 Argo Rollouts 또는 Istio와 결합하여 특정 퍼센트(%)의 트래픽만 신규 버전으로 흘려보내는 Canary 배포를 제안하십시오.
 - **[MUST] Automated Rollback:** 새로운 버전 배포 후 메트릭(에러율 증가 등)을 분석하여 임계치를 초과할 경우 자동으로 롤백되는 AnalysisTemplate 구성을 제안하십시오.
+</k8s_cicd_gitops_standard>

@@ -1,3 +1,4 @@
+<aws_azure_security_compliance>
 # 컨텍스트 모듈: 보안 및 권한 컴플라이언스 가이드
 
 ## 1. 크로스 클라우드 자격 증명 및 시크릿 관리
@@ -27,3 +28,5 @@
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 클라우드 서비스 주체(SP)나 Access Key(장기 자격 증명)를 플랫폼 Secret에 저장하지 마십시오.
 - **[MUST] OIDC:** 파이프라인 인증 시 반드시 OIDC(OpenID Connect) 기반의 단기 자격 증명 획득 아키텍처를 강제하십시오.
 - **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증**하십시오.
+- **[Trigger: Security Scan Completion] Security Audit Report:** 스캔 완료 후 단순히 채팅창에 결과를 출력하지 말고, 반드시 `security-audit-report.md` 파일에 취약점 목록과 완화 조치(Mitigation)를 표 형태로 요약하십시오.
+</aws_azure_security_compliance>

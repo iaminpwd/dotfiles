@@ -1,3 +1,4 @@
+<aiops_agent_logic>
 # AI 에이전트 설계 및 RAG / Guardrails 패턴
 
 ## 1. LLM 워크로드 및 RAG(Retrieval-Augmented Generation) 연동
@@ -13,3 +14,4 @@
   - `[Incident Summary]`: 알람/장애 요약
   - `[Root Cause Hypothesis]`: 파악된 근본 원인 가설
   - `[Manual Action Required]`: 엔지니어가 수동으로 진행해야 할 즉각적 조치
+</aiops_agent_logic>

@@ -1,3 +1,4 @@
+<aws_iac_standards>
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
 ## 1. 공통 원칙 (Provisioning & Configuration)
@@ -5,6 +6,7 @@
 - **[NEVER] Provisioner:** Terraform 내장 프로비저너(`local-exec`, `remote-exec`) 사용을 멱등성 훼손 사유로 엄격히 금지하십시오.
 
 ## 2. Terraform 엔지니어링 표준
+- **[MUST] Plan Analysis CoT (AI Rule):** `terraform plan` 결과를 리뷰할 때, 결과를 기계적으로 읽지 말고 반드시 `<thinking>` 태그 내에서 파괴적 변경(Destroy/Replace)이나 State Drift의 근본 원인을 먼저 분석하십시오.
 - **[PREFER] TGW:** 1:1 VPC Peering 복잡성을 피하고 AWS Transit Gateway(TGW) 기반의 중앙 집중형 라우팅을 제안하십시오.
 - **[MUST] State Management:** 로컬 State 저장을 절대 금지하며, AWS S3 Backend + DynamoDB State Locking을 필수 구성하십시오.
 - **[MUST] Multi-Env (Terragrunt):** 단순 `tfvars`나 Workspace 하드코딩을 지양하고, **Terragrunt**를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입(Variable Injection) 아키텍처를 적용하십시오.
@@ -16,6 +18,7 @@
 - **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 로컬에 `terraform-docs` 도구가 있다면 `run_command`를 통해 README.md를 자동 생성하여 문서화를 강제하십시오.
 - **[Trigger: Before Terraform Apply] Explicit Drift Check:** 파괴적 명령어를 실행하기 전, 반드시 `terraform plan`을 선행하고 그 결과를 분석하여 **의도치 않은 리소스 삭제(Destroy)나 교체(Replace)**가 발생하는지 실제 출력값 기반으로 검증(Drift Check)하십시오.
 - **[MUST] SG Lazy Deletion Prevention:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion)로 인한 Terraform 무한 대기(Deadlock)를 방지하기 위해 반드시 `name` 대신 `name_prefix = "..."`를 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
+- **[Trigger: Terraform Apply Completion] IaC Deployment Summary:** Terraform 적용(Apply)이 성공적으로 완료된 직후, `iac-deployment-summary.md` 산출물 파일에 추가/변경/삭제된 리소스 목록(Drift)과 `infracost` 기준 예상 비용 증감 내역을 문서화하십시오.
 
 ## 3. Ansible 엔지니어링 표준
 - **[MUST] Idempotency:** `shell`이나 `command` 모듈 대신 `yum`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하십시오.
@@ -29,3 +32,4 @@
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 로컬에 `conftest` 도구가 있다면 **직접 터미널 명령어를 실행하여 작성한 코드가 사내 규정(Policy)을 위반하지 않는지 사전 검증(Pre-flight)**하십시오.
+</aws_iac_standards>

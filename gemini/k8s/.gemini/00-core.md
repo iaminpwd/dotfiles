@@ -1,3 +1,4 @@
+<k8s_core>
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -16,7 +17,7 @@
 - **[MUST] High Availability Scheduling:** 노드 장애나 AZ(가용 영역) 장애에 대비하기 위해, 단일 노드나 단일 AZ에 파드가 집중되지 않도록 `topologySpreadConstraints` (maxSkew: 1, topologyKey: topology.kubernetes.io/zone) 및 `podAntiAffinity` 구성을 기본으로 포함하십시오.
 - **[MUST] Graceful Shutdown & Liveness/Readiness:** 서비스 무중단 배포를 위해 `readinessProbe`와 `livenessProbe`를 분리하여 설정하고, 파드 종료 시 트래픽 유실을 막기 위한 `preStop` 훅 (예: `sleep 5`를 통한 엔드포인트 전파 지연 보완) 및 애플리케이션 레벨의 SIGTERM 처리를 강제하십시오.
 
-## 4. 시크릿 관리 및 트러블슈팅 (Secrets & Day 2)
+## 4. 시크릿 관리 및 컨테이너 디버깅 (Secrets & Debugging)
 - **[NEVER] Raw Kubernetes Secrets:** Kubernetes 기본 Secret은 Base64 인코딩 상태로 etcd에 저장되므로 보안에 취약합니다. 평문 YAML을 통한 Secret 생성을 금지하십시오.
 - **[MUST] External Secrets Operator (ESO):** AWS Secrets Manager, HashiCorp Vault, Azure Key Vault 등의 외부 키 관리 시스템(KMS)과 K8s를 동기화하는 External Secrets Operator 패턴을 반드시 제안하십시오.
 - **[PREFER] Ephemeral Debugging:** 운영 환경 파드에서 문제가 발생했을 때 컨테이너 내부에 직접 `exec`로 접속해 디버깅 툴을 설치하는 것을 엄격히 금지합니다. 대신 `kubectl debug` 명령어를 활용하여 진단 도구가 포함된 임시 컨테이너(Ephemeral Container)를 붙여서(Attach) 디버깅하는 최신 기법을 가이드하십시오.
@@ -27,3 +28,7 @@
 - **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:** `kubectl delete namespace`, `helm uninstall`, `kubectl drain` 등 클러스터에 파급 범위(Blast Radius)가 큰 파괴적인 명령어를 터미널에서 실행하기 전에는 **반드시 사용자에게 명확한 경고(Warning) 메시지를 제공하고 사전 승인**을 받으십시오.
 - **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):** `kubectl apply` 나 `helm upgrade` 실행 직후 사용자에게 묻지 말고 즉시 백그라운드에서 `kubectl get pods` 또는 `kubectl rollout status`를 실행하여 정상 배포 여부를 확인하십시오. CrashLoopBackOff 등 에러 발생 시 스스로 `kubectl logs`를 분석하여 코드를 픽스하고 재시도(최대 3회) 하십시오.
 - **[Trigger: Validation Failed 3 times] Fail-Fast & Halt:** 자가 치유 시도 후에도 K8s 리소스가 정상 상태(Running)에 도달하지 못했다면 강제 진행을 멈추고(Halt), 문제 상황(`[Drift/State Context]`)과 필요한 수동 조치(`[Required Action]`)를 정리하여 사용자 개입을 요청하십시오.
+- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
+  - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
+  - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+</k8s_core>

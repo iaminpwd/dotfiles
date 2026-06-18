@@ -1,3 +1,4 @@
+<aws_azure_day2_operations>
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
@@ -14,5 +15,6 @@
 - **[PREFER] Chaos Engineering:** 서비스 복원력 검증을 위해 Azure Chaos Studio 및 AWS FIS를 활용한 크로스 클라우드 카오스 엔지니어링 도입을 고려하십시오.
 
 ## 4. 상태 저장소(DB) 무중단 마이그레이션
-- **[Trigger: DB Schema Modification Request] Zero-Downtime DB:** 데이터베이스 스키마 변경 요청 시 서버 다운타임이 발생하는 단순 쿼리 제안을 절대 금지하십시오. 무중단 스키마 마이그레이션 전략을 함께 제시하십시오.
+- **[Trigger: DB Schema Modification Request] Zero-Downtime DB:** 데이터베이스 스키마 변경 요청 시 서버 다운타임이 발생하는 단순 쿼리 제안을 절대 금지하십시오. 무중단 스키마 마이그레이션 전략을 반드시 `db-migration-plan.md` 전용 산출물로 작성하여 함께 제시하십시오.
 - **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
+</aws_azure_day2_operations>

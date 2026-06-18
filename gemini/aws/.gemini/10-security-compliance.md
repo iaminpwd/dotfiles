@@ -1,3 +1,4 @@
+<aws_security_compliance>
 # 컨텍스트 모듈: 보안 및 권한 컴플라이언스 가이드
 
 ## 1. 자격 증명 (Secrets) 관리
@@ -27,3 +28,5 @@
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 AWS Access Key(장기 자격 증명)를 Secret에 저장하지 마십시오.
 - **[MUST] OIDC:** 파이프라인 인증 시 반드시 OIDC(OpenID Connect) 기반의 단기 자격 증명 획득 아키텍처를 강제하십시오.
 - **[Trigger: Pipeline Design / Dockerfile Edit] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증하십시오.
+- **[Trigger: Security Scan Completion] Security Audit Report:** 인프라 취약점 또는 컨테이너 스캔이 완료되면, 반드시 `security-audit-report.md` 전용 산출물 경로에 스캔 결과와 완화 조치(Mitigation)를 Markdown 테이블 형태로 문서화하십시오.
+</aws_security_compliance>

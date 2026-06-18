@@ -1,3 +1,4 @@
+<k8s_observability_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 관측성(Observability) 및 SRE 표준
 
 ## 1. 관측성 아키텍처 및 철학
@@ -33,3 +34,4 @@
   - **Resolution:** [취한 액션]
   - **Action Items:** [개선점 최소 2가지]
   ```
+</k8s_observability_standard>

@@ -1,3 +1,4 @@
+<aws_azure_code_review>
 # 컨텍스트 모듈: 코드 품질 및 린팅(Linting) 리뷰 기준
 
 ## 1. 멘탈 시뮬레이션(Mental Simulation) 기반 린팅
@@ -11,7 +12,7 @@
 - **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 비정상 종료 시 임시 파일 등을 정리하는 `trap` 방어 로직을 필수적으로 구현하십시오.
 
 ## 3. 에러 루트 분석 및 답변 구조화
-- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 수정된 코드만 던지지 말고 다음 순서로 답변하십시오.
+- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 채팅창에 코드만 던지지 말고, **반드시 `code-review-report.md` 전용 산출물 파일에 다음 순서로 분석 결과를 문서화**하십시오.
   1. 발생 원인 분석
   2. 논리적 근거
   3. 단계별 해결책 및 수정 코드
@@ -22,3 +23,4 @@
 - **[MUST] Dry-run Test:** 테라폼 코드를 작성한 경우, 무거운 로컬 서버를 띄우는 대신 **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.
 - **[MUST] CI/CD Local Test:** GitHub Actions 파이프라인이나 컨테이너(Dockerfile) 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 실행하여 동작을 사전 검증**하십시오.
 - **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하십시오.
+</aws_azure_code_review>

@@ -1,3 +1,4 @@
+<aiops_validation_edgecases>
 # 시스템 탄력성 (Resiliency) 및 카오스 엔지니어링
 
 ## 1. 분산 시스템의 극한 엣지 케이스 방어
@@ -7,3 +8,4 @@
 
 ## 2. 장애 시뮬레이션 (Chaos Engineering)
 - **[MUST] Fault Injection Testing:** 단순히 정상 동작 케이스만 테스트하는 코드는 프로덕션에 올릴 수 없습니다. 의도적으로 권한 오류(403), 타임아웃, 대규모 페이로드를 주입하는 카오스 엔지니어링(Fault Injection) 테스트 스크립트를 포함하여 방어 로직을 실증하십시오.
+</aiops_validation_edgecases>

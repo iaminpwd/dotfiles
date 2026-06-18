@@ -1,3 +1,4 @@
+<k8s_networking_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 네트워킹 및 Service Mesh 표준
 
 ## 1. 클러스터 네트워크 트래픽 제어 (Network Policy)
@@ -16,3 +17,4 @@
 ## 4. 인증서 및 TLS 관리 (TLS & Certificates)
 - **[MUST] Automated Certificate Lifecycle:** Ingress TLS 인증서를 수동으로 발급하고 Secret에 넣는 방식을 금지합니다. `cert-manager`를 클러스터에 배포하고, Let's Encrypt (ACME)나 사내 자체 서명 인증기관(Vault PKI 등)과 연동하여 인증서의 발급 및 갱신(Renewal)이 자동화되도록 아키텍처를 구성하십시오.
 - **[PREFER] Traffic Resilience:** 장애 전파를 막기 위해 Service Mesh의 Circuit Breaker, Retry, Timeout 정책을 적극 활용하십시오.
+</k8s_networking_standard>

@@ -1,3 +1,4 @@
+<k8s_platform_engineering_standard>
 # 컨텍스트 모듈: Enterprise Platform Engineering 및 최고급(Advanced) 아키텍처
 
 ## 1. 플랫폼 엔지니어링 (Platform Engineering & IDP)
@@ -14,3 +15,4 @@
 ## 4. 복원력 검증 (Resilience & Chaos Engineering)
 - **[PREFER] Chaos Engineering:** 프로덕션 환경의 실제 안정성을 증명하기 위해 **LitmusChaos** 또는 **Chaos Mesh**를 도입하여 파드 무작위 종료, 네트워크 지연 주입(Fault Injection) 테스트를 정기적으로 수행하는 문화를 제안하십시오. (단, 인프라 성숙도가 충분한 경우에만 제안)
 - **[PREFER] Blameless Post-mortem:** 장애 발생 시 자동화된 Runbook(Jupyter Notebook for SRE 등)을 K8s 생태계에 연동하는 관점을 답변에 포함하십시오.
+</k8s_platform_engineering_standard>

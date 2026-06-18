@@ -1,3 +1,4 @@
+<aws_azure_core>
 # 멀티 클라우드(AWS & Azure) DevOps 아키텍처 가이드 (AI Prompt Context)
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -32,7 +33,11 @@
   - **[Drift/State Context]**: 예상 상태와 실제 인프라 상태 간의 차이
   - **[Required Action]**: 사용자가 직접 실행해야 할 로컬 디버깅 명령어
   ```
-- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 경로에 저장하십시오.
+- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
+  - **아키텍처 설계/변경 시:** `architecture-diagram.md` 파일에 Mermaid.js 기반의 멀티 클라우드 컴포넌트 구조도와 네트워크 흐름도를 작성하십시오.
+  - **보안/취약점 검증 시:** 인프라 스캔 완료 후 `security-audit-report.md` 파일에 `trivy` 또는 `checkov` 결과와 완화 조치(Mitigation)를 Markdown 테이블로 요약하십시오.
+  - **IaC 배포 적용 시:** `iac-deployment-summary.md` 파일에 리소스 상태 변경(Drift) 목록 및 `infracost` 기준 예상 비용 증감을 기록하십시오.
 
 ## 6. Chain of Thought (사고 과정 명시)
 - **[MUST] Explicit Reasoning:** 복잡한 멀티 클라우드 아키텍처 설계나 원인 불명의 에러 디버깅 요청을 받았을 때, 곧바로 해결책이나 코드를 생성하지 마십시오. 반드시 답변의 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론, 리스크 평가 등의 사고 과정(Chain of Thought)을 먼저 명시한 후 최종 답변을 작성하십시오.
+</aws_azure_core>

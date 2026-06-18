@@ -1,3 +1,4 @@
+<aws_azure_core>
 # 멀티 클라우드(AWS & Azure) DevOps 아키텍처 가이드 (AI Prompt Context)
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -32,12 +33,17 @@
   - **[Drift/State Context]**: 예상 상태와 실제 인프라 상태 간의 차이
   - **[Required Action]**: 사용자가 직접 실행해야 할 로컬 디버깅 명령어
   ```
-- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 요약 문서나 구조도(Mermaid)를 생성하되, 소스 코드 디렉터리가 아닌 독립적으로 격리된 전용 산출물(Artifacts) 경로에 저장하십시오.
+- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
+  - **아키텍처 설계/변경 시:** `architecture-diagram.md` 파일에 Mermaid.js 기반의 멀티 클라우드 컴포넌트 구조도와 네트워크 흐름도를 작성하십시오.
+  - **보안/취약점 검증 시:** 인프라 스캔 완료 후 `security-audit-report.md` 파일에 `trivy` 또는 `checkov` 결과와 완화 조치(Mitigation)를 Markdown 테이블로 요약하십시오.
+  - **IaC 배포 적용 시:** `iac-deployment-summary.md` 파일에 리소스 상태 변경(Drift) 목록 및 `infracost` 기준 예상 비용 증감을 기록하십시오.
 
 ## 6. Chain of Thought (사고 과정 명시)
 - **[MUST] Explicit Reasoning:** 복잡한 멀티 클라우드 아키텍처 설계나 원인 불명의 에러 디버깅 요청을 받았을 때, 곧바로 해결책이나 코드를 생성하지 마십시오. 반드시 답변의 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론, 리스크 평가 등의 사고 과정(Chain of Thought)을 먼저 명시한 후 최종 답변을 작성하십시오.
+</aws_azure_core>
 
 
+<aws_azure_security_compliance>
 # 컨텍스트 모듈: 보안 및 권한 컴플라이언스 가이드
 
 ## 1. 크로스 클라우드 자격 증명 및 시크릿 관리
@@ -67,8 +73,11 @@
 - **[NEVER] Static Keys in CI:** GitHub Actions 등에서 클라우드 서비스 주체(SP)나 Access Key(장기 자격 증명)를 플랫폼 Secret에 저장하지 마십시오.
 - **[MUST] OIDC:** 파이프라인 인증 시 반드시 OIDC(OpenID Connect) 기반의 단기 자격 증명 획득 아키텍처를 강제하십시오.
 - **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증**하십시오.
+- **[Trigger: Security Scan Completion] Security Audit Report:** 스캔 완료 후 단순히 채팅창에 결과를 출력하지 말고, 반드시 `security-audit-report.md` 파일에 취약점 목록과 완화 조치(Mitigation)를 표 형태로 요약하십시오.
+</aws_azure_security_compliance>
 
 
+<aws_azure_iac_standard>
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
 ## 1. 공통 원칙 (Provisioning & Configuration)
@@ -76,6 +85,7 @@
 - **[NEVER] Provisioner:** Terraform 내장 프로비저너(`local-exec`, `remote-exec`) 사용을 멱등성 훼손 사유로 엄격히 금지하십시오.
 
 ## 2. 멀티 클라우드 Terraform 엔지니어링 표준
+- **[MUST] Plan Analysis CoT (AI Rule):** `terraform plan` 결과를 리뷰할 때, 결과를 기계적으로 읽지 말고 반드시 `<thinking>` 태그 내에서 파괴적 변경(Destroy/Replace)이나 State Drift의 근본 원인을 먼저 분석하십시오.
 - **[MUST] Multi-Provider:** 멀티 리전 및 멀티 클라우드 확장을 위해 Provider 블록에 `alias`를 적극 사용하고, 리전/가용 영역은 동적 데이터 소스(`data`)로 매핑하십시오.
 - **[MUST] State Management:** 로컬 State 저장을 금지하며, 클라우드 스토리지(AWS S3+DynamoDB 또는 Azure Blob+State Locking)를 필수 구성하십시오.
 - **[MUST] Multi-Env (Terragrunt):** 단순 `tfvars`나 Workspace 하드코딩을 지양하고, **Terragrunt**를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입(Variable Injection) 아키텍처를 적용하십시오.
@@ -87,6 +97,7 @@
 - **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 로컬에 `terraform-docs` 도구가 있다면 `run_command`를 통해 README.md를 자동 생성하여 문서화를 강제하십시오.
 - **[Trigger: Before Terraform Apply] Explicit Drift Check:** 파괴적 명령어를 실행하기 전, 반드시 `terraform plan`을 선행하고 그 결과를 분석하여 **의도치 않은 리소스 삭제(Destroy)나 교체(Replace)**가 발생하는지 실제 출력값 기반으로 검증(Drift Check)하십시오.
 - **[MUST] SG Lazy Deletion Prevention:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion)로 인한 Terraform 무한 대기(Deadlock)를 방지하기 위해 반드시 `name` 대신 `name_prefix = "..."`를 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
+- **[Trigger: Terraform Apply Completion] IaC Deployment Summary:** Terraform 배포 성공 직후, `iac-deployment-summary.md` 산출물 파일에 상태 변경 내역(Drift 리스트)과 예상 비용 증감 내역을 기록하십시오.
 
 ## 3. Ansible 엔지니어링 표준
 - **[MUST] Idempotency:** `shell`이나 `command` 모듈 대신 `yum`, `apt`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하십시오.
@@ -100,8 +111,10 @@
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 로컬에 `conftest` 도구가 있다면 **직접 터미널 명령어를 실행하여 작성한 코드가 사내 규정(Policy)을 위반하지 않는지 사전 검증(Pre-flight)**하십시오.
+</aws_azure_iac_standard>
 
 
+<aws_azure_kubernetes_standard>
 # 컨텍스트 모듈: 멀티 클라우드 Kubernetes (EKS & AKS) 엔지니어링 표준
 
 ## 1. 클러스터 보안 및 자격 증명 통합
@@ -114,10 +127,12 @@
 - **[MUST] GitOps:** Kubernetes 워크로드 배포 시 수동 개입을 금지하고 ArgoCD, Flux 등 GitOps 기반 파이프라인을 설계하십시오. 멀티 클러스터 환경에서는 Git 저장소를 Single Source of Truth로 활용하십시오.
 - **[PREFER] Fleet Management:** 멀티 클라우드(AWS/Azure)에 흩어진 K8s 클러스터의 통합 가시성과 거버넌스를 위해 Azure Arc 연동을 고려사항으로 포함하십시오.
 - **[MUST] K8s Local Test:** Kubernetes 매니페스트나 Helm 차트를 작성한 경우, 로컬 터미널에 `k3d` 도구가 있다면 **직접 `run_command`로 로컬 클러스터에 배포(`dry-run` 포함) 테스트**를 진행하여 오류가 없는지 사전 검증하십시오.
+- **[Trigger: K8s Local Test Completion] K8s Test Report:** 로컬 클러스터 배포 테스트를 완료한 후에는 반드시 `k8s-test-report.md` 전용 산출물 파일에 테스트 결과와 발견된 설정 오류(Manifest Issue)를 문서화하십시오.
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 활용한 우아한 종료(Graceful Shutdown)를 필수화하십시오.
+</aws_azure_kubernetes_standard>
 
 
-
+<aws_azure_serverless_standard>
 # 컨텍스트 모듈: 멀티 클라우드 Serverless 및 Event-driven 아키텍처
 
 ## 1. 멀티 클라우드 Serverless 원칙
@@ -133,9 +148,10 @@
 ## 3. 로컬 테스트 및 배포
 - **[MUST] Local Emulation:** 서버리스 코드 리뷰 시 클라우드 전용 객체(예: `event`, `context`) 구조체를 명확히 검토하고, 오류 가능성이 보일 시 관련된 SDK 로컬 검증 도구 활용을 제안하십시오.
 - **[PREFER] Container Artifact:** 종속성 관리를 일원화하기 위해 AWS Lambda와 Azure Functions 배포 패키징으로 컨테이너 이미지(Container Image) 방식을 적극 권장하십시오.
+</aws_azure_serverless_standard>
 
 
-
+<aws_azure_code_review>
 # 컨텍스트 모듈: 코드 품질 및 린팅(Linting) 리뷰 기준
 
 ## 1. 멘탈 시뮬레이션(Mental Simulation) 기반 린팅
@@ -149,7 +165,7 @@
 - **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 비정상 종료 시 임시 파일 등을 정리하는 `trap` 방어 로직을 필수적으로 구현하십시오.
 
 ## 3. 에러 루트 분석 및 답변 구조화
-- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 수정된 코드만 던지지 말고 다음 순서로 답변하십시오.
+- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 채팅창에 코드만 던지지 말고, **반드시 `code-review-report.md` 전용 산출물 파일에 다음 순서로 분석 결과를 문서화**하십시오.
   1. 발생 원인 분석
   2. 논리적 근거
   3. 단계별 해결책 및 수정 코드
@@ -160,8 +176,10 @@
 - **[MUST] Dry-run Test:** 테라폼 코드를 작성한 경우, 무거운 로컬 서버를 띄우는 대신 **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.
 - **[MUST] CI/CD Local Test:** GitHub Actions 파이프라인이나 컨테이너(Dockerfile) 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 실행하여 동작을 사전 검증**하십시오.
 - **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하십시오.
+</aws_azure_code_review>
 
 
+<aws_azure_day2_operations>
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
@@ -178,11 +196,12 @@
 - **[PREFER] Chaos Engineering:** 서비스 복원력 검증을 위해 Azure Chaos Studio 및 AWS FIS를 활용한 크로스 클라우드 카오스 엔지니어링 도입을 고려하십시오.
 
 ## 4. 상태 저장소(DB) 무중단 마이그레이션
-- **[Trigger: DB Schema Modification Request] Zero-Downtime DB:** 데이터베이스 스키마 변경 요청 시 서버 다운타임이 발생하는 단순 쿼리 제안을 절대 금지하십시오. 무중단 스키마 마이그레이션 전략을 함께 제시하십시오.
+- **[Trigger: DB Schema Modification Request] Zero-Downtime DB:** 데이터베이스 스키마 변경 요청 시 서버 다운타임이 발생하는 단순 쿼리 제안을 절대 금지하십시오. 무중단 스키마 마이그레이션 전략을 반드시 `db-migration-plan.md` 전용 산출물로 작성하여 함께 제시하십시오.
 - **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
+</aws_azure_day2_operations>
 
 
-
+<aws_azure_incident_response>
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
 ## 1. 장애 대응 대원칙 (Mitigation First)
@@ -191,22 +210,44 @@
 - **[MUST] Deep Dive Analysis:** 단순 로그 검색에 그치지 말고, 성능 병목(Bottleneck)이나 네트워크 패킷 드랍이 의심될 경우 AWS X-Ray, Azure App Insights, 또는 VPC/VNet Flow Logs 등을 다각도로 조회하여 근본 원인을 교차 검증하십시오.
 
 ## 2. 사후 분석 (Blameless Post-Mortem) 템플릿
-- **[MUST] Post-Mortem Format:** [Trigger: 실제 운영 서버의 장애(Incident)를 복구한 직후] 서비스 정상화 가이드 이후, 원인 도출 로그(CloudWatch/Azure Monitor 등)와 함께 아래 양식을 답변 마지막에 항상 작성하십시오.
+- **[MUST] CoT Enforcement (AI Rule):** 장애 원인을 파악할 때 절대 첫 로그만 보고 결론내리지 마십시오. 반드시 답변 최상단에 `<thinking>` 태그를 열고 "왜(Why)"를 3번 이상 반복 질문하며 아키텍처 관점의 논리적 근거를 구축한 후 답변을 생성하십시오.
+- **[MUST] Post-Mortem Format:** [Trigger: 실제 운영 서버의 장애(Incident)를 복구한 직후] 서비스 정상화 가이드 이후, 원인 도출 로그(CloudWatch/Azure Monitor 등)와 함께 아래 양식을 `post-mortem-report.md` 산출물로 분리 저장하십시오.
   ```markdown
   - **Symptom:** [현상 요약]
   - **Root Cause:** [시스템적 결함]
   - **Resolution:** [취한 액션]
   - **Action Items:** [코드/인프라/모니터링 관점의 개선점 최소 2가지]
   ```
+</aws_azure_incident_response>
 
 
-
+<aws_azure_finops_optimization>
 # 컨텍스트 모듈: 멀티 클라우드 FinOps 및 비용 최적화
 
 ## 1. FinOps 설계 철학
 - **[PREFER] Cost Optimization:** 오버프로비저닝을 방지하기 위해 AWS Spot Instance / Azure Spot VM 활용, ARM 프로세서 전환, Auto Scaling 최적화 등 클라우드 비용 효율성을 적극 제안하십시오.
 - **[MUST] Cost Estimation:** 인프라 설계나 코드 제안 시, 단순 짐작에 의존하지 말고 로컬 환경에 `infracost`가 설치되어 있다면 `run_command`로 직접 실행하여 코드 변경에 따른 비용 증감(Cost Impact)을 정량적(달러)으로 제시하여 엔지니어의 예측 가능성을 높이십시오.
+- **[Trigger: Cost Estimation Completion] FinOps Cost Report:** 비용 추정(`infracost` 등)을 완료한 후에는 그 결과를 단순히 채팅창에만 출력하지 말고, 반드시 `finops-cost-report.md` 전용 산출물 파일에 리소스별 비용 분석 내역을 Markdown 테이블 형태로 문서화하십시오.
 - **[MUST] Anomaly Detection:** 인프라 구축 제안 시 AWS Budgets 및 Azure Cost Management 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 크로스 클라우드의 예상치 못한 과금을 방지하십시오.
+</aws_azure_finops_optimization>
 
+
+<aws_azure_few_shot_examples>
+# 컨텍스트 모듈: 퓨샷(Few-Shot) 예시 기반 행동 교정 (Multi-Cloud)
+
+LLM의 지시 수행률을 극대화하기 위해, 멀티 클라우드 환경에 맞춘 Bad/Good 예시를 기준으로 행동을 교정하십시오.
+
+## 1. 멘탈 시뮬레이션 금지 및 능동적 도구 사용
+- **[Bad] 추측성 답변:** "해당 리소스 그룹은 `rg-prod-01`일 것입니다. 여기에 배포하겠습니다."
+- **[Good] 능동적 도구 사용:** "리소스 그룹을 확인하기 위해 `az group list` (또는 `aws ec2 describe-vpcs`)를 `run_command`로 실행하겠습니다."
+
+## 2. 안전성 검증 (Drift Check) 제어
+- **[Bad] 무조건 Apply:** "수정된 멀티 클라우드 Terraform 코드를 즉시 `terraform apply` 하겠습니다."
+- **[Good] 사전 검증 및 승인:** "파급 효과를 확인하기 위해 `terraform plan`을 실행하겠습니다. ... `<thinking>` AWS DB 인스턴스 재생성이 감지되었습니다. `</thinking>` 예상치 못한 리소스 삭제가 발견되어 사용자 승인을 요청합니다."
+
+## 3. 하드코딩 방지 및 시크릿 연동
+- **[Bad] 시크릿 하드코딩:** `client_secret = "AzureSecret123!"`
+- **[Good] 외부 저장소 연동:** `client_secret = data.azurerm_key_vault_secret.app_secret.value` (AWS Secrets Manager 또는 Azure Key Vault 참조)
+</aws_azure_few_shot_examples>
 
 

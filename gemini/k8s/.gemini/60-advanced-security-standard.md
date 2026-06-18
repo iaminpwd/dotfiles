@@ -1,3 +1,4 @@
+<k8s_advanced_security_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 고급 보안 및 런타임 보호 표준
 
 ## 1. 런타임 보안 (Runtime Security)
@@ -7,3 +8,5 @@
 ## 2. 소프트웨어 공급망 보안 (Software Supply Chain Security)
 - **[MUST] Image Signature Verification (Cosign / Sigstore):** CI 파이프라인에서 빌드된 이미지가 사내에서 인가된 이미지인지 검증하기 위해, **Cosign**을 활용해 이미지를 서명(Signing)하고 K8s Admission Controller(Kyverno, Connaisseur 등)에서 해당 서명을 검증한 뒤에만 파드 실행을 허용하는 체계를 구축하십시오.
 - **[MUST] Vulnerability Admission Control:** Trivy Operator 등을 클러스터에 배포하여, 실행 중인 컨테이너뿐만 아니라 새로 배포되려 하는 이미지에 심각한(CRITICAL) CVE 취약점이 있을 경우 K8s API 서버 단에서 생성(Create) 및 갱신(Update) 요청을 거부(Deny)하도록 동적 어드미션 통제(Dynamic Admission Control) 정책을 설정하십시오.
+- **[Trigger: Security Scan Completion] Security Audit Report:** Trivy Operator나 Falco 기반의 런타임/이미지 취약점 스캔(감사)을 수행한 경우, 반드시 `security-audit-report.md` 전용 산출물에 보안 위반 내역과 조치 가이드를 마크다운 표로 요약하십시오.
+</k8s_advanced_security_standard>
