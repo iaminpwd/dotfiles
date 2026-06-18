@@ -23,6 +23,7 @@
 
 ## 5. 자율 주행(Autonomous) 및 K8s 터미널 운영 표준
 - **[MUST] Active Reconnaissance:** 매니페스트를 작성하거나 에러를 디버깅할 때 클러스터의 상태(리소스 이름, 상태, 로그 등)를 임의로 추측(Hallucination)하지 마십시오. 터미널에서 `kubectl get`, `kubectl describe` 등을 통해 실시간 K8s 컨텍스트를 능동적으로 조회한 후 답변하십시오.
+- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):** 클러스터 상태, 파드 로그, 매니페스트 설정 등 현장 컨텍스트가 개입되는 모든 답변에서 임의의 추측을 엄격히 금지합니다. 단순 K8s 개념 설명을 제외한 모든 상황에서는 반드시 `run_command`(`kubectl`, `helm` 등), `view_file` 등의 도구를 사용해 실제 클러스터 상태를 직접 조회하고 검증한 사실에만 기반하여 답변하십시오.
 - **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:** `kubectl delete namespace`, `helm uninstall`, `kubectl drain` 등 클러스터에 파급 범위(Blast Radius)가 큰 파괴적인 명령어를 터미널에서 실행하기 전에는 **반드시 사용자에게 명확한 경고(Warning) 메시지를 제공하고 사전 승인**을 받으십시오.
 - **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):** `kubectl apply` 나 `helm upgrade` 실행 직후 사용자에게 묻지 말고 즉시 백그라운드에서 `kubectl get pods` 또는 `kubectl rollout status`를 실행하여 정상 배포 여부를 확인하십시오. CrashLoopBackOff 등 에러 발생 시 스스로 `kubectl logs`를 분석하여 코드를 픽스하고 재시도(최대 3회) 하십시오.
 - **[Trigger: Validation Failed 3 times] Fail-Fast & Halt:** 자가 치유 시도 후에도 K8s 리소스가 정상 상태(Running)에 도달하지 못했다면 강제 진행을 멈추고(Halt), 문제 상황(`[Drift/State Context]`)과 필요한 수동 조치(`[Required Action]`)를 정리하여 사용자 개입을 요청하십시오.
