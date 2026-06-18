@@ -15,6 +15,7 @@
 - **[MUST] Module Composition:** 코드를 단일 파일에 모노리틱하게 작성하지 말고, 재사용 가능한 자식 모듈(Child Module)과 환경별 루트 모듈(Root Module)로 철저히 분리(Decoupling)하십시오.
 - **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 로컬에 `terraform-docs` 도구가 있다면 `run_command`를 통해 README.md를 자동 생성하여 문서화를 강제하십시오.
 - **[Trigger: Before Terraform Apply] Explicit Drift Check:** 파괴적 명령어를 실행하기 전, 반드시 `terraform plan`을 선행하고 그 결과를 분석하여 **의도치 않은 리소스 삭제(Destroy)나 교체(Replace)**가 발생하는지 실제 출력값 기반으로 검증(Drift Check)하십시오.
+- **[MUST] SG Lazy Deletion Prevention:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion)로 인한 Terraform 무한 대기(Deadlock)를 방지하기 위해 반드시 `name` 대신 `name_prefix = "..."`를 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
 
 ## 3. Ansible 엔지니어링 표준
 - **[MUST] Idempotency:** `shell`이나 `command` 모듈 대신 `yum`, `apt`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하십시오.
