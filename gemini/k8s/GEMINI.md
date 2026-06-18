@@ -31,7 +31,11 @@
 - **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
   - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
   - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+
+## Break-Glass (예외 승인) 프로토콜
+- **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
 </k8s_core>
+
 
 
 <k8s_networking_standard>
@@ -56,6 +60,7 @@
 </k8s_networking_standard>
 
 
+
 <k8s_storage_stateful_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 스토리지, 상태 보존(Stateful) 워크로드 및 DR 표준
 
@@ -74,6 +79,7 @@
 - **[MUST] Application-Level Backup:** 영구 볼륨 스냅샷만으로는 데이터베이스의 메모리 상태나 트랜잭션 정합성(Consistency)을 보장할 수 없습니다. 단순히 Velero 스냅샷을 제안하는 것을 넘어, 데이터베이스 수준의 덤프(pg_dump 등)나 트랜잭션 로그 백업 아키텍처를 병행 제안하십시오.
 - **[MUST] Ephemeral Storage Limits:** 임시 데이터 처리를 위해 파드의 `emptyDir`을 사용할 때, 무한정 데이터를 쌓아 워커 노드의 디스크 슬래시(`/`) 공간을 고갈(Disk Pressure)시키는 것을 막기 위해 `limits.ephemeral-storage`를 필수로 지정하도록 강제하십시오.
 </k8s_storage_stateful_standard>
+
 
 
 <k8s_cicd_gitops_standard>
@@ -101,6 +107,7 @@
 - **[MUST] Canary & Blue/Green (Argo Rollouts):** 비즈니스 크리티컬 서비스 배포 시, 전체 사용자 동시 배포를 지양하고 Argo Rollouts 또는 Istio와 결합하여 특정 퍼센트(%)의 트래픽만 신규 버전으로 흘려보내는 Canary 배포를 제안하십시오.
 - **[MUST] Automated Rollback:** 새로운 버전 배포 후 메트릭(에러율 증가 등)을 분석하여 임계치를 초과할 경우 자동으로 롤백되는 AnalysisTemplate 구성을 제안하십시오.
 </k8s_cicd_gitops_standard>
+
 
 
 <k8s_observability_standard>
@@ -142,6 +149,7 @@
 </k8s_observability_standard>
 
 
+
 <k8s_autoscaling_finops_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 오토스케일링 및 FinOps 표준
 
@@ -161,6 +169,7 @@
 </k8s_autoscaling_finops_standard>
 
 
+
 <k8s_advanced_security_standard>
 # 컨텍스트 모듈: Enterprise Kubernetes 고급 보안 및 런타임 보호 표준
 
@@ -173,6 +182,7 @@
 - **[MUST] Vulnerability Admission Control:** Trivy Operator 등을 클러스터에 배포하여, 실행 중인 컨테이너뿐만 아니라 새로 배포되려 하는 이미지에 심각한(CRITICAL) CVE 취약점이 있을 경우 K8s API 서버 단에서 생성(Create) 및 갱신(Update) 요청을 거부(Deny)하도록 동적 어드미션 통제(Dynamic Admission Control) 정책을 설정하십시오.
 - **[Trigger: Security Scan Completion] Security Audit Report:** Trivy Operator나 Falco 기반의 런타임/이미지 취약점 스캔(감사)을 수행한 경우, 반드시 `security-audit-report.md` 전용 산출물에 보안 위반 내역과 조치 가이드를 마크다운 표로 요약하십시오.
 </k8s_advanced_security_standard>
+
 
 
 <k8s_platform_engineering_standard>
@@ -193,6 +203,7 @@
 - **[PREFER] Chaos Engineering:** 프로덕션 환경의 실제 안정성을 증명하기 위해 **LitmusChaos** 또는 **Chaos Mesh**를 도입하여 파드 무작위 종료, 네트워크 지연 주입(Fault Injection) 테스트를 정기적으로 수행하는 문화를 제안하십시오. (단, 인프라 성숙도가 충분한 경우에만 제안)
 - **[PREFER] Blameless Post-mortem:** 장애 발생 시 자동화된 Runbook(Jupyter Notebook for SRE 등)을 K8s 생태계에 연동하는 관점을 답변에 포함하십시오.
 </k8s_platform_engineering_standard>
+
 
 
 <k8s_few_shot_examples>
@@ -218,5 +229,6 @@ Kubernetes 네이티브 환경에 맞춘 Bad/Good 예시를 기준으로 행동�
   결론: 메모리 누수로 인한 OOM이 원인.
   `</thinking>`
 </k8s_few_shot_examples>
+
 
 

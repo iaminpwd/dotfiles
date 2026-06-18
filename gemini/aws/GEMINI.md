@@ -40,7 +40,11 @@
 
 ## 6. Chain of Thought (사고 과정 명시)
 - **[MUST] Explicit Reasoning:** 복잡한 아키텍처 설계나 원인 불명의 에러 디버깅 요청을 받았을 때, 곧바로 해결책이나 코드를 생성하지 마십시오. 반드시 답변의 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론, 리스크 평가 등의 사고 과정(Chain of Thought)을 먼저 명시한 후 최종 답변을 작성하십시오.
+
+## Break-Glass (예외 승인) 프로토콜
+- **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
 </aws_core_guidelines>
+
 
 
 <aws_security_compliance>
@@ -75,6 +79,7 @@
 - **[Trigger: Pipeline Design / Dockerfile Edit] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증하십시오.
 - **[Trigger: Security Scan Completion] Security Audit Report:** 인프라 취약점 또는 컨테이너 스캔이 완료되면, 반드시 `security-audit-report.md` 전용 산출물 경로에 스캔 결과와 완화 조치(Mitigation)를 Markdown 테이블 형태로 문서화하십시오.
 </aws_security_compliance>
+
 
 
 <aws_iac_standards>
@@ -114,6 +119,7 @@
 </aws_iac_standards>
 
 
+
 <aws_kubernetes_standards>
 # 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
 
@@ -131,6 +137,7 @@
 - **[Trigger: K8s Local Test Completion] K8s Test Report:** 로컬 클러스터 배포 테스트를 완료한 후에는 반드시 `k8s-test-report.md` 전용 산출물 파일에 테스트 결과와 발견된 설정 오류(Manifest Issue)를 문서화하십시오.
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 통한 우아한 종료(Graceful Shutdown) 구성을 필수화하여 배포 중단(Downtime)을 방지하십시오.
 </aws_kubernetes_standards>
+
 
 
 <aws_serverless_standards>
@@ -151,6 +158,7 @@
 - **[MUST] SAM Local Testing (CLI):** AWS SAM(Serverless Application Model) 기반의 인프라 코드 작성 시 단순 멘탈 시뮬레이션에 의존하지 말고, `run_command`로 `sam validate`를 실행하여 템플릿 문법을 사전 검증하십시오.
 - **[Trigger: After Lambda Code Edit] Local Invoke Trigger:** 람다(Lambda) 함수 코드 변경 시 실제 클라우드에 배포하기 전에 `sam local invoke` 또는 `sam local start-api`를 사용하여 로컬 환경에서 함수 동작을 시뮬레이션하고 에러를 확인하십시오.
 </aws_serverless_standards>
+
 
 
 <aws_code_review_standards>
@@ -181,6 +189,7 @@
 </aws_code_review_standards>
 
 
+
 <aws_day2_operations>
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
@@ -203,6 +212,7 @@
 </aws_day2_operations>
 
 
+
 <aws_incident_response>
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
@@ -223,6 +233,7 @@
 </aws_incident_response>
 
 
+
 <aws_finops_optimization>
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 
@@ -232,6 +243,7 @@
 - **[Trigger: Cost Estimation Completion] FinOps Cost Report:** 비용 추정(`infracost` 등)을 완료한 후에는 그 결과를 단순히 채팅창에만 출력하지 말고, 반드시 `finops-cost-report.md` 전용 산출물 파일에 리소스별 비용 분석 내역을 Markdown 테이블 형태로 문서화하십시오.
 - **[MUST] Anomaly Detection:** 인프라 구축 제안 시 AWS Budgets 및 Cost Explorer 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 예상치 못한 과금(Billing Spike)을 방지하십시오.
 </aws_finops_optimization>
+
 
 
 <aws_few_shot_examples>
@@ -265,5 +277,6 @@ LLM의 지시 수행률을 극대화하기 위해, 아래의 명시적인 Bad/Go
   `</thinking>`
   "단순 OOM이 아니라 DB 병목이 근본 원인입니다. RDS 로그를 추가로 조회하겠습니다."
 </aws_few_shot_examples>
+
 
 

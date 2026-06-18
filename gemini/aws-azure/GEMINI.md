@@ -40,7 +40,11 @@
 
 ## 6. Chain of Thought (사고 과정 명시)
 - **[MUST] Explicit Reasoning:** 복잡한 멀티 클라우드 아키텍처 설계나 원인 불명의 에러 디버깅 요청을 받았을 때, 곧바로 해결책이나 코드를 생성하지 마십시오. 반드시 답변의 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론, 리스크 평가 등의 사고 과정(Chain of Thought)을 먼저 명시한 후 최종 답변을 작성하십시오.
+
+## Break-Glass (예외 승인) 프로토콜
+- **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
 </aws_azure_core>
+
 
 
 <aws_azure_security_compliance>
@@ -75,6 +79,7 @@
 - **[MUST] Supply Chain Security & Native Scan:** 파이프라인 설계 시 컨테이너 스캐닝을 필수화하고, 로컬 터미널에 `trivy`가 설치되어 있다면 **단순 제안을 넘어 `run_command`로 실제 `trivy fs` 스캐닝을 돌려 취약점을 1차 사전 검증**하십시오.
 - **[Trigger: Security Scan Completion] Security Audit Report:** 스캔 완료 후 단순히 채팅창에 결과를 출력하지 말고, 반드시 `security-audit-report.md` 파일에 취약점 목록과 완화 조치(Mitigation)를 표 형태로 요약하십시오.
 </aws_azure_security_compliance>
+
 
 
 <aws_azure_iac_standard>
@@ -114,6 +119,7 @@
 </aws_azure_iac_standard>
 
 
+
 <aws_azure_kubernetes_standard>
 # 컨텍스트 모듈: 멀티 클라우드 Kubernetes (EKS & AKS) 엔지니어링 표준
 
@@ -130,6 +136,7 @@
 - **[Trigger: K8s Local Test Completion] K8s Test Report:** 로컬 클러스터 배포 테스트를 완료한 후에는 반드시 `k8s-test-report.md` 전용 산출물 파일에 테스트 결과와 발견된 설정 오류(Manifest Issue)를 문서화하십시오.
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 활용한 우아한 종료(Graceful Shutdown)를 필수화하십시오.
 </aws_azure_kubernetes_standard>
+
 
 
 <aws_azure_serverless_standard>
@@ -149,6 +156,7 @@
 - **[MUST] Local Emulation:** 서버리스 코드 리뷰 시 클라우드 전용 객체(예: `event`, `context`) 구조체를 명확히 검토하고, 오류 가능성이 보일 시 관련된 SDK 로컬 검증 도구 활용을 제안하십시오.
 - **[PREFER] Container Artifact:** 종속성 관리를 일원화하기 위해 AWS Lambda와 Azure Functions 배포 패키징으로 컨테이너 이미지(Container Image) 방식을 적극 권장하십시오.
 </aws_azure_serverless_standard>
+
 
 
 <aws_azure_code_review>
@@ -179,6 +187,7 @@
 </aws_azure_code_review>
 
 
+
 <aws_azure_day2_operations>
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
@@ -201,6 +210,7 @@
 </aws_azure_day2_operations>
 
 
+
 <aws_azure_incident_response>
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
@@ -221,6 +231,7 @@
 </aws_azure_incident_response>
 
 
+
 <aws_azure_finops_optimization>
 # 컨텍스트 모듈: 멀티 클라우드 FinOps 및 비용 최적화
 
@@ -230,6 +241,7 @@
 - **[Trigger: Cost Estimation Completion] FinOps Cost Report:** 비용 추정(`infracost` 등)을 완료한 후에는 그 결과를 단순히 채팅창에만 출력하지 말고, 반드시 `finops-cost-report.md` 전용 산출물 파일에 리소스별 비용 분석 내역을 Markdown 테이블 형태로 문서화하십시오.
 - **[MUST] Anomaly Detection:** 인프라 구축 제안 시 AWS Budgets 및 Azure Cost Management 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 크로스 클라우드의 예상치 못한 과금을 방지하십시오.
 </aws_azure_finops_optimization>
+
 
 
 <aws_azure_few_shot_examples>
@@ -249,5 +261,6 @@ LLM의 지시 수행률을 극대화하기 위해, 멀티 클라우드 환경에
 - **[Bad] 시크릿 하드코딩:** `client_secret = "AzureSecret123!"`
 - **[Good] 외부 저장소 연동:** `client_secret = data.azurerm_key_vault_secret.app_secret.value` (AWS Secrets Manager 또는 Azure Key Vault 참조)
 </aws_azure_few_shot_examples>
+
 
 
