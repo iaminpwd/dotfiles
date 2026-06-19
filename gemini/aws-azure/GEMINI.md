@@ -212,6 +212,8 @@
   > 4. Recurrence prevention measures (Best Practice)
 - **[NEVER] Assume Context (컨텍스트 임의 가정 금지):**
   > NEVER make arbitrary assumptions if logs are insufficient to identify the root cause. You MUST ask the user directly for specific logs first.
+- **[MUST] Context Isolation via XML Tags:**
+  > When injecting user code or system logs into your response or artifact, MUST enclose them within explicit XML tags like `<user_code>`, `<system_log>`, or `<refactored_code>` to strictly isolate the context and prevent hallucinations.
 
 ## 4. 로컬 테스트 (Local Testing)
 - **[MUST] Dry-run Test:** 테라폼 코드를 작성한 경우, 무거운 로컬 서버를 띄우는 대신 **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.

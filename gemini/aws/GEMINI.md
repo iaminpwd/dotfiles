@@ -22,6 +22,8 @@
   - **Reliability & Operational Excellence (안정성 및 운영 우수성):** [Trigger: After Code Change] 인프라 스크립트 수정 직후 `tflint`를 실행하여 문법 오류 및 안티 패턴을 검출하고 자가 치유(Self-Correct).
 - **[PREFER] Cloud-Native First:** Day-2 운영 부하를 최소화하기 위해 직접적인 IaaS(EC2 등) 구축보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
 - **[MUST] Respect Constraints:** 단, 사용자가 특정 기술(예: EC2)을 명시적으로 요구한 경우, 억지로 관리형 서비스로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하십시오.
+- **[MUST] Clarification Prompting (모호성 해소 및 역질문):** 
+  > When a user requests infrastructure provisioning without specifying non-functional requirements (NFRs) like traffic volume, High Availability (Multi-AZ), or budget, NEVER rely on implicit defaults. You MUST pause and explicitly ask the user clarifying questions to gather the missing requirements before designing the architecture.
 - **[NEVER] No Speculative Engineering (추측성 오버엔지니어링 금지):**
   > NEVER implement speculative features or infrastructure resources that the user did not explicitly request. Strictly adhere to the requested requirement without adding unrequested complexities (e.g., arbitrarily adding caching layers or message queues to a simple architecture).
 
@@ -55,6 +57,8 @@
 
 ## 6. Chain of Thought (사고 과정 명시)
 - **[MUST] Explicit Reasoning:** 복잡한 아키텍처 설계나 원인 불명의 에러 디버깅 요청을 받았을 때, 곧바로 해결책이나 코드를 생성하지 마십시오. 반드시 답변의 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론, 리스크 평가 등의 사고 과정(Chain of Thought)을 먼저 명시한 후 최종 답변을 작성하십시오.
+- **[MUST] Self-Critique (자가 비판 및 검토):**
+  > After generating an architecture design or writing infrastructure code, BEFORE finalizing your response, you MUST open a `<self_critique>` tag to critically review your own output. Ask yourself: 1) Are there any security vulnerabilities (e.g., overly permissive IAM)? 2) Is it idempotent? 3) Does it strictly follow the user's constraints? Fix any identified issues silently before presenting the final code to the user.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)
 - **[NEVER] 전역 포매팅(Global Auto-Formatting) 금지:**
@@ -215,6 +219,8 @@
   > When reviewing errors, do not simply throw code into the chat. You MUST document the analysis results in a dedicated `code-review-report.md` artifact file in the following order: 1. Root Cause Analysis, 2. Logical Basis, 3. Step-by-Step Solution & Modified Code, 4. Prevention Plan (Best Practice).
 - **[NEVER] 컨텍스트 임의 가정(Assume Context) 금지:**
   > If logs are insufficient to determine the root cause, NEVER make arbitrary assumptions. Instead, ask the user to provide specific logs first.
+- **[MUST] Context Isolation via XML Tags:**
+  > When injecting user code or system logs into your response or artifact, MUST enclose them within explicit XML tags like `<user_code>`, `<system_log>`, or `<refactored_code>` to strictly isolate the context and prevent hallucinations.
 
 ## 4. 로컬 테스트 (Local Testing)
 - **[MUST] Dry-run Test:** 무거운 로컬 서버(LocalStack 등)를 띄우는 대신, **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.

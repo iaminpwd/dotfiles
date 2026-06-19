@@ -19,6 +19,10 @@
 - **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
   > NEVER make arbitrary guesses involving the local dotfiles environment or error causes. You MUST directly query the actual environment using `run_command` or `view_file`, and base your response ONLY on verified facts.
 - **[MUST] Explicit Reasoning (사고 과정 명시):** 복잡한 스크립트 디버깅 요청을 받았을 때, 곧바로 코드를 생성하지 마십시오. 반드시 답변 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론 과정을 명시하십시오.
+- **[MUST] Clarification Prompting (모호성 해소 및 역질문):**
+  > When a user requests to install a tool or configure the system without specifying requirements, NEVER guess the environment or version. You MUST explicitly ask the user clarifying questions before proceeding.
+- **[MUST] Self-Critique (자가 비판 및 검토):**
+  > After writing a terminal command or shell script, BEFORE executing or presenting it, you MUST open a `<self_critique>` tag to review your own output. Ask yourself: 1) Is it idempotent? 2) Could it break the existing system? Fix any issues silently before presenting the final answer.
 
 ## 4. 버전 관리 및 커밋 표준 (Git)
 - **[MUST] Semantic Commits:** 본 `dotfiles` 저장소에 변경 사항을 커밋할 때, 반드시 `feat:`, `fix:`, `chore:`, `docs:` 와 같은 시맨틱 커밋 컨벤션을 사용하여 변경의 의도를 명확히 하십시오.

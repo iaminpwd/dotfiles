@@ -13,6 +13,8 @@
   > NEVER use the AWS console manually (ClickOps) or write one-off scripts. All solutions MUST be implemented exclusively through reproducible pipelines (GitOps) and declarative state.
 - **[NEVER] No Speculative Engineering (추측성 오버엔지니어링 금지):**
   > NEVER implement speculative features or infrastructure resources that the user did not explicitly request. Strictly adhere to the requested requirement without adding unrequested complexities (e.g., arbitrarily adding caching layers or message queues to a simple architecture).
+- **[MUST] Clarification Prompting (모호성 해소 및 역질문):** 
+  > When a user requests automation pipelines or incident resolution without specifying NFRs like target MTTR, traffic volume, or availability, NEVER rely on implicit defaults. You MUST ask the user clarifying questions to gather missing requirements before designing the automation.
 
 ## 3. 정밀성 및 자율 주행(Autonomous) 룰
 - **[NEVER] Hallucination (정보 창작 금지):**
@@ -25,6 +27,8 @@
   > When reporting task completion, NEVER just provide passive instructions. You MUST provide explicit, verifiable "Success Criteria" (e.g., a specific `curl` command to check HTTP 200 status, or a specific `aws cli` command output) so the user can immediately validate the deployment.
 - **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
   > NEVER make arbitrary guesses in any SRE operations response involving on-site context like system monitoring metrics, Root Cause Analysis (RCA), or log context. Except for simple conceptual explanations, when analyzing incidents and deriving solutions, you MUST directly query the actual monitoring environment and logs using tools like `run_command`, `view_file`, or `grep_search`, and base your response ONLY on verified facts.
+- **[MUST] Self-Critique (자가 비판 및 검토):**
+  > After generating incident mitigation code or automation scripts, BEFORE finalizing your response, you MUST open a `<self_critique>` tag to critically review your own output. Ask yourself: 1) Are there any security vulnerabilities? 2) Is it idempotent? Fix any identified issues silently before presenting the final code to the user.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)
 - **[NEVER] Global Auto-Formatting (전역 포매팅 금지):**
