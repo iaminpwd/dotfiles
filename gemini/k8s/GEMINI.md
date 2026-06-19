@@ -18,23 +18,31 @@
 - **[MUST] Graceful Shutdown & Liveness/Readiness:** 서비스 무중단 배포를 위해 `readinessProbe`와 `livenessProbe`를 분리하여 설정하고, 파드 종료 시 트래픽 유실을 막기 위한 `preStop` 훅 (예: `sleep 5`를 통한 엔드포인트 전파 지연 보완) 및 애플리케이션 레벨의 SIGTERM 처리를 강제하십시오.
 
 ## 4. 시크릿 관리 및 컨테이너 디버깅 (Secrets & Debugging)
-- **[NEVER] Raw Kubernetes Secrets:** Kubernetes 기본 Secret은 Base64 인코딩 상태로 etcd에 저장되므로 보안에 취약합니다. 평문 YAML을 통한 Secret 생성을 금지하십시오.
+- **[NEVER] Raw Kubernetes Secrets (평문 K8s 시크릿 생성 금지):**
+  > NEVER create Kubernetes Secrets using plain-text YAML. Kubernetes default Secrets are stored in etcd as Base64 encoded strings and are vulnerable to security breaches.
 - **[MUST] External Secrets Operator (ESO):** AWS Secrets Manager, HashiCorp Vault, Azure Key Vault 등의 외부 키 관리 시스템(KMS)과 K8s를 동기화하는 External Secrets Operator 패턴을 반드시 제안하십시오.
 - **[PREFER] Ephemeral Debugging:** 운영 환경 파드에서 문제가 발생했을 때 컨테이너 내부에 직접 `exec`로 접속해 디버깅 툴을 설치하는 것을 엄격히 금지합니다. 대신 `kubectl debug` 명령어를 활용하여 진단 도구가 포함된 임시 컨테이너(Ephemeral Container)를 붙여서(Attach) 디버깅하는 최신 기법을 가이드하십시오.
 
 ## 5. 자율 주행(Autonomous) 및 K8s 터미널 운영 표준
 - **[MUST] Active Reconnaissance:** 매니페스트를 작성하거나 에러를 디버깅할 때 클러스터의 상태(리소스 이름, 상태, 로그 등)를 임의로 추측(Hallucination)하지 마십시오. 터미널에서 `kubectl get`, `kubectl describe` 등을 통해 실시간 K8s 컨텍스트를 능동적으로 조회한 후 답변하십시오.
-- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):** 클러스터 상태, 파드 로그, 매니페스트 설정 등 현장 컨텍스트가 개입되는 모든 답변에서 임의의 추측을 엄격히 금지합니다. 단순 K8s 개념 설명을 제외한 모든 상황에서는 반드시 `run_command`(`kubectl`, `helm` 등), `view_file` 등의 도구를 사용해 실제 클러스터 상태를 직접 조회하고 검증한 사실에만 기반하여 답변하십시오.
-- **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:** `kubectl delete namespace`, `helm uninstall`, `kubectl drain` 등 클러스터에 파급 범위(Blast Radius)가 큰 파괴적인 명령어를 터미널에서 실행하기 전에는 **반드시 사용자에게 명확한 경고(Warning) 메시지를 제공하고 사전 승인**을 받으십시오.
-- **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):** `kubectl apply` 나 `helm upgrade` 실행 직후 사용자에게 묻지 말고 즉시 백그라운드에서 `kubectl get pods` 또는 `kubectl rollout status`를 실행하여 정상 배포 여부를 확인하십시오. CrashLoopBackOff 등 에러 발생 시 스스로 `kubectl logs`를 분석하여 코드를 픽스하고 재시도(최대 3회) 하십시오.
-- **[Trigger: Validation Failed 3 times] Fail-Fast & Halt:** 자가 치유 시도 후에도 K8s 리소스가 정상 상태(Running)에 도달하지 못했다면 강제 진행을 멈추고(Halt), 문제 상황(`[Drift/State Context]`)과 필요한 수동 조치(`[Required Action]`)를 정리하여 사용자 개입을 요청하십시오.
-- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
-  - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
-  - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
+  > NEVER make arbitrary guesses in any response involving on-site context like cluster state, pod logs, or manifest settings. Except for simple K8s conceptual explanations, you MUST directly query the actual cluster state using tools like `run_command` (`kubectl`, `helm`, etc.) or `view_file`, and base your response ONLY on verified facts.
+- **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:**
+  > Before executing destructive terminal commands with a large blast radius in the cluster like `kubectl delete namespace`, `helm uninstall`, or `kubectl drain`, you MUST provide a clear Warning message to the user and obtain prior approval.
+- **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):**
+  > Immediately perform background verification using `kubectl get pods` or `kubectl rollout status` without asking the user after executing `kubectl apply` or `helm upgrade`. If errors like CrashLoopBackOff occur, analyze `kubectl logs` to self-correct the code and retry (up to 3 times).
+- **[Trigger: Validation Failed 3 times] Fail-Fast & Halt (빠른 실패 및 중단):**
+  > If the K8s resource fails to reach the Running state even after self-correction attempts, you MUST halt forced execution and request user intervention by summarizing the problem context (`[Drift/State Context]`) and required manual actions (`[Required Action]`).
+- **[Trigger: Task Completion] Artifact Generation (산출물 생성):**
+  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in dedicated paths:
+  > - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
+  > - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)
-- **[NEVER] Global Auto-Formatting:** NEVER run global or recursive auto-formatting commands (e.g., `terraform fmt -recursive`, `prettier .`, `black`, `eslint --fix`).
-- **[NEVER] Modify Unrelated Files:** You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
+- **[NEVER] Global Auto-Formatting (전역 포매팅 금지):**
+  > NEVER run global or recursive auto-formatting commands (e.g., `terraform fmt -recursive`, `prettier .`, `black`, `eslint --fix`).
+- **[NEVER] Modify Unrelated Files (무관한 파일 수정 금지):**
+  > You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
 - **[MUST] Single File Formatting ONLY:** If you need to format code, apply it ONLY to the exact single file you just modified (e.g., `terraform fmt <specific_file>`). Do not touch the rest of the workspace.
 
 ## Break-Glass (예외 승인) 프로토콜
@@ -104,8 +112,10 @@
 ## 3. 지속적 배포 (Continuous Deployment) & GitOps (ArgoCD)
 - **[MUST] Declarative GitOps:** 모든 클러스터의 상태(State)는 Git에 저장된 매니페스트와 100% 일치해야 합니다. ArgoCD를 활용해 Git 저장소를 Single Source of Truth로 삼고 동기화를 수행하십시오.
 - **[MUST] App of Apps / ApplicationSet Pattern:** 수십 개의 마이크로서비스 배포 시 `App of Apps` 패턴이나 `ApplicationSet`을 활용하여 다수 클러스터 및 환경 배포를 자동화하는 구조를 제안하십시오.
-- **[Trigger: Before K8s Apply] Explicit Drift Check (AI Rule):** 파급력이 큰 변경 사항을 로컬 터미널에서 수동 배포(`kubectl apply` 또는 `helm upgrade`)하기 전에는 즉시 실행하지 말고 반드시 `kubectl diff -f <file>` 또는 `helm diff upgrade`를 사용하여 기존 클러스터 상태와 변경될 상태 간의 **Drift(편차)**를 분석하고, `<thinking>` 태그 내에서 서비스 영향을 평가한 후 사용자에게 시각적으로 제시하여 안전성을 검증받으십시오.
-- **[Trigger: CI/CD Deployment Completion] Deployment Report:** ArgoCD 동기화나 Helm 배포 등 CI/CD 파이프라인 적용이 완료된 직후, 상태 변경 내역과 파드 정상 기동 여부를 `k8s-deployment-report.md` 전용 산출물 파일에 문서화하십시오.
+- **[Trigger: Before K8s Apply] Explicit Drift Check (명시적 편차 검증):**
+  > Before manually deploying high-impact changes from the local terminal (`kubectl apply` or `helm upgrade`), DO NOT execute immediately. You MUST use `kubectl diff -f <file>` or `helm diff upgrade` to analyze the Drift between the existing cluster state and the intended state, evaluate service impact within a `<thinking>` tag, and visually present it to the user for safety verification.
+- **[Trigger: CI/CD Deployment Completion] Deployment Report (배포 보고서):**
+  > Immediately after applying a CI/CD pipeline like ArgoCD sync or Helm deployment, document the state change history and pod startup status in the dedicated `k8s-deployment-report.md` artifact file.
 
 ## 4. 점진적 배포 및 롤백 (Progressive Delivery)
 - **[MUST] Zero-Downtime Deployment:** K8s 기본 `Deployment`의 RollingUpdate 시 발생하는 미세한 커넥션 드롭을 방지하기 위해 `readinessProbe`와 결합된 안전한 롤아웃 전략을 구성하십시오.
@@ -130,7 +140,7 @@
   - 인프라 리소스: USE (Utilization, Saturation, Errors) 메트릭 필수 모니터링.
 
 ## 3. Logging & Aggregation
-- **[MUST] Standard Output & JSON:** K8s 파드 내부의 파일 시스템 로깅을 금지합니다. 모든 로그는 stdout/stderr로 출력하며, 파싱 리소스를 최소화하기 위해 애플리케이션 레벨에서부터 JSON 포맷(Structured Logging)으로 출력하도록 강제하십시오.
+- **[MUST] Standard Output & JSON:** K8s 파드 내부의 파일 시스템 로깅을 금지합니다. 모든 로그는 stdout/stderr로 출력하며, 파싱 리소스를 최소화하기 위해 애플리케이션 레벨에서부터 JSON 포맷(Structured Logging) 단위를 적용하도록 강제하십시오.
 - **[MUST] Log Context Enrichment:** 로그 수집 에이전트 설정 시, K8s 메타데이터(Namespace, Pod Name, Labels)를 파싱하여 로그의 컨텍스트(Enrichment)를 추가하는 필터 룰을 반드시 포함하십시오.
 - **[MUST] PII Data Masking:** 민감한 개인정보(PII)가 로그 시스템에 적재되지 않도록 정규식을 활용한 마스킹(Masking) 필터 구성을 기본 정책으로 제안하십시오.
 
@@ -140,17 +150,20 @@
 
 ## 5. 장애 대응 (Incident Response) 및 에러 분석 워크플로우
 - **[MUST] Actionable & Tiered Alerts:** Alertmanager 룰 작성 시 단순 경고(Warning)와 즉시 개입이 필요한 심각(Critical) 단계를 명확히 분리하고, 알람 메시지에는 문제 해결 가이드(Runbook URL)를 포함시키십시오.
-- **[MUST] Structured Analysis (AI Rule):** [Trigger: 에러나 버그 수정 요청 시] 에러 원인을 분석할 때 단순히 수정된 코드만 던지지 말고 `1.발생 원인 분석(Root Cause) -> 2.논리적 근거(Evidence/Logs) -> 3.단계별 해결책(Solution) -> 4.재발 방지책(Best Practice)`의 4단계 순서로 답변을 구조화하십시오.
-- **[NEVER] Assume Context:** 로그가 잘려 있거나 원인 파악이 불가능할 때 임의로 가정을 세워 코드를 수정하지 마십시오. 사용자에게 `kubectl logs -p`나 `kubectl get events`를 실행해 달라고 역질문하십시오.
+- **[Trigger: Error Analysis Required] Structured Analysis (구조화된 분석):**
+  > [Trigger: When requesting an error or bug fix] When analyzing the root cause of an error, DO NOT just throw the modified code. You MUST structure your answer in the following 4-step order: 1. Root Cause Analysis -> 2. Logical Evidence/Logs -> 3. Step-by-step Solution -> 4. Recurrence Prevention (Best Practice).
+- **[NEVER] Assume Context (컨텍스트 임의 가정 금지):**
+  > NEVER make arbitrary assumptions and modify code when logs are truncated or the root cause cannot be identified. You MUST ask the user to execute `kubectl logs -p` or `kubectl get events` first.
 - **[MUST] Mitigation First (AI Rule):** 운영 클러스터의 심각한 장애 상황 보고 시, SRE 관점에서 1단계로 서비스 다운타임 최소화를 위한 우회 조치(Mitigation: 롤백, 파드 Eviction 등)를 최우선 제안하고, 2단계로 근본 원인 분석(RCA)을 진행하십시오.
-- **[MUST] Post-Mortem Format (AI Rule):** [Trigger: 실제 운영 장애(Incident) 복구 직후] 서비스 정상화 후, 단순 축하로 끝내지 말고 아래의 사후 분석 템플릿을 답변 마지막에 항상 작성하십시오.
-  ```markdown
-  ### 📝 장애 사후 분석 (Blameless Post-Mortem)
-  - **Symptom:** [현상 요약]
-  - **Root Cause:** [시스템적 결함]
-  - **Resolution:** [취한 액션]
-  - **Action Items:** [개선점 최소 2가지]
-  ```
+- **[Trigger: Post-Incident] Post-Mortem Format (사후 분석 템플릿):**
+  > [Trigger: Immediately after recovering from an actual production Incident] After service normalization, DO NOT just end with congratulations. You MUST always write the following Post-Mortem template at the end of your response.
+  > ```markdown
+  > ### 📝 장애 사후 분석 (Blameless Post-Mortem)
+  > - **Symptom:** [현상 요약]
+  > - **Root Cause:** [시스템적 결함]
+  > - **Resolution:** [취한 액션]
+  > - **Action Items:** [개선점 최소 2가지]
+  > ```
 </k8s_observability_standard>
 
 
@@ -169,7 +182,8 @@
 ## 3. FinOps 및 리소스 최적화 (Cost Optimization)
 - **[MUST] Resource Quota Tightening:** 개발/스테이징 네임스페이스에는 반드시 하드 리밋(Hard Limit)을 가진 `ResourceQuota`를 적용하여, 개발자의 실수로 인한 클러스터 전체 리소스 고갈 및 과금 폭탄을 방지하십시오.
 - **[PREFER] Cost Visibility (Kubecost / OpenCost):** 네임스페이스, 레이블(팀별, 프로젝트별) 단위로 K8s 인프라 비용을 추적하고 가시화할 수 있는 OpenCost 또는 Kubecost 배포 아키텍처를 도입하여 사내 과금(Chargeback/Showback) 체계를 구축하도록 제안하십시오.
-- **[Trigger: Cost Visibility Analysis] FinOps Cost Report:** Kubecost 등 리소스 기반 비용 분석이나 오토스케일링 비용 시뮬레이션을 수행한 후에는 단순히 채팅창에 출력하지 말고, `finops-cost-report.md` 산출물 파일에 분석 내역을 표 형태로 문서화하십시오.
+- **[Trigger: Cost Visibility Analysis] FinOps Cost Report (FinOps 비용 보고서):**
+  > After performing resource-based cost analysis (like Kubecost) or autoscaling cost simulations, DO NOT just print it in the chat window. You MUST document the analysis details as a table in the `finops-cost-report.md` artifact file.
 - **[MUST] Spot Interruption Handling:** Spot 인스턴스를 사용할 워크로드는 반드시 `nodeSelector`나 `tolerations`를 통해 분리해야 하며, AWS Node Termination Handler(NTH) 또는 Karpenter의 Interruption Queue 연동을 통해 Spot 회수(Reclaim) 2분 전에 파드가 우아하게 종료(Graceful Shutdown)되고 다른 노드로 대피(Eviction)하도록 아키텍처를 강제하십시오.
 </k8s_autoscaling_finops_standard>
 
@@ -185,7 +199,8 @@
 ## 2. 소프트웨어 공급망 보안 (Software Supply Chain Security)
 - **[MUST] Image Signature Verification (Cosign / Sigstore):** CI 파이프라인에서 빌드된 이미지가 사내에서 인가된 이미지인지 검증하기 위해, **Cosign**을 활용해 이미지를 서명(Signing)하고 K8s Admission Controller(Kyverno, Connaisseur 등)에서 해당 서명을 검증한 뒤에만 파드 실행을 허용하는 체계를 구축하십시오.
 - **[MUST] Vulnerability Admission Control:** Trivy Operator 등을 클러스터에 배포하여, 실행 중인 컨테이너뿐만 아니라 새로 배포되려 하는 이미지에 심각한(CRITICAL) CVE 취약점이 있을 경우 K8s API 서버 단에서 생성(Create) 및 갱신(Update) 요청을 거부(Deny)하도록 동적 어드미션 통제(Dynamic Admission Control) 정책을 설정하십시오.
-- **[Trigger: Security Scan Completion] Security Audit Report:** Trivy Operator나 Falco 기반의 런타임/이미지 취약점 스캔(감사)을 수행한 경우, 반드시 `security-audit-report.md` 전용 산출물에 보안 위반 내역과 조치 가이드를 마크다운 표로 요약하십시오.
+- **[Trigger: Security Scan Completion] Security Audit Report (보안 감사 보고서):**
+  > When a runtime/image vulnerability scan (audit) based on Trivy Operator or Falco is performed, you MUST summarize the security violations and mitigation guides as a Markdown table in the dedicated `security-audit-report.md` artifact.
 </k8s_advanced_security_standard>
 
 
