@@ -53,6 +53,8 @@
 
 ## 6. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Explicit Reasoning (CoT):** 복잡한 아키텍처 설계, 시스템 진단(Diagnostics), Terraform Plan 리뷰 진행 시 반드시 답변 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열고, "왜(Why)"를 3번 이상 반복 질문하는 방식을 통해 내부적인 논리 추론 및 상태 변경점 확인 등 사고 과정(Chain of Thought)을 명확히 구축한 후 최종 해결책이나 코드를 생성하십시오.
+- **[MUST] Task Breakdown & Planning (작업 분할 및 사전 계획 강제):**
+  > When receiving complex architectural requests (e.g., building EKS, Multi-AZ VPC), DO NOT execute code or modify files immediately. You MUST first break down the task into a logical step-by-step workflow and present an explicit `implementation_plan.md` artifact to the user. Obtain explicit user approval before proceeding to the execution phase.
 - **[MUST] Self-Critique (자가 비판 및 검토):**
   > After generating an architecture design or writing infrastructure code, BEFORE finalizing your response, you MUST open a `<self_critique>` tag to critically review your own output. Ask yourself: 1) Are there any security vulnerabilities (e.g., overly permissive IAM)? 2) Is it idempotent? 3) Does it strictly follow the user's constraints? Fix any identified issues silently before presenting the final code to the user.
 
