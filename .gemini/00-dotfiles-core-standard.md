@@ -8,7 +8,8 @@
   > NEVER implement speculative features or packages that the user did not explicitly request. Strictly adhere to the requested requirement without adding unrequested complexities (e.g., arbitrarily adding unused Zsh plugins or heavy DevOps tools).
 
 ## 2. Meta-Prompting (프롬프트 작성 원칙)
-- **[MUST] Reference Master Guide:** 새로운 워크스페이스 프롬프트를 설계하거나 확장할 때, 주니어 수준의 추상적인 룰 작성을 피하고 반드시 **`40-prompt-engineering-standard.md` (프롬프트 엔지니어링 마스터 가이드)**의 규칙(도메인 분할, CLI 도구 매핑, 트리거 패턴 등)을 100% 준수하여 엔터프라이즈급 깊이를 확보하십시오.
+- **[MUST] Reference Master Guide:** 새로운 워크스페이스 프롬프트를 설계하거나 확장할 때, 추상적인 룰 작성을 피하고 **`40-prompt-engineering-standard.md`** (마스터 가이드)를 기준으로 작성하십시오.
+  > MUST strictly adhere to the prompt engineering master guide (`40-prompt-engineering-standard.md`) when creating or expanding workspace rules.
 
 ## 3. 정밀성과 신뢰성 보장
 - **[MUST] Fact-Check:** 셸 스크립트 도구나 패키지를 추가할 때, 리눅스 및 데브옵스 커뮤니티의 최신 공식 문서(Official Docs)와 안정 버전(Stable)을 기준으로 작성하십시오.
@@ -30,4 +31,5 @@
   > NEVER run global or recursive auto-formatting commands (e.g., `prettier .`, `shfmt -w .`).
 - **[NEVER] Modify Unrelated Files (무관한 파일 수정 금지):**
   > You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
-- **[MUST] Single File Formatting ONLY:** If you need to format code, apply it ONLY to the exact single file you just modified (e.g., `shfmt -w <specific_file>`). Do not touch the rest of the workspace.
+- **[MUST] Single File Formatting ONLY:** 코드를 포매팅해야 할 경우, 수정한 특정 파일 하나에만 적용하십시오.
+  > MUST apply formatting ONLY to the exact single file you just modified (e.g., `shfmt -w <specific_file>`). Do not modify whitespace or formatting in the rest of the workspace.

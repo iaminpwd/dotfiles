@@ -4,6 +4,7 @@
 - **[NEVER] No Secrets in Git (Git 시크릿 저장 금지):**
   > NEVER hardcode any kind of plain-text passwords, API Keys, AWS Secrets, or GitHub Tokens in files like `.zshrc` or `setup.sh` when committing to the `dotfiles` repository.
 - **[MUST] Local Separation:** 민감한 환경 변수는 깃허브 추적에서 제외(`gitignore`)된 `~/.zshrc.local` 또는 `~/.gitconfig.local` 파일에 분리하여 저장하는 아키텍처를 강제하십시오.
+  > MUST store sensitive environment variables in untracked local files (e.g., `~/.zshrc.local`) to ensure separation of concerns.
 
 ## 2. 보안 스캐닝 강제화
 - **[Trigger: Before Push] Mandatory Secret Scan (시크릿 스캔 의무화):**
