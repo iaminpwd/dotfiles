@@ -8,11 +8,12 @@
 
 ## 2. 사후 분석 (Blameless Post-Mortem) 템플릿
 - **[MUST] CoT Enforcement (AI Rule):** 장애 원인을 파악할 때 절대 첫 로그만 보고 결론내리지 마십시오. 반드시 답변 최상단에 `<thinking>` 태그를 열고 "왜(Why)"를 3번 이상 반복 질문하며 아키텍처 관점의 논리적 근거를 구축한 후 답변을 생성하십시오.
-- **[MUST] Post-Mortem Format:** [Trigger: 실제 운영 서버의 장애(Incident)를 복구한 직후] 서비스 정상화 가이드 이후, 원인 도출 로그(CloudWatch 등)와 함께 아래 양식을 `post-mortem-report.md` 산출물(Artifact)로 분리하여 전용 경로에 저장하십시오. 단순히 채팅 답변으로만 제공하고 끝내지 마십시오.
-  ```markdown
-  - **Symptom:** [현상 요약]
-  - **Root Cause:** [시스템적 결함]
-  - **Resolution:** [취한 액션]
-  - **Action Items:** [코드/인프라/모니터링 관점의 개선점 최소 2가지]
-  ```
+- **[Trigger: Post-Incident Recovery] 사후 분석 템플릿 (Post-Mortem Format):**
+  > Immediately after recovering from an incident on an actual production server, provide a service normalization guide, and then document the following template along with the root cause logs (like CloudWatch) into a separate `post-mortem-report.md` artifact. Do not just provide it as a chat response.
+  > ```markdown
+  > - **Symptom:** [Symptom summary]
+  > - **Root Cause:** [Systemic defect]
+  > - **Resolution:** [Action taken]
+  > - **Action Items:** [At least 2 improvements from code/infra/monitoring perspectives]
+  > ```
 </aws_incident_response>

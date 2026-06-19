@@ -3,7 +3,8 @@
 
 ## 1. 공통 원칙 (Provisioning & Configuration)
 - **[MUST] Decoupling:** Terraform은 인프라 리소스 수명 주기 관리, Ansible은 OS 설정 및 앱 구성 담당으로 역할을 엄격히 분리하십시오.
-- **[NEVER] Provisioner:** Terraform 내장 프로비저너(`local-exec`, `remote-exec`) 사용을 멱등성 훼손 사유로 엄격히 금지하십시오.
+- **[NEVER] 내장 프로비저너(Provisioner) 금지:**
+  > NEVER use Terraform built-in provisioners (`local-exec`, `remote-exec`) as they break idempotency.
 
 ## 2. Terraform 엔지니어링 표준
 - **[MUST] Plan Analysis CoT (AI Rule):** `terraform plan` 결과를 리뷰할 때, 결과를 기계적으로 읽지 말고 반드시 `<thinking>` 태그 내에서 파괴적 변경(Destroy/Replace)이나 State Drift의 근본 원인을 먼저 분석하십시오.
@@ -16,9 +17,11 @@
 - **[MUST] Version Pinning:** 인프라의 예측 가능성을 위해 Terraform 코어 및 AWS Provider 버전(`required_version`, `required_providers`)은 반드시 특정 버전(또는 `~>` 구문)으로 명시하여 고정하십시오.
 - **[MUST] Module Composition:** 코드를 단일 파일에 모노리틱하게 작성하지 말고, 재사용 가능한 자식 모듈(Child Module)과 환경별 루트 모듈(Root Module)로 철저히 분리(Decoupling)하십시오.
 - **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 로컬에 `terraform-docs` 도구가 있다면 `run_command`를 통해 README.md를 자동 생성하여 문서화를 강제하십시오.
-- **[Trigger: Before Terraform Apply] Explicit Drift Check:** 파괴적 명령어를 실행하기 전, 반드시 `terraform plan`을 선행하고 그 결과를 분석하여 **의도치 않은 리소스 삭제(Destroy)나 교체(Replace)**가 발생하는지 실제 출력값 기반으로 검증(Drift Check)하십시오.
+- **[Trigger: Before Terraform Apply] 명시적 편차 검증 (Explicit Drift Check):**
+  > Before executing destructive commands, you MUST first run `terraform plan` and analyze the results to verify (Drift Check) based on the actual output whether any **unintended resource destruction (Destroy) or replacement (Replace)** occurs.
 - **[MUST] SG Lazy Deletion Prevention:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion)로 인한 Terraform 무한 대기(Deadlock)를 방지하기 위해 반드시 `name` 대신 `name_prefix = "..."`를 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
-- **[Trigger: Terraform Apply Completion] IaC Deployment Summary:** Terraform 적용(Apply)이 성공적으로 완료된 직후, `iac-deployment-summary.md` 산출물 파일에 추가/변경/삭제된 리소스 목록(Drift)과 `infracost` 기준 예상 비용 증감 내역을 문서화하십시오.
+- **[Trigger: Terraform Apply Completion] IaC 배포 요약 (IaC Deployment Summary):**
+  > Immediately after a successful Terraform apply, document the list of added/changed/deleted resources (Drift) and the estimated cost impact (via `infracost`) in the `iac-deployment-summary.md` artifact file.
 
 ## 3. Ansible 엔지니어링 표준
 - **[MUST] Idempotency:** `shell`이나 `command` 모듈 대신 `yum`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하십시오.

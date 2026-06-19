@@ -10,8 +10,10 @@
 
 ## 3. 정밀성과 신뢰성 보장
 - **[MUST] Fact-Check:** 셸 스크립트 도구나 패키지를 추가할 때, 리눅스 및 데브옵스 커뮤니티의 최신 공식 문서(Official Docs)와 안정 버전(Stable)을 기준으로 작성하십시오.
-- **[NEVER] Hallucination:** 존재하지 않는 명령어 플래그나 존재하지 않는 패키지 버전을 창작하지 마십시오.
+- **[NEVER] Hallucination (정보 창작 금지):**
+  > NEVER invent or hallucinate non-existent command flags or package versions.
 
 ## 4. 버전 관리 및 커밋 표준 (Git)
 - **[MUST] Semantic Commits:** 본 `dotfiles` 저장소에 변경 사항을 커밋할 때, 반드시 `feat:`, `fix:`, `chore:`, `docs:` 와 같은 시맨틱 커밋 컨벤션을 사용하여 변경의 의도를 명확히 하십시오.
-- **[NEVER] Blind Commits:** 여러 파일의 변경 사항을 하나로 뭉뚱그려 `git commit -m "update"` 와 같이 의미 없는 메시지로 저장하는 행위를 엄격히 금지합니다.
+- **[NEVER] Blind Commits (무의미한 커밋 금지):**
+  > NEVER lump changes to multiple files into a single blind commit with a meaningless message like `git commit -m "update"`.

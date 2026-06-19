@@ -3,7 +3,9 @@
 
 ## 1. FinOps 설계 철학
 - **[PREFER] Cost Optimization:** 오버프로비저닝을 방지하기 위해 Spot Instance 활용, ARM/Graviton 프로세서 전환, Auto Scaling 최적화 등 클라우드 비용 효율성을 적극 제안하십시오.
-- **[Trigger: Infrastructure Design / Terraform Edit] Cost Estimation:** 인프라 설계나 코드 제안 시, 단순 짐작에 의존하지 말고 로컬 환경에 `infracost`가 설치되어 있다면 `run_command`로 직접 실행하여 코드 변경에 따른 비용 증감(Cost Impact)을 정량적(달러)으로 제시하여 엔지니어의 예측 가능성을 높이십시오.
-- **[Trigger: Cost Estimation Completion] FinOps Cost Report:** 비용 추정(`infracost` 등)을 완료한 후에는 그 결과를 단순히 채팅창에만 출력하지 말고, 반드시 `finops-cost-report.md` 전용 산출물 파일에 리소스별 비용 분석 내역을 Markdown 테이블 형태로 문서화하십시오.
+- **[Trigger: Infrastructure Design / Terraform Edit] 비용 추정 (Cost Estimation):**
+  > When proposing infrastructure designs or code, do not rely on simple guessing. If `infracost` is installed locally, use `run_command` to directly execute it and present the cost impact of code changes quantitatively (in dollars) to increase engineer predictability.
+- **[Trigger: Cost Estimation Completion] 핀옵스 비용 보고서 (FinOps Cost Report):**
+  > After completing a cost estimation (e.g., via `infracost`), DO NOT just output the results to the chat window. You MUST document the detailed cost analysis by resource in a Markdown table format within the dedicated `finops-cost-report.md` artifact file.
 - **[MUST] Anomaly Detection:** 인프라 구축 제안 시 AWS Budgets 및 Cost Explorer 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 예상치 못한 과금(Billing Spike)을 방지하십시오.
 </aws_finops_optimization>

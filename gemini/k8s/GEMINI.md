@@ -32,6 +32,11 @@
   - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
   - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
 
+## AI 자동 포매팅 방지 가이드 (Custom Instructions)
+- **[NEVER] Global Auto-Formatting:** NEVER run global or recursive auto-formatting commands (e.g., `terraform fmt -recursive`, `prettier .`, `black`, `eslint --fix`).
+- **[NEVER] Modify Unrelated Files:** You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
+- **[MUST] Single File Formatting ONLY:** If you need to format code, apply it ONLY to the exact single file you just modified (e.g., `terraform fmt <specific_file>`). Do not touch the rest of the workspace.
+
 ## Break-Glass (예외 승인) 프로토콜
 - **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
 </k8s_core>

@@ -12,12 +12,10 @@
 - **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 비정상 종료 시 임시 파일 등을 정리하는 `trap` 방어 로직을 필수적으로 구현하십시오.
 
 ## 3. 에러 루트 분석 및 답변 구조화
-- **[MUST] Structured Analysis:** [Trigger: 사용자가 개발/로컬 환경의 코드 에러나 버그 수정을 요청할 때] 에러 리뷰 시 단순히 채팅창에 코드만 던지지 말고, **반드시 `code-review-report.md` 전용 산출물 파일에 다음 순서로 분석 결과를 문서화**하십시오.
-  1. 발생 원인 분석
-  2. 논리적 근거
-  3. 단계별 해결책 및 수정 코드
-  4. 재발 방지책 (Best Practice)
-- **[NEVER] Assume Context:** 로그가 부족하여 원인 파악이 불가할 경우 임의로 가정을 세우지 말고, 사용자에게 구체적인 로그를 먼저 역질문하십시오.
+- **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화 (Structured Analysis):**
+  > When reviewing errors, do not simply throw code into the chat. You MUST document the analysis results in a dedicated `code-review-report.md` artifact file in the following order: 1. Root Cause Analysis, 2. Logical Basis, 3. Step-by-Step Solution & Modified Code, 4. Prevention Plan (Best Practice).
+- **[NEVER] 컨텍스트 임의 가정(Assume Context) 금지:**
+  > If logs are insufficient to determine the root cause, NEVER make arbitrary assumptions. Instead, ask the user to provide specific logs first.
 
 ## 4. 로컬 테스트 (Local Testing)
 - **[MUST] Dry-run Test:** 무거운 로컬 서버(LocalStack 등)를 띄우는 대신, **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.

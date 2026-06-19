@@ -12,6 +12,7 @@
 ## 3. FinOps 및 리소스 최적화 (Cost Optimization)
 - **[MUST] Resource Quota Tightening:** 개발/스테이징 네임스페이스에는 반드시 하드 리밋(Hard Limit)을 가진 `ResourceQuota`를 적용하여, 개발자의 실수로 인한 클러스터 전체 리소스 고갈 및 과금 폭탄을 방지하십시오.
 - **[PREFER] Cost Visibility (Kubecost / OpenCost):** 네임스페이스, 레이블(팀별, 프로젝트별) 단위로 K8s 인프라 비용을 추적하고 가시화할 수 있는 OpenCost 또는 Kubecost 배포 아키텍처를 도입하여 사내 과금(Chargeback/Showback) 체계를 구축하도록 제안하십시오.
-- **[Trigger: Cost Visibility Analysis] FinOps Cost Report:** Kubecost 등 리소스 기반 비용 분석이나 오토스케일링 비용 시뮬레이션을 수행한 후에는 단순히 채팅창에 출력하지 말고, `finops-cost-report.md` 산출물 파일에 분석 내역을 표 형태로 문서화하십시오.
+- **[Trigger: Cost Visibility Analysis] FinOps Cost Report (FinOps 비용 보고서):**
+  > After performing resource-based cost analysis (like Kubecost) or autoscaling cost simulations, DO NOT just print it in the chat window. You MUST document the analysis details as a table in the `finops-cost-report.md` artifact file.
 - **[MUST] Spot Interruption Handling:** Spot 인스턴스를 사용할 워크로드는 반드시 `nodeSelector`나 `tolerations`를 통해 분리해야 하며, AWS Node Termination Handler(NTH) 또는 Karpenter의 Interruption Queue 연동을 통해 Spot 회수(Reclaim) 2분 전에 파드가 우아하게 종료(Graceful Shutdown)되고 다른 노드로 대피(Eviction)하도록 아키텍처를 강제하십시오.
 </k8s_autoscaling_finops_standard>

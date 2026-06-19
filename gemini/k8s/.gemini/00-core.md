@@ -18,19 +18,32 @@
 - **[MUST] Graceful Shutdown & Liveness/Readiness:** 서비스 무중단 배포를 위해 `readinessProbe`와 `livenessProbe`를 분리하여 설정하고, 파드 종료 시 트래픽 유실을 막기 위한 `preStop` 훅 (예: `sleep 5`를 통한 엔드포인트 전파 지연 보완) 및 애플리케이션 레벨의 SIGTERM 처리를 강제하십시오.
 
 ## 4. 시크릿 관리 및 컨테이너 디버깅 (Secrets & Debugging)
-- **[NEVER] Raw Kubernetes Secrets:** Kubernetes 기본 Secret은 Base64 인코딩 상태로 etcd에 저장되므로 보안에 취약합니다. 평문 YAML을 통한 Secret 생성을 금지하십시오.
+- **[NEVER] Raw Kubernetes Secrets (평문 K8s 시크릿 생성 금지):**
+  > NEVER create Kubernetes Secrets using plain-text YAML. Kubernetes default Secrets are stored in etcd as Base64 encoded strings and are vulnerable to security breaches.
 - **[MUST] External Secrets Operator (ESO):** AWS Secrets Manager, HashiCorp Vault, Azure Key Vault 등의 외부 키 관리 시스템(KMS)과 K8s를 동기화하는 External Secrets Operator 패턴을 반드시 제안하십시오.
 - **[PREFER] Ephemeral Debugging:** 운영 환경 파드에서 문제가 발생했을 때 컨테이너 내부에 직접 `exec`로 접속해 디버깅 툴을 설치하는 것을 엄격히 금지합니다. 대신 `kubectl debug` 명령어를 활용하여 진단 도구가 포함된 임시 컨테이너(Ephemeral Container)를 붙여서(Attach) 디버깅하는 최신 기법을 가이드하십시오.
 
 ## 5. 자율 주행(Autonomous) 및 K8s 터미널 운영 표준
 - **[MUST] Active Reconnaissance:** 매니페스트를 작성하거나 에러를 디버깅할 때 클러스터의 상태(리소스 이름, 상태, 로그 등)를 임의로 추측(Hallucination)하지 마십시오. 터미널에서 `kubectl get`, `kubectl describe` 등을 통해 실시간 K8s 컨텍스트를 능동적으로 조회한 후 답변하십시오.
-- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):** 클러스터 상태, 파드 로그, 매니페스트 설정 등 현장 컨텍스트가 개입되는 모든 답변에서 임의의 추측을 엄격히 금지합니다. 단순 K8s 개념 설명을 제외한 모든 상황에서는 반드시 `run_command`(`kubectl`, `helm` 등), `view_file` 등의 도구를 사용해 실제 클러스터 상태를 직접 조회하고 검증한 사실에만 기반하여 답변하십시오.
-- **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:** `kubectl delete namespace`, `helm uninstall`, `kubectl drain` 등 클러스터에 파급 범위(Blast Radius)가 큰 파괴적인 명령어를 터미널에서 실행하기 전에는 **반드시 사용자에게 명확한 경고(Warning) 메시지를 제공하고 사전 승인**을 받으십시오.
-- **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):** `kubectl apply` 나 `helm upgrade` 실행 직후 사용자에게 묻지 말고 즉시 백그라운드에서 `kubectl get pods` 또는 `kubectl rollout status`를 실행하여 정상 배포 여부를 확인하십시오. CrashLoopBackOff 등 에러 발생 시 스스로 `kubectl logs`를 분석하여 코드를 픽스하고 재시도(최대 3회) 하십시오.
-- **[Trigger: Validation Failed 3 times] Fail-Fast & Halt:** 자가 치유 시도 후에도 K8s 리소스가 정상 상태(Running)에 도달하지 못했다면 강제 진행을 멈추고(Halt), 문제 상황(`[Drift/State Context]`)과 필요한 수동 조치(`[Required Action]`)를 정리하여 사용자 개입을 요청하십시오.
-- **[Trigger: Task Completion] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
-  - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
-  - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
+  > NEVER make arbitrary guesses in any response involving on-site context like cluster state, pod logs, or manifest settings. Except for simple K8s conceptual explanations, you MUST directly query the actual cluster state using tools like `run_command` (`kubectl`, `helm`, etc.) or `view_file`, and base your response ONLY on verified facts.
+- **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:**
+  > Before executing destructive terminal commands with a large blast radius in the cluster like `kubectl delete namespace`, `helm uninstall`, or `kubectl drain`, you MUST provide a clear Warning message to the user and obtain prior approval.
+- **[Trigger: After Deployment] Autonomous Self-Correction (자가 치유):**
+  > Immediately perform background verification using `kubectl get pods` or `kubectl rollout status` without asking the user after executing `kubectl apply` or `helm upgrade`. If errors like CrashLoopBackOff occur, analyze `kubectl logs` to self-correct the code and retry (up to 3 times).
+- **[Trigger: Validation Failed 3 times] Fail-Fast & Halt (빠른 실패 및 중단):**
+  > If the K8s resource fails to reach the Running state even after self-correction attempts, you MUST halt forced execution and request user intervention by summarizing the problem context (`[Drift/State Context]`) and required manual actions (`[Required Action]`).
+- **[Trigger: Task Completion] Artifact Generation (산출물 생성):**
+  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in dedicated paths:
+  > - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
+  > - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+
+## AI 자동 포매팅 방지 가이드 (Custom Instructions)
+- **[NEVER] Global Auto-Formatting (전역 포매팅 금지):**
+  > NEVER run global or recursive auto-formatting commands (e.g., `terraform fmt -recursive`, `prettier .`, `black`, `eslint --fix`).
+- **[NEVER] Modify Unrelated Files (무관한 파일 수정 금지):**
+  > You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
+- **[MUST] Single File Formatting ONLY:** If you need to format code, apply it ONLY to the exact single file you just modified (e.g., `terraform fmt <specific_file>`). Do not touch the rest of the workspace.
 
 ## Break-Glass (예외 승인) 프로토콜
 - **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.

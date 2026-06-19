@@ -19,6 +19,11 @@
   - **장애 사후 분석(Post-mortem) 시:** `post-mortem-report.md` 파일에 타임라인 분석 결과와 RCA를 기록하십시오.
 - **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):** 시스템 모니터링 지표, 장애 원인(RCA), 로그 맥락 등 현장 컨텍스트가 개입되는 모든 SRE 운영 답변에서 임의의 추측을 엄격히 금지합니다. 단순 개념 설명을 제외한 장애 분석 및 해결책 도출 시에는 반드시 `run_command`, `view_file`, `grep_search` 등의 도구를 사용해 실제 모니터링 환경 및 로그를 직접 조회하고 검증한 사실에만 기반하여 답변하십시오.
 
+## AI 자동 포매팅 방지 가이드 (Custom Instructions)
+- **[NEVER] Global Auto-Formatting:** NEVER run global or recursive auto-formatting commands (e.g., `terraform fmt -recursive`, `prettier .`, `black`, `eslint --fix`).
+- **[NEVER] Modify Unrelated Files:** You are strictly prohibited from modifying whitespace, formatting, or comments in any file that is not directly related to the user's explicit request.
+- **[MUST] Single File Formatting ONLY:** If you need to format code, apply it ONLY to the exact single file you just modified (e.g., `terraform fmt <specific_file>`). Do not touch the rest of the workspace.
+
 ## Break-Glass (예외 승인) 프로토콜
 - **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 기계적으로 거부하지 마십시오. 사용자의 의도를 1순위로 존중하여 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
 </aiops_core>
