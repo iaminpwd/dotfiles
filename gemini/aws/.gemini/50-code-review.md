@@ -11,15 +11,7 @@
 - **[MUST] Boto3 Safety:** Python AWS SDK(Boto3) 코드 리뷰 시, 대량 조회용 `Paginator` 사용 및 `botocore` 예외 처리(ClientError) 누락을 깐깐하게 검토하십시오.
 - **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 비정상 종료 시 임시 파일 등을 정리하는 `trap` 방어 로직을 필수적으로 구현하십시오.
 
-## 3. 에러 루트 분석 및 답변 구조화
-- **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화 (Structured Analysis):**
-  > When reviewing errors, do not simply throw code into the chat. You MUST document the analysis results in a dedicated `code-review-report.md` artifact file in the following order: 1. Root Cause Analysis, 2. Logical Basis, 3. Step-by-Step Solution & Modified Code, 4. Prevention Plan (Best Practice).
-- **[NEVER] 컨텍스트 임의 가정(Assume Context) 금지:**
-  > If logs are insufficient to determine the root cause, NEVER make arbitrary assumptions. Instead, ask the user to provide specific logs first.
-- **[MUST] Context Isolation via XML Tags:**
-  > When injecting user code or system logs into your response or artifact, MUST enclose them within explicit XML tags like `<user_code>`, `<system_log>`, or `<refactored_code>` to strictly isolate the context and prevent hallucinations.
-
-## 4. 로컬 테스트 (Local Testing)
+## 3. 로컬 테스트 (Local Testing)
 - **[MUST] Dry-run Test:** 무거운 로컬 서버(LocalStack 등)를 띄우는 대신, **`run_command`로 `terraform plan`을 실행(Dry-run)하여** 인프라 변경 사항에 논리적 오류가 없는지 사전 검증하십시오. 단, `plan`을 실행하기 전에 반드시 `terraform fmt -check`와 `terraform validate`를 선행하여 문법적 완결성을 우선 검증하십시오.
 - **[MUST] CI/CD Local Test:** GitHub Actions 파이프라인이나 컨테이너(Dockerfile) 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **직접 실행하여 동작을 사전 검증**하십시오.
 - **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하십시오.

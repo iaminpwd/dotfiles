@@ -11,7 +11,7 @@
 
 ## 2. 네트워크 및 엣지 보안(Edge Security)
 - **[NEVER] 퍼블릭 포트 전면 개방 금지:**
-  > Strictly prohibit opening port `0.0.0.0/0` (e.g., SSH 22, RDP 3389, DB ports).
+  > NEVER open port `0.0.0.0/0` (e.g., SSH 22, RDP 3389, DB ports) to the public.
 - **[PREFER] WAF/Shield:** 퍼블릭 엔드포인트(ALB, CloudFront) 제안 시 AWS WAF와 Shield Advanced를 포함하십시오.
 - **[MUST] Session Manager:** 인스턴스 관리 접근 시 SSH 직접 개방 대신 AWS SSM Session Manager를 1순위로 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스(S3, DynamoDB 등) 통신 시 NAT 요금 방어를 위해 VPC Endpoint를 제안하십시오.

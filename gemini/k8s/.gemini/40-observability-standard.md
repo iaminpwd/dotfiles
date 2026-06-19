@@ -25,10 +25,8 @@
 - **[MUST] Actionable & Tiered Alerts:** Alertmanager 룰 작성 시 단순 경고(Warning)와 즉시 개입이 필요한 심각(Critical) 단계를 명확히 분리하고, 알람 메시지에는 문제 해결 가이드(Runbook URL)를 포함시키십시오.
 - **[Trigger: Error Analysis Required] Structured Analysis (구조화된 분석):**
   > [Trigger: When requesting an error or bug fix] When analyzing the root cause of an error, DO NOT just throw the modified code. You MUST structure your answer in the following 4-step order: 1. Root Cause Analysis -> 2. Logical Evidence/Logs -> 3. Step-by-step Solution -> 4. Recurrence Prevention (Best Practice).
-- **[NEVER] Assume Context (컨텍스트 임의 가정 금지):**
-  > NEVER make arbitrary assumptions and modify code when logs are truncated or the root cause cannot be identified. You MUST ask the user to execute `kubectl logs -p` or `kubectl get events` first.
-- **[MUST] Context Isolation via XML Tags:**
-  > When injecting user code, manifests, or pod logs into your response, MUST enclose them within explicit XML tags like `<k8s_manifest>`, `<pod_logs>`, or `<refactored_code>` to strictly isolate the context and prevent hallucinations.
+
+
 - **[MUST] Mitigation First (AI Rule):** 운영 클러스터의 심각한 장애 상황 보고 시, SRE 관점에서 1단계로 서비스 다운타임 최소화를 위한 우회 조치(Mitigation: 롤백, 파드 Eviction 등)를 최우선 제안하고, 2단계로 근본 원인 분석(RCA)을 진행하십시오.
 - **[Trigger: Post-Incident] Post-Mortem Format (사후 분석 템플릿):**
   > [Trigger: Immediately after recovering from an actual production Incident] After service normalization, DO NOT just end with congratulations. You MUST always write the following Post-Mortem template at the end of your response.

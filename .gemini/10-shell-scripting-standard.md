@@ -8,8 +8,8 @@
   > MUST use 'trap' to ensure the cleanup of temporary files and directories upon script exit.
 
 ## 2. 파일 수정 및 조작 룰
-- **[NEVER] Blind Appending (무지성 추가 금지):**
-  > NEVER blindly append to files using `cat >> file`. Always check if the configuration already exists using `grep` before appending to ensure safety.
+- **[MUST] Safe Configuration Appending (안전한 설정 추가 강제):**
+  > You MUST always check if the configuration already exists using `grep` before appending to a file to ensure safety, rather than blindly appending using `cat >> file`.
 - **[MUST] Symlink Awareness (Stow):** 본 저장소는 GNU Stow를 사용해 홈 디렉토리(`~`)로 심볼릭 링크를 맺는 구조입니다. Zsh나 Vim 설정을 수정할 때 사용자 홈 디렉토리의 파일을 직접 수정하지 말고, 반드시 `~/dotfiles/zsh/.zshrc` 등 **Stow의 원본 타겟(Source)**을 수정하십시오.
 - **[NEVER] Sudo Abuse (Sudo 권한 남용 금지):** 데브옵스 도구 설치나 시스템 설정 시 무지성으로 `sudo`를 남발하여 시스템의 소유권(Ownership)을 망가뜨리는 행위를 차단하십시오.
   > NEVER prepend 'sudo' blindly to commands unless modifying root-owned system paths. Always prefer user-level installations.

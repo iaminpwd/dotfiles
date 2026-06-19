@@ -3,8 +3,8 @@
 
 ## 1. 공통 원칙 (Provisioning & Configuration)
 - **[MUST] Decoupling:** Terraform은 인프라 리소스 수명 주기 관리, Ansible은 OS 설정 및 앱 구성 담당으로 역할을 엄격히 분리하십시오.
-- **[NEVER] Provisioner (내장 프로비저너 금지):**
-  > NEVER use Terraform built-in provisioners (`local-exec`, `remote-exec`) as they strictly violate idempotency.
+- **[MUST] Declarative Configuration Management (선언적 구성 관리 강제):**
+  > You MUST use dedicated configuration tools (like Ansible) or native OS scripts instead of Terraform built-in provisioners to maintain idempotency.
 
 ## 2. 멀티 클라우드 Terraform 엔지니어링 표준
 - **[MUST] Plan Analysis CoT (AI Rule):** `terraform plan` 결과를 리뷰할 때, 결과를 기계적으로 읽지 말고 반드시 `<thinking>` 태그 내에서 파괴적 변경(Destroy/Replace)이나 State Drift의 근본 원인을 먼저 분석하십시오.

@@ -1,8 +1,8 @@
 # 데브옵스 도구 및 패키지 설치 관리 표준
 
 ## 1. 버전 관리 선언주의 (Declarative Versioning)
-- **[NEVER] No 'Latest' Tags (Latest 태그 사용 금지):**
-  > NEVER use the `latest` tag when adding new infrastructure/DevOps tools to `mise.toml`. This severely breaks idempotency over time.
+- **[MUST] Explicit Version Pinning (명시적 버전 고정 강제):**
+  > You MUST strictly enforce explicit version pinning when adding new infrastructure/DevOps tools to `mise.toml` to maintain idempotency, instead of using `latest` tags.
 - **[MUST] Explicit Pinning:** 릴리스 노트를 확인하거나 `mise ls-remote <tool>`을 통해 검증된 **특정 버전 번호(예: `1.5.7`)를 명시적으로 하드코딩(Pinning)** 하십시오.
   > MUST always explicitly pin the exact version number of a tool after verifying its stability.
 

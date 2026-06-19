@@ -3,8 +3,8 @@
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
 - **[MUST] Separation of Concerns:** CI(빌드/테스트)와 CD(배포) 역할을 엄격히 분리하고, 배포 시 수동 개입을 금지하십시오.
-- **[NEVER] Latest Tag (Latest 태그 사용 금지):**
-  > NEVER use the `latest` tag for container images. You MUST enforce explicit Version Pinning on container images, Helm charts, and Terraform modules.
+- **[MUST] Explicit Version Pinning (명시적 버전 고정 강제):**
+  > You MUST strictly enforce explicit version pinning for container images, Helm charts, and Terraform modules to ensure deterministic deployments, instead of using `latest` tags.
 
 ## 2. 가시성 (Observability) 및 데이터 복원력
 - **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch, Azure Monitor)을 넘어, 마이크로서비스 환경에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray, App Insights) 아키텍처를 반드시 포함하십시오.

@@ -3,8 +3,8 @@
 본 가이드는 AI 에이전트가 다른 워크스페이스(예: `gemini/gcp`, `gemini/azure` 등)에 대한 **새로운 프롬프트 룰북(`.gemini/` 파일들)을 스스로 작성하거나 확장할 때 반드시 준수해야 하는 메타 설계 표준**입니다.
 
 ## 1. 프롬프트 구조 설계 (Architecture & Modularity)
-- **[NEVER] Monolithic Prompting (단일 프롬프트 금지):**
-  > NEVER cram all rules into a single massive file like `GEMINI.md`. This scatters the AI's attention.
+- **[MUST] Modular Prompting (모듈형 프롬프트 분할 강제):**
+  > You MUST divide rules into numbered files (modules) by lifecycle or domain to maintain AI attention, instead of cramming them into a single massive file.
 - **[MUST] Waterfall Modularity:** 반드시 생애주기 및 도메인별로 번호를 매겨 파일(모듈)을 분할하십시오. 
   - *예시:* `00-core`, `10-networking`, `20-iac`, `30-cicd`, `40-observability`, `50-incident-response` 등.
 
@@ -13,7 +13,7 @@
   - *Good:* `> NEVER use the 'latest' tag when adding new tools.`
   - *Bad:* `> 최신 태그를 사용하지 마십시오.`
 - **[MUST] Strict Command Tone (엄격한 명령어조 유지):** 프롬프트 내의 모든 지시는 감정적 표현, 친절한 어투, 비유적 표현을 완전히 배제하고 가장 엄격하고 건조한 명령어조(`~하십시오`)를 유지하도록 작성하십시오.
-- **[NEVER] No Emojis (이모지 사용 절대 금지):** 프롬프트를 작성할 때, 그리고 작성된 프롬프트를 기반으로 AI가 답변이나 README 문서를 생성할 때 어떠한 이모지도 사용되지 않도록 강제하는 규칙을 명시하십시오.
+- **[MUST] Professional Tone Without Emojis (이모지 배제 전문성 유지):** 프롬프트를 작성할 때, 그리고 생성된 답변이나 README 문서에 어떠한 이모지도 포함되지 않도록 전문적인 톤을 강제하는 규칙을 명시하십시오.
 
 ## 3. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] System vs User Context Separation (컨텍스트 분리):** AI의 페르소나, 행동 규칙, 제약 사항은 System 영역에 배치하고, 대상이 되는 로그나 소스 코드 등의 가변 데이터는 명확히 분리하여 제공하도록 강제하십시오. 

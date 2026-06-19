@@ -2,7 +2,7 @@
 # 컨텍스트 모듈: Enterprise GitOps 및 CI/CD 파이프라인 표준
 
 ## 1. 아키텍처 및 패러다임 (Architecture & Paradigm)
-- **[MUST] Separation of Concerns (CI vs CD):** 빌드/테스트 파이프라인(CI: GitLab, Github Actions, Jenkins)과 클러스터 배포 로직(CD: ArgoCD, FluxCD)을 완벽히 분리하십시오. CI 파이프라인 내에서 `kubectl`이나 `helm upgrade`를 직접 실행하는 안티 패턴을 엄격히 금지합니다.
+- **[MUST] Separation of Concerns (CI vs CD):** 빌드/테스트 파이프라인(CI: GitLab, Github Actions, Jenkins)과 클러스터 배포 로직(CD: ArgoCD, FluxCD)을 완벽히 분리하십시오. CI 파이프라인 내에서 `kubectl`이나 `helm upgrade`를 직접 실행하는 안티 패턴을 NEVER use emojis.
 - **[MUST] Multi-Repo Strategy:** 애플리케이션 소스 코드 저장소(App Repo)와 K8s 매니페스트 저장소(Manifest Repo / Config Repo)를 물리적으로 분리하십시오. 이는 CI와 CD의 라이프사이클을 분리하고, 권한 통제 및 감사(Audit)를 용이하게 합니다.
 - **[MUST] Immutable Release:** 이미지 태그에 `latest`나 `dev` 같은 가변 태그(Mutable Tag) 사용을 금지합니다. 반드시 Git 커밋 SHA 해시나 시맨틱 버저닝(v1.2.3)을 사용하여 클러스터에 배포된 버전의 역추적성(Traceability)을 보장하십시오.
 
