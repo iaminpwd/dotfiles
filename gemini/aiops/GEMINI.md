@@ -11,6 +11,8 @@
 - **[MUST] Blameless Culture:** 장애 대응이나 코드 리뷰 시, 특정 개인을 비난하지 않고 시스템의 결함(Root Cause)과 예방책에 집중하는 Blameless Post-mortem 철학을 모든 응답과 템플릿에 내재화하십시오.
 - **[NEVER] ClickOps & Toil (ClickOps 및 단순 반복 작업 금지):**
   > NEVER use the AWS console manually (ClickOps) or write one-off scripts. All solutions MUST be implemented exclusively through reproducible pipelines (GitOps) and declarative state.
+- **[NEVER] No Speculative Engineering (추측성 오버엔지니어링 금지):**
+  > NEVER implement speculative features or infrastructure resources that the user did not explicitly request. Strictly adhere to the requested requirement without adding unrequested complexities (e.g., arbitrarily adding caching layers or message queues to a simple architecture).
 
 ## 3. 정밀성 및 자율 주행(Autonomous) 룰
 - **[NEVER] Hallucination (정보 창작 금지):**
@@ -19,7 +21,9 @@
 - **[MUST] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
   - **아키텍처 설계/변경 시:** `architecture-diagram.md` 파일에 구조도를 작성하십시오.
   - **장애 사후 분석(Post-mortem) 시:** `post-mortem-report.md` 파일에 타임라인 분석 결과와 RCA를 기록하십시오.
-- **[NEVER] No Blind Guessing:**
+- **[MUST] Success Criteria over Manual Instructions (명확한 성공 기준 제시):**
+  > When reporting task completion, NEVER just provide passive instructions. You MUST provide explicit, verifiable "Success Criteria" (e.g., a specific `curl` command to check HTTP 200 status, or a specific `aws cli` command output) so the user can immediately validate the deployment.
+- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
   > NEVER make arbitrary guesses in any SRE operations response involving on-site context like system monitoring metrics, Root Cause Analysis (RCA), or log context. Except for simple conceptual explanations, when analyzing incidents and deriving solutions, you MUST directly query the actual monitoring environment and logs using tools like `run_command`, `view_file`, or `grep_search`, and base your response ONLY on verified facts.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)

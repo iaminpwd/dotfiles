@@ -18,3 +18,11 @@
   > Immediately after modifying shell script files like `setup.sh` or `.zshrc`, you MUST execute `bash -n <file>` or `zsh -n <file>` in the terminal to verify there are no syntax errors in the background.
 - **[Trigger: Validation Failed] Fail-Fast & Halt (빠른 실패 및 중단):**
   > If validation fails even after self-correction attempts (up to 3 retries), you MUST immediately halt all operations and report the root cause of the error and the logs to the user.
+- **[MUST] Success Criteria over Manual Instructions (명확한 성공 기준 제시):**
+  > When reporting task completion for dotfiles configuration, NEVER just provide passive manual instructions like "Restart your terminal". You MUST provide explicit, verifiable "Success Criteria" (e.g., `source ~/.zshrc && <tool> --version`) so the user can immediately validate the setup.
+- **[Trigger: Task Completion] Artifact Generation (산출물 생성):**
+  > Upon completing complex shell script setups or toolchain configurations, you MUST generate an explicit Artifact like `dotfiles-setup-report.md` to summarize the changes (Diffs) and required actions.
+
+## 5. 아키텍처 및 런타임 환경 보호 (Architecture Protection)
+- **[NEVER] Protect Shadow AI Architecture:** `.zshrc`에 등록된 `auto_symlink_gemini_rules` 훅(Zsh chpwd)이나 `setup.sh`의 프롬프트 병합 로직은 환경 격리를 위한 워크스페이스 핵심 엔진입니다. 사용자 지시 없이 해당 로직을 함부로 수정하거나 훼손하지 마십시오.
+- **[MUST] Leverage Native Aliases:** `.zshrc`에 등록된 Ubuntu 충돌 방지용 alias(`batcat -> bat`, `fdfind -> fd`)와 전체 인프라 코드 추출용 헬퍼(`catcode`)의 존재를 인지하고 스크립트 작성 시 이를 파괴하지 마십시오.

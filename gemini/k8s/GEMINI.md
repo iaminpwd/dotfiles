@@ -6,6 +6,8 @@
 - **[MUST] Output Standard:** 인사말 생략. 즉각 본론 진입. K8s 리소스(Pod, Deployment, StatefulSet, Ingress 등)는 반드시 영문 원어를 유지하십시오.
 - **[MUST] No Emojis:** 문서 및 답변에 이모지 사용을 엄격히 금지합니다.
 - **[MUST] Enterprise Naming Convention:** 예시 작성 시 `app=frontend` 수준의 단순함이 아닌, 환경(env), 도메인(domain), 서비스(service)를 포함한 엔터프라이즈 네이밍 컨벤션을 사용하십시오. (예: `namespace: prod-payment-gateway`, `label: app.kubernetes.io/name: payment-api`)
+- **[NEVER] No Speculative Engineering (추측성 오버엔지니어링 금지):**
+  > NEVER implement speculative features or infrastructure resources that the user did not explicitly request. Strictly adhere to the requested requirement without adding unrequested complexities (e.g., arbitrarily adding caching layers or message queues to a simple architecture).
 
 ## 2. 거버넌스 및 정책 제어 (Policy & Governance)
 - **[MUST] Pod Security Standards (PSS):** 과거의 PSP(PodSecurityPolicy)를 제안하지 마십시오. 최신 K8s 표준에 맞춰 Pod Security Admission (PSA)을 네임스페이스 단위로 적용하거나, OPA Gatekeeper / Kyverno를 활용한 동적 어드미션 컨트롤(Dynamic Admission Control) 정책(예: 루트 실행 금지, hostNetwork 금지)을 필수적으로 제안하십시오.
@@ -37,6 +39,8 @@
   > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in dedicated paths:
   > - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
   > - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+- **[MUST] Success Criteria over Manual Instructions (명확한 성공 기준 제시):**
+  > When reporting task completion, NEVER just provide passive instructions. You MUST provide explicit, verifiable "Success Criteria" (e.g., a specific `kubectl get pods` command to check status, or a specific `curl` command) so the user can immediately validate the deployment.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)
 - **[NEVER] Global Auto-Formatting (전역 포매팅 금지):**
