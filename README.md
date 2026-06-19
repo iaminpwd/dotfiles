@@ -15,8 +15,12 @@
 - **도구의 격리:** 시스템 파이프라인 얽힘을 방지하기 위해 `mise`와 `pipx`를 활용하여 데브옵스 도구들을 샌드박스 형태로 격리하여 선언적으로 관리합니다.
 - **시크릿 기록 방지:** 터미널 히스토리 설정(`HIST_IGNORE_SPACE`)을 통해 비밀번호나 API 키가 터미널 히스토리에 남는 것을 방지합니다.
 
-### 2. AI 자율 주행 (Closed-Loop AI)
-AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로컬에서 검증" 하도록 설계된 룰북이 내장되어 있습니다. 머릿속으로만 시뮬레이션하지 않고, AI가 **직접 터미널을 제어하여 `tflint`, `checkov`, `trufflehog`, `terraform plan`, `k3d`, `act` 등을 백그라운드에서 실행해 보고 에러를 혼자 고친 뒤 완벽한 코드를 반환**합니다.
+### 2. SOTA 에이전트 워크플로우 (Agentic Workflow 4대 원칙 내재화)
+단순한 챗봇을 넘어, 최신 AI 연구소(OpenAI, Anthropic, Andrew Ng 백서)에서 권장하는 **자율 주행 에이전트 4대 원칙**이 프롬프트 아키텍처에 완벽히 구현되어 있습니다.
+- **도구 사용 (Tool Use):** 머릿속으로만 시뮬레이션하지 않고, AI가 `run_command`를 통해 직접 터미널을 제어하여 `tflint`, `checkov`, `terraform plan`, `k3d` 등을 백그라운드에서 실행하고 검증합니다.
+- **반성 및 자가 치유 (Reflection):** 코드 출력 전 의무적으로 `<self_critique>` 태그를 열어 멱등성과 보안 결함을 스스로 비판합니다. 에러 발생 시 최대 3번 혼자 고치고 실패하면 중단하는 Fail-Fast 서킷 브레이커가 동작합니다.
+- **계획 수립 (Planning):** 복잡한 인프라 작업 지시 시 곧바로 코드를 쏟아내지 않습니다. 반드시 하위 작업으로 분할(Task Breakdown)하고 `implementation_plan.md` 사전 계획서를 통해 승인을 얻은 후 실행합니다.
+- **전문성 락킹 (Persona/Multi-agent):** 15년 차 '수석 데브옵스 아키텍트'라는 가장 강력한 페르소나를 부여받아, 단순 조수 역할을 넘어 주도적으로 아키텍처를 설계하는 페어 프로그래밍 협업을 이룹니다.
 
 ### 3. Shadow AI Architecture (프롬프트 상속 및 격리)
 로컬 개발 환경의 편의성과 팀 협업(Git)의 순수성을 완벽하게 분리하는 독자적인 아키텍처입니다.
@@ -26,25 +30,29 @@ AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로�
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`gemini/` 폴더)
 > **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, 감정적 표현이 배제된 가장 엄격한 형태의 명령어조(`~하십시오`)와 명시적 제약 태그(`[MUST]`, `[NEVER]`)를 사용합니다.
 
+- **에이전트 인지 구조 및 파싱 최적화 (AI-Friendly Cognitive Architecture):**
+  - **다국어 최적화 (English Core Directive):** 제목과 설명은 한글로 작성하되, AI가 반드시 지켜야 하는 핵심 행동 강령(Blockquote `>`)은 영문 명령문(Imperative)으로 작성했습니다. 대형 언어 모델의 학습 데이터 구조를 활용하여 지시 수행률(Instruction Following)을 극대화한 백서 수준의 기법입니다.
+  - **상태 기계(State-Machine) 트리거 로직:** 줄글 형태의 조건을 배제하고 `[Trigger: Validation Failed 3 times]`와 같은 명시적 상태 트리거를 도입했습니다. 이를 통해 AI의 무한 루프 에러를 방지하는 강력한 서킷 브레이커(Fail-Fast) 회로를 내장했습니다.
+  - **시각적 어텐션 분리 (Action Badges):** `[MUST]`, `[PREFER]`, `[NEVER]` 뱃지를 문두에 배치하여 AI의 어텐션(Attention) 가중치를 즉각적으로 분배하고 환각(Hallucination)을 최소화합니다.
 - **고급 프롬프트 엔지니어링 (Advanced Prompt Architecture) 적용:**
   - **XML 캡슐화 (Domain Isolation):** `aws`, `k8s` 등 각 도메인 규칙이 섞이는 할루시네이션(Bleeding)을 막기 위해 모든 마크다운을 `<aws_core_guidelines>` 등의 고유 XML 태그로 캡슐화했습니다.
   - **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령어 실행 전이나 장애 원인 분석 시, 즉시 행동하지 않고 `<thinking>` 태그 내에서 3-Why 기법과 파급 효과를 분석하도록 설계되었습니다.
-  - **원칙 기반 퓨샷 프롬프팅 (Principle-Driven Few-Shot):** 각 워크스페이스의 마지막 모듈(`90-few-shot-examples.md` 등)에 Bad/Good 예시를 주입하여, 추상적인 규칙이 실제 터미널 도구 명령(`run_command`)으로 완벽하게 교정(Self-Correction)되도록 보장합니다.
-  - **자율 주행 트리거 (Autonomous Action Trigger):** 단순 텍스트 답변이 아닌 로컬 CLI 도구(`tflint`, `trivy` 등)와 연동된 `[Trigger]` 태그를 통해 편차 검증(Drift Check) 및 에러 자가 수정(Self-Correction)을 자율 수행합니다.
+  - **원칙 기반 퓨샷 프롬프팅 (Principle-Driven Few-Shot):** 각 워크스페이스의 마지막 모듈(`100-few-shot-examples.md` 등)에 Bad/Good 예시를 주입하여, 추상적인 규칙이 실제 터미널 도구 명령(`run_command`)으로 완벽하게 교정(Self-Correction)되도록 보장합니다.
   - **엔터프라이즈 마인드셋 락킹 (Enterprise Focus):** 모든 워크스페이스 프롬프트에 Zero-Trust 보안, 장애 복원력(Day-2/SRE), 비용 최적화(FinOps) 철학을 강제로 탑재하여 아키텍처 결함을 사전 차단합니다.
 
 - **워크스페이스별 특화 모듈:**
-  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`00` ~ `90`)
-    - `00-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
-    - `10-security`: 자격 증명(Secrets) 격리 및 최소 권한(PoLP) 컴플라이언스
-    - `20-iac`: Terraform/Ansible 역할 분리(Decoupling) 및 프로비저닝 표준
-    - `30-kubernetes`: EKS 보안 및 IAM Roles for Service Accounts (IRSA) 강제
-    - `40-serverless`: Event-driven 및 비동기(Asynchronous) 아키텍처 우선 제안
-    - `50-code-review`: TFLint, Checkov 등 CLI 도구 기반의 린팅 자율 검증 강제
-    - `60-day2`: 파이프라인(CI/CD) 역할 분리 및 선언적 배포
-    - `70-incident`: 장애 발생 시 우회 조치(Mitigation First) 우선 및 사후 분석
-    - `80-finops`: Spot Instance, Graviton 등을 활용한 능동적 비용 최적화 제안
-    - `90-few-shot`: LLM 지시 수행률 극대화를 위한 명시적 Bad/Good 행동 예시
+  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`000` ~ `100`)
+    - `000-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
+    - `010-security`: 자격 증명(Secrets) 격리 및 최소 권한(PoLP) 컴플라이언스
+    - `020-iac`: Terraform/Ansible 역할 분리(Decoupling) 및 프로비저닝 표준
+    - `030-kubernetes`: EKS 보안 및 IAM Roles for Service Accounts (IRSA) 강제
+    - `040-serverless`: Event-driven 및 비동기(Asynchronous) 아키텍처 우선 제안
+    - `050-database`: Redis, RDS 등 데이터베이스 상태 보호 및 보안 강제
+    - `060-code-review`: TFLint, Checkov 등 CLI 도구 기반의 린팅 자율 검증 강제
+    - `070-day2`: 파이프라인(CI/CD) 역할 분리 및 선언적 배포
+    - `080-incident`: 장애 발생 시 우회 조치(Mitigation First) 우선 및 사후 분석
+    - `090-finops`: Spot Instance, Graviton 등을 활용한 능동적 비용 최적화 제안
+    - `100-few-shot`: LLM 지시 수행률 극대화를 위한 명시적 Bad/Good 행동 예시
   - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`00` ~ `80`)
   - **AIOps (`aiops/`):** Blameless Post-Mortem, SRE 에러 분석 워크플로우, SLI/SLO 지표 기반 진단 (`00` ~ `60`)
   - **Multi-Cloud (`aws-azure/`):** 하이브리드 네트워크 보안 및 워크로드 자격 증명 통합 아키텍처 (`00` ~ `90`)
@@ -127,18 +135,13 @@ exec zsh
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   └── 00-core.md ~ 90-few-shot-examples.md
+│   │   │   └── 000-core.md ~ 100-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
-│   ├── k8s/         # Kubernetes & Cloud Native 워크스페이스
-│   │   ├── .aiexclude
-│   │   ├── .gemini/
-│   │   │   └── 00-core.md ~ 80-few-shot-examples.md
-│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
-│   └── aws-azure/   # 멀티 클라우드(AWS+Azure) 워크스페이스
+│   └── k8s/         # Kubernetes & Cloud Native 워크스페이스
 │       ├── .aiexclude
 │       ├── .gemini/
-│       │   └── 00-core.md ~ 90-few-shot-examples.md
-│       └── GEMINI.md
+│       │   └── 00-core.md ~ 80-few-shot-examples.md
+│       └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)
 ├── vim/             # Vim 에디터 최적화 설정 (.vimrc)

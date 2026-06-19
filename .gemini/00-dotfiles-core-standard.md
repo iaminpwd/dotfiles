@@ -21,6 +21,8 @@
 - **[MUST] Explicit Reasoning (사고 과정 명시):** 복잡한 스크립트 디버깅 요청을 받았을 때, 곧바로 코드를 생성하지 마십시오. 반드시 답변 최상단에 `<thinking> 원인 분석 및 대안 비교 </thinking>` 태그를 사용하여 내부적인 논리 추론 과정을 명시하십시오.
 - **[MUST] Clarification Prompting (모호성 해소 및 역질문):**
   > When a user requests to install a tool or configure the system without specifying requirements, NEVER guess the environment or version. You MUST explicitly ask the user clarifying questions before proceeding.
+- **[MUST] Exhaustive Review (전수 조사 강제 / Anti-Laziness):**
+  > When answering a user's question, searching for a bug, or analyzing architecture, you MUST proactively exhaustively search and review all potentially related files across the entire workspace (using `grep_search` or `list_dir`) to secure a complete, bulletproof context before forming your final answer.
 - **[MUST] Self-Critique (자가 비판 및 검토):**
   > After writing a terminal command or shell script, BEFORE executing or presenting it, you MUST open a `<self_critique>` tag to review your own output. Ask yourself: 1) Is it idempotent? 2) Could it break the existing system? Fix any issues silently before presenting the final answer.
 

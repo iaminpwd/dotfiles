@@ -60,6 +60,8 @@
 
 - **[MUST] Context Validation & Request (사전 컨텍스트 검증 및 요청):**
   > If logs or context are insufficient to determine the root cause, you MUST pause and explicitly ask the user to provide the specific logs first.
+- **[MUST] Exhaustive Review (전수 조사 강제 / Anti-Laziness):**
+  > When answering a question or debugging an issue, you MUST proactively exhaustively search and review all potentially related files across the entire workspace (using `grep_search` or `list_dir`) to secure a complete, bulletproof context before forming your final answer.
 - **[MUST] Context Isolation via XML Tags:**
   > When injecting user code or system logs into your response or artifact, MUST enclose them within explicit XML tags like `<user_code>`, `<system_log>`, or `<refactored_code>` to strictly isolate the context and ensure accurate response generation.
 
@@ -80,8 +82,6 @@
 - **[MUST] Explicit Atomic Commits (명시적 원자적 커밋 강제):**
   > You MUST separate changes into logical atomic commits with meaningful semantic messages instead of lumping changes into a single blind commit.
 </aws_core_guidelines>
-
-
 
 <aws_security_compliance>
 # 컨텍스트 모듈: 보안 및 권한 컴플라이언스 가이드
@@ -123,8 +123,6 @@
   > Once infrastructure vulnerability or container scanning is complete, you MUST document the scan results and mitigations in a Markdown table format in the dedicated `security-audit-report.md` artifact path.
 </aws_security_compliance>
 
-
-
 <aws_iac_standards>
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
@@ -163,8 +161,6 @@
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 로컬에 `conftest` 도구가 있다면 **`run_command`를 통해 직접 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오.
 </aws_iac_standards>
 
-
-
 <aws_kubernetes_standards>
 # 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
 
@@ -186,8 +182,6 @@
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 통한 우아한 종료(Graceful Shutdown) 구성을 필수화하여 무중단 배포(Zero-Downtime)를 달성하십시오.
 </aws_kubernetes_standards>
 
-
-
 <aws_serverless_standards>
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
@@ -208,8 +202,6 @@
   > Before deploying to the actual cloud after modifying Lambda function code, simulate the function's behavior in a local environment and check for errors using `run_command` to execute `sam local invoke` or `sam local start-api`.
 </aws_serverless_standards>
 
-
-
 <aws_database_standards>
 # 컨텍스트 모듈: 데이터베이스 (RDS, DynamoDB, ElastiCache) 엔지니어링 표준
 
@@ -226,8 +218,6 @@
 ## 3. 인메모리 데이터 저장소 (ElastiCache)
 - **[MUST] Redis Security:** Redis 클러스터 생성 시 단순 퍼블릭 접근 통제와 더불어, 반드시 `AUTH` 토큰(비밀번호) 인증과 전송 중 데이터 암호화(TLS in transit) 기능을 활성화하도록 설계하십시오.
 </aws_database_standards>
-
-
 
 <aws_code_review_standards>
 # 컨텍스트 모듈: 코드 품질 및 린팅(Linting) 리뷰 기준
@@ -251,8 +241,6 @@
 - **[MUST] CI/CD Local Test:** GitHub Actions 파이프라인이나 컨테이너(Dockerfile) 코드를 작성한 경우, 터미널에 `act` 도구가 있다면 **`run_command`를 사용하여 직접 실행하여 동작을 사전 검증**하십시오.
 - **[MUST] Pre-Validation:** 운영 환경 PR 생성 시에는 `terratest`나 `terraform plan` 코멘트를 통한 자동화 검증 워크플로우를 반드시 권장하십시오.
 </aws_code_review_standards>
-
-
 
 <aws_day2_operations>
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
@@ -279,8 +267,6 @@
 - **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
 </aws_day2_operations>
 
-
-
 <aws_incident_response>
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
@@ -303,8 +289,6 @@
   > ```
 </aws_incident_response>
 
-
-
 <aws_finops_optimization>
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 
@@ -319,8 +303,6 @@
 - **[PREFER] EBS Optimization:** EC2 인스턴스의 EBS 볼륨 제안 시, 일반적인 I/O 요구사항 환경에서는 비용 효율성이 뛰어난 `gp3` 볼륨 타입을 기본값으로 제안하십시오.
 - **[PREFER] NAT Gateway Cost Avoidance:** AWS 내부 서비스(S3, DynamoDB 등)와 대량 통신이 필요한 프라이빗 서브넷 아키텍처 제안 시, 데이터 처리 요금을 절감하기 위해 VPC Endpoints(Gateway/Interface) 구성을 1순위로 제안하십시오.
 </aws_finops_optimization>
-
-
 
 <aws_few_shot_examples>
 # 컨텍스트 모듈: 퓨샷(Few-Shot) 예시 기반 행동 교정
@@ -362,6 +344,4 @@ LLM의 지시 수행률을 극대화하기 위해, 아래의 명시적인 Bad/Go
 - **[Bad] 단순 알람:** "EC2 인스턴스의 CPU 사용률이 80%를 넘으면 알람이 울리도록 CloudWatch Alarm을 설정하겠습니다."
 - **[Good] SRE Golden Signals 기반 알람:** "단순 CPU 지표 모니터링을 넘어, 실제 사용자 경험에 영향을 미치는 **API 지연 시간(Latency) 급증 및 5xx HTTP 오류율(Errors)**을 기준으로 CloudWatch Alarm을 설계하겠습니다. 또한 자동 복구(Auto Scaling) 트리거 또는 대응 **런북(Runbook)**이 포함된 SNS 알림을 구성하여 즉각적인 후속 조치를 유도하겠습니다."
 </aws_few_shot_examples>
-
-
 
