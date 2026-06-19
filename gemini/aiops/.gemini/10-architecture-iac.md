@@ -15,4 +15,7 @@
 
 ## 3. 명명 규칙 (Naming Convention)
 - **[MUST] Naming Standard:** 시스템 아키텍처나 파이프라인 리소스를 제안할 때는 모호한 표현을 피하고, `<Project>-<Env>-<Service>-<Resource>` 형태의 직관적이고 표준화된 엔터프라이즈 명명 규칙을 사용하십시오.
+
+## 4. AI 엔드포인트 보안 (Zero-Trust)
+- **[MUST] Zero-Trust 모델 서빙 접근 통제:** 모델 서빙 엔드포인트나 주피터 노트북(SageMaker 등) 배포 시 0.0.0.0/0 개방을 엄격히 금지합니다. 모든 AI 인프라는 반드시 VPC/VNet 내부망에 프라이빗하게 배치하고, 인증된 내부망(VPN 등) 또는 명시적인 API Gateway 리버스 프록시를 통해서만 접근하도록 Default Deny 네트워크 룰을 강제하십시오.
 </aiops_architecture_iac>

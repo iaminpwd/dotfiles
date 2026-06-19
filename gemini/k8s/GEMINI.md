@@ -22,8 +22,8 @@
 - **[MUST] Graceful Shutdown & Liveness/Readiness:** 서비스 무중단 배포를 위해 `readinessProbe`와 `livenessProbe`를 분리하여 설정하고, 파드 종료 시 트래픽 유실을 막기 위한 `preStop` 훅 (예: `sleep 5`를 통한 엔드포인트 전파 지연 보완) 및 애플리케이션 레벨의 SIGTERM 처리를 강제하십시오.
 
 ## 4. 시크릿 관리 및 컨테이너 디버깅 (Secrets & Debugging)
-- **[NEVER] Raw Kubernetes Secrets (평문 K8s 시크릿 생성 금지):**
-  > NEVER create Kubernetes Secrets using plain-text YAML. Kubernetes default Secrets are stored in etcd as Base64 encoded strings and are vulnerable to security breaches.
+- **[MUST] 외부 시크릿 관리 도구 연동 강제:**
+  > You MUST enforce the use of external Key Management Systems (e.g., AWS Secrets Manager, Vault) with External Secrets Operator rather than creating Kubernetes Secrets using plain-text YAML.
 - **[MUST] External Secrets Operator (ESO):** AWS Secrets Manager, HashiCorp Vault, Azure Key Vault 등의 외부 키 관리 시스템(KMS)과 K8s를 동기화하는 External Secrets Operator 패턴을 반드시 제안하십시오.
 - **[PREFER] Ephemeral Debugging:** 운영 환경 파드에서 문제가 발생했을 때 컨테이너 내부에 직접 `exec`로 접속해 디버깅 툴을 설치하는 것을 지양하십시오. 대신 `kubectl debug` 명령어를 활용하여 진단 도구가 포함된 임시 컨테이너(Ephemeral Container)를 붙여서(Attach) 디버깅하는 최신 기법을 가이드하십시오.
 
@@ -38,9 +38,7 @@
 - **[Trigger: Validation Failed 3 times] Fail-Fast & Halt (빠른 실패 및 중단):**
   > If the K8s resource fails to reach the Running state even after self-correction attempts, you MUST halt forced execution and request user intervention by summarizing the problem context (`[Drift/State Context]`) and required manual actions (`[Required Action]`).
 - **[Trigger: Task Completion] Artifact Generation (산출물 생성):**
-  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in dedicated paths:
-  > - **매니페스트 및 아키텍처 설계 시:** `architecture-diagram.md` 파일에 클러스터/파드 구조도를 작성하십시오.
-  > - **배포 및 테스트 완료 시:** `k8s-deployment-report.md` 파일에 적용 결과와 에러 내역을 문서화하십시오.
+  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in the dedicated paths as defined by each domain's module rules (e.g., `architecture-diagram.md`, `k8s-deployment-report.md`).
 - **[MUST] Success Criteria over Manual Instructions (명확한 성공 기준 제시):**
   > When reporting task completion, you MUST provide explicit, verifiable "Success Criteria" (e.g., a specific curl command or tool output) so the user can immediately validate it, rather than just providing passive instructions. (e.g., a specific `kubectl get pods` command to check status, or a specific `curl` command) so the user can immediately validate the deployment.
 
@@ -55,8 +53,8 @@
   > When running code formatting tools or linters (e.g., `terraform fmt`, `prettier`, `black`, `shfmt`), you MUST explicitly append the exact target file name to the command (e.g., `terraform fmt <specific_file>`).
 - **[MUST] Scope Isolation (수정 범위 격리):**
   > You MUST strictly limit your modifications (including whitespace, formatting, and comments) ONLY to the files directly related to the user's explicit request.
-- **[NEVER] Global Execution (전역 실행 금지):**
-  > To prevent side-effects, NEVER execute formatting commands without a specific file argument (e.g., `terraform fmt` without a target, `prettier .`, `shfmt -w .`).
+- **[MUST] Target-Specific Execution (특정 타겟 실행 강제):**
+  > To prevent side-effects, you MUST always execute formatting commands with a specific file argument (e.g., `terraform fmt <specific_file>`) rather than globally (e.g., `prettier .`, `shfmt -w .`).
 
 ## Break-Glass (예외 승인) 프로토콜
 - **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 사용자의 의도를 1순위로 존중하여 예외적으로 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.

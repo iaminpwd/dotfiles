@@ -16,10 +16,7 @@
   > You MUST actively use tools like `run_command`, `view_file`, or `grep_search` to query the actual environment state rather than making arbitrary guesses about the user's infrastructure state, code context, or error root causes.
 
 ## 3. 아키텍처 설계 철학
-- **[MUST] Tool-Driven Architecture Validation:** IaC 코드 작성 및 변경 전후로 반드시 다음 로컬 CLI 도구를 실행하여 아키텍처 검증 절차를 강제하십시오.
-  - **Security (보안):** `run_command`로 `checkov -d .` 또는 `trivy config .`를 실행하여 1차 사전 보안 스캔 수행.
-  - **Cost Optimization (비용 최적화):** 테라폼 코드 변경 전, `run_command`로 `infracost breakdown --path .`를 실행하여 리소스 변경 예상 비용 편차 산출.
-  - **Reliability & Operational Excellence (안정성 및 운영 우수성):** [Trigger: After Code Change] 인프라 스크립트 수정 직후 `tflint`를 실행하여 문법 오류 및 안티 패턴을 검출하고 자가 치유(Self-Correct).
+
 - **[PREFER] Cloud-Native First:** Day-2 운영 부하를 최소화하기 위해 직접적인 IaaS(EC2 등) 구축보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
 - **[MUST] Respect Constraints:** 단, 사용자가 특정 기술(예: EC2)을 명시적으로 요구한 경우, 억지로 관리형 서비스로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하십시오.
 - **[MUST] Clarification Prompting (모호성 해소 및 역질문):** 
@@ -34,12 +31,12 @@
 
 ## 5. 자율 주행(Autonomous) 및 문서화 표준
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 파일 읽기/쓰기가 반복적으로 필요할 경우, 대화 시작 시 `ask_permission`을 호출하여 최소한의 경로 권한만 확보하십시오.
-- **[NEVER] 클라우드 명령어 영구 승인 금지:**
-  > NEVER use `ask_permission` to obtain permanent approval for CLI commands involving cloud network requests (e.g., `aws`, `terraform`). You MUST use `run_command` to get explicit per-execution approval from the user.
+- **[MUST] 클라우드 명령어 개별 승인 강제:**
+  > You MUST always use `run_command` to obtain explicit per-execution approval from the user for CLI commands involving cloud network requests (e.g., `aws`, `terraform`), rather than using `ask_permission` for permanent approval.
 - **[Trigger: Before Destructive Action] 파괴적 명령어 사전 승인 의무화:**
   > Before executing any command that mutates or destroys infrastructure state (`terraform apply`, `destroy`, `aws * create/delete`), you MUST internally analyze the blast radius and present a clear Warning message to the user to obtain explicit prior approval.
 - **[Trigger: After Code Change] 자율적 자가 치유 (Autonomous Self-Correction):**
-  > Immediately perform background self-validation without asking the user after changing code or infrastructure settings. If an error occurs, analyze the logs to self-correct and retry (up to 3 times). However, you MUST explicitly target specific files for formatting rather than indiscriminately executing `terraform fmt` on the entire directory.
+  > Immediately perform background self-validation without asking the user after changing code or infrastructure settings. If an error occurs, analyze the logs to self-correct and retry (up to 3 times).
 - **[Trigger: Validation Failed 3 times] 빠른 실패 및 중단 (Fail-Fast & Halt):**
   > If validation fails even after self-correction (up to 3 retries), DO NOT ignore the error or force the apply. Immediately halt all tool calls and request user intervention using the following template:
   > ```markdown
@@ -48,10 +45,7 @@
   > - **[Required Action]**: Local debugging commands the user must run manually
   > ```
 - **[Trigger: Task Completion] 산출물 생성 (Artifact Generation):**
-  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in dedicated paths:
-  > - **Architecture Design/Change:** Create an `architecture-diagram.md` file with Mermaid.js component diagrams and network flows.
-  > - **Security/Vulnerability Scan:** After scanning, summarize the `trivy` or `checkov` results and mitigations in a Markdown table within `security-audit-report.md`.
-  > - **IaC (Terraform) Deployment:** Record the list of changed resources (Drift/Apply) and the estimated cost impact (via `infracost`) in `iac-deployment-summary.md`.
+  > Upon task completion, DO NOT invent random document formats. You MUST generate explicit Artifacts specific to the task domain in the dedicated paths as defined by each domain's module rules (e.g., `architecture-diagram.md`, `security-audit-report.md`, `iac-deployment-summary.md`).
 - **[MUST] Success Criteria over Manual Instructions (명확한 성공 기준 제시):**
   > When reporting task completion, you MUST provide explicit, verifiable "Success Criteria" (e.g., a specific `curl` command to check HTTP 200 status, or a specific `aws cli` command output) so the user can immediately validate the deployment, rather than just providing passive instructions.
 
@@ -70,8 +64,8 @@
   > When running code formatting tools or linters (e.g., `terraform fmt`, `prettier`, `black`, `shfmt`), you MUST explicitly append the exact target file name to the command (e.g., `terraform fmt <specific_file>`).
 - **[MUST] Scope Isolation (수정 범위 격리):**
   > You MUST strictly limit your modifications (including whitespace, formatting, and comments) ONLY to the files directly related to the user's explicit request.
-- **[NEVER] Global Execution (전역 실행 금지):**
-  > To prevent side-effects, NEVER execute formatting commands without a specific file argument (e.g., `terraform fmt` without a target, `prettier .`, `shfmt -w .`).
+- **[MUST] Target-Specific Execution (특정 타겟 실행 강제):**
+  > To prevent side-effects, you MUST always execute formatting commands with a specific file argument (e.g., `terraform fmt <specific_file>`) rather than globally (e.g., `prettier .`, `shfmt -w .`).
 
 ## Break-Glass (예외 승인) 프로토콜
 - **[MUST] Break-Glass (예외 승인):** 시니어 엔지니어(사용자)가 보안이나 아키텍처 규칙(NEVER)을 의도적으로 위반하는 요청(예: "PoC니까 그냥 0.0.0.0/0 열어줘")을 명시적으로 할 경우, 사용자의 의도를 1순위로 존중하여 예외적으로 작업을 수행하되, 반드시 해당 작업이 기술 부채임을 기록하는 `tech-debt-log.md` 파일(또는 ADR 문서)에 위반 사항과 허용 사유를 기록하여 추후 감사(Audit)가 가능하도록 조치하십시오.
