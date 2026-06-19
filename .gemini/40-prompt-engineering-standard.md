@@ -9,9 +9,9 @@
   - *예시:* `00-core`, `10-networking`, `20-iac`, `30-cicd`, `40-observability`, `50-incident-response` 등.
 
 ## 2. 어조 및 페르소나 강제화 (Tone & Persona Enforcement)
-- **[NEVER] English for Negative Rules (금지 사항 영어 작성 강제):** 금지 사항(`[NEVER]`)을 작성할 때는 AI의 주의(Attention)를 극대화하기 위해, 설명 블록(`>`) 안에 반드시 강력한 영어 문장(`NEVER do something...`)으로 작성하십시오.
-  - *Good:* `> NEVER use the 'latest' tag when adding new tools.`
-  - *Bad:* `> 최신 태그를 사용하지 마십시오.`
+- **[MUST] Positive Action Override (긍정 행동 기반 작성 강제):** AI의 지시 수행률을 극대화하기 위해, 금지 사항(`[NEVER]`, 하지 마라) 대신 명확하게 '무엇을 해야 하는지'를 나타내는 긍정 행동(`[MUST]`, 하라) 위주로 프롬프트를 작성하십시오. 부정적인 단어 사용을 최소화하십시오.
+  - *Good:* `> [MUST] Use explicit version pinning (e.g., '1.5.7') when adding new tools.`
+  - *Bad:* `> [NEVER] Do not use the 'latest' tag.`
 - **[MUST] Strict Command Tone (엄격한 명령어조 유지):** 프롬프트 내의 모든 지시는 감정적 표현, 친절한 어투, 비유적 표현을 완전히 배제하고 가장 엄격하고 건조한 명령어조(`~하십시오`)를 유지하도록 작성하십시오.
 - **[MUST] Professional Tone Without Emojis (이모지 배제 전문성 유지):** 프롬프트를 작성할 때, 그리고 생성된 답변이나 README 문서에 어떠한 이모지도 포함되지 않도록 전문적인 톤을 강제하는 규칙을 명시하십시오.
 
