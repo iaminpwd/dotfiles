@@ -30,9 +30,21 @@ AI 에이전트가 코드를 짜고 끝나는 것이 아니라, "스스로 로�
   - **XML 캡슐화 (Domain Isolation):** `aws`, `k8s` 등 각 도메인 규칙이 섞이는 할루시네이션(Bleeding)을 막기 위해 모든 마크다운을 `<aws_core_guidelines>` 등의 고유 XML 태그로 캡슐화했습니다.
   - **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령어 실행 전이나 장애 원인 분석 시, 즉시 행동하지 않고 `<thinking>` 태그 내에서 3-Why 기법과 파급 효과를 분석하도록 설계되었습니다.
   - **원칙 기반 퓨샷 프롬프팅 (Principle-Driven Few-Shot):** 각 워크스페이스의 마지막 모듈(`90-few-shot-examples.md` 등)에 Bad/Good 예시를 주입하여, 추상적인 규칙이 실제 터미널 도구 명령(`run_command`)으로 완벽하게 교정(Self-Correction)되도록 보장합니다.
+  - **자율 주행 트리거 (Autonomous Action Trigger):** 단순 텍스트 답변이 아닌 로컬 CLI 도구(`tflint`, `trivy` 등)와 연동된 `[Trigger]` 태그를 통해 편차 검증(Drift Check) 및 에러 자가 수정(Self-Correction)을 자율 수행합니다.
+  - **엔터프라이즈 마인드셋 락킹 (Enterprise Focus):** 모든 워크스페이스 프롬프트에 Zero-Trust 보안, 장애 복원력(Day-2/SRE), 비용 최적화(FinOps) 철학을 강제로 탑재하여 아키텍처 결함을 사전 차단합니다.
 
 - **워크스페이스별 특화 모듈:**
-  - **AWS (`aws/`):** IAM PoLP, Serverless 아키텍처, FinOps 등 AWS 전 생애주기 폭포수 아키텍처 (`00` ~ `90`)
+  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`00` ~ `90`)
+    - `00-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
+    - `10-security`: 자격 증명(Secrets) 격리 및 최소 권한(PoLP) 컴플라이언스
+    - `20-iac`: Terraform/Ansible 역할 분리(Decoupling) 및 프로비저닝 표준
+    - `30-kubernetes`: EKS 보안 및 IAM Roles for Service Accounts (IRSA) 강제
+    - `40-serverless`: Event-driven 및 비동기(Asynchronous) 아키텍처 우선 제안
+    - `50-code-review`: TFLint, Checkov 등 CLI 도구 기반의 린팅 자율 검증 강제
+    - `60-day2`: 파이프라인(CI/CD) 역할 분리 및 선언적 배포
+    - `70-incident`: 장애 발생 시 우회 조치(Mitigation First) 우선 및 사후 분석
+    - `80-finops`: Spot Instance, Graviton 등을 활용한 능동적 비용 최적화 제안
+    - `90-few-shot`: LLM 지시 수행률 극대화를 위한 명시적 Bad/Good 행동 예시
   - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`00` ~ `80`)
   - **AIOps (`aiops/`):** Blameless Post-Mortem, SRE 에러 분석 워크플로우, SLI/SLO 지표 기반 진단 (`00` ~ `60`)
   - **Multi-Cloud (`aws-azure/`):** 하이브리드 네트워크 보안 및 워크로드 자격 증명 통합 아키텍처 (`00` ~ `90`)
@@ -109,7 +121,9 @@ exec zsh
 ├── gemini/          # AI 에이전트 연동 자율 주행 가이드라인 (각 워크스페이스별)
 │   ├── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
 │   │   ├── .aiexclude
-│   │   └── .gemini/ # 전사적 장애 대응, 복원력 설계, FinOps, SRE 봇을 위한 아키텍처 프롬프트
+│   │   ├── .gemini/
+│   │   │   └── 00-core.md ~ 60-few-shot-examples.md
+│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
@@ -120,12 +134,11 @@ exec zsh
 │   │   ├── .gemini/
 │   │   │   └── 00-core.md ~ 80-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
-│   └── aws-azure/  # 멀티 클라우드(AWS+Azure) 워크스페이스
+│   └── aws-azure/   # 멀티 클라우드(AWS+Azure) 워크스페이스
 │       ├── .aiexclude
 │       ├── .gemini/
 │       │   └── 00-core.md ~ 90-few-shot-examples.md
 │       └── GEMINI.md
-│       └── ...
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)
 ├── vim/             # Vim 에디터 최적화 설정 (.vimrc)
@@ -139,16 +152,17 @@ exec zsh
 시스템 전역을 더럽히지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치되는 핵심 도구들입니다.
 
 ### 1. `mise` & `pipx` 관리 도구
-- **IaC & 설정:** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`
+- **IaC & 설정:** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`, `cfn-lint`, `ansible-lint`, `infracost`
 - **보안 & 규정 준수:** `trivy`, `conftest`, `cosign`, `checkov`, `trufflehog`, `pre-commit`, `yamllint`
-- **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `helm`, `helm-diff`, `kube-linter`, `k3d`, `act`
-- **클라우드 CLI:** `awscli`, `azure-cli`
+- **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `helm`, `helm-diff`, `helm-docs`, `kustomize`, `kube-linter`, `k3d`, `act`
+- **클라우드 CLI:** `awscli`, `aws-sam-cli`, `azure-cli`
+- **런타임 (Runtimes):** `python`, `node`, `go`
 
 ### 2. 주요 단축어 (`.zshrc` & `.gitconfig`)
 - **Terraform:** `tf` (terraform), `tfi` (init), `tfp` (plan), `tfv` (validate), `tff` (fmt -recursive)
 - **Kubernetes:** `k` (kubectl), `kx` (kubectx), `kn` (kubens), `kgp`/`kgs`/`kga`/`kdp`, `klogs`, `kex`, `knet` (트러블슈팅 컨테이너)
 - **Docker & Helm:** `d` (docker), `dc` (docker-compose), `h` (helm)
-- **Git:** `git lg` (히스토리 그래프), `git amend` (커밋 덮어쓰기), `st/co/cb/br/ci/cm/df`
+- **Git:** `git lg` (히스토리 그래프), `git amend` (커밋 덮어쓰기), `st/co/cb/br/ci/cm/df`, `pull.rebase = true` (안전한 병합)
 - **시스템 편의성:** `src` (`source ~/.zshrc`), `ll` (`ls -alF`), `fd` (`fdfind`), `bat` (`batcat`), `c` (`code .`), `e` (`explorer.exe .`), `catcode` (인프라 코드 통째로 병합)
 
 ### 3. 로컬 시크릿 파일 (비밀번호 관리)
