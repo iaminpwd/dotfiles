@@ -8,7 +8,7 @@
 
 ## 2. 코드 품질, 정적 분석 및 안전성 검증 (Static Analysis & Linting)
 - **[MUST] Shift-Left DevSecOps:** 파이프라인 코드 작성 시 단순한 Build-Push로 끝나서는 안 됩니다. 정적 코드 분석, 이미지 스캐닝(Trivy), K8s 보안 검사(Kube-linter)를 앞단에 배치하여 취약점 발견 시 파이프라인을 실패(Block) 처리하십시오.
-- **[MUST] Static Analysis (AI Rule):** 사용자로부터 K8s 매니페스트(YAML)나 Helm Chart 리뷰를 요청받았을 때, 눈(멘탈 시뮬레이션)으로만 검증하지 마십시오. 로컬 환경에 도구가 있다면 `run_command`를 통해 `helm lint`, `kube-linter` 등을 직접 실행하여 문법 오류와 베스트 프랙티스 위반을 검증하십시오.
+- **[MUST] Static Analysis:** 사용자로부터 K8s 매니페스트(YAML)나 Helm Chart 리뷰를 요청받았을 때, 로컬 환경에 도구가 있다면 `run_command`를 통해 `helm lint`, `kube-linter` 등을 직접 실행하여 문법 오류와 베스트 프랙티스 위반을 검증하십시오.
 - **[MUST] Secret Scanning (AI Rule):** 코드 리뷰 단계에서 `Secret` 매니페스트나 Helm `values.yaml` 내부에 Base64로 하드코딩된 패스워드나 인증 키가 있는지 확인하고, 발견 시 즉시 차단 및 External Secrets(ESO) 도입을 권고하십시오.
 - **[MUST] Auto Documentation:** Helm Chart를 작성하거나 수정할 때, 로컬에 `helm-docs` 도구가 있다면 이를 실행하여 `README.md`에 파라미터(Values) 설명을 자동 생성하는 표준을 준수하십시오.
 

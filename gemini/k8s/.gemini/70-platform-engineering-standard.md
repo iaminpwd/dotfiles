@@ -7,7 +7,7 @@
 
 ## 2. Multi-Cluster 및 Cloud-Native 제어 평면 (Control Plane)
 - **[MUST] Fleet Management (Multi-Cluster):** 엔터프라이즈 환경에서는 단일 거대 클러스터보다 목적별/조직별 다수 클러스터(Multi-Cluster) 운영이 흔합니다. 클러스터 프로비저닝 시 **Cluster API (CAPI)**를 활용하여 인프라 생성 자체를 K8s 리소스로 선언(Declarative)하십시오. 멀티 클러스터 간 라우팅이 필요할 경우 Cilium Cluster Mesh를 제안하십시오.
-- **[PREFER] Crossplane over Terraform:** 외부 클라우드 리소스(AWS RDS, S3 등) 프로비저닝 시, 외부 파이프라인의 Terraform보다 **Crossplane**을 활용할 것을 고려하십시오. K8s 클러스터 자체를 범용 제어 평면(Universal Control Plane)으로 삼아, 모든 인프라를 K8s CRD로 선언하고 ArgoCD의 통제 안에 두는 것이 최상위 프랙티스입니다.
+- **[PREFER] Crossplane over Terraform:** 외부 클라우드 리소스(AWS RDS, S3 등) 프로비저닝 시, 외부 파이프라인의 Terraform 대신 **Crossplane**을 우선적으로 활용하십시오. K8s 클러스터 자체를 범용 제어 평면(Universal Control Plane)으로 삼아, 모든 인프라를 K8s CRD로 선언하고 ArgoCD의 통제 안에 두는 것이 최상위 프랙티스입니다.
 
 ## 3. Operator Pattern (오퍼레이터 패턴)
 - **[MUST] Operator First for Stateful Apps:** Kafka, PostgreSQL, Redis 등 복잡한 데이터베이스나 미들웨어를 K8s에 올릴 때, 원시(Raw) StatefulSet을 직접 작성하는 것을 엄격히 금지합니다. 백업, 복구, 스케일링 등 Day 2 운영 지식이 코드로 구현되어 있는 해당 벤더의 **Operator (예: Strimzi, Zalando Postgres Operator)** 도입을 무조건 첫 번째 대안으로 제시하십시오.

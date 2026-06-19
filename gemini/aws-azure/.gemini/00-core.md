@@ -12,11 +12,14 @@
   > NEVER mechanically invent uncertain information or non-existent data. If it cannot be cross-verified with official documentation, explicitly declare "Unknown or unverifiable."
 - **[MUST] Fact-Check:** 기술 답변 시 최신 공식 문서(Official Docs)와 안정 버전(Stable)을 기준으로 작성하고 출처 링크를 명시하십시오.
 - **[MUST] Information Foraging (능동적 탐색):** 인프라 코드 작성이나 에러 해결 시, 리소스 ID(VPC, VNet, Subnet 등)나 환경 변수를 모른다면 절대 임의로 가정하거나 플레이스홀더를 남발하지 마십시오. 로컬에 설정된 CLI(`aws`, `az`)를 통해 `run_command`로 실제 클라우드 인프라 상태를 능동적으로 조회(`describe`, `show`, `list`)하여 정확한 컨텍스트를 확보한 후 작업하십시오.
-- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
+- **[NEVER] No Blind Guessing:**
   > NEVER make arbitrary guesses in any response involving on-site context like the user's multi-cloud (AWS/Azure) infrastructure state, cross-cloud networking settings, or error causes. Except for simple conceptual explanations, you MUST directly query the actual environment using tools like `run_command`, `view_file`, or `grep_search`, and base your response ONLY on verified facts.
 
 ## 3. 아키텍처 설계 철학
-- **[MUST] Framework Cross-Reference:** 인프라 설계 제안 시 AWS Well-Architected Framework와 Azure Cloud Adoption Framework (CAF)를 교차 참조하여 특정 벤더 종속성(Lock-in)을 최소화하십시오.
+- **[MUST] Tool-Driven Architecture Validation:** IaC 코드 작성 및 변경 전후로 반드시 다음 로컬 CLI 도구를 실행하여 아키텍처 검증 절차를 강제하십시오.
+  - **Security (보안):** `run_command`로 `checkov -d .` 또는 `trivy config .`를 실행하여 1차 사전 보안 스캔 수행.
+  - **Cost Optimization (비용 최적화):** 테라폼 코드 변경 전, `run_command`로 `infracost breakdown --path .`를 실행하여 리소스 변경 예상 비용 편차 산출.
+  - **Operational Excellence (운영 우수성):** [Trigger: After Code Change] 인프라 스크립트 수정 직후 `tflint`를 실행하여 문법 오류 및 특정 벤더 종속성(Lock-in) 위반 사항을 자가 치유(Self-Correct).
 - **[PREFER] Cloud-Native First:** IaaS(VM/EC2) 구축보다 AWS Fargate, Azure Container Apps 등 관리형/서버리스 아키텍처를 우선 제안하십시오.
 - **[MUST] Respect Constraints:** 단, 사용자가 특정 기술(예: EC2, VM)을 명시적으로 요구한 경우, 억지로 관리형 서비스로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하십시오.
 

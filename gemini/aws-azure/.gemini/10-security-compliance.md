@@ -6,7 +6,7 @@
   > NEVER hardcode plain-text cloud credentials or DB passwords into `.tf` files or playbooks.
 - **[MUST] OIDC Inter-Cloud:** AWS와 Azure 간 통신 시 정적 자격증명 교환을 금지하고 반드시 OIDC(OpenID Connect) 기반 임시 자격증명 아키텍처를 강제하십시오.
 - **[MUST] Native Secrets:** 자체 구축 도구 대신 AWS Secrets Manager, Azure Key Vault 등 네이티브 보안 저장소에서 `data` 블록으로 호출하십시오.
-- **[MUST] Secret Scanning:** 코드 리뷰 또는 작성 시, 로컬 환경에 `trufflehog`가 있다면 멘탈 시뮬레이션에 의존하지 말고 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 선제적으로 완벽히 차단하십시오.
+- **[MUST] Secret Scanning:** 코드 리뷰 또는 작성 시, 로컬 환경에 `trufflehog`가 있다면 `run_command`로 네이티브 스캐닝을 돌려 하드코딩된 시크릿을 선제적으로 완벽히 차단하십시오.
 
 ## 2. 하이브리드 네트워크 및 인프라 보안
 - **[NEVER] Public Access (퍼블릭 접근 허용 금지):**
@@ -24,7 +24,7 @@
 - **[MUST] Federation:** 다중 계정 접근을 위해 파편화된 IAM 계정을 막고 Microsoft Entra ID와 AWS IAM Identity Center 연동 SSO를 제안하십시오.
 
 ## 4. 멀티 클라우드 제로 트러스트 (Zero Trust) 아키텍처
-- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 침해되었다고 가정(Assume Breach)하십시오. 멀티 클라우드 간 통신, 인스턴스 간 통신 시 NSG(Network Security Group) 및 Security Group을 통해 최소 권한의 통신 규칙을 구성하십시오.
+- **[MUST] Assume Breach & SG Validation:** 모든 네트워크 트래픽은 침해되었다고 가정(Assume Breach)하십시오. 멀티 클라우드 간 통신, 인스턴스 간 통신 시 NSG(Network Security Group) 및 Security Group을 최소 권한으로 구성한 뒤, `run_command`로 `checkov -d .` 등을 실행해 허용 포트(예: 0.0.0.0/0 개방)가 없는지 물리적으로 검증하십시오.
 - **[MUST] Data in Transit:** 멀티 클라우드 환경의 통신 시나리오에서는 공용 인터넷 구간 통과 가능성이 높으므로, 반드시 엔드투엔드(E2E) TLS 암호화 적용을 강제하십시오.
 
 ## 5. 파이프라인 (CI/CD) 및 공급망 보안

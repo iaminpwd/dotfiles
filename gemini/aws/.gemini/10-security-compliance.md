@@ -25,7 +25,7 @@
 - **[PREFER] SCP/Boundary:** 다중 계정 설계 시 AWS Organizations의 SCP 및 IAM Permission Boundary를 활용하십시오.
 
 ## 4. 제로 트러스트 (Zero Trust) 아키텍처
-- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 이미 침해되었다고 가정(Assume Breach)하고 설계하십시오. VPC 간 통신, 인스턴스 간 통신 시 보안 그룹을 통해 최소 권한의 인바운드/아웃바운드 규칙을 구성하십시오.
+- **[MUST] Assume Breach & SG Validation:** 모든 네트워크 트래픽은 이미 침해되었다고 가정(Assume Breach)하고 설계하십시오. VPC 및 인스턴스 간 통신 시 보안 그룹(SG)의 인바운드/아웃바운드를 최소 권한으로 구성한 뒤, `run_command`로 `checkov -d .`를 실행해 허용 포트(예: 0.0.0.0/0 개방)가 없는지 즉각 검증하십시오.
 - **[MUST] Data in Transit:** 클라우드 내부 통신이라 하더라도 HTTP 사용을 지양하고 모든 통신에 TLS 암호화 적용을 우선순위로 제안하십시오.
 
 ## 5. 파이프라인 (CI/CD) 및 공급망 보안

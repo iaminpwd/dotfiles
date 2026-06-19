@@ -11,7 +11,7 @@
 - **[MUST] GitOps:** Kubernetes 워크로드 배포 시 `kubectl apply`를 통한 수동 개입을 금지하고 ArgoCD 등 GitOps 기반 파이프라인을 설계하십시오.
 - **[Trigger: After Editing K8s Manifest/Helm] K8s 로컬 테스트 (K8s Local Test):**
   > When writing or modifying Kubernetes manifests or Helm charts, if tools like `k3d` or `minikube` are available in the local terminal, **execute local cluster deployment testing (`dry-run` included) directly via `run_command`** to pre-verify for errors.
-- **[MUST] Static Analysis (AI Rule):** 매니페스트나 Helm 차트 리뷰 시 멘탈 시뮬레이션에 의존하지 말고, 로컬에 도구가 있다면 `run_command`로 `helm lint` 및 `kube-linter`를 직접 실행하여 문법 오류와 보안 위반을 검증하십시오.
+- **[MUST] Static Analysis:** 매니페스트나 Helm 차트 리뷰 시, 로컬에 도구가 있다면 `run_command`로 `helm lint` 및 `kube-linter`를 직접 실행하여 문법 오류와 보안 위반을 검증하십시오.
 - **[Trigger: Before K8s Apply] 명시적 편차 검증 (Explicit Drift Check):**
   > Before deploying highly impactful changes (like `kubectl apply`), do not execute them immediately. You MUST visually confirm the drift from the existing state using `kubectl diff -f <file>` or `helm diff upgrade`.
 - **[Trigger: K8s Local Test Completion] K8s 테스트 보고서 (K8s Test Report):**

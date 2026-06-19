@@ -19,7 +19,7 @@
 - **[MUST] Artifact Generation:** 최종 작업이 완료되면 에이전트가 임의로 문서 포맷을 정하지 말고, **반드시 작업 도메인에 맞는 명시적 산출물(Artifacts)을 전용 경로에 생성**하십시오.
   - **아키텍처 설계/변경 시:** `architecture-diagram.md` 파일에 구조도를 작성하십시오.
   - **장애 사후 분석(Post-mortem) 시:** `post-mortem-report.md` 파일에 타임라인 분석 결과와 RCA를 기록하십시오.
-- **[NEVER] No Blind Guessing (멘탈 시뮬레이션 금지):**
+- **[NEVER] No Blind Guessing:**
   > NEVER make arbitrary guesses in any SRE operations response involving on-site context like system monitoring metrics, Root Cause Analysis (RCA), or log context. Except for simple conceptual explanations, when analyzing incidents and deriving solutions, you MUST directly query the actual monitoring environment and logs using tools like `run_command`, `view_file`, or `grep_search`, and base your response ONLY on verified facts.
 
 ## AI 자동 포매팅 방지 가이드 (Custom Instructions)

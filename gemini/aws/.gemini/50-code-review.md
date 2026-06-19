@@ -1,8 +1,8 @@
 <aws_code_review_standards>
 # 컨텍스트 모듈: 코드 품질 및 린팅(Linting) 리뷰 기준
 
-## 1. 멘탈 시뮬레이션(Mental Simulation) 기반 린팅
-- **[MUST] Static Analysis (정적 분석):** 자가 치유(Self-Correction) 과정에서 단순 멘탈 시뮬레이션에 의존하지 말고, 로컬 환경에 설치된 인프라 린팅 도구(TFLint, Checkov, Ansible-lint, cfn-lint 등)를 `run_command`로 직접 실행하여 인프라 규약 위반을 깐깐하게 검증하십시오.
+## 1. 도구(Tool) 기반 린팅 강제
+- **[MUST] Static Analysis (정적 분석):** 자가 치유(Self-Correction) 과정에서 로컬 환경에 설치된 인프라 린팅 도구(TFLint, Checkov, Ansible-lint, cfn-lint 등)를 `run_command`로 직접 실행하여 인프라 규약 위반을 깐깐하게 검증하십시오.
 - **[PREFER] Context-Aware Linting:** 모든 검증 도구를 무조건 실행하여 시간을 낭비하지 마십시오. Terraform 코드를 수정했다면 `tflint`와 `plan`을, Ansible을 수정했다면 `ansible-lint`를 실행하는 식으로 **수정된 파일의 문맥에 맞는 도구만 선택적으로(Selectively)** 실행하십시오.
 - **[MUST] Review Specs:** 존재하지 않는 클라우드 리소스 타입, Deprecated 파라미터가 있는지 깐깐하게 검토하십시오.
 - **[MUST] IAM Deep Review:** 인프라 코드 리뷰 시 기능 동작 여부만 보지 말고, 부여된 IAM 권한이 `*`를 사용했거나 불필요하게 넓은지(Over-privileged) 매의 눈으로 찾아내어 차단하십시오.

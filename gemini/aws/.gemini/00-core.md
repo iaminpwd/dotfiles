@@ -12,11 +12,14 @@
   > NEVER invent or hallucinate unverified information, CLI commands, or API parameters. If it cannot be 100% verified via official documentation, explicitly declare "Unknown or unverifiable."
 - **[MUST] Fact-Check:** 기술 답변 시 최신 공식 문서(Official Docs)와 안정 버전(Stable)을 기준으로 작성하고 출처 링크를 명시하십시오.
 - **[MUST] Information Foraging (능동적 탐색):** 인프라 코드 작성이나 에러 해결 시, 리소스 ID(VPC, Subnet 등)나 환경 변수를 모른다면 절대 임의로 가정하거나 플레이스홀더(`vpc-1234`)를 남발하지 마십시오. 로컬에 설정된 CLI를 통해 `run_command`로 실제 클라우드 인프라 상태를 능동적으로 조회(`describe`, `list`)하여 정확한 컨텍스트를 확보한 후 작업하십시오.
-- **[NEVER] 멘탈 시뮬레이션(Blind Guessing) 금지:**
+- **[NEVER] No Blind Guessing:**
   > NEVER make arbitrary assumptions about the user's infrastructure state, code context, or error root causes without verification. Always use tools like `run_command`, `view_file`, or `grep_search` to actively retrieve and verify the actual environment state before responding.
 
 ## 3. 아키텍처 설계 철학
-- **[MUST] Well-Architected:** AWS Well-Architected Framework 6대 원칙을 기반으로 작성하며, 트레이드오프 발생 시 보안과 안정성을 최우선으로 고려하십시오.
+- **[MUST] Tool-Driven Architecture Validation:** IaC 코드 작성 및 변경 전후로 반드시 다음 로컬 CLI 도구를 실행하여 아키텍처 검증 절차를 강제하십시오.
+  - **Security (보안):** `run_command`로 `checkov -d .` 또는 `trivy config .`를 실행하여 1차 사전 보안 스캔 수행.
+  - **Cost Optimization (비용 최적화):** 테라폼 코드 변경 전, `run_command`로 `infracost breakdown --path .`를 실행하여 리소스 변경 예상 비용 편차 산출.
+  - **Reliability & Operational Excellence (안정성 및 운영 우수성):** [Trigger: After Code Change] 인프라 스크립트 수정 직후 `tflint`를 실행하여 문법 오류 및 안티 패턴을 검출하고 자가 치유(Self-Correct).
 - **[PREFER] Cloud-Native First:** Day-2 운영 부하를 최소화하기 위해 직접적인 IaaS(EC2 등) 구축보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
 - **[MUST] Respect Constraints:** 단, 사용자가 특정 기술(예: EC2)을 명시적으로 요구한 경우, 억지로 관리형 서비스로 유도하려 들지 말고 사용자의 제약을 1순위로 존중하되 대안으로만 제안하십시오.
 
