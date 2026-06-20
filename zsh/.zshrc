@@ -104,18 +104,24 @@ function auto_symlink_ai_rules() {
   # 1. AI 룰북 자동 링크 (Gemini 단일)
   local target_md="$dotfiles_env_dir/RULES.md"
   if [ -f "$target_md" ]; then
-    if [ ! -f ".gemini/00-global-rules.md" ]; then
+    local current_link=""
+    [ -L ".gemini/00-global-rules.md" ] && current_link=$(readlink ".gemini/00-global-rules.md")
+    if [ "$current_link" != "$target_md" ]; then
       mkdir -p .gemini
       ln -sfn "$target_md" .gemini/00-global-rules.md
-      echo "🤖 AI 룰북(RULES.md) 동적 링크 주입 완료 (Gemini)"
+      echo "🤖 AI 룰북(RULES.md) 동적 링크 주입(갱신) 완료 (Gemini)"
     fi
   fi
 
   # 2. AI 최적화 룰 다이렉트 자동 링크
   local target_aiexclude="$dotfiles_env_dir/.aiexclude"
-  if [ -f "$target_aiexclude" ] && [ ! -f ".aiexclude" ]; then
-    ln -sfn "$target_aiexclude" .aiexclude
-    echo "🤖 AI 최적화 룰(.aiexclude) 다이렉트 자동 상속 완료: .aiexclude 링크 생성됨"
+  if [ -f "$target_aiexclude" ]; then
+    local current_aiexclude_link=""
+    [ -L ".aiexclude" ] && current_aiexclude_link=$(readlink ".aiexclude")
+    if [ "$current_aiexclude_link" != "$target_aiexclude" ]; then
+      ln -sfn "$target_aiexclude" .aiexclude
+      echo "🤖 AI 최적화 룰(.aiexclude) 다이렉트 자동 상속(갱신) 완료: .aiexclude 링크 생성됨"
+    fi
   fi
 }
 # 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
