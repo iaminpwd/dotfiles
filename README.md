@@ -41,7 +41,7 @@
   - **엔터프라이즈 마인드셋 락킹 (Enterprise Focus):** 모든 워크스페이스 프롬프트에 Zero-Trust 보안, 장애 복원력(Day-2/SRE), 비용 최적화(FinOps) 철학을 강제로 탑재하여 아키텍처 결함을 사전 차단합니다.
 
 - **워크스페이스별 특화 모듈:**
-  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`000` ~ `120`)
+  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`000` ~ `110`)
     - `000-universal-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
     - `010-aws-core`: AWS 워크스페이스 핵심 행동 강령
     - `020-security-compliance`: 자격 증명(Secrets) 격리 및 컴플라이언스
@@ -51,11 +51,10 @@
     - `060-kubernetes-standard`: EKS 보안 및 클라우드 네이티브 표준
     - `070-serverless-standard`: Event-driven 및 비동기 아키텍처
     - `080-database-standard`: 데이터베이스 보호 및 보안
-    - `090-code-review`: CLI 도구 기반 린팅 및 자율 검증
-    - `100-day2-operations`: 운영 파이프라인 및 배포
-    - `110-incident-response`: 장애 우회 조치 및 사후 분석
-    - `120-few-shot-examples`: 지시 수행률 극대화를 위한 행동 예시
-  - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`00` ~ `80`)
+    - `090-day2-operations`: 운영 파이프라인 및 배포
+    - `100-incident-response`: 장애 우회 조치 및 사후 분석
+    - `110-few-shot-examples`: 지시 수행률 극대화를 위한 행동 예시
+  - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`000` ~ `090`)
   - **AIOps (`aiops/`):** Blameless Post-Mortem, SRE 에러 분석 워크플로우, SLI/SLO 지표 기반 진단 (`00` ~ `60`)
 
 ---
@@ -123,7 +122,7 @@ exec zsh
 ```text
 ~/dotfiles
 ├── .aiexclude       # 루트 컨텍스트 중복 방지 (원본 .gemini 소스 대신 빌드된 GEMINI.md만 읽도록 AI 강제)
-├── .gemini/         # Dotfiles 레포지토리 자체 관리를 위한 메타 AI 프롬프트 (00~40)
+├── .gemini/         # Dotfiles 레포지토리 자체 관리를 위한 메타 AI 프롬프트 (000~050)
 ├── GEMINI.md        # 병합된 Dotfiles 메인테이너 AI 프롬프트 지침 (setup.sh 자동 생성)
 ├── README.md        # 프로젝트 설명서 (본 문서)
 ├── setup.sh         # 전체 환경 자동 구성 스크립트
@@ -136,12 +135,12 @@ exec zsh
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   └── 000-universal-core.md ~ 120-few-shot-examples.md
+│   │   │   └── 000-universal-core.md ~ 110-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
 │   └── k8s/         # Kubernetes & Cloud Native 워크스페이스
 │       ├── .aiexclude
 │       ├── .gemini/
-│       │   └── 00-core.md ~ 80-few-shot-examples.md
+│       │   └── 000-universal-core.md ~ 090-few-shot-examples.md
 │       └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)

@@ -62,15 +62,7 @@ echo "[+] Helm 플러그인 설치 중 (helm-diff)..."
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 helm plugin install https://github.com/databus23/helm-diff --verify=false || echo "helm-diff 플러그인이 이미 설치되어 있거나 실패했습니다."
 
-echo "[+] 보안 검증 도구(Checkov, Trufflehog) 추가 설치 중..."
-# Checkov (IaC 보안 취약점 스캐너) - pipx로 격리 설치
-pipx install checkov || echo "Checkov 설치 실패 또는 이미 존재함"
-pipx install pre-commit || echo "pre-commit 설치 실패"
-pipx install yamllint || echo "yamllint 설치 실패"
-pipx ensurepath
 
-# TruffleHog (시크릿 스캐너) - 로컬 bin에 바이너리 다운로드
-curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b ~/.local/bin || echo "Trufflehog 설치 실패"
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
