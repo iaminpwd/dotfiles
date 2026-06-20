@@ -121,20 +121,7 @@ for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
   WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
   mkdir -p "$WORKSPACE_DIR/src"
 
-  # 심볼릭 링크 동적 생성 (파일이 실제로 존재할 때만 생성)
-  if [ -f "$MERGED_MD" ]; then
-    ln -sf "$MERGED_MD" "$WORKSPACE_DIR/GEMINI.md"
-  fi
-  
-  if [ -d "$TARGET_DIR/.gemini" ]; then
-    ln -sfn "$TARGET_DIR/.gemini" "$WORKSPACE_DIR/.gemini"
-  fi
-
-  if [ -f "$TARGET_DIR/.aiexclude" ]; then
-    ln -sf "$TARGET_DIR/.aiexclude" "$WORKSPACE_DIR/.aiexclude"
-  fi
-
-  echo "   ✅ [$ENV_NAME] 세팅 완료 및 링크 생성 완료"
+  echo "   ✅ [$ENV_NAME] 기본 워크스페이스 디렉토리 생성 완료"
 done
 
 echo "========================================================="

@@ -77,38 +77,46 @@ alias src='source ~/.zshrc'
 # ~/aws, ~/kubernetes 등 부모 폴더에 GEMINI.md가 존재하는 상태에서,
 # 하위의 Git 레포지토리 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
 function auto_symlink_gemini_rules() {
-  # 1. 현재 폴더가 Git 레포지토리 루트인지 먼저 확인
+  # 1. 현재 폴더가 Git 레포지토리 루트인지 확인
   if [ ! -d ".git" ]; then
     return
   fi
 
-  local current_dir="$PWD"
-  local target_md=""
-  local depth=0
-  local max_depth=4
+  # 2. 현재 경로에서 환경명 추출 (패턴: */workspace/<env_name>/src/*)
+  local env_name=""
+  case "$PWD" in
+    */workspace/*/src/*)
+      env_name="${PWD#*/workspace/}"
+      env_name="${env_name%%/src/*}"
+      ;;
+    *)
+      return
+      ;;
+  esac
 
-  # 2. 홈 디렉토리를 만나거나 최대 4단계 위로 올라갈 때까지 상위 폴더 역추적
-  while [ "$current_dir" != "/" ] && [ "$current_dir" != "$HOME" ] && [ $depth -lt $max_depth ]; do
-    current_dir=$(dirname "$current_dir")
-    depth=$((depth + 1))
-    
-    # 상위 폴더에서 GEMINI.md를 찾은 경우
-    if [ -f "$current_dir/GEMINI.md" ]; then
-      target_md="$current_dir/GEMINI.md"
-      break
-    fi
-  done
+  local dotfiles_env_dir="$HOME/dotfiles/gemini/$env_name"
+  
+  # 3. 환경 원본 폴더 존재 여부 확인
+  if [ ! -d "$dotfiles_env_dir" ]; then
+    return
+  fi
 
-  # 3. 타겟을 찾았을 때만 심볼릭 링크(절대 경로 기반) 생성 로직 수행
-  if [ -n "$target_md" ]; then
-    if [ ! -d ".gemini" ]; then
-      mkdir -p .gemini
-    fi
-    
-    if [ ! -f ".gemini/00-global-rules.md" ]; then
-      ln -s "$target_md" .gemini/00-global-rules.md
-      echo "🤖 AI 룰북(GEMINI.md) 글로벌-로컬 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
-    fi
+  if [ ! -d ".gemini" ]; then
+    mkdir -p .gemini
+  fi
+  
+  # 1. AI 룰북 다이렉트 자동 링크
+  local target_gemini="$dotfiles_env_dir/GEMINI.md"
+  if [ -f "$target_gemini" ] && [ ! -f ".gemini/00-global-rules.md" ]; then
+    ln -s "$target_gemini" .gemini/00-global-rules.md
+    echo "🤖 AI 룰북(GEMINI.md) 다이렉트 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
+  fi
+
+  # 2. AI 최적화 룰 다이렉트 자동 링크
+  local target_aiexclude="$dotfiles_env_dir/.aiexclude"
+  if [ -f "$target_aiexclude" ] && [ ! -f ".aiexclude" ]; then
+    ln -s "$target_aiexclude" .aiexclude
+    echo "🤖 AI 최적화 룰(.aiexclude) 다이렉트 자동 상속 완료: .aiexclude 링크 생성됨"
   fi
 }
 # 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
