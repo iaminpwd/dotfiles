@@ -3,7 +3,7 @@
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
 - **[MUST] Separation of Concerns:** CI(빌드/테스트)와 CD(배포) 역할을 엄격히 분리하고, 배포 파이프라인 설계 시 파이프라인에 의한 100% 자동화 배포가 이루어지도록 구성하십시오.
-- **[MUST] CI/CD Local Test:** GitHub Actions 등 파이프라인 코드 작성 시 `act` 도구가 있다면 로컬에서 직접 실행하여 사전 검증하십시오.
+- **[MUST] CI/CD Local Test:** GitHub Actions 등 파이프라인 코드 작성 시 반드시 `run_command`로 `act -W <특정_워크플로우_파일>` 도구를 실행하여 로컬에서 사전 검증하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
 
 ## 2. 가시성 (Observability) 및 데이터 복원력
 - **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch)을 넘어, 마이크로서비스 환경에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray) 아키텍처를 반드시 포함하십시오.
