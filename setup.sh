@@ -68,19 +68,13 @@ echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
-# 모든 프롬프트 소스 디렉토리를 순회 (예: aws, dotfiles, k8s 등)
+# 모든 컨텍스트 디렉토리를 순회하여 RULES.md 병합 출력 (dotfiles 포함, 패턴 통일)
 for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
   ENV_NAME=$(basename "$TARGET_DIR")
-  
-  if [ "$ENV_NAME" = "dotfiles" ]; then
-    echo "=> [dotfiles] 자체 메타 프롬프트(GEMINI.md) 빌드 중..."
-    MERGED_MD="$DOTFILES_DIR/GEMINI.md"
-  else
-    echo "=> [$ENV_NAME] 환경 AI 컨텍스트 룰북(RULES.md) 빌드 중..."
-    MERGED_MD="$TARGET_DIR/RULES.md"
-  fi
-  
+
+  echo "=> [$ENV_NAME] 컨텍스트 룰북(RULES.md) 빌드 중..."
+  MERGED_MD="$TARGET_DIR/RULES.md"
   rm -f "$MERGED_MD"
 
   # .contexts 폴더가 존재하는 경우에만 병합 수행
@@ -89,7 +83,7 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     for md_file in "$TARGET_DIR/.contexts/"*.md; do
       # .md 파일이 없을 경우 literal 문자열이 반환되는 것을 방지
       [ -f "$md_file" ] || continue
-      
+
       echo "   Adding: $(basename "$md_file")"
       cat "$md_file" >> "$MERGED_MD"
       echo -e "\n\n" >> "$MERGED_MD"
@@ -100,8 +94,15 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
   mkdir -p "$WORKSPACE_DIR/src"
 
-  echo "   ✅ [$ENV_NAME] 기본 워크스페이스 디렉토리 생성 완료"
+  echo "   ✅ [$ENV_NAME] 룰북 빌드 및 워크스페이스 생성 완료"
 done
+
+# GEMINI.md (루트): contexts/dotfiles/RULES.md를 가리키는 심볼릭 링크 생성
+echo "=> [GEMINI.md] 심볼릭 링크 생성 중..."
+DOTFILES_RULES="$CONTEXTS_DIR/dotfiles/RULES.md"
+rm -f "$DOTFILES_DIR/GEMINI.md"
+ln -sf "$DOTFILES_RULES" "$DOTFILES_DIR/GEMINI.md"
+echo "   ✅ [GEMINI.md] -> $DOTFILES_RULES"
 
 echo "========================================================="
 echo "🎉 모든 기본 설치 및 환경 세팅이 백그라운드로 완료되었습니다!"
