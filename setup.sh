@@ -66,40 +66,27 @@ helm plugin install https://github.com/databus23/helm-diff --verify=false || ech
 
 echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
-echo "=> [dotfiles] 자체 메타 프롬프트 병합 진행 중..."
-DOTFILES_MERGED_MD="$DOTFILES_DIR/GEMINI.md"
-rm -f "$DOTFILES_MERGED_MD"
-if [ -d "$DOTFILES_DIR/.gemini" ]; then
-  for md_file in "$DOTFILES_DIR/.gemini/"*.md; do
-    [ -f "$md_file" ] || continue
-    echo "   Adding: $(basename "$md_file")"
-    cat "$md_file" >> "$DOTFILES_MERGED_MD"
-    echo -e "\n\n" >> "$DOTFILES_MERGED_MD"
-  done
-  echo "   ✅ [dotfiles] 메타 프롬프트 병합 완료"
-fi
+CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
-# gemini 폴더 경로 변수화
-GEMINI_BASE_DIR="$DOTFILES_DIR/gemini"
-
-# gemini 폴더 하위의 모든 디렉토리를 순회 (예: aws, kubernetes, terraform 등)
-for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
-  # 디렉토리가 아닌 경우(glob 실패 등) 건너뜐다
+# 모든 프롬프트 소스 디렉토리를 순회 (예: aws, dotfiles, k8s 등)
+for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
-
-  # 맨 뒤의 슬래시(/)를 제거하고 순수 폴더명만 추출 (예: 'aws')
   ENV_NAME=$(basename "$TARGET_DIR")
   
-  echo "=> [$ENV_NAME] 환경 AI 브레인 세팅 진행 중..."
-
-  # 해당 환경의 GEMINI.md 최종 출력 경로
-  MERGED_MD="$TARGET_DIR/GEMINI.md"
+  if [ "$ENV_NAME" = "dotfiles" ]; then
+    echo "=> [dotfiles] 자체 메타 프롬프트(GEMINI.md) 빌드 중..."
+    MERGED_MD="$DOTFILES_DIR/GEMINI.md"
+  else
+    echo "=> [$ENV_NAME] 환경 AI 컨텍스트 룰북(RULES.md) 빌드 중..."
+    MERGED_MD="$TARGET_DIR/RULES.md"
+  fi
+  
   rm -f "$MERGED_MD"
 
-  # .gemini 폴더가 존재하는 경우에만 병합 수행
-  if [ -d "$TARGET_DIR/.gemini" ]; then
+  # .contexts 폴더가 존재하는 경우에만 병합 수행
+  if [ -d "$TARGET_DIR/.contexts" ]; then
     # bash의 기본 glob 확장 기능을 활용하여 사전순(00, 10, 20...) 정렬 처리
-    for md_file in "$TARGET_DIR/.gemini/"*.md; do
+    for md_file in "$TARGET_DIR/.contexts/"*.md; do
       # .md 파일이 없을 경우 literal 문자열이 반환되는 것을 방지
       [ -f "$md_file" ] || continue
       

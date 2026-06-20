@@ -74,9 +74,9 @@ alias src='source ~/.zshrc'
 # =============================================================================
 # 🤖 AI 프롬프트 자동 상속 훅 (Auto-Symlink)
 # =============================================================================
-# ~/aws, ~/kubernetes 등 부모 폴더에 GEMINI.md가 존재하는 상태에서,
+# ~/aws, ~/kubernetes 등 부모 폴더에 RULES.md가 존재하는 상태에서,
 # 하위의 Git 레포지토리 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
-function auto_symlink_gemini_rules() {
+function auto_symlink_ai_rules() {
   # 1. 현재 폴더가 Git 레포지토리 루트인지 확인
   if [ ! -d ".git" ]; then
     return
@@ -94,30 +94,29 @@ function auto_symlink_gemini_rules() {
       ;;
   esac
 
-  local dotfiles_env_dir="$HOME/dotfiles/gemini/$env_name"
+  local dotfiles_env_dir="$HOME/dotfiles/rules/$env_name"
   
   # 3. 환경 원본 폴더 존재 여부 확인
   if [ ! -d "$dotfiles_env_dir" ]; then
     return
   fi
-
-  if [ ! -d ".gemini" ]; then
-    mkdir -p .gemini
-  fi
   
-  # 1. AI 룰북 다이렉트 자동 링크
-  local target_gemini="$dotfiles_env_dir/GEMINI.md"
-  if [ -f "$target_gemini" ] && [ ! -f ".gemini/00-global-rules.md" ]; then
-    ln -s "$target_gemini" .gemini/00-global-rules.md
-    echo "🤖 AI 룰북(GEMINI.md) 다이렉트 자동 상속 완료: .gemini/00-global-rules.md 생성됨"
+  # 1. AI 룰북 자동 링크 (Gemini 단일)
+  local target_md="$dotfiles_env_dir/RULES.md"
+  if [ -f "$target_md" ]; then
+    if [ ! -f ".gemini/00-global-rules.md" ]; then
+      mkdir -p .gemini
+      ln -sfn "$target_md" .gemini/00-global-rules.md
+      echo "🤖 AI 룰북(RULES.md) 동적 링크 주입 완료 (Gemini)"
+    fi
   fi
 
   # 2. AI 최적화 룰 다이렉트 자동 링크
   local target_aiexclude="$dotfiles_env_dir/.aiexclude"
   if [ -f "$target_aiexclude" ] && [ ! -f ".aiexclude" ]; then
-    ln -s "$target_aiexclude" .aiexclude
+    ln -sfn "$target_aiexclude" .aiexclude
     echo "🤖 AI 최적화 룰(.aiexclude) 다이렉트 자동 상속 완료: .aiexclude 링크 생성됨"
   fi
 }
 # 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
-add-zsh-hook chpwd auto_symlink_gemini_rules
+add-zsh-hook chpwd auto_symlink_ai_rules

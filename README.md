@@ -61,31 +61,31 @@
 
 ## 작동 논리 및 아키텍처 (How it Works)
 
-본 레포지토리의 핵심은 **"Shadow AI Architecture"**를 통해 개발자의 로컬 환경과 원격 Git 레포지토리를 철저히 분리하면서도, AI에게 완벽한 컨텍스트(Context)를 주입하는 것입니다. 이는 다음 4단계의 메커니즘을 거쳐 자동으로 구성됩니다.
+본 레포지토리의 핵심은 **"Shadow AI Architecture"**를 통해 개발자의 로컬 환경과 원격 Git 레포지토리를 철저히 분리하면서도, AI(Gemini 등)에게 완벽한 컨텍스트(Context)를 주입하는 것입니다. 이는 다음 4단계의 메커니즘을 거쳐 자동으로 구성됩니다.
 
 ### 1단계: 모듈화된 메타 프롬프트 병합 (Prompt Build)
 거대한 단일 프롬프트 작성(Monolithic Prompting)을 지양하고, 관리의 복잡성을 낮추기 위해 생애주기 및 도메인별로 규칙을 분할하여 체계적인 폭포수(Waterfall) 구조를 확보합니다.
-- `setup.sh` 스크립트 실행 시, `~/dotfiles/gemini/<env>/.gemini/` 하위에 번호순(예: `00-core.md`, `10-security.md`)으로 분할된 프롬프트 모듈들을 차례대로 읽어들입니다.
-- 분할 관리된 이 모듈들을 하나로 합쳐서 환경별(예: AWS, K8s) `GEMINI.md`라는 단일 마스터 룰북 파일로 빌드(병합)합니다. 
+- `setup.sh` 스크립트 실행 시, `~/dotfiles/rules/<env>/.rules/` 하위에 번호순(예: `000-core.md`, `010-security.md`)으로 분할된 프롬프트 모듈들을 차례대로 읽어들입니다.
+- 분할 관리된 이 모듈들을 하나로 합쳐서 환경별(예: AWS, K8s) `RULES.md`라는 단일 마스터 룰북 파일로 빌드(병합)합니다. 
 
 ### 2단계: 워크스페이스(Workspace) 동적 프로비저닝
 각 환경의 코드가 섞이지 않도록 `setup.sh`가 `~/workspace/` 하위에 도메인별 작업 공간을 구성합니다.
 - 예: `~/workspace/aws/`, `~/workspace/k8s/` 폴더가 자동 생성됩니다.
-- 생성된 각 워크스페이스의 루트 경로에 1단계에서 빌드된 마스터 `GEMINI.md`와 AI 접근을 제어할 `.aiexclude` 파일이 심볼릭 링크(Symlink)로 연결됩니다.
+- 생성된 각 워크스페이스의 루트 경로에 1단계에서 빌드된 마스터 `RULES.md`와 AI 접근을 제어할 `.aiexclude` 파일이 심볼릭 링크(Symlink)로 연결됩니다.
 - 실제 Git 프로젝트들이 위치할 안전 격리 구역인 `src/` 폴더(`~/workspace/<env>/src/`)를 별도로 생성합니다.
 
 ### 3단계: Zsh 훅 기반 자율 상속 (Auto-Symlink Hook)
 개발자가 특정 작업을 위해 코드가 있는 디렉토리로 진입할 때 일어나는 마법입니다.
 - 개발자가 터미널에서 `cd ~/workspace/aws/src/my-terraform-repo` 명령을 통해 Git 레포지토리 루트로 진입합니다.
 - `.zshrc`에 등록된 Zsh 내장 훅(`chpwd`)이 디렉토리 이동 이벤트를 즉시 감지합니다.
-- 현재 폴더가 Git 레포지토리(`.git` 폴더 존재)인지 확인한 후, 최대 4단계까지 부모 디렉토리를 탐색하여 부모의 `GEMINI.md` 마스터 룰북을 찾습니다.
+- 현재 폴더가 Git 레포지토리(`.git` 폴더 존재)인지 확인한 후, 최대 4단계까지 부모 디렉토리를 탐색하여 부모의 `RULES.md` 마스터 룰북을 찾습니다.
 - 마스터 룰북을 발견하면 현재 레포지토리 내부에 `.gemini/00-global-rules.md`라는 이름으로 심볼릭 링크를 자동 주입합니다.
 - *결과적으로 AI는 해당 프로젝트를 열자마자 `00-global-rules.md`를 최상위 지침으로 인식하여 자율 주행의 기반을 다집니다.*
 
 ### 4단계: 컨텍스트 중복 차단 및 보안선 구축 (Context & Security Isolation)
 AI가 불필요한 파일을 읽어 할루시네이션(Hallucination)을 일으키거나, AI 룰북이 협업 레포지토리에 커밋되는 것을 완벽히 차단합니다.
-- **Git 오염 방지:** `setup.sh`가 초기 세팅 시 설치한 전역 `.gitignore_global` 규칙에 의해 `.gemini/` 폴더와 `GEMINI.md`는 철저히 무시됩니다. 동료의 PC나 원격 레포지토리에 절대 푸시되지 않습니다.
-- **AI 컨텍스트 최적화 (`.aiexclude`):** 워크스페이스 루트에 주입된 `.aiexclude`가 파편화된 원본 모듈들이나 상위의 중복된 `GEMINI.md`를 읽지 못하게 차단합니다. AI 에이전트의 시야에는 오직 레포지토리 내부에 주입된 단 1개의 최적화된 마스터 룰북(`.gemini/00-global-rules.md`)만 들어오게 됩니다.
+- **Git 오염 방지:** `setup.sh`가 초기 세팅 시 설치한 전역 `.gitignore_global` 규칙에 의해 위 룰북 파일들은 철저히 무시됩니다. 동료의 PC나 원격 레포지토리에 절대 푸시되지 않습니다.
+- **AI 컨텍스트 최적화 (`.aiexclude`):** 워크스페이스 루트에 주입된 `.aiexclude`가 파편화된 원본 모듈들이나 상위의 중복된 룰북을 읽지 못하게 차단합니다.
 
 ---
 
@@ -121,27 +121,15 @@ exec zsh
 
 ```text
 ~/dotfiles
-├── .aiexclude       # 루트 컨텍스트 중복 방지 (원본 .gemini 소스 대신 빌드된 GEMINI.md만 읽도록 AI 강제)
-├── .gemini/         # Dotfiles 레포지토리 자체 관리를 위한 메타 AI 프롬프트 (000~050)
+├── .aiexclude       # 루트 컨텍스트 중복 방지 (원본 소스 대신 빌드된 파일만 읽도록 강제)
 ├── GEMINI.md        # 병합된 Dotfiles 메인테이너 AI 프롬프트 지침 (setup.sh 자동 생성)
 ├── README.md        # 프로젝트 설명서 (본 문서)
 ├── setup.sh         # 전체 환경 자동 구성 스크립트
-├── gemini/          # AI 에이전트 연동 자율 주행 가이드라인 (각 워크스페이스별)
-│   ├── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
-│   │   ├── .aiexclude
-│   │   ├── .gemini/
-│   │   │   └── 00-core.md ~ 60-few-shot-examples.md
-│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
+├── contexts/        # 모든 AI 컨텍스트 룰북 원본 소스 디렉토리 (단일 진실 공급원)
+│   ├── dotfiles/    # Dotfiles 레포지토리 자체 관리를 위한 메타 프롬프트 소스
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
-│   │   ├── .aiexclude
-│   │   ├── .gemini/
-│   │   │   └── 000-universal-core.md ~ 110-few-shot-examples.md
-│   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
-│   └── k8s/         # Kubernetes & Cloud Native 워크스페이스
-│       ├── .aiexclude
-│       ├── .gemini/
-│       │   └── 000-universal-core.md ~ 090-few-shot-examples.md
-│       └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침
+│   ├── k8s/         # Kubernetes & Cloud Native 워크스페이스
+│   └── aiops/       # AIOps (운영 자동화 AI) 워크스페이스
 ├── git/             # Git 글로벌 설정 (.gitconfig) 및 전역 보안 (.gitignore_global)
 ├── mise/            # 인프라 도구 버전 관리 매니페스트 (.mise.toml)
 ├── vim/             # Vim 에디터 최적화 설정 (.vimrc)
@@ -183,4 +171,4 @@ API 키나 토큰을 절대 `.zshrc`에 적지 마세요! 설치가 끝나면 `~
 
 - **도구 추가/버전 변경:** `mise/.mise.toml` 파일을 열어 버전을 바꾸고 터미널에서 `mise install`을 치면 끝입니다.
 - **단축키 추가:** `zsh/.zshrc`에 단축키를 적고 터미널에 `src`를 치면 즉시 적용됩니다.
-- **AI 룰 수정:** `gemini/aws/.gemini/` 폴더 안의 마크다운 파일을 수정한 뒤 `~/dotfiles/setup.sh`를 한 번 더 실행하시면 프롬프트 룰북이 자동 갱신됩니다.
+- **AI 룰 수정:** `rules/aws/.rules/` 폴더 안의 마크다운 파일을 수정한 뒤 `~/dotfiles/setup.sh`를 한 번 더 실행하시면 프롬프트 룰북이 자동 갱신됩니다.
