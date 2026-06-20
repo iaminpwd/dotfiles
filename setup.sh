@@ -126,6 +126,10 @@ for TARGET_DIR in "$GEMINI_BASE_DIR"/*/; do
     ln -sf "$MERGED_MD" "$WORKSPACE_DIR/GEMINI.md"
   fi
   
+  if [ -d "$TARGET_DIR/.gemini" ]; then
+    ln -sfn "$TARGET_DIR/.gemini" "$WORKSPACE_DIR/.gemini"
+  fi
+
   if [ -f "$TARGET_DIR/.aiexclude" ]; then
     ln -sf "$TARGET_DIR/.aiexclude" "$WORKSPACE_DIR/.aiexclude"
   fi
