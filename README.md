@@ -182,37 +182,11 @@ ls -la .gemini/
 
 ```text
 ~/dotfiles
-├── .aiexclude            # 루트: contexts/ 내 원본 소스 중복 인덱싱 차단
-├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
-├── GEMINI.md             # symlink → contexts/dotfiles/RULES.md
-│                         # (Gemini IDE 자동 인식 특수 파일명)
-├── README.md             # 본 문서
-├── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
-│
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
-│   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트
-│   │   ├── .contexts/    # 모듈 분할 소스 (000~050)
-│   │   │   ├── 000-universal-core.md
-│   │   │   ├── 010-dotfiles-core-standard.md
-│   │   │   ├── 020-shell-scripting-standard.md
-│   │   │   ├── 030-toolchain-management-standard.md
-│   │   │   ├── 040-dotfiles-security-standard.md
-│   │   │   └── 050-prompt-engineering-standard.md
-│   │   └── RULES.md      # 병합된 마스터 룰북 (setup.sh 자동 생성)
-│   │
 │   ├── aws/              # AWS 인프라 워크스페이스 룰북
-│   │   ├── .aiexclude    # AI 바이너리/로그 파일 차단 규칙
-│   │   ├── .contexts/    # 모듈 분할 소스 (000~110, 12개)
-│   │   └── RULES.md      # 병합된 마스터 룰북
-│   │
-│   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스
-│   │   ├── .contexts/    # 모듈 분할 소스 (000~090, 10개)
-│   │   └── RULES.md      # 병합된 마스터 룰북
-│   │
-│   └── aiops/            # AIOps (운영 자동화) 워크스페이스
-│       ├── .aiexclude
-│       ├── .contexts/    # 모듈 분할 소스 (000~070, 8개)
-│       └── RULES.md      # 병합된 마스터 룰북
+│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스
+│   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트
+│   └── k8s/              # Kubernetes & Cloud Native 워크스페이스
 │
 ├── git/
 │   ├── .gitconfig        # 글로벌 Git 설정 (alias, pull.rebase=true)
@@ -224,8 +198,14 @@ ls -la .gemini/
 ├── vim/
 │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
 │
-└── zsh/
-    └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
+├── zsh/
+│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
+│
+├── .aiexclude            # 루트: contexts/ 내 원본 소스 중복 인덱싱 차단
+├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
+├── GEMINI.md             # symlink -> contexts/dotfiles/RULES.md
+├── README.md             # 본 문서
+└── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
 ```
 
 ---
@@ -236,98 +216,71 @@ ls -la .gemini/
 
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
-| 카테고리 | 도구 | 버전 |
-|---|---|---|
-| **보안 & 정책 검증** | trivy | 0.71.0 |
-| | conftest | 0.68.2 |
-| | cosign | 3.1.1 |
-| | trufflehog | 3.95.6 |
-| | checkov (pipx) | 3.3.1 |
-| | pre-commit (pipx) | 4.6.0 |
-| | yamllint (pipx) | 1.38.0 |
-| | cfn-lint (pipx) | 1.51.5 |
-| **IaC & 구성 관리** | terraform | 1.5.7 |
-| | terragrunt | 1.0.8 |
-| | tflint | 0.63.1 |
-| | terraform-docs | 0.24.0 |
-| | infracost | 0.10.44 |
-| | ansible | 9.5.1 |
-| | ansible-lint (pipx) | 26.4.0 |
-| **클라우드 CLI** | awscli | 2.15.30 |
-| | azure-cli | 2.87.0 |
-| | aws-sam-cli (pipx) | 1.162.1 |
-| **Kubernetes & 컨테이너** | kubectl | 1.30.1 |
-| | kubectx | 0.9.5 |
-| | k9s | 0.32.4 |
-| | docker-cli | 29.5.3 |
-| | helm | 4.2.1 |
-| | helm-docs | 1.14.2 |
-| | kustomize | 5.8.1 |
-| | kube-linter | 0.8.3 |
-| **로컬 테스트** | k3d | 5.6.3 |
-| | act | 0.2.62 |
-| **런타임** | node | 20.12.2 |
-| | python | 3.14.6 |
-| | go | 1.26.4 |
+**보안 & 정책 검증**
+`trivy` · `conftest` · `cosign` · `trufflehog` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint`
+
+**IaC & 구성 관리**
+`terraform` · `terragrunt` · `tflint` · `terraform-docs` · `infracost` · `ansible` · `ansible-lint`
+
+**클라우드 CLI**
+`awscli` · `azure-cli` · `aws-sam-cli`
+
+**Kubernetes & 컨테이너**
+`kubectl` · `kubectx` · `k9s` · `docker-cli` · `helm` · `helm-docs` · `kustomize` · `kube-linter`
+
+**로컬 테스트**
+`k3d` · `act`
+
+**런타임**
+`node` · `python` · `go`
+
+> 버전 고정 정보는 [`mise/.mise.toml`](mise/.mise.toml)에서 확인하십시오.
 
 ### 2. 주요 단축어 (`.zshrc` & `.gitconfig`)
 
-**Terraform**
-
 ```bash
-tf   # terraform
-tfi  # terraform init
-tfp  # terraform plan
-tfv  # terraform validate
-tff  # terraform fmt -recursive
-```
+# --- Terraform ---
+tf        # terraform
+tfi       # terraform init
+tfp       # terraform plan
+tfv       # terraform validate
+tff       # terraform fmt -recursive
 
-**Kubernetes**
+# --- Kubernetes ---
+k         # kubectl
+kx        # kubectx
+kn        # kubens
+kgp       # kubectl get pods
+kgs       # kubectl get svc
+kga       # kubectl get all
+kdp       # kubectl describe pod
+klogs     # kubectl logs -f
+kex       # kubectl exec -i -t
+knet      # 트러블슈팅용 netshoot 컨테이너 즉시 실행
 
-```bash
-k      # kubectl
-kx     # kubectx
-kn     # kubens
-kgp    # kubectl get pods
-kgs    # kubectl get svc
-kga    # kubectl get all
-kdp    # kubectl describe pod
-klogs  # kubectl logs -f
-kex    # kubectl exec -i -t
-knet   # 트러블슈팅용 netshoot 컨테이너 즉시 실행
-```
+# --- Docker & Helm ---
+d         # docker
+dc        # docker-compose
+h         # helm
 
-**Docker & Helm**
+# --- Git ---
+git st    # status
+git co    # checkout
+git cb    # checkout -b
+git br    # branch
+git cm    # commit -m
+git df    # diff
+git amend # commit --amend --no-edit
+git lg    # 컬러 그래프 히스토리 (가독성 최적화)
 
-```bash
-d   # docker
-dc  # docker-compose
-h   # helm
-```
-
-**Git (`.gitconfig` alias)**
-
-```bash
-git st     # status
-git co     # checkout
-git cb     # checkout -b
-git br     # branch
-git cm     # commit -m
-git df     # diff
-git amend  # commit --amend --no-edit
-git lg     # 컬러 그래프 히스토리 (가독성 최적화)
-```
-
-**시스템 편의성**
-
-```bash
+# --- 시스템 편의성 ---
 src       # source ~/.zshrc (설정 즉시 재로드)
 ll        # ls -alF
 bat       # batcat (Ubuntu 패키지명 충돌 해결)
 fd        # fdfind (Ubuntu 패키지명 충돌 해결)
 c         # code .
 e         # explorer.exe . (WSL2)
-catcode   # 현재 디렉토리의 인프라 코드 전체를 all_code.txt로 추출 (AI 컨텍스트 주입용)
+catcode   # 현재 디렉토리 인프라 코드 전체를 all_code.txt로 추출
 ```
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
