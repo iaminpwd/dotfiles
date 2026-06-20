@@ -94,7 +94,7 @@ function auto_symlink_ai_rules() {
       ;;
   esac
 
-  local dotfiles_env_dir="$HOME/dotfiles/rules/$env_name"
+  local dotfiles_env_dir="$HOME/dotfiles/contexts/$env_name"
   
   # 3. 환경 원본 폴더 존재 여부 확인
   if [ ! -d "$dotfiles_env_dir" ]; then

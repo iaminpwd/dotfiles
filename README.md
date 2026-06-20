@@ -65,7 +65,7 @@
 
 ### 1단계: 모듈화된 메타 프롬프트 병합 (Prompt Build)
 거대한 단일 프롬프트 작성(Monolithic Prompting)을 지양하고, 관리의 복잡성을 낮추기 위해 생애주기 및 도메인별로 규칙을 분할하여 체계적인 폭포수(Waterfall) 구조를 확보합니다.
-- `setup.sh` 스크립트 실행 시, `~/dotfiles/rules/<env>/.rules/` 하위에 번호순(예: `000-core.md`, `010-security.md`)으로 분할된 프롬프트 모듈들을 차례대로 읽어들입니다.
+- `setup.sh` 스크립트 실행 시, `~/dotfiles/contexts/<env>/.contexts/` 하위에 번호순(예: `000-core.md`, `010-security.md`)으로 분할된 프롬프트 모듈들을 차례대로 읽어들입니다.
 - 분할 관리된 이 모듈들을 하나로 합쳐서 환경별(예: AWS, K8s) `RULES.md`라는 단일 마스터 룰북 파일로 빌드(병합)합니다. 
 
 ### 2단계: 워크스페이스(Workspace) 동적 프로비저닝
@@ -171,4 +171,4 @@ API 키나 토큰을 절대 `.zshrc`에 적지 마세요! 설치가 끝나면 `~
 
 - **도구 추가/버전 변경:** `mise/.mise.toml` 파일을 열어 버전을 바꾸고 터미널에서 `mise install`을 치면 끝입니다.
 - **단축키 추가:** `zsh/.zshrc`에 단축키를 적고 터미널에 `src`를 치면 즉시 적용됩니다.
-- **AI 룰 수정:** `rules/aws/.rules/` 폴더 안의 마크다운 파일을 수정한 뒤 `~/dotfiles/setup.sh`를 한 번 더 실행하시면 프롬프트 룰북이 자동 갱신됩니다.
+- **AI 룰 수정:** `contexts/aws/.contexts/` 폴더 안의 마크다운 파일을 수정한 뒤 `~/dotfiles/setup.sh`를 한 번 더 실행하시면 프롬프트 룰북이 자동 갱신됩니다.
