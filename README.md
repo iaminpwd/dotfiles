@@ -41,21 +41,22 @@
   - **엔터프라이즈 마인드셋 락킹 (Enterprise Focus):** 모든 워크스페이스 프롬프트에 Zero-Trust 보안, 장애 복원력(Day-2/SRE), 비용 최적화(FinOps) 철학을 강제로 탑재하여 아키텍처 결함을 사전 차단합니다.
 
 - **워크스페이스별 특화 모듈:**
-  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`000` ~ `100`)
-    - `000-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
-    - `010-security`: 자격 증명(Secrets) 격리 및 최소 권한(PoLP) 컴플라이언스
-    - `020-iac`: Terraform/Ansible 역할 분리(Decoupling) 및 프로비저닝 표준
-    - `030-kubernetes`: EKS 보안 및 IAM Roles for Service Accounts (IRSA) 강제
-    - `040-serverless`: Event-driven 및 비동기(Asynchronous) 아키텍처 우선 제안
-    - `050-database`: Redis, RDS 등 데이터베이스 상태 보호 및 보안 강제
-    - `060-code-review`: TFLint, Checkov 등 CLI 도구 기반의 린팅 자율 검증 강제
-    - `070-day2`: 파이프라인(CI/CD) 역할 분리 및 선언적 배포
-    - `080-incident`: 장애 발생 시 우회 조치(Mitigation First) 우선 및 사후 분석
-    - `090-finops`: Spot Instance, Graviton 등을 활용한 능동적 비용 최적화 제안
-    - `100-few-shot`: LLM 지시 수행률 극대화를 위한 명시적 Bad/Good 행동 예시
+  - **AWS (`aws/`):** 대규모 엔터프라이즈 환경을 가정한 AWS 전 생애주기 폭포수 아키텍처 (`000` ~ `120`)
+    - `000-universal-core`: 수석 데브옵스 아키텍트 페르소나 및 핵심 행동 표준
+    - `010-aws-core`: AWS 워크스페이스 핵심 행동 강령
+    - `020-security-compliance`: 자격 증명(Secrets) 격리 및 컴플라이언스
+    - `030-finops-optimization`: 비용 최적화 (FinOps)
+    - `040-automation-scripting`: 셸 스크립트 및 자동화 표준
+    - `050-iac-standard`: Terraform 프로비저닝 표준
+    - `060-kubernetes-standard`: EKS 보안 및 클라우드 네이티브 표준
+    - `070-serverless-standard`: Event-driven 및 비동기 아키텍처
+    - `080-database-standard`: 데이터베이스 보호 및 보안
+    - `090-code-review`: CLI 도구 기반 린팅 및 자율 검증
+    - `100-day2-operations`: 운영 파이프라인 및 배포
+    - `110-incident-response`: 장애 우회 조치 및 사후 분석
+    - `120-few-shot-examples`: 지시 수행률 극대화를 위한 행동 예시
   - **K8s (`k8s/`):** GitOps(ArgoCD) 배포 편차(Drift) 검증, mTLS, External Secrets, eBPF 런타임 보안 (`00` ~ `80`)
   - **AIOps (`aiops/`):** Blameless Post-Mortem, SRE 에러 분석 워크플로우, SLI/SLO 지표 기반 진단 (`00` ~ `60`)
-  - **Multi-Cloud (`aws-azure/`):** 하이브리드 네트워크 보안 및 워크로드 자격 증명 통합 아키텍처 (`00` ~ `90`)
 
 ---
 
@@ -135,7 +136,7 @@ exec zsh
 │   ├── aws/         # AWS 인프라(Terraform) 워크스페이스 환경
 │   │   ├── .aiexclude
 │   │   ├── .gemini/
-│   │   │   └── 000-core.md ~ 100-few-shot-examples.md
+│   │   │   └── 000-universal-core.md ~ 120-few-shot-examples.md
 │   │   └── GEMINI.md        # 결합된 최종 AI 프롬프트 지침 (자동 생성)
 │   └── k8s/         # Kubernetes & Cloud Native 워크스페이스
 │       ├── .aiexclude
@@ -157,7 +158,7 @@ exec zsh
 ### 1. `mise` & `pipx` 관리 도구
 - **IaC & 설정:** `terraform`, `ansible`, `terragrunt`, `tflint`, `terraform-docs`, `cfn-lint`, `ansible-lint`, `infracost`
 - **보안 & 규정 준수:** `trivy`, `conftest`, `cosign`, `checkov`, `trufflehog`, `pre-commit`, `yamllint`
-- **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `helm`, `helm-diff`, `helm-docs`, `kustomize`, `kube-linter`, `k3d`, `act`
+- **Kubernetes & 시뮬레이션:** `kubectl`, `kubectx`, `k9s`, `docker-cli`, `helm`, `helm-diff`, `helm-docs`, `kustomize`, `kube-linter`, `k3d`, `act`
 - **클라우드 CLI:** `awscli`, `aws-sam-cli`, `azure-cli`
 - **런타임 (Runtimes):** `python`, `node`, `go`
 
