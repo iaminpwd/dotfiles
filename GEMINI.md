@@ -40,6 +40,8 @@
 - **[NEVER] Global Execution (전역 실행 금지):**
   > To prevent side-effects, NEVER execute formatting commands without a specific file argument (e.g., `terraform fmt` without a target, `prettier .`, `shfmt -w .`).
 
+
+
 # 셸 스크립트 및 시스템 설정(Dotfiles) 표준
 
 ## 1. 셸 스크립트 작성 표준
@@ -76,6 +78,8 @@
   > NEVER modify, damage, or delete the core workspace engine logic like 'auto_symlink_gemini_rules' hook in '.zshrc' without explicit user permission.
 - **[MUST] Leverage Native Aliases:** `.zshrc`에 등록된 Ubuntu 충돌 방지용 alias(`batcat -> bat`, `fdfind -> fd`)와 전체 인프라 코드 추출용 헬퍼(`catcode`)의 존재를 인지하고 스크립트 작성 시 이를 파괴하지 마십시오.
 
+
+
 # 데브옵스 도구 및 패키지 설치 관리 표준
 
 ## 1. 버전 관리 선언주의 (Declarative Versioning)
@@ -94,6 +98,8 @@
 - **[Trigger: After Toolchain Edit] Mise Validation (Mise 자율 검증):**
   > After adding a new package to `mise.toml`, DO NOT commit immediately. You MUST perform self-validation by directly running `mise install` and `mise ls` locally to ensure the binary is successfully downloaded and parsed.
 
+
+
 # Dotfiles 보안 및 시크릿 관리 표준
 
 ## 1. 시크릿 유출 차단 (Secret Leak Prevention)
@@ -109,6 +115,8 @@
 ## 3. 로컬 권한 탈취 방지
 - **[NEVER] Private Key 무단 열람 금지 (No Unauthorized Access to Private Keys):**
   > NEVER read core private keys (like `~/.ssh/id_rsa`) or GPG keys arbitrarily using `run_command` or `cat`. You MUST explain the purpose to the user and obtain explicit permission via `ask_permission`.
+
+
 
 # AI 아키텍트 프롬프트 엔지니어링 마스터 가이드
 
@@ -155,4 +163,6 @@
   > **[EXCEPTION] Template Standalone (템플릿 자립성을 위한 의도된 중복 허용):** 단, `gemini/aws/.gemini/`와 같이 추후 타겟 저장소로 클론(배포)되어 독립적으로 동작해야 하는 템플릿(Decoupled Workspace)을 작성할 때는 예외입니다. 글로벌 설정(`dotfiles/.gemini/`)에 존재하는 기초 룰이라 하더라도, 클론된 환경에서의 자립성(Standalone)을 보장하기 위해 템플릿 워크스페이스 내에 중복으로 포함시키는 것(수직적 중복)은 허용됩니다. **그러나, 단일 템플릿 워크스페이스 내부의 파일들 간(예: `aws/.gemini/00-core.md`와 `50-code-review.md` 사이)에 발생하는 수평적 중복(Horizontal Redundancy)은 예외 없이 철저히 제거(Deduplication)하여 템플릿 내에서의 SSOT를 유지하십시오.**
 - **[MUST] Conciseness (과도한 부연 설명 축소):** 장황한 튜토리얼식 설명이나 불필요한 맥락을 걷어내십시오. AI가 즉시 행동으로 옮길 수 있도록 조건(Condition)과 행동(Action) 위주로 간결하게 압축하십시오.
 - **[MUST] AI-Friendly Formatting (AI 친화적 구조화):** AI 모델의 컨텍스트 파싱 효율을 극대화하기 위해 불릿 포인트, `[MUST]`, `[NEVER]`, `[Trigger]`, `[PREFER]` 같은 명확한 태그와 마크다운 문법을 활용하여 지시를 구조화하십시오.
+
+
 
