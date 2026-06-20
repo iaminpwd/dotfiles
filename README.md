@@ -69,36 +69,18 @@
 
 ### 전체 아키텍처 흐름
 
-```mermaid
-flowchart TD
-    A["<b>setup.sh</b> 실행"] --> B["Step 1-2: apt 패키지 +\nOh My Zsh 설치"]
-    B --> C["Step 3: GNU Stow\n심볼릭 링크 연결\n(zsh/vim/mise/git → ~/)"]
-    C --> D["Step 4: mise install\n40+ 인프라 도구 설치"]
-    D --> E["Step 5: contexts/ 순회\n각 RULES.md 빌드 (모듈 병합)"]
-    E --> F["워크스페이스 생성\n~/workspace/aws/src\n~/workspace/k8s/src\n~/workspace/aiops/src"]
-    E --> G["GEMINI.md 심볼릭 링크 생성\n~/dotfiles/GEMINI.md\n→ contexts/dotfiles/RULES.md"]
-```
+<p align="center">
+  <img src="assets/setup-pipeline.png" alt="setup.sh Installation Pipeline" width="520">
+</p>
 
 ### GNU Stow 심볼릭 링크 구조
 
-```mermaid
-flowchart LR
-    subgraph "~/dotfiles (원본 소스)"
-        Z1["zsh/.zshrc"]
-        Z2["vim/.vimrc"]
-        Z3["mise/.mise.toml"]
-        Z4["git/.gitconfig"]
-    end
-    subgraph "~/ (홈 디렉토리)"
-        H1["~/.zshrc"]
-        H2["~/.vimrc"]
-        H3["~/.mise.toml"]
-        H4["~/.gitconfig"]
-    end
-    Z1 -->|symlink| H1
-    Z2 -->|symlink| H2
-    Z3 -->|symlink| H3
-    Z4 -->|symlink| H4
+```text
+~/dotfiles/          (원본 소스)          ~/         (홈 디렉토리)
+├── zsh/.zshrc    ──────symlink──────►  ~/.zshrc
+├── vim/.vimrc    ──────symlink──────►  ~/.vimrc
+├── mise/.mise.toml ───symlink──────►  ~/.mise.toml
+└── git/.gitconfig ────symlink──────►  ~/.gitconfig
 ```
 
 > **[MUST] 수정 원칙:** 설정 파일을 직접 편집할 때는 반드시 `~/dotfiles/` 내의 원본 소스 파일만 조작하십시오. `~/.zshrc`를 직접 편집하면 symlink 아키텍처가 파괴됩니다.
@@ -107,19 +89,9 @@ flowchart LR
 
 개발자가 특정 디렉토리로 `cd`할 때 AI 룰북이 자동 주입되는 메커니즘입니다.
 
-```mermaid
-flowchart TD
-    A["cd ~/workspace/aws/src/my-repo"] --> B{"현재 폴더에\n.git 디렉토리 존재?"}
-    B -- "No" --> Z["훅 종료 (무동작)"]
-    B -- "Yes" --> C{"PWD 패턴 검사\n*/workspace/env/src/*"}
-    C -- "패턴 불일치" --> Z
-    C -- "패턴 일치" --> D["env_name 추출\n예: 'aws'"]
-    D --> E{"~/dotfiles/contexts/aws\n존재 여부 확인"}
-    E -- "미존재" --> Z
-    E -- "존재" --> F["RULES.md → .gemini/00-global-rules.md\n심볼릭 링크 생성"]
-    F --> G[".aiexclude → .aiexclude\n심볼릭 링크 생성"]
-    G --> H["AI가 프로젝트 진입 즉시\n환경별 룰북을 최상위 지침으로 인식"]
-```
+<p align="center">
+  <img src="assets/auto-symlink-hook.png" alt="Auto-Symlink Hook Workflow" width="480">
+</p>
 
 **결과 파일 구조 (예: `~/workspace/aws/src/my-terraform-repo/`)**
 
@@ -144,18 +116,9 @@ my-terraform-repo/
 
 ### 컨텍스트 빌드 파이프라인
 
-```mermaid
-flowchart LR
-    subgraph "contexts/aws/.contexts/"
-        M1["000-universal-core.md"]
-        M2["010-aws-core.md"]
-        M3["020-security.md"]
-        M4["..."]
-        M5["110-few-shot-examples.md"]
-    end
-    M1 & M2 & M3 & M4 & M5 -->|"cat 순차 병합\n(setup.sh)"| R["contexts/aws/RULES.md\n(단일 마스터 룰북)"]
-    R -->|"cd 훅 자동 주입"| P[".gemini/00-global-rules.md\n(프로젝트별 symlink)"]
-```
+<p align="center">
+  <img src="assets/context-build.png" alt="AI Context Build Pipeline" width="680">
+</p>
 
 ---
 
