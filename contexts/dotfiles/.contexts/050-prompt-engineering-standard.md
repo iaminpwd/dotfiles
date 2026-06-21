@@ -20,6 +20,7 @@
 - **[MUST] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
 
 ## 4. 자율 실행 통제 및 제약 (Autonomous Ops)
+- **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력(`write_to_file`)으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
 - **[MUST] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
 - **[MUST] Eval-Driven Testing:** 실행 결과나 JSON 파싱 여부를 검증하는 평가 코드를 프롬프트 룰에 포함하십시오.
 - **[MUST] Split Complex Tasks:** 복잡한 셋업은 한 번에 하지 말고 넘버링(Step-by-Step)하여 쪼개 실행하도록 강제하십시오.
