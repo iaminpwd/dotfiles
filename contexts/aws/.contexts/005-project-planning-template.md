@@ -6,6 +6,7 @@
 
 ## 1. 클라우드 특화 자율 주행 (Cloud Agentic Workflow)
 - **[MUST] Use Built-in Artifact:** 계획서는 반드시 대상 에이전트(Antigravity)의 내장 `implementation_plan.md` 아티팩트를 사용하여 작성하십시오.
+- **[Trigger: Before Architecture Design] Agentic RAG 강제:** 새로운 아키텍처를 설계하기 전, 에이전트 스스로 `grep_search`나 `view_file` 도구를 사용하여 `030`(FinOps), `060`(K8s) 등 워크스페이스 내의 사내 표준(SSOT) 프롬프트 룰을 능동적으로 검색하고, 그 표준을 계획서에 100% 반영하도록 강제하십시오.
 - **[Trigger: Before Architecture Design] AWS Account Foraging:** 아키텍처 설계에 착수하기 전, 반드시 `run_command`로 `aws sts get-caller-identity`, `aws ec2 describe-vpcs`, `aws service-quotas` 등을 실행하여 현재 계정의 리전, VPC, Quota 상태를 팩트 기반으로 확보하십시오.
 - **[Trigger: Designing Architecture] Cloud Alternatives Table:** 핵심 컴퓨팅/스토리지 선택 시 반드시 2~3개의 AWS 서비스 대안(예: EC2 vs Fargate vs Lambda)과 비용/운영 복잡도를 Markdown Table로 제시하여 사용자의 선택을 유도하십시오.
 - **[Trigger: Cloud Quota Bottleneck] Serverless Mitigation:** 리소스 할당량(Quota) 초과 등 확장성 병목이 감지될 경우, 즉시 Fargate나 Lambda 기반의 서버리스 아키텍처로 전환하는 대안을 선제적으로 제시하십시오.
@@ -14,7 +15,7 @@
 ## 2. 마스터 플랜 뼈대 강제 (Master Plan Schema)
 - **[MUST] Strict Structure:** 작성 시 아래 10개 목차를 한국어 제목으로 100% 준수하여 명시하십시오.
   1. **프로젝트 요약 (Executive Summary)**: 프로젝트 개요 및 비즈니스 목표를 명시하십시오.
-  2. **아키텍처 청사진 (Architecture Blueprint)**: 전체 시스템 구성도를 설계하고 관리형 서비스 우선 도입을 명시하십시오.
+  2. **아키텍처 청사진 (Architecture Blueprint) & ADR**: 전체 시스템 구성도를 설계하고, 도입된 기술에 대해 **ADR(Architecture Decision Records)** 형식을 차용하여 "대안 B를 검토했으나 비용/보안 문제로 기각하고 대안 A를 최종 채택함"이라는 명시적 기각 사유와 트레이드오프를 반드시 기록하십시오.
   3. **네트워크 및 연결성 (Network & Connectivity)**: VPC, 서브넷(Public/Private), 라우팅 전략을 설계하십시오.
   4. **보안 및 자격 증명 (Security & IAM)**: 최소 권한(PoLP) 및 시크릿 물리적 분리 원칙을 적용하십시오.
   5. **비용 최적화 (FinOps & Cost Estimation)**: 초기 예상 비용 및 탄력적 스케일링(Autoscaling) 비용 최적화 방안을 명시하십시오.
