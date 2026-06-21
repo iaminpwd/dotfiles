@@ -19,6 +19,29 @@
 - **[MUST] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입하십시오.
 - **[MUST] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
 
+### 메타 프롬프트 예시 주입 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```markdown
+- [MUST] OOM 발생 시 파드의 resources.limits를 확인하십시오.
+<examples>
+<example>
+[Good]
+limits:
+  memory: "256Mi"
+</example>
+</examples>
+```
+</example>
+<example>
+[Bad]
+```markdown
+- [MUST] OOM이 안 나게 메모리를 256Mi 정도로 잘 설정해야 합니다. (추상적이고 예시 없음)
+```
+</example>
+</examples>
+
 ## 4. 자율 실행 통제 및 제약 (Autonomous Ops)
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력(`write_to_file`)으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
 - **[MUST] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
@@ -36,5 +59,7 @@
 ## 6. 프롬프트 최적화 (Readability)
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
 - **[MUST] Conciseness:** 장황한 부연 설명을 모두 걷어내고, 즉시 행동 가능한 짧은 단문 명령형으로 프롬프트를 압축하십시오.
+
+- **[Trigger: Prompt Authored] 자가 비판 (Self-Critique):** 새로운 프롬프트 모듈(`.md`) 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **추상적이고 장황한 문장(`~하는 것이 좋습니다` 등)이 포함되었는지, 그리고 핵심 예시가 XML(`<examples>`)로 명확히 격리되지 않았거나 다른 파일과 중복(SSOT 파괴)되는지** 집중 비판하십시오.
 </dotfiles_prompt_engineering_standard>
 </domain_specific_rules>

@@ -14,5 +14,30 @@
 
 ## 3. 프라이빗 키(Private Key) 보호 통제
 - **[MUST] Explicit Key Access Request:** 디버깅 목적이라도 `~/.ssh/id_rsa` 등 프라이빗 키 내용을 무작정 열람하지 마십시오. 반드시 `ask_permission`으로 명시적 승인을 먼저 취득하십시오.
+
+### 시크릿 물리적 분리 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```bash
+# ~/.zshrc (Git으로 추적됨)
+if [ -f ~/.zshrc.local ]; then
+    source ~/.zshrc.local
+fi
+
+# ~/.zshrc.local (Git Ignore 처리됨)
+export GITHUB_TOKEN="ghp_xxx..."
+```
+</example>
+<example>
+[Bad]
+```bash
+# ~/.zshrc (Git으로 추적됨)
+export GITHUB_TOKEN="ghp_xxx..." # 절대 금지 (퍼블릭 저장소 유출 위험)
+```
+</example>
+</examples>
+
+- **[Trigger: Before Commit / File Authored] 자가 비판 (Self-Critique):** 자동화 스크립트나 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **AWS Access Key나 PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되어 퍼블릭 저장소에 노출될 위험성**을 집중 비판하십시오.
 </dotfiles_security_standard>
 </domain_specific_rules>

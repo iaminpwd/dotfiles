@@ -24,5 +24,20 @@
   - **Root Cause Analysis (5-Whys)**: [장애의 진짜 원인 심층 분석]
   - **Action Items (액션 아이템)**: [시스템 강건성을 위한 아키텍처 개선 후속 조치 목록]
   ```
+
+### 비난 없는 사후 분석(Blameless RCA) 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- "개발자 A가 잘못된 코드를 배포함" -> "CI/CD 파이프라인에 문법 검증 단계가 누락되어 잘못된 코드가 프로덕션에 배포될 수 있는 시스템적 취약점이 있었음"
+- "작업자의 실수로 DB가 삭제됨" -> "운영 DB에 `prevent_destroy` 락이 걸려있지 않아 휴먼 에러가 시스템 파괴로 이어질 수 있었음"
+</example>
+<example>
+[Bad]
+- "담당자의 부주의로 인해 발생함. 앞으로 주의를 기울이도록 교육함." (사람을 탓함)
+</example>
+</examples>
+
+- **[Trigger: RCA Completed] 자가 비판 (Self-Critique):** 장애 사후 분석(Post-Mortem) 보고서 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **장애의 원인을 '사람의 실수(Human Error)'로 단정짓지 않았는지, 시스템적/구조적 예방책(Action Item)이 명확히 도출되었는지** 집중 비판하십시오.
 </incident_response>
 </domain_specific_rules>

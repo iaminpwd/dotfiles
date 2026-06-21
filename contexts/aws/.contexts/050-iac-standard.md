@@ -16,7 +16,32 @@
 - **[MUST] Version Pinning:** 인프라의 예측 가능성을 위해 Terraform 코어 및 AWS Provider 버전(`required_version`, `required_providers`)은 반드시 특정 버전(또는 `~>` 구문)으로 명시하여 고정하십시오.
 - **[MUST] Module Composition:** 코드를 재사용 가능한 자식 모듈(Child Module)과 환경별 루트 모듈(Root Module)로 철저히 분리(Decoupling)하십시오.
 - **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 반드시 `run_command`를 통해 `terraform-docs markdown <특정_경로>` 도구를 실행하여 README.md를 자동 생성해 문서화를 강제하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
-- **[Trigger: Before Terraform Apply] 명시적 편차 검증 (Explicit Drift Check):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform fmt -check <특정_파일>` 및 `terraform validate`를 실행하여 구문의 유효성을 검증하고, 이어서 `terraform plan`을 통해 리소스 변경(Destroy/Replace)의 정확한 범위를 확인하십시오.
+
+### State 관리 및 의존성 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state-bucket"
+    key            = "prod/vpc/terraform.tfstate"
+    region         = "ap-northeast-2"
+    dynamodb_table = "terraform-locks"
+  }
+}
+```
+</example>
+<example>
+[Bad]
+```hcl
+# backend 블록 누락 (로컬 state 사용)
+# dynamodb_table 누락 (동시성 제어 불가)
+```
+</example>
+</examples>
+
+- **[Trigger: Before Terraform Apply] 자가 비판 및 편차 검증 (Self-Critique):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform plan`을 실행하고 스스로 `<self_critique>` 태그를 열어 **의도치 않은 리소스 재생성(Destroy & Recreate)에 따른 프로덕션 다운타임 및 데이터 유실 가능성**을 집중 비판하십시오. 통과한 경우에만 `terraform apply`를 실행하십시오.
 - **[MUST] SG Lazy Deletion Control:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion) 과정에서 안정적인 리소스 수명 주기 제어(Lifecycle Management)를 보장하기 위해 `name_prefix = "..."`를 적극 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
 - **[Trigger: Terraform Apply Completion] IaC 배포 요약 (IaC Deployment Summary):** Terraform Apply가 성공적으로 완료된 직후, 추가/변경/삭제된 리소스 목록(Drift)과 `infracost`를 통한 예상 비용 영향을 `iac-deployment-summary.md` 산출물에 문서화하십시오.
 

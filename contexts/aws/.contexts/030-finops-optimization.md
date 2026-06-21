@@ -10,5 +10,21 @@
 - **[PREFER] Storage Tiering:** S3 버킷 설계 시, 장기 보관 데이터의 스토리지 비용을 최적화하기 위해 S3 Intelligent-Tiering 클래스를 적용하거나 객체 수명 주기(Lifecycle) 정책(예: 30일 이후 Glacier 전환)을 기본 아키텍처로 우선 제안하십시오.
 - **[PREFER] EBS Optimization:** EC2 인스턴스의 EBS 볼륨 제안 시, 일반적인 I/O 요구사항 환경에서는 비용 효율성이 뛰어난 `gp3` 볼륨 타입을 기본값으로 제안하십시오.
 - **[PREFER] NAT Gateway Cost Avoidance:** AWS 내부 서비스(S3, DynamoDB 등)와 대량 통신이 필요한 프라이빗 서브넷 아키텍처 제안 시, 데이터 처리 요금을 절감하기 위해 VPC Endpoints(Gateway/Interface) 구성을 1순위로 제안하십시오.
+
+### 적정 사이즈(Right-Sizing) 도출 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- "최초 구축 시에는 T3/T4g 인스턴스를 활용해 비용을 최소화하고, 이후 트래픽 패턴을 분석하여 Auto Scaling Group(ASG)을 통해 필요할 때만 Scale-Out 되도록 설계하십시오."
+- "Batch 작업용 노드는 100% Spot Instance로 구성하십시오."
+</example>
+<example>
+[Bad]
+- "나중에 트래픽이 많아질 수 있으니 처음부터 m5.4xlarge 인스턴스 10대를 고정으로 띄우겠습니다."
+- "안정성이 중요하니 모든 워커 노드는 On-Demand로 구성합니다."
+</example>
+</examples>
+
+- **[Trigger: Resource Sizing] 자가 비판 (Self-Critique):** 인스턴스 타입이나 개수 등 리소스 사이징을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 **사용자의 현재 요구사항 대비 과도한 프로비저닝(Over-provisioning) 및 미사용 리소스(Idle Resource) 발생 가능성**을 집중 비판하십시오.
 </finops_optimization>
 </domain_specific_rules>

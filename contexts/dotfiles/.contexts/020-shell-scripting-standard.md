@@ -19,5 +19,30 @@
 ## 3. 검증 및 런타임 환경 보호
 - **[Trigger: After Script Edit] Syntax Validation:** `setup.sh`나 `.zshrc` 수정 후 백그라운드 검증 시, 반드시 `bash -n <file>` 또는 `zsh -n <file>`로 문법 자가 검증을 수행하십시오.
 - **[MUST] Preserve Core Architecture:** `auto_symlink_gemini_rules` 훅이나 `batcat` 앨리어스 등 코어 엔진 구조는 임의로 변경하지 마십시오.
+
+### 방어적 셸 스크립트 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```bash
+set -euo pipefail
+trap 'rm -rf /tmp/myscript' EXIT
+
+# 멱등성 보장: 이미 추가된 라인인지 확인 후 Append
+if ! grep -q "alias k=kubectl" ~/.zshrc; then
+    echo "alias k=kubectl" >> ~/.zshrc
+fi
+```
+</example>
+<example>
+[Bad]
+```bash
+# set -e 누락, 에러 발생해도 계속 실행됨
+echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
+```
+</example>
+</examples>
+
+- **[Trigger: Bash Script Authored] 자가 비판 (Self-Critique):** 자동화 셸 스크립트 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **에러 발생 시 스크립트가 멈추지 않고 폭주할 가능성(Fail-Fast 누락) 및 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복으로 무한 증식될 위험성**을 집중 비판하십시오.
 </dotfiles_shell_scripting_standard>
 </domain_specific_rules>

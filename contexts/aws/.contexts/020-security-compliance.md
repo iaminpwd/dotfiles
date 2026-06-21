@@ -10,4 +10,47 @@
 ## 2. 최소 권한 및 데이터 보안 (Least Privilege & Data Security)
 - **[MUST] 명시적 최소 권한 부여 (Least Privilege):** IAM/RBAC 정책 작성 시, 반드시 정확한 작업(Action) 이름과 명시적인 리소스 ARN을 지정하여 최소 권한을 부여하십시오.
 - **[MUST] Data in Transit:** 클라우드 내부 통신이라 하더라도 모든 네트워크 통신에 TLS 암호화를 반드시 적용하도록 설계하십시오.
+
+### 최소 권한 부여 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```json
+{
+  "Action": [
+    "s3:GetObject",
+    "s3:PutObject"
+  ],
+  "Resource": "arn:aws:s3:::my-secure-app-bucket/*"
+}
+```
+</example>
+<example>
+[Bad]
+```json
+{
+  "Action": "*",
+  "Resource": "*"
+}
+```
+</example>
+</examples>
+
+### 시크릿 동적 주입 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```hcl
+password = data.aws_secretsmanager_secret_version.db_pass.secret_string
+```
+</example>
+<example>
+[Bad]
+```hcl
+password = "SuperSecret123!" # 하드코딩 절대 금지
+```
+</example>
+</examples>
+
+- **[Trigger: IAM Policy Created] 자가 비판 (Self-Critique):** IAM 정책 초안 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **와일드카드(`*`) 사용으로 인한 권한 상승(Privilege Escalation) 가능성 및 의도치 않은 리소스 접근 위험성**을 집중 비판하십시오.
 </security_core>

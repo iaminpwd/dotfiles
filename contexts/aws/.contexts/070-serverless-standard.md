@@ -12,6 +12,33 @@
 - **[MUST] Failure Handling & Retry:** 모든 비동기 Lambda 호출 및 이벤트 트리거(SQS, EventBridge, **Kinesis** 등)에는 메시지 처리의 신뢰성을 보장하기 위해 **Dead Letter Queue (DLQ), On-Failure Destinations 또는 스트림 에러 제어(예: BisectBatchOnFunctionError)**를 구성하고 재시도(Retry) 정책을 명시하십시오.
 - **[MUST] API Security:** API Gateway 제안 시 반드시 IAM 인증, Cognito User Pool, 또는 Lambda Custom Authorizer를 필수 구성 요소로 포함하여 퍼블릭 접근을 통제하십시오.
 
+### 비동기 오류 제어 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```hcl
+resource "aws_lambda_function_event_invoke_config" "example" {
+  function_name                = aws_lambda_function.example.function_name
+  maximum_event_age_in_seconds = 60
+  maximum_retry_attempts       = 2
+
+  destination_config {
+    on_failure {
+      destination = aws_sqs_queue.dlq.arn
+    }
+  }
+}
+```
+</example>
+<example>
+[Bad]
+# maximum_retry_attempts 설정 누락 (무한 재시도 위험)
+# DLQ(on_failure destination) 누락 (메시지 유실)
+</example>
+</examples>
+
+- **[Trigger: Serverless Deployed] 자가 비판 (Self-Critique):** 서버리스 아키텍처(Lambda, SQS, SNS 등) 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 **비동기 이벤트 처리 실패 시 무한 재시도(Infinite Loop) 발생 가능성 및 Dead Letter Queue (DLQ) 누락으로 인한 메시지 영구 유실 가능성**을 집중 비판하십시오.
+
 ## 3. 배포 및 패키징
 - **[PREFER] Container Image:** 배포 패키징 시 종속성(Dependencies) 용량 한계를 극복하고 로컬 테스트 용이성을 확보하기 위해, Zip 파일 방식보다 **컨테이너 이미지(Container Image) 배포** 방식을 우선 고려하십시오.
 - **[MUST] SAM Local Testing (CLI):** AWS SAM(Serverless Application Model) 기반의 인프라 코드 작성 시 반드시 `run_command`로 `sam validate -t <특정_템플릿_파일>`을 실행하여 템플릿 문법을 사전 검증하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.

@@ -10,6 +10,22 @@
 - **[MUST] Session Manager:** 인스턴스 관리 접근 시 보안을 위해 AWS SSM Session Manager를 1순위로 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스 통신 시 퍼블릭 인터넷을 우회하여 데이터 경로를 격리하기 위해 VPC Endpoint를 제안하십시오.
 
+### 보안 그룹(SG) 인바운드 통제 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- "DB 보안 그룹의 3306 포트 인바운드를 애플리케이션 보안 그룹 ID(`sg-xxxx`)로만 제한하십시오."
+- "SSH 접근을 위한 22번 포트 인바운드 소스를 사내 VPN 대역(`10.10.0.0/16`)으로만 한정하십시오."
+</example>
+<example>
+[Bad]
+- "DB 보안 그룹 3306 포트를 `0.0.0.0/0`으로 엽니다."
+- "테스트를 위해 SSH 포트를 `0.0.0.0/0` 개방합니다."
+</example>
+</examples>
+
+- **[Trigger: Network Rule Modified] 자가 비판 (Self-Critique):** 보안 그룹이나 네트워크 ACL 규칙 설계를 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 **웹 포트(80/443)가 아닌 다른 포트에 대해 0.0.0.0/0 완전 개방이 존재하는지** 집중 비판하십시오.
+
 ## 2. 엔터프라이즈 권한 통제 (Enterprise IAM)
 - **[MUST] Federation (SSO):** 파편화된 다중 계정 접근을 통제하기 위해, **AWS IAM Identity Center (SSO)** 기반의 중앙 집중형 연동 아키텍처를 반드시 최우선으로 제안하십시오.
 - **[PREFER] Threat Detection:** 엔터프라이즈 아키텍처에서는 내부 네트워크 위협 탐지를 위해 Amazon GuardDuty 적용을 함께 제안하십시오.
