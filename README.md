@@ -8,12 +8,103 @@
 
 ## 목차
 
-1. [핵심 기능](#핵심-기능)
-2. [작동 논리 및 아키텍처](#작동-논리-및-아키텍처)
-3. [설치 가이드](#설치-가이드)
-4. [디렉토리 구조](#디렉토리-구조)
+1. [설치 가이드](#설치-가이드)
+2. [디렉토리 구조](#디렉토리-구조)
+3. [핵심 기능](#핵심-기능)
+4. [작동 논리 및 아키텍처](#작동-논리-및-아키텍처)
 5. [포함된 도구 및 단축어](#포함된-도구-및-단축어)
 6. [커스터마이징](#커스터마이징)
+
+---
+
+## 설치 가이드
+
+> [!WARNING]
+> **지원 OS**: Ubuntu / Debian 기반 Linux (또는 Windows WSL2 Ubuntu 환경)
+> WSL2 사용 시, 반드시 Linux 네이티브 홈 디렉토리(`~/`) 하위에 클론하십시오. `/mnt/c/` 경로에서 실행하면 권한 오류가 발생하며 스크립트가 즉시 종료됩니다.
+
+### Step 1. 저장소 클론
+
+```bash
+git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+```
+
+### Step 2. 자동 설치 스크립트 실행
+
+```bash
+./setup.sh
+```
+
+스크립트는 다음 6단계를 순차적으로 실행합니다.
+
+| 단계 | 작업 내용 |
+|---|---|
+| **[1/6]** 필수 패키지 설치 | `apt`로 git, zsh, stow, pipx, fd-find, dnsutils, tree 등 설치 |
+| **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
+| **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
+| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
+| **[5/6]** AI 컨텍스트 빌드 | `contexts/*/` 순회하여 `RULES.md` 병합, 워크스페이스 생성, `GEMINI.md` symlink |
+| **[6/6]** 시크릿 보안 훅 | Trufflehog 기반 Git `pre-commit` 보안 스캔 훅 자동 구성 (시크릿 유출 원천 차단) |
+
+### Step 3. 터미널 재시작
+
+```bash
+exec zsh
+# 또는 기존 터미널에서: src
+```
+
+### 성공 검증 커맨드
+
+```bash
+# mise 도구 설치 확인
+mise ls
+
+# Stow symlink 확인
+ls -la ~/.zshrc ~/.gitconfig ~/.mise.toml
+
+# AI 컨텍스트 빌드 확인
+ls ~/workspace/aws/src && cat ~/dotfiles/GEMINI.md | head -5
+
+# 훅 동작 확인: aws workspace로 이동 후 확인
+cd ~/workspace/aws/src
+mkdir -p test-repo && cd test-repo && git init
+ls -la .gemini/
+```
+
+---
+
+## 디렉토리 구조
+
+```text
+~/dotfiles
+├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
+│   ├── 000-universal-core.md  # 전 워크스페이스 공통 마스터 엔진 (SSOT)
+│   ├── README.md              # 프롬프트 아키텍처 백과사전
+│   ├── aws/              # AWS 인프라 워크스페이스 룰북 🟢 Production
+│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
+│   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
+│   └── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
+│
+├── git/
+│   ├── .gitconfig        # 글로벌 Git 설정 (alias, pull.rebase=true)
+│   └── .gitignore_global # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
+│
+├── mise/
+│   └── .mise.toml        # 인프라 도구 버전 선언 매니페스트 (SSOT)
+│
+├── vim/
+│   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
+│
+├── zsh/
+│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
+│
+├── .aiexclude            # 루트: contexts/ 내 원본 소스 중복 인덱싱 차단
+├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
+├── GEMINI.md             # symlink -> contexts/dotfiles/RULES.md
+├── README.md             # 본 문서
+└── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
+```
 
 ---
 
@@ -56,12 +147,12 @@
 
 **워크스페이스별 특화 모듈:**
 
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
-|---|---|---|
-| **AWS** (`aws/`) | 12개 (`000`~`110`) | 자격증명 격리, FinOps, Terraform, EKS, Serverless, RDS, 장애 대응 |
-| **K8s** (`k8s/`) | 10개 (`000`~`090`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA |
-| **AIOps** (`aiops/`) | 8개 (`000`~`070`) | Blameless Post-Mortem, SRE 에러 분석, SLI/SLO 지표 기반 진단 |
-| **Dotfiles** (`dotfiles/`) | 5개 (`000`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
+| 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
+|---|---|---|---|
+| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`000`~`110`) | 자격증명 격리, FinOps, Terraform, EKS, Serverless, RDS, 장애 대응 |
+| **K8s** (`k8s/`) | 🟡 Draft (초안) | 10개 (`000`~`090`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA |
+| **AIOps** (`aiops/`) | 🟡 Draft (초안) | 8개 (`000`~`070`) | Blameless Post-Mortem, SRE 에러 분석, SLI/SLO 지표 기반 진단 |
+| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 5개 (`000`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
 
 ---
 
@@ -85,9 +176,14 @@
 
 > **[MUST] 수정 원칙:** 설정 파일을 직접 편집할 때는 반드시 `~/dotfiles/` 내의 원본 소스 파일만 조작하십시오. `~/.zshrc`를 직접 편집하면 symlink 아키텍처가 파괴됩니다.
 
-### Auto-Symlink 훅 동작 원리 (Zsh `chpwd`)
+### 이중 Auto-Symlink 훅 동작 원리 (Zsh `chpwd`)
 
-개발자가 특정 디렉토리로 `cd`할 때 AI 룰북이 자동 주입되는 메커니즘입니다.
+Zsh 디렉토리 이동(`cd`) 이벤트를 감지하여 두 가지 핵심 심볼릭 링크를 자동 주입합니다.
+
+1. **마스터 코어 룰북 주입 훅 (`auto_symlink_contexts_core`)**
+   - 개발자가 새로운 AI 룰 폴더(예: `~/dotfiles/contexts/gcp/`)로 진입하기만 하면, 즉시 최상단 `000-universal-core.md` SSOT 마스터 파일을 해당 폴더 내부에 동적으로 링크 생성하여 멱등성을 보장합니다.
+2. **워크스페이스 작업용 주입 훅 (`auto_symlink_ai_rules`)**
+   - 개발자가 인프라 작업 폴더(예: `~/workspace/aws/src/my-repo`)로 진입하면, 해당 환경의 `RULES.md` 룰북과 `.aiexclude`를 자동으로 주입하여 작업용 AI 컨텍스트를 완성합니다.
 
 <p align="center">
   <img src="assets/auto-symlink-hook.png" alt="Auto-Symlink Hook Workflow" width="480">
@@ -122,94 +218,6 @@ my-terraform-repo/
 
 ---
 
-## 설치 가이드
-
-> [!WARNING]
-> **지원 OS**: Ubuntu / Debian 기반 Linux (또는 Windows WSL2 Ubuntu 환경)
-> WSL2 사용 시, 반드시 Linux 네이티브 홈 디렉토리(`~/`) 하위에 클론하십시오. `/mnt/c/` 경로에서 실행하면 권한 오류가 발생하며 스크립트가 즉시 종료됩니다.
-
-### Step 1. 저장소 클론
-
-```bash
-git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-```
-
-### Step 2. 자동 설치 스크립트 실행
-
-```bash
-./setup.sh
-```
-
-스크립트는 다음 5단계를 순차적으로 실행합니다.
-
-| 단계 | 작업 내용 |
-|---|---|
-| **[1/5]** 필수 패키지 설치 | `apt`로 git, zsh, fzf, jq, stow, pipx, bat, fd-find, tree 등 설치 |
-| **[2/5]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
-| **[3/5]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
-| **[4/5]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/5]** AI 컨텍스트 빌드 | `contexts/*/` 순회하여 `RULES.md` 병합, 워크스페이스 생성, `GEMINI.md` symlink |
-
-### Step 3. 터미널 재시작
-
-```bash
-exec zsh
-# 또는 기존 터미널에서: src
-```
-
-### 성공 검증 커맨드
-
-```bash
-# mise 도구 설치 확인
-mise ls
-
-# Stow symlink 확인
-ls -la ~/.zshrc ~/.gitconfig ~/.mise.toml
-
-# AI 컨텍스트 빌드 확인
-ls ~/workspace/aws/src && cat ~/dotfiles/GEMINI.md | head -5
-
-# 훅 동작 확인: aws workspace로 이동 후 확인
-cd ~/workspace/aws/src
-mkdir -p test-repo && cd test-repo && git init
-ls -la .gemini/
-```
-
----
-
-## 디렉토리 구조
-
-```text
-~/dotfiles
-├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
-│   ├── aws/              # AWS 인프라 워크스페이스 룰북
-│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스
-│   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트
-│   └── k8s/              # Kubernetes & Cloud Native 워크스페이스
-│
-├── git/
-│   ├── .gitconfig        # 글로벌 Git 설정 (alias, pull.rebase=true)
-│   └── .gitignore_global # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
-│
-├── mise/
-│   └── .mise.toml        # 인프라 도구 버전 선언 매니페스트 (SSOT)
-│
-├── vim/
-│   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
-│
-├── zsh/
-│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
-│
-├── .aiexclude            # 루트: contexts/ 내 원본 소스 중복 인덱싱 차단
-├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
-├── GEMINI.md             # symlink -> contexts/dotfiles/RULES.md
-├── README.md             # 본 문서
-└── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
-```
-
----
-
 ## 포함된 도구 및 단축어
 
 ### 1. `mise.toml` 선언 도구 목록 (버전 고정)
@@ -234,54 +242,31 @@ ls -la .gemini/
 **런타임**
 `node` · `python` · `go`
 
+**CLI 유틸리티**
+`fzf` · `jq` · `bat`
+
 > 버전 고정 정보는 [`mise/.mise.toml`](mise/.mise.toml)에서 확인하십시오.
 
 ### 2. 주요 단축어 (`.zshrc` & `.gitconfig`)
 
-```bash
-# --- Terraform ---
-tf        # terraform
-tfi       # terraform init
-tfp       # terraform plan
-tfv       # terraform validate
-tff       # terraform fmt -recursive
-
-# --- Kubernetes ---
-k         # kubectl
-kx        # kubectx
-kn        # kubens
-kgp       # kubectl get pods
-kgs       # kubectl get svc
-kga       # kubectl get all
-kdp       # kubectl describe pod
-klogs     # kubectl logs -f
-kex       # kubectl exec -i -t
-knet      # 트러블슈팅용 netshoot 컨테이너 즉시 실행
-
-# --- Docker & Helm ---
-d         # docker
-dc        # docker-compose
-h         # helm
-
-# --- Git ---
-git st    # status
-git co    # checkout
-git cb    # checkout -b
-git br    # branch
-git cm    # commit -m
-git df    # diff
-git amend # commit --amend --no-edit
-git lg    # 컬러 그래프 히스토리 (가독성 최적화)
-
-# --- 시스템 편의성 ---
-src       # source ~/.zshrc (설정 즉시 재로드)
-ll        # ls -alF
-bat       # batcat (Ubuntu 패키지명 충돌 해결)
-fd        # fdfind (Ubuntu 패키지명 충돌 해결)
-c         # code .
-e         # explorer.exe . (WSL2)
-catcode   # 현재 디렉토리 인프라 코드 전체를 all_code.txt로 추출
-```
+| 카테고리 | 단축어 | 명령어 | 단축어 | 명령어 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Terraform** | `tf` | `terraform` | `tfi` | `terraform init` |
+| | `tfp` | `terraform plan` | `tfv` | `terraform validate` |
+| | `tff` | `terraform fmt -recursive` | | |
+| **Kubernetes** | `k` | `kubectl` | `kx` / `kn` | `kubectx` / `kubens` |
+| | `kgp` | `kubectl get pods` | `kgs` | `kubectl get svc` |
+| | `kga` | `kubectl get all` | `kdp` | `kubectl describe pod` |
+| | `klogs` | `kubectl logs -f` | `kex` | `kubectl exec -i -t` |
+| | `knet` | `netshoot 실행 (트러블슈팅)` | | |
+| **Docker/Helm** | `d` | `docker` | `dc` / `h`| `docker-compose` / `helm`|
+| **Git** | `git st` | `status` | `git co` | `checkout` |
+| | `git cb` | `checkout -b` | `git br` | `branch` |
+| | `git cm` | `commit -m` | `git df` | `diff` |
+| | `git amend` | `commit --amend --no-edit` | `git lg` | `컬러 그래프 히스토리` |
+| **시스템/기타** | `src` | `source ~/.zshrc (설정 재로드)` | `ll` | `ls -alF` |
+| | `fd` | `fdfind (충돌 해결)` | `c` / `e` | `code .` / `explorer.exe .` |
+| | `catcode` | `인프라 코드 전체 추출 (all_code.txt)` | | |
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
 
@@ -344,12 +329,13 @@ vim ~/dotfiles/contexts/aws/.contexts/020-security-compliance.md
 새로운 환경(예: GCP)을 추가하려면 기존 워크스페이스 구조를 참고하여 디렉토리를 구성한 후 `setup.sh`를 재실행하십시오.
 
 ```bash
-# 신규 워크스페이스 디렉토리 생성
-mkdir -p ~/dotfiles/contexts/gcp/.contexts
+# 1. 신규 워크스페이스 도메인 디렉토리 진입 
+# (진입 시 Zsh 훅이 작동하여 .contexts 폴더와 000 마스터 코어 링크를 자동 주입합니다)
+mkdir -p ~/dotfiles/contexts/gcp
+cd ~/dotfiles/contexts/gcp
 
-# 모듈 파일 작성 (000-universal-core.md 부터 시작)
-cp ~/dotfiles/contexts/aws/.contexts/000-universal-core.md \
-   ~/dotfiles/contexts/gcp/.contexts/000-universal-core.md
+# 2. 도메인 특화 모듈 파일 작성 (010부터 시작)
+touch .contexts/010-gcp-core.md
 
 # setup.sh 재실행으로 자동 빌드 및 워크스페이스 생성
 ~/dotfiles/setup.sh
@@ -357,3 +343,4 @@ cp ~/dotfiles/contexts/aws/.contexts/000-universal-core.md \
 
 > [!NOTE]
 > `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 디렉토리 추가 후 재실행만으로 `~/workspace/gcp/src/` 워크스페이스와 `RULES.md` 빌드가 자동으로 수행됩니다.
+

@@ -14,10 +14,10 @@ fi
 # 스크립트가 실행된 위치와 무관하게 dotfiles 경로를 안전하게 가져옴
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "[1/5] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
+echo "[1/6] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
 sudo apt update && sudo apt install -y git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree
 
-echo "[2/5] Oh My Zsh 및 플러그인 구성 중..."
+echo "[2/6] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 fi
@@ -30,7 +30,7 @@ if [ "$SHELL" != "$(which zsh)" ]; then
   sudo chsh -s $(which zsh) $USER
 fi
 
-echo "[3/5] Stow 연결을 위한 기존 파일 정리 및 연결..."
+echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
 # 백업 추가 (안전성 향상)
 cp ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
 cp ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
@@ -45,7 +45,7 @@ cd "$DOTFILES_DIR"
 stow -t "$HOME" -R zsh vim mise git
 
 
-echo "[4/5] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
+echo "[4/6] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
 if ! command -v ~/.local/bin/mise &> /dev/null; then
     curl https://mise.run | sh
 fi
@@ -64,7 +64,7 @@ helm plugin install https://github.com/databus23/helm-diff --verify=false || ech
 
 
 
-echo "[5/5] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
+echo "[5/6] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
@@ -113,7 +113,7 @@ rm -f "$DOTFILES_DIR/GEMINI.md"
 ln -sf "$DOTFILES_RULES" "$DOTFILES_DIR/GEMINI.md"
 echo "   ✅ [GEMINI.md] -> $DOTFILES_RULES"
 
-echo "[5.5/5] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
+echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 if command -v trufflehog &> /dev/null; then
   echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."

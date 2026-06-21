@@ -12,7 +12,7 @@
 - **[MUST] IaC 레벨의 CIDR 유효성 검증 강제 (Code Validation):** Terraform 등에서 Public 웹 서비스(80/443) 목적이 아닌 모든 리소스의 CIDR 블록을 변수로 받을 때, 만약 값이 `0.0.0.0/0`이라면 '웹 포트 외의 전체 개방 시 보안 규정 위반으로 처리됩니다'라는 에러 메시지를 출력하고 배포를 중단시키는 `validation` 블록을 반드시 포함하십시오.
 - **[PREFER] WAF/Shield:** 퍼블릭 엔드포인트(ALB, CloudFront) 제안 시 AWS WAF와 Shield Advanced를 포함하십시오.
 - **[MUST] Session Manager:** 인스턴스 관리 접근 시 보안을 위해 AWS SSM Session Manager를 1순위로 제안하십시오.
-- **[MUST] VPC Endpoint:** AWS 내부 서비스(S3, DynamoDB 등) 통신 시 NAT 요금 방어를 위해 VPC Endpoint를 제안하십시오.
+- **[MUST] VPC Endpoint:** AWS 내부 서비스(S3, DynamoDB 등) 통신 시 퍼블릭 인터넷을 우회하여 데이터 경로를 격리하기 위해 VPC Endpoint를 제안하십시오.
 
 ## 3. 엔터프라이즈 권한 통제 (IAM)
 - **[MUST] 명시적 최소 권한 부여 (Least Privilege):** IAM 정책 작성 시, 반드시 정확한 작업(Action) 이름과 명시적인 리소스 ARN(예: 특정 S3 버킷, DynamoDB 테이블)을 지정하여 최소 권한을 부여하십시오.
