@@ -117,14 +117,15 @@ ls -la .gemini/
 - **시크릿 히스토리 차단:** `HIST_IGNORE_SPACE` 설정으로 공백으로 시작하는 커맨드는 터미널 히스토리에 기록되지 않습니다.
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
-### 2. SOTA 에이전트 워크플로우 (Agentic 4대 원칙)
+### 2. SOTA 에이전트 워크플로우 (Agentic 5대 원칙)
 
-최신 AI 연구(OpenAI, Anthropic)에서 권장하는 자율 주행 에이전트 원칙이 프롬프트 아키텍처에 구현되어 있습니다.
+최신 AI 연구(OpenAI, Anthropic)에서 증명된 자율 주행 에이전트 원칙을 로컬 프롬프트 아키텍처에 강제(Hard Constraint)로 탑재했습니다. **에이전트는 다음의 5대 원칙을 무조건 준수해야 합니다.**
 
-- **도구 사용 (Tool Use):** AI가 `run_command`로 직접 터미널을 제어하여 `tflint`, `checkov`, `trivy`, `terraform plan` 등을 실행하고 결과를 검증합니다.
-- **반성 및 자가 치유 (Reflection):** 코드 출력 전 `<self_critique>` 태그로 멱등성과 보안 결함을 자가 비판합니다. 에러 발생 시 최대 3회 자가 치유 후 Fail-Fast 서킷 브레이커가 작동합니다.
-- **계획 수립 (Planning):** 복잡한 인프라 작업 시 즉시 코드를 출력하지 않고 `implementation_plan.md` 사전 계획서를 작성해 승인을 받은 후 실행합니다.
-- **전문성 락킹 (Persona):** 수석 DevOps/SRE 아키텍트 페르소나를 부여받아 주도적으로 아키텍처를 설계하는 페어 프로그래밍 협업 방식으로 작동합니다.
+- **도구 사용 (Tool Use):** 뇌피셜(Hallucination)에 의존한 이론적 처방을 엄격히 금지합니다. 반드시 `run_command`로 터미널을 능동 제어하여 상태를 검증하십시오.
+- **반성 및 자가 치유 (Reflection):** 코드 출력 전 `<self_critique>` 태그를 열어 멱등성과 보안 결함을 스스로 비판하십시오. 에러 발생 시 최대 3회 자가 치유 루프를 실행하며, 실패 시 Fail-Fast 서킷 브레이커가 작동합니다.
+- **프롬프트 자가 진화 (Prompt Self-Evolution):** 코드가 아닌 논리적 모순이나 엣지 케이스에 부딪힐 경우, 즉각 사내 규정(프롬프트 마크다운 원본) 자체의 허점을 의심하고 프롬프트 리팩토링을 사용자에게 역제안(Reverse Proposal)하십시오.
+- **계획 수립 및 RAG (Planning & Agentic RAG):** 인프라 구축 전 스스로 사내 규정(FinOps, K8s 등)을 탐색하여 계획서(`implementation_plan.md`)에 강제로 녹여내고(Agentic RAG), 사용자의 명시적 승인을 득한 후 실행하십시오.
+- **전문성 락킹 (Persona):** 수석 DevOps/SRE 아키텍트 페르소나를 부여받아, 사용자의 무리한 요구를 맹목적으로 따르지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오.
 
 ### 3. Shadow AI Architecture (컨텍스트 자동 상속)
 
@@ -140,10 +141,11 @@ ls -la .gemini/
 
 **고급 프롬프트 엔지니어링 기법 적용:**
 
-- **XML 도메인 격리 (Domain Isolation):** `<aws_core_guidelines>`, `<k8s_standard>` 등 고유 XML 태그로 도메인 규칙 간 할루시네이션(Bleeding) 차단
-- **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령 실행 전 `<thinking>` 태그 내에서 3-Why 분석 및 파급 효과 사전 검토 강제
-- **퓨샷 프롬프팅 (Few-Shot):** 각 워크스페이스 마지막 모듈(`*-few-shot-examples.md`)에 Bad/Good 예시를 주입해 추상 규칙의 실제 터미널 명령 교정 보장
-- **엔터프라이즈 마인드셋 락킹:** Zero-Trust 보안, Day-2/SRE 장애 복원력, FinOps 비용 최적화 철학을 모든 워크스페이스 프롬프트에 강제 탑재
+- **XML 도메인 격리 (Domain Isolation):** 모든 프롬프트 룰과 예시는 `<examples>`, `<aws_core_guidelines>` 등의 고유 XML 태그 내부에 엄격히 격리되어 할루시네이션(Bleeding)을 원천 차단합니다.
+- **계급 기반 충돌 해결 (Rule Conflict Resolution):** 수많은 도메인 룰 간에 모순이 발생할 경우, 각 파일 최상단의 `<priority>` 속성(highest > critical > high)을 기계적으로 해석하여 000번 마스터 코어가 모든 것을 강제로 덮어씌웁니다(Override).
+- **가혹한 평가자 분리 (LLM-as-a-Judge):** 인프라 설계 직후 스스로 제3의 심판관 페르소나로 전환하여 보안/멱등성 기준 10점 만점으로 가혹하게 자가 채점(8점 미만 시 자가 폐기)을 강제합니다.
+- **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령 실행 전 `<thinking>` 태그 내에서 3-Why 분석 및 파급 효과 사전 검토를 강제합니다.
+- **엔터프라이즈 마인드셋 락킹:** Zero-Trust 보안, Day-2/SRE 장애 복원력, 그리고 컨텍스트 누수 없이 동적 라우팅(Lazy Routing)되는 글로벌 FinOps 비용 최적화 철학을 강제 탑재합니다.
 
 **워크스페이스별 특화 모듈:**
 
