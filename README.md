@@ -149,7 +149,7 @@ ls -la .gemini/
 
 | 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
 |---|---|---|---|
-| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`000`~`110`) | 자격증명 격리, FinOps, Terraform, EKS, Serverless, RDS, 장애 대응 |
+| **AWS** (`aws/`) | 🟢 **Production** | 13개 (`000`~`110`) | 제로트러스트 엣지 보안, 자격증명 격리, FinOps, Terraform, EKS, Serverless, RDS, 장애 대응 |
 | **K8s** (`k8s/`) | 🟡 Draft (초안) | 10개 (`000`~`090`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA |
 | **AIOps** (`aiops/`) | 🟡 Draft (초안) | 8개 (`000`~`070`) | Blameless Post-Mortem, SRE 에러 분석, SLI/SLO 지표 기반 진단 |
 | **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 5개 (`000`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
@@ -312,9 +312,13 @@ echo "alias myalias='my-command'" >> ~/dotfiles/zsh/.zshrc
 src
 ```
 
-### AI 룰 수정
+### AI 룰 수정 및 추가 (Zero-Config)
 
-특정 워크스페이스의 AI 행동 규칙을 변경하려면 해당 `.contexts/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행하십시오.
+특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `.contexts/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행하십시오.
+
+> [!TIP]
+> **신규 룰 추가 시 가이드 (태그 내재화)**
+> 특정 기술 스택에만 조건부로 적용되어야 하는 룰이라면, 파일 내용 전체를 `<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">` 태그로 감싸주십시오. `setup.sh`가 내부에 태그가 포함되어 있는지 자동 감지(grep)하여 글로벌 룰과 도메인 룰을 스마트하게 분리 및 병합하는 **Zero-Config 아키텍처**로 동작합니다.
 
 ```bash
 # 예: AWS 보안 규칙 수정
