@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">
 <kubernetes_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
 
@@ -15,3 +16,4 @@
 - **[Trigger: K8s Local Test Completion] K8s 테스트 보고서 (K8s Test Report):** 로컬 클러스터 배포 테스트를 완료한 후, 테스트 결과와 구성 검토 세부 사항을 전용 `k8s-test-report.md` 산출물에 문서화하십시오.
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 통한 우아한 종료(Graceful Shutdown) 구성을 필수화하여 무중단 배포(Zero-Downtime)를 달성하십시오.
 </kubernetes_standard>
+</domain_specific_rules>

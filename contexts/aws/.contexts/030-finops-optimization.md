@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Apply these rules ONLY when designing AWS infrastructure, provisioning resources, or optimizing cloud costs.">
 <finops_optimization role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 
@@ -10,3 +11,4 @@
 - **[PREFER] EBS Optimization:** EC2 인스턴스의 EBS 볼륨 제안 시, 일반적인 I/O 요구사항 환경에서는 비용 효율성이 뛰어난 `gp3` 볼륨 타입을 기본값으로 제안하십시오.
 - **[PREFER] NAT Gateway Cost Avoidance:** AWS 내부 서비스(S3, DynamoDB 등)와 대량 통신이 필요한 프라이빗 서브넷 아키텍처 제안 시, 데이터 처리 요금을 절감하기 위해 VPC Endpoints(Gateway/Interface) 구성을 1순위로 제안하십시오.
 </finops_optimization>
+</domain_specific_rules>

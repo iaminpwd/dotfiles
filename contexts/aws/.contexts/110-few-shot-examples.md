@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Review these few-shot examples to align your behavior before executing tasks.">
 <few_shot_examples role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 퓨샷(Few-Shot) 예시 기반 행동 교정
 
@@ -57,3 +58,4 @@
 보안 스캔이나 문법 검증 도구가 로컬에 없을 때, 절대 임의로 검증을 건너뛰지 말고 즉시 중단하여 설치를 요구하십시오.
 </examples>
 </few_shot_examples>
+</domain_specific_rules>

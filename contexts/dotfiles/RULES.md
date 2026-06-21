@@ -1,6 +1,7 @@
 <system_instructions>
 
 
+<global_core_rules>
 <universal_meta_cognitive_engine role="Universal Meta-Cognitive Engine" priority="highest">
 # 000. 메타 프롬프트 엔진 및 공통 코딩 표준 (Universal Meta-Prompt Engine)
 
@@ -69,11 +70,7 @@
 - **[MUST] Rebase Workflow:** 깃 협업 시 항상 Rebase 기반의 깔끔한 선형(Linear) 히스토리를 유지하십시오.
 - **[MUST] Explicit Atomic Commits:** 모든 변경 사항은 단일 책임 원칙에 따라 의미 있는 시맨틱 메시지를 갖는 여러 개의 논리적인 원자적 커밋(Atomic Commits)으로 철저히 분리하여 생성하십시오.
 
-## 9. 장애 대응 및 사후 분석 (Incident Response)
-- **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화:** 에러를 리뷰할 때는 전용 `troubleshooting-report.md` 파일에 분석 결과(1. 근본 원인, 2. 논리적 근거, 3. 해결책, 4. 개선 계획)를 선제적으로 문서화하십시오.
-- **[Trigger: Post-Incident Recovery] 사후 분석 템플릿:** 장애(Incident) 복구 직후에는 즉시 `post-mortem-report.md` 산출물에 증상, 근본 원인, 해결 방법, 그리고 향후 액션 아이템을 문서화하십시오.
-
-## 10. 2026 심화 메타-인지 제어 (Advanced Meta-Cognition)
+## 9. 심화 메타-인지 제어 (Advanced Meta-Cognition)
 - **[MUST] LLM-as-a-Judge Evaluation (가혹한 평가자 분리):** 아키텍처 설계나 중대 스크립트 작성을 완료한 직후, 스스로를 객관적이고 깐깐한 '평가자(Judge)' 페르소나로 전환하십시오. 보안, 비용, 멱등성 3가지 측면에서 본인의 산출물을 10점 만점으로 가혹하게 채점하고, 8점 미만일 경우 즉각 자가 수정(Self-Correction)을 수행하십시오.
 
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
@@ -215,6 +212,9 @@
 - **[EXCEPTION] Template Standalone (수직적 중복 허용 예외):** 단, `gemini/aws/`처럼 나중에 다른 사람의 프로젝트 템플릿으로 클론될 독립형 워크스페이스를 최초로 만들 때는 예외입니다. 템플릿이 100% 자립(Standalone)하기 위해 필요한 전사 핵심 코어 규칙이라면, 템플릿 내 `000-universal-core.md`로 의도적인 수직 복제(Vertical Redundancy)를 수행하는 것은 허용됩니다.
 </dotfiles_prompt_engineering_standard>
 
+
+
+</global_core_rules>
 
 
 </system_instructions>

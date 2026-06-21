@@ -85,14 +85,28 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
     ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
 
-    # bash의 기본 glob 확장 기능을 활용하여 사전순(00, 10, 20...) 정렬 처리
+    # 위계적 병합 (Zero-Config Hierarchical Merge) 처리
+    # - <domain_specific_rules> 태그가 내장되지 않은 파일만 모아서 한 번에 글로벌 코어로 감쌉니다.
+    echo "<global_core_rules>" >> "$MERGED_MD"
     for md_file in "$TARGET_DIR/.contexts/"*.md; do
-      # .md 파일이 없을 경우 literal 문자열이 반환되는 것을 방지
       [ -f "$md_file" ] || continue
+      if ! grep -q "<domain_specific_rules" "$md_file"; then
+        echo "   Adding Global: $(basename "$md_file")"
+        cat "$md_file" >> "$MERGED_MD"
+        echo -e "\n\n" >> "$MERGED_MD"
+      fi
+    done
+    echo "</global_core_rules>" >> "$MERGED_MD"
+    echo -e "\n" >> "$MERGED_MD"
 
-      echo "   Adding: $(basename "$md_file")"
-      cat "$md_file" >> "$MERGED_MD"
-      echo -e "\n\n" >> "$MERGED_MD"
+    # - <domain_specific_rules> 태그가 이미 내장된 파일들은 태그 래핑 없이 그대로 이어붙입니다.
+    for md_file in "$TARGET_DIR/.contexts/"*.md; do
+      [ -f "$md_file" ] || continue
+      if grep -q "<domain_specific_rules" "$md_file"; then
+        echo "   Adding Domain: $(basename "$md_file")"
+        cat "$md_file" >> "$MERGED_MD"
+        echo -e "\n\n" >> "$MERGED_MD"
+      fi
     done
     
     echo "</system_instructions>" >> "$MERGED_MD"

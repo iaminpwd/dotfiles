@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">
 <iac_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
@@ -32,3 +33,4 @@
 ## 5. Policy-as-Code (PaC) 및 거버넌스
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 반드시 **`run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
 </iac_standard>
+</domain_specific_rules>
