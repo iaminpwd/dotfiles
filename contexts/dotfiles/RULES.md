@@ -40,6 +40,10 @@
   - **논리적 근거 (Why)**: [사용자가 지시한 예외 이유]
   - **향후 상환 계획 (Action Item)**: [정상화하기 위해 향후 해야 할 작업]
   ```
+
+## 6. 심화 메타-인지 제어 (Advanced Meta-Cognition)
+- **[MUST] LLM-as-a-Judge Evaluation (가혹한 평가자 분리):** 아키텍처 설계나 중대 스크립트(예: `setup.sh`) 및 메타 프롬프트 작성을 완료한 직후, 스스로를 객관적이고 깐깐한 '평가자(Judge)' 페르소나로 전환하십시오. 보안, 비용, 멱등성 3가지 측면에서 본인의 산출물을 10점 만점으로 가혹하게 채점하고, 8점 미만일 경우 즉각 자가 수정(Self-Correction)을 수행하십시오.
+- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오.
 </universal_meta_cognitive_engine>
 
 
@@ -61,6 +65,28 @@
 - **[MUST] Rebase Workflow:** 깔끔한 선형(Linear) 히스토리를 위해 Rebase 워크플로우를 유지하십시오.
 - **[Trigger: Before Commit] Auto-Sync 강제:** 커밋 전 반드시 `git pull --rebase`를 실행하여 최신 상태를 자동 동기화하십시오.
 - **[MUST] Targeted Execution:** 전역 포매팅(`prettier .` 등)을 절대 금지합니다. 포매터 실행 시 반드시 타겟 파일명을 명시(`shfmt -w <file>`)하십시오.
+
+### 시맨틱 및 원자적 커밋 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```bash
+# 의미 단위로 분리된 개별 커밋 (Atomic Commits)
+git commit -m "feat(aws): add security self-critique trigger"
+git commit -m "fix(bash): resolve set -e idempotency bug"
+```
+</example>
+<example>
+[Bad]
+```bash
+# 여러 변경 사항을 하나로 뭉뚱그린 커밋 (Anti-pattern)
+git commit -m "update files"
+git commit -m "fix bugs and add new features"
+```
+</example>
+</examples>
+
+- **[Trigger: Before Commit] 자가 비판 (Self-Critique):** `git commit` 명령어를 실행하기 직전, 스스로 `<self_critique>` 태그를 열어 **현재 Staging된 변경 사항이 단일 책임 원칙(Atomic Commit)을 위배하여 너무 거대하게 뭉쳐지지 않았는지, 시맨틱 커밋 컨벤션(feat/fix 등)을 준수했는지** 집중 비판하십시오.
 </dotfiles_core_standard>
 </domain_specific_rules>
 
@@ -87,6 +113,31 @@
 ## 3. 검증 및 런타임 환경 보호
 - **[Trigger: After Script Edit] Syntax Validation:** `setup.sh`나 `.zshrc` 수정 후 백그라운드 검증 시, 반드시 `bash -n <file>` 또는 `zsh -n <file>`로 문법 자가 검증을 수행하십시오.
 - **[MUST] Preserve Core Architecture:** `auto_symlink_gemini_rules` 훅이나 `batcat` 앨리어스 등 코어 엔진 구조는 임의로 변경하지 마십시오.
+
+### 방어적 셸 스크립트 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```bash
+set -euo pipefail
+trap 'rm -rf /tmp/myscript' EXIT
+
+# 멱등성 보장: 이미 추가된 라인인지 확인 후 Append
+if ! grep -q "alias k=kubectl" ~/.zshrc; then
+    echo "alias k=kubectl" >> ~/.zshrc
+fi
+```
+</example>
+<example>
+[Bad]
+```bash
+# set -e 누락, 에러 발생해도 계속 실행됨
+echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
+```
+</example>
+</examples>
+
+- **[Trigger: Bash Script Authored] 자가 비판 (Self-Critique):** 자동화 셸 스크립트 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **에러 발생 시 스크립트가 멈추지 않고 폭주할 가능성(Fail-Fast 누락) 및 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복으로 무한 증식될 위험성**을 집중 비판하십시오.
 </dotfiles_shell_scripting_standard>
 </domain_specific_rules>
 
@@ -109,6 +160,27 @@
 
 ## 3. 셋업 전 자율 검증 트리거
 - **[Trigger: After Toolchain Edit] Mise Validation:** `mise.toml` 수정 직후, `mise install` 및 `mise ls`를 실행하여 다운로드 및 바이너리 연결 정상 여부를 자가 검증하십시오.
+
+### 툴체인 버전 선언주의 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```toml
+[tools]
+terraform = "1.5.7"
+"pipx:checkov" = "3.2.14"
+```
+</example>
+<example>
+[Bad]
+```toml
+[tools]
+terraform = "latest" # 절대 금지 (미래에 멱등성 깨짐)
+```
+</example>
+</examples>
+
+- **[Trigger: Toolchain Configured] 자가 비판 (Self-Critique):** `mise.toml` 등의 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **설치 도구의 버전이 `latest`로 지정되어 있어 1년 뒤에 실행했을 때 빌드가 깨지거나 멱등성이 파괴될 위험성**을 집중 비판하십시오.
 </dotfiles_toolchain_management_standard>
 </domain_specific_rules>
 
@@ -130,6 +202,31 @@
 
 ## 3. 프라이빗 키(Private Key) 보호 통제
 - **[MUST] Explicit Key Access Request:** 디버깅 목적이라도 `~/.ssh/id_rsa` 등 프라이빗 키 내용을 무작정 열람하지 마십시오. 반드시 `ask_permission`으로 명시적 승인을 먼저 취득하십시오.
+
+### 시크릿 물리적 분리 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```bash
+# ~/.zshrc (Git으로 추적됨)
+if [ -f ~/.zshrc.local ]; then
+    source ~/.zshrc.local
+fi
+
+# ~/.zshrc.local (Git Ignore 처리됨)
+export GITHUB_TOKEN="ghp_xxx..."
+```
+</example>
+<example>
+[Bad]
+```bash
+# ~/.zshrc (Git으로 추적됨)
+export GITHUB_TOKEN="ghp_xxx..." # 절대 금지 (퍼블릭 저장소 유출 위험)
+```
+</example>
+</examples>
+
+- **[Trigger: Before Commit / File Authored] 자가 비판 (Self-Critique):** 자동화 스크립트나 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **AWS Access Key나 PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되어 퍼블릭 저장소에 노출될 위험성**을 집중 비판하십시오.
 </dotfiles_security_standard>
 </domain_specific_rules>
 
@@ -156,7 +253,31 @@
 - **[MUST] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입하십시오.
 - **[MUST] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
 
+### 메타 프롬프트 예시 주입 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+```markdown
+- [MUST] OOM 발생 시 파드의 resources.limits를 확인하십시오.
+<examples>
+<example>
+[Good]
+limits:
+  memory: "256Mi"
+</example>
+</examples>
+```
+</example>
+<example>
+[Bad]
+```markdown
+- [MUST] OOM이 안 나게 메모리를 256Mi 정도로 잘 설정해야 합니다. (추상적이고 예시 없음)
+```
+</example>
+</examples>
+
 ## 4. 자율 실행 통제 및 제약 (Autonomous Ops)
+- **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력(`write_to_file`)으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
 - **[MUST] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
 - **[MUST] Eval-Driven Testing:** 실행 결과나 JSON 파싱 여부를 검증하는 평가 코드를 프롬프트 룰에 포함하십시오.
 - **[MUST] Split Complex Tasks:** 복잡한 셋업은 한 번에 하지 말고 넘버링(Step-by-Step)하여 쪼개 실행하도록 강제하십시오.
@@ -172,6 +293,8 @@
 ## 6. 프롬프트 최적화 (Readability)
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
 - **[MUST] Conciseness:** 장황한 부연 설명을 모두 걷어내고, 즉시 행동 가능한 짧은 단문 명령형으로 프롬프트를 압축하십시오.
+
+- **[Trigger: Prompt Authored] 자가 비판 (Self-Critique):** 새로운 프롬프트 모듈(`.md`) 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **추상적이고 장황한 문장(`~하는 것이 좋습니다` 등)이 포함되었는지, 그리고 핵심 예시가 XML(`<examples>`)로 명확히 격리되지 않았거나 다른 파일과 중복(SSOT 파괴)되는지** 집중 비판하십시오.
 </dotfiles_prompt_engineering_standard>
 </domain_specific_rules>
 
