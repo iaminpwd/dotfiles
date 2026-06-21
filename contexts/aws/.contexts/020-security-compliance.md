@@ -1,4 +1,4 @@
-<security_compliance>
+<security_compliance role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 보안 및 권한 컴플라이언스 가이드
 
 ## 1. 자격 증명 (Secrets) 관리

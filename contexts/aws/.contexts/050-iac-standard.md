@@ -1,4 +1,4 @@
-<iac_standard>
+<iac_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
 ## 1. 공통 원칙 (Provisioning & Configuration)

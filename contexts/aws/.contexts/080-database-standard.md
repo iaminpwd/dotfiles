@@ -1,4 +1,4 @@
-<database_standard>
+<database_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 데이터베이스 (RDS, DynamoDB, ElastiCache) 엔지니어링 표준
 
 ## 1. 관계형 데이터베이스 (RDS & Aurora)

@@ -1,4 +1,4 @@
-<aws_core>
+<aws_architecture role="Senior Cloud Architect" priority="critical">
 # AWS DevOps 아키텍처 가이드 (AI Prompt Context)
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -23,4 +23,4 @@
 
 ## 6. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Task Breakdown & Planning (작업 분할 및 사전 계획 강제):** 복잡한 아키텍처 요청 시 코드 수정 전에 반드시 작업을 논리적 단계로 분할하여 `implementation_plan.md` 산출물을 제시한 후 사용자 승인을 얻어 실행에 착수하십시오.
-</aws_core>
+</aws_architecture>

@@ -41,7 +41,7 @@
 
 - **AI 룰북 자동 상속:** `cd ~/workspace/aws/src/my-repo` 시, Zsh `chpwd` 훅이 자동으로 환경별 AI 룰북(`RULES.md`)을 `.gemini/00-global-rules.md`로 심볼릭 링크합니다.
 - **Git 커밋 완전 차단:** 자동 생성된 AI 컨텍스트 파일들은 전역 `.gitignore_global`에 의해 원격 저장소와 팀원 PC를 오염시키지 않습니다.
-- **`.aiexclude` 이중 차단:** 워크스페이스에 주입된 `.aiexclude`는 분할된 원본 모듈 파일들이 AI 컨텍스트에 중복 인덱싱되지 않도록 차단합니다. 이를 통해 토큰 낭비와 할루시네이션을 예방합니다.
+- **`.aiexclude` 이중 차단:** 워크스페이스에 주입된 `.aiexclude`는 분할된 원본 모듈 파일들이 AI 컨텍스트에 중복 인덱싱을 사전에 차단합니다. 이를 통해 토큰 낭비와 할루시네이션을 예방합니다.
 
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 
@@ -285,7 +285,7 @@ catcode   # 현재 디렉토리 인프라 코드 전체를 all_code.txt로 추�
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
 
-API 키, 토큰 등 민감 정보는 절대 `.zshrc`에 직접 작성하지 마십시오. `setup.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
+API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `setup.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
 
 ```bash
 # ~/.zshrc.local 예시

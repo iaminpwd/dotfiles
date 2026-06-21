@@ -1,4 +1,4 @@
-<automation_scripting>
+<automation_scripting role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
 ## 1. 셸 스크립트 작성 (Bash Scripting)

@@ -1,4 +1,4 @@
-<day2_operations>
+<day2_operations role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)

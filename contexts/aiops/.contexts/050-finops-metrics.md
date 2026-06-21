@@ -1,8 +1,8 @@
-<aiops_finops_metrics>
+<aiops_finops_metrics role="Senior AIOps Engineer" priority="high">
 # 컨텍스트 모듈: 고급 FinOps 및 DORA 지표 관측성 (Observability)
 
 ## 1. DORA Metrics 및 시스템 가시성 (Observability Pipeline)
-- **[MUST] Full Observability Pipeline:** 시스템 상태를 블랙박스로 방치하지 마십시오. 단순 로깅을 넘어 애플리케이션 추적(Distributed Tracing: X-Ray, OpenTelemetry)과 메트릭(Prometheus)을 결합한 완벽한 관측성 체계를 인프라 파이프라인에 필수적으로 구성하십시오.
+- **[MUST] Full Observability Pipeline:** 시스템 상태를 완벽히 가시화하기 위해 단순 로깅을 넘어 애플리케이션 추적(Distributed Tracing: X-Ray, OpenTelemetry)과 메트릭(Prometheus)을 결합한 완벽한 관측성 체계를 인프라 파이프라인에 필수적으로 구성하십시오.
 - **[MUST] MTTR & MTTD Tracking:** 장애 알람 발생 시점부터 에이전트의 1차 원인 분석(MTTD) 및 우회/복구 조치(MTTR) 완료까지의 리드 타임을 정밀하게 측정하여 CloudWatch 커스텀 메트릭 또는 Datadog 대시보드로 시각화하는 DORA 지표 추적 시스템을 구축하십시오.
 
 ## 2. 엔터프라이즈 FinOps 통제 및 비용 최적화

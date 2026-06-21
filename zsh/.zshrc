@@ -24,9 +24,6 @@ alias c='code .'
 alias ll='ls -alF'
 
 # Ubuntu 패키지명 충돌 해결 (사용자 편의성)
-if command -v batcat &> /dev/null; then
-  alias bat='batcat'
-fi
 if command -v fdfind &> /dev/null; then
   alias fd='fdfind'
 fi
@@ -58,9 +55,10 @@ alias tfp='terraform plan'
 # 4. 도구 환경 활성화 (Mise)
 eval "$(~/.local/bin/mise activate zsh)"
 
-# 5. fzf (Fuzzy Finder) 단축키 및 자동완성 연동 (apt로 설치된 경로 기준)
-[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
-[ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
+# 5. fzf (Fuzzy Finder) 단축키 및 자동완성 연동 (Mise 설치 기준)
+if command -v fzf &> /dev/null; then
+  eval "$(fzf --zsh)"
+fi
 # ------------------------------------
 
 # 🤖 AI Prompt Context Generator (전체 인프라 코드 한 방에 추출하기)
@@ -126,3 +124,52 @@ function auto_symlink_ai_rules() {
 }
 # 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
 add-zsh-hook chpwd auto_symlink_ai_rules
+
+# =============================================================================
+# 🤖 컨텍스트 000 마스터 코어 자동 링크 훅 (SSOT Auto-Symlink)
+# =============================================================================
+# ~/dotfiles/contexts/gcp/.contexts 처럼 새로운 룰 폴더로 진입할 경우,
+# 최상위 000-universal-core.md 마스터 엔진을 자동으로 심볼릭 링크합니다.
+function auto_symlink_contexts_core() {
+  # 1차 필터링: contexts 폴더 하위일 때만 발동
+  case "$PWD" in
+    */contexts/*)
+      local target_dir=""
+      
+      # 2차 판별: 진입한 곳이 .contexts 안인지, 아니면 상위 도메인 폴더인지
+      case "$PWD" in
+        */\.contexts)
+          target_dir="${PWD%/.contexts}"
+          ;;
+        *)
+          # 현재 경로의 부모 폴더가 contexts 인지 확인하여 1-depth 폴더에만 발동 (예: contexts/gcp)
+          local parent_dir=$(dirname "$PWD")
+          if [[ "${parent_dir}" == */contexts ]]; then
+            target_dir="$PWD"
+          else
+            return
+          fi
+          ;;
+      esac
+      
+      # 마스터 코어 존재 여부 확인
+      local master_core="$target_dir/../000-universal-core.md"
+      if [ -f "$master_core" ]; then
+          # 디렉토리가 없으면 즉시 생성
+          mkdir -p "$target_dir/.contexts"
+          
+          local target_link="$target_dir/.contexts/000-universal-core.md"
+          local current_link=""
+          
+          [ -L "$target_link" ] && current_link=$(readlink "$target_link")
+          
+          # cd(이동) 명령어 없이 제자리에서 절대/상대 경로 조합으로 심볼릭 링크 꽂기 (무한루프 방지)
+          if [ "$current_link" != "../../000-universal-core.md" ]; then
+              ln -sfn "../../000-universal-core.md" "$target_link"
+              echo "🤖 마스터 프롬프트 엔진(000-universal-core) 동적 링크 주입 완료"
+          fi
+      fi
+      ;;
+  esac
+}
+add-zsh-hook chpwd auto_symlink_contexts_core

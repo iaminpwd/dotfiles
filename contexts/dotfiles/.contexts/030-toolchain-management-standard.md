@@ -1,4 +1,4 @@
-<dotfiles_toolchain_management_standard>
+<dotfiles_toolchain_management_standard role="Senior Prompt Architect" priority="high">
 # 컨텍스트 모듈: 시스템 환경 패키지 도구(Toolchain) 셋업 관리 표준
 
 본 모듈은 `dotfiles` 환경 내부에서 터미널 CLI 도구, 로컬 인프라 패키지, 데브옵스 유틸리티를 설치하고 버전을 관리할 때 적용됩니다. 일반 애플리케이션 코딩의 `package.json` 등과는 무관합니다.

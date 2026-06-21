@@ -1,4 +1,4 @@
-<serverless_standard>
+<serverless_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
 ## 1. Serverless 설계 원칙

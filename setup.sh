@@ -15,7 +15,7 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/5] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
-sudo apt update && sudo apt install -y git curl unzip wget zsh fzf jq stow pipx python3-venv fd-find tree bat dnsutils
+sudo apt update && sudo apt install -y git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree
 
 echo "[2/5] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -79,6 +79,12 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
 
   # .contexts 폴더가 존재하는 경우에만 병합 수행
   if [ -d "$TARGET_DIR/.contexts" ]; then
+    echo "<system_instructions>" >> "$MERGED_MD"
+    echo -e "\n" >> "$MERGED_MD"
+    
+    # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
+    ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
+
     # bash의 기본 glob 확장 기능을 활용하여 사전순(00, 10, 20...) 정렬 처리
     for md_file in "$TARGET_DIR/.contexts/"*.md; do
       # .md 파일이 없을 경우 literal 문자열이 반환되는 것을 방지
@@ -88,6 +94,9 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
       cat "$md_file" >> "$MERGED_MD"
       echo -e "\n\n" >> "$MERGED_MD"
     done
+    
+    echo "</system_instructions>" >> "$MERGED_MD"
+    echo -e "\n" >> "$MERGED_MD"
   fi
 
   # 단일 워크스페이스(Workspace) 동적 할당 및 생성 (예: ~/workspace/aws)
@@ -103,6 +112,28 @@ DOTFILES_RULES="$CONTEXTS_DIR/dotfiles/RULES.md"
 rm -f "$DOTFILES_DIR/GEMINI.md"
 ln -sf "$DOTFILES_RULES" "$DOTFILES_DIR/GEMINI.md"
 echo "   ✅ [GEMINI.md] -> $DOTFILES_RULES"
+
+echo "[5.5/5] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+if command -v trufflehog &> /dev/null; then
+  echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."
+  trufflehog filesystem "$DOTFILES_DIR" --no-update || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
+else
+  echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
+fi
+
+# Pre-commit 훅 생성
+mkdir -p "$DOTFILES_DIR/.git/hooks"
+cat << 'EOF' > "$DOTFILES_DIR/.git/hooks/pre-commit"
+#!/bin/bash
+if command -v trufflehog &> /dev/null; then
+  echo "🔒 커밋 전 시크릿 스캔을 수행합니다..."
+  trufflehog filesystem "$(pwd)" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
+fi
+EOF
+chmod +x "$DOTFILES_DIR/.git/hooks/pre-commit"
+echo "   ✅ Git pre-commit 훅(trufflehog) 구성 완료"
+
 
 echo "========================================================="
 echo "🎉 모든 기본 설치 및 환경 세팅이 백그라운드로 완료되었습니다!"

@@ -1,4 +1,4 @@
-<aiops_quality_report>
+<aiops_quality_report role="Senior AIOps Engineer" priority="high">
 # 컨텍스트 모듈: DevSecOps 통합, 컴플라이언스 및 사후 분석(Post-Mortem) 자동화
 
 ## 1. 보안 규정 준수 (Shift-Left Security & PaC)
@@ -19,7 +19,7 @@
 
 ## 3. 에러 분석 및 디버깅 결과의 구조화
 - **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화 (Structured Analysis):**
-  > 챗 창에서 에러 코드를 분석할 때 무분별하게 수정 코드만 출력하지 마십시오. 반드시 산출물 파일인 `troubleshooting-report.md`에 다음 순서로 결과를 문서화하십시오:
+  > 챗 창에서 에러 코드 분석 시 전체 컨텍스트 보존을 위해 반드시 산출물 파일인 `troubleshooting-report.md`에 다음 순서로 결과를 문서화하십시오:
   > 1. Root Cause Analysis (근본 원인 분석)
   > 2. Logical Basis (시스템 로그 및 터미널 출력 기반 증거)
   > 3. Step-by-Step Solution & Modified Code (해결 절차)

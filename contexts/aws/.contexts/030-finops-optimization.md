@@ -1,4 +1,4 @@
-<finops_optimization>
+<finops_optimization role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 
 ## 1. FinOps 설계 철학

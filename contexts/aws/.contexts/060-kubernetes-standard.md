@@ -1,4 +1,4 @@
-<kubernetes_standard>
+<kubernetes_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
 
 ## 1. 클러스터 보안 및 인증 (Security & Auth)

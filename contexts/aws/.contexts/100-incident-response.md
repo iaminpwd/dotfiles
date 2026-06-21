@@ -1,4 +1,4 @@
-<incident_response>
+<incident_response role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
 ## 1. 트러블슈팅 및 장애 대응 대원칙 (Mitigation First)
