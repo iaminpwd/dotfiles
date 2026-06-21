@@ -83,7 +83,10 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     echo -e "\n" >> "$MERGED_MD"
     
     # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
-    ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
+    # dotfiles 워크스페이스는 자체 000 파일이 있으므로 심볼릭 링크 생성을 제외합니다.
+    if [ "$ENV_NAME" != "dotfiles" ]; then
+      ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
+    fi
 
     # 위계적 병합 (Zero-Config Hierarchical Merge) 처리
     # - <domain_specific_rules> 태그가 내장되지 않은 파일만 모아서 한 번에 글로벌 코어로 감쌉니다.

@@ -154,7 +154,8 @@ function auto_symlink_contexts_core() {
       
       # 마스터 코어 존재 여부 확인
       local master_core="$target_dir/../000-universal-core.md"
-      if [ -f "$master_core" ]; then
+      # dotfiles 워크스페이스는 자체 000 파일이 있으므로 심볼릭 링크 생성을 제외합니다.
+      if [ -f "$master_core" ] && [ "$(basename "$target_dir")" != "dotfiles" ]; then
           # 디렉토리가 없으면 즉시 생성
           mkdir -p "$target_dir/.contexts"
           
