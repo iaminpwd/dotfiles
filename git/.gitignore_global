@@ -48,3 +48,4 @@ Thumbs.db
 # AI Context Files (Prevent AI rule pollution in remote repos)
 .gemini/
 .aiexclude
+!dotfiles/contexts/*/.aiexclude
