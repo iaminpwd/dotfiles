@@ -117,7 +117,7 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   fi
 
   # 단일 워크스페이스(Workspace) 동적 할당 및 생성 (예: ~/workspace/aws)
-  # dotfiles는 이미 홈 디렉토리에 존재하므로 workspace 생성 대상에서 제외
+  # dotfiles는 workspace 생성 대상에서 제외
   if [ "$ENV_NAME" != "dotfiles" ]; then
     WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
     mkdir -p "$WORKSPACE_DIR/src"
