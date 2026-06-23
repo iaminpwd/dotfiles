@@ -1,5 +1,14 @@
 #!/bin/bash
 if command -v trufflehog &> /dev/null; then
-  echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (Workspace 훅)..."
-  trufflehog filesystem "$(pwd)" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
+  echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (이번에 변경된 파일만 검사합니다)..."
+  
+  # 새로 추가되거나 수정된 파일 목록 추출
+  STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+  
+  if [ -z "$STAGED_FILES" ]; then
+    exit 0
+  fi
+  
+  # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
+  trufflehog filesystem $STAGED_FILES --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
 fi
