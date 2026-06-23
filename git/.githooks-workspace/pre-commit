@@ -1,0 +1,5 @@
+#!/bin/bash
+if command -v trufflehog &> /dev/null; then
+  echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (Workspace 훅)..."
+  trufflehog filesystem "$(pwd)" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
+fi
