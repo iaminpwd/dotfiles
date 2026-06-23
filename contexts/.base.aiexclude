@@ -1,0 +1,152 @@
+# ==============================================================================
+# AI Exclude File (Ultimate Universal Base Template)
+# ==============================================================================
+
+# 1. Security, Secrets, Credentials & Encrypted Data
+# (하드코딩된 시크릿, 인증 키, VPN, IaC 변수 등 치명적 보안 위협 방지)
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.gpg
+*.kdbx
+*.ovpn
+.aws/
+.azure/
+.config/gcloud/
+.ssh/
+id_rsa*
+id_ed25519*
+kubeconfig
+*.kubeconfig
+.env
+.env.*
+.netrc
+.npmrc
+.pypirc
+.docker/config.json
+*secret*
+*credential*
+*password*
+service-account*.json
+client_secret*.json
+*.sops.yaml
+*.sops.json
+*.enc
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+*secret*.tfvars
+*credential*.tfvars
+
+# 2. Build Artifacts, Dependencies & Caches
+# (언어별 종속성 폴더, 패키지 매니저 캐시 및 빌드 찌꺼기 무시)
+*.zip
+*.tar.gz
+*.tgz
+*.jar
+*.war
+*.ear
+build/
+dist/
+out/
+bin/
+obj/
+target/
+vendor/
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+.cache/
+tmp/
+temp/
+docker-data/
+mysql-data/
+pg-data/
+
+# 3. Cloud, Infrastructure & Terraform Temp Files
+# (테라폼 상태 파일, 서버리스 배포 잔여물 등 방대한 인프라 찌꺼기)
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info
+.terraform.d/
+.terragrunt-cache/
+.serverless/
+.aws-sam/
+cdk.out/
+
+# 4. CI/CD, Testing Caches & Coverage
+# (정적 분석, 비용 산정, 파이썬/기타 테스트 도구의 임시 파일 및 리포트)
+.tflint.d/
+.infracost/
+.kitchen/
+.pytest_cache/
+.tox/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+checkov_report.*
+tfsec_report.*
+
+# 5. Documentation, Logs, Data & Large Media
+# (AI 분석 윈도우를 잡아먹는 바이너리, 로그, 방대한 데이터셋)
+*.log
+*.log.*
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.mp4
+*.mov
+*.pdf
+*.drawio
+*.csv
+*.tsv
+*.sql
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+*.iso
+*.tar
+*.qcow2
+*.vdi
+
+# 6. OS & IDE Temp Files
+# (운영체제 및 각종 에디터 임시 파일)
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+.history/
+Session.vim
+.aider/
+.aider.chat.history.md
+*.swp
+*.swo
+*~
+

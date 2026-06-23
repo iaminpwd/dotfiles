@@ -88,6 +88,12 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
       ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
     fi
 
+    # [NEW] 공통 .aiexclude 베이스 템플릿 복사 (존재하지 않을 경우에만, 멱등성 유지)
+    if [ -f "$CONTEXTS_DIR/.base.aiexclude" ] && [ ! -f "$TARGET_DIR/.aiexclude" ]; then
+      cp "$CONTEXTS_DIR/.base.aiexclude" "$TARGET_DIR/.aiexclude"
+      echo "   Adding Base: .aiexclude"
+    fi
+
     # 위계적 병합 (Zero-Config Hierarchical Merge) 처리
     # - <domain_specific_rules> 태그가 내장되지 않은 파일만 모아서 한 번에 글로벌 코어로 감쌉니다.
     echo "<global_core_rules>" >> "$MERGED_MD"

@@ -169,6 +169,14 @@ function auto_symlink_contexts_core() {
               ln -sfn "../../000-universal-core.md" "$target_link"
               echo "🤖 마스터 프롬프트 엔진(000-universal-core) 동적 링크 주입 완료"
           fi
+
+          # [NEW] .base.aiexclude 템플릿 복사 로직 (멱등성 보장)
+          local base_aiexclude="$target_dir/../.base.aiexclude"
+          local target_aiexclude="$target_dir/.aiexclude"
+          if [ -f "$base_aiexclude" ] && [ ! -f "$target_aiexclude" ]; then
+              cp "$base_aiexclude" "$target_aiexclude"
+              echo "🤖 범용 AI Exclude 템플릿(.aiexclude) 동적 셋업 완료"
+          fi
       fi
       ;;
   esac
