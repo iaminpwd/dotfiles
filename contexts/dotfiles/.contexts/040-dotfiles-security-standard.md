@@ -9,7 +9,7 @@
 - **[MUST] Local Separation:** 민감한 환경 변수는 반드시 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일로 물리적으로 분리하십시오.
 
 ## 2. 셋업 코드의 스캐닝 자동화
-- **[Trigger: Before Commit / Push] Mandatory Secret Scan:** Git Staging이나 Push 전, 반드시 `trufflehog`나 `trivy`를 `run_command`로 실행하여 시크릿 하드코딩 여부를 검사하십시오. (도구가 없다면 즉시 설치를 제안하십시오)
+- **[Trigger: Before Push] Mandatory Secret Scan:** 새로운 자격 증명 로직을 추가하거나 원격 저장소에 Push하기 전, `trufflehog`나 `trivy`를 `run_command`로 실행하여 시크릿 하드코딩 여부를 1회 검사하십시오. (단순 로컬 커밋마다 실행 금지)
 - **[Trigger: Security Vulnerability Found] Hard Block:** 스캔 중 시크릿 유출 발견 시 즉각 작업을 중단(Hard Block)하고 사용자에게 해당 자격 증명 파기(Revoke)를 가이드하십시오.
 
 ## 3. 프라이빗 키(Private Key) 보호 통제

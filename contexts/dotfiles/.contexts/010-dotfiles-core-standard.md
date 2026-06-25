@@ -10,7 +10,6 @@
 ## 2. 버전 관리 (Git) 및 포매터 안전망
 - **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 다중 변경 사항은 의미 단위(Atomic)로 분리하여 개별 커밋하십시오.
 - **[MUST] Rebase Workflow:** 깔끔한 선형(Linear) 히스토리를 위해 Rebase 워크플로우를 유지하십시오.
-- **[Trigger: Before Commit] Auto-Sync 강제:** 커밋 전 반드시 `git pull --rebase`를 실행하여 최신 상태를 자동 동기화하십시오.
 - **[MUST] Targeted Execution:** 전역 포매팅(`prettier .` 등)을 절대 금지합니다. 포매터 실행 시 반드시 타겟 파일명을 명시(`shfmt -w <file>`)하십시오.
 
 ### 시맨틱 및 원자적 커밋 예시 (Few-Shot Examples)
