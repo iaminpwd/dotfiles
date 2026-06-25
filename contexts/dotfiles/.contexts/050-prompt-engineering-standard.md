@@ -50,11 +50,11 @@ limits:
 - **[Trigger] Autonomous Action:** 에이전트의 자율 개입을 위해 `[Trigger: 이벤트명]` 형태의 조건문을 적극 설계하십시오.
 - **[MUST] Artifact Generation Rules:** 산출물 작성 시 대상 에이전트(Antigravity)의 내장 마크다운 스키마(`walkthrough.md`, `task.md` 등) 활용을 강제하십시오.
 
-## 5. 엔터프라이즈 마인드셋 락킹 (Enterprise Architecture)
-클라우드 등 다른 도메인 룰북 작성 시 아래 철학을 강제하십시오.
-1. **Zero-Trust Security:** 최소 권한(PoLP), 하드코딩 시크릿 차단.
-2. **Day-2 Operations & SRE:** 복구(Mitigation) 최우선, 비난 없는 분석(Blameless RCA).
-3. **FinOps & Autoscaling:** 정량화된 비용 분석 및 탄력적 스케일링 고려.
+## 5. 방어적 로컬 환경 철학 (Defensive Environment Architecture)
+Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시오.
+1. **Zero-Trust Security:** 최소 권한, Git 저장소 내 시크릿 하드코딩 엄격 차단.
+2. **Idempotency First:** 여러 번 실행해도 시스템 환경이 망가지지 않도록 멱등성 검증 로직 강제.
+3. **Fail-Fast & Recovery:** 에러 발생 시 무한 루프를 막고, 핵심 설정 덮어쓰기 전 항상 `.bak` 백업을 수행하도록 유도.
 
 ## 6. 프롬프트 최적화 (Readability)
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
