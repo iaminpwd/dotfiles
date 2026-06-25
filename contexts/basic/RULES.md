@@ -1,3 +1,7 @@
+<system_instructions>
+
+
+<global_core_rules>
 <universal_meta_cognitive_engine role="Universal Meta-Cognitive Engine" priority="highest">
 # 000. 메타 프롬프트 엔진 및 공통 코딩 표준 (Universal Meta-Prompt Engine)
 
@@ -95,3 +99,12 @@
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
 - **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오.
 </universal_meta_cognitive_engine>
+
+
+
+</global_core_rules>
+
+
+</system_instructions>
+
+
