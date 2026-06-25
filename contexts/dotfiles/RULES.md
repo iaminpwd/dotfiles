@@ -15,7 +15,7 @@
 - **[MUST] Information Foraging:** 무지성 추측을 배제하고, 반드시 `run_command`로 실제 시스템 상태(OS, 패키지 등)를 먼저 파악하십시오.
 - **[MUST] Explicit Reasoning:** 답변 최상단에 `<thinking> 분석 및 설계 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
 - **[MUST] Exhaustive Review:** 에러나 아키텍처 분석 시 반드시 `grep_search` 등으로 관련된 모든 파일을 전수 조사하십시오.
-- **[MUST] Self-Critique:** 작업 완료 전 `<self_critique>` 태그를 열어 취약점과 멱등성을 스스로 비판하고 수정하십시오.
+- **[MUST] Delegated Self-Critique:** 자가 비판(Self-Critique)은 전역에서 무조건 수행하지 말고, 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 `<self_critique>` 태그를 열어 수행하십시오.
 
 ## 3. 셋업 및 설계 전 사고 (Think Before Execution)
 인프라 스크립트를 작성하거나 새로운 규칙을 설계하기 전에 다음 사고 과정을 반드시 거치십시오.
@@ -63,7 +63,6 @@
 ## 2. 버전 관리 (Git) 및 포매터 안전망
 - **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 다중 변경 사항은 의미 단위(Atomic)로 분리하여 개별 커밋하십시오.
 - **[MUST] Rebase Workflow:** 깔끔한 선형(Linear) 히스토리를 위해 Rebase 워크플로우를 유지하십시오.
-- **[Trigger: Before Commit] Auto-Sync 강제:** 커밋 전 반드시 `git pull --rebase`를 실행하여 최신 상태를 자동 동기화하십시오.
 - **[MUST] Targeted Execution:** 전역 포매팅(`prettier .` 등)을 절대 금지합니다. 포매터 실행 시 반드시 타겟 파일명을 명시(`shfmt -w <file>`)하십시오.
 
 ### 시맨틱 및 원자적 커밋 예시 (Few-Shot Examples)
@@ -150,13 +149,12 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 본 모듈은 터미널 CLI 도구, 로컬 인프라 패키지, 데브옵스 유틸리티 설치 및 버전 관리 시 적용됩니다.
 
 ## 1. 글로벌 도구의 선언주의 및 격리(Isolation)
-- **[MUST] Mise First:** CLI 도구(`kubectl`, `terraform` 등) 설치 시 자유로운 버전 스왑이 가능한 `mise`를 최우선으로 제안하십시오.
-- **[MUST] Pipx Isolation:** 파이썬 기반 글로벌 도구(`checkov`, `trufflehog` 등)는 반드시 `pipx`로 설치하여 시스템 환경을 완벽히 격리하십시오.
+- **[MUST] Mise First:** CLI 도구(`kubectl`, `terraform` 등) 관리 시 시스템 설치를 금지하고, 자유로운 버전 스왑이 가능한 `mise`를 최우선으로 제안하십시오.
+- **[MUST] Pipx via Mise (SSOT):** 파이썬 기반 글로벌 도구(`checkov`, `trufflehog` 등)를 터미널에서 `pipx install` 명령어로 직접 설치하는 것을 엄격히 금지합니다. 반드시 `mise.toml` 파일 내부에 `"pipx:<tool_name>" = "<version>"` 구문으로 선언하여, `mise`가 `pipx`를 통해 격리 설치하도록 단일 진실 공급원(SSOT)을 유지하십시오.
 
-## 2. 단일 진실 공급원(SSOT) 통제
-- **[MUST] Explicit Version Pinning:** 멱등성 보장을 위해 `mise.toml` 등 설정 파일에 명확한 특정 버전(예: `'1.5.7'`)을 하드코딩하십시오.
+## 2. 버전 통제 및 멱등성 보장
+- **[MUST] Explicit Version Pinning:** 멱등성 보장을 위해 `mise.toml` 등 설정 파일에 명확한 특정 버전을 하드코딩하십시오. (예: `latest` 금지)
 - **[MUST] Verifiable Pinning:** 도구 추가 시 `run_command`로 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 찾아 하드코딩하십시오.
-- **[MUST] Declarative Pipx via Mise:** `pipx` 도구 역시 `mise.toml` 내부에 `"pipx:<tool_name>" = "<version>"` 구문으로 선언적으로 관리하십시오.
 
 ## 3. 셋업 전 자율 검증 트리거
 - **[Trigger: After Toolchain Edit] Mise Validation:** `mise.toml` 수정 직후, `mise install` 및 `mise ls`를 실행하여 다운로드 및 바이너리 연결 정상 여부를 자가 검증하십시오.
@@ -197,7 +195,7 @@ terraform = "latest" # 절대 금지 (미래에 멱등성 깨짐)
 - **[MUST] Local Separation:** 민감한 환경 변수는 반드시 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일로 물리적으로 분리하십시오.
 
 ## 2. 셋업 코드의 스캐닝 자동화
-- **[Trigger: Before Commit / Push] Mandatory Secret Scan:** Git Staging이나 Push 전, 반드시 `trufflehog`나 `trivy`를 `run_command`로 실행하여 시크릿 하드코딩 여부를 검사하십시오. (도구가 없다면 즉시 설치를 제안하십시오)
+- **[Trigger: Before Push] Mandatory Secret Scan:** 새로운 자격 증명 로직을 추가하거나 원격 저장소에 Push하기 전, `trufflehog`나 `trivy`를 `run_command`로 실행하여 시크릿 하드코딩 여부를 1회 검사하십시오. (단순 로컬 커밋마다 실행 금지)
 - **[Trigger: Security Vulnerability Found] Hard Block:** 스캔 중 시크릿 유출 발견 시 즉각 작업을 중단(Hard Block)하고 사용자에게 해당 자격 증명 파기(Revoke)를 가이드하십시오.
 
 ## 3. 프라이빗 키(Private Key) 보호 통제
@@ -284,11 +282,11 @@ limits:
 - **[Trigger] Autonomous Action:** 에이전트의 자율 개입을 위해 `[Trigger: 이벤트명]` 형태의 조건문을 적극 설계하십시오.
 - **[MUST] Artifact Generation Rules:** 산출물 작성 시 대상 에이전트(Antigravity)의 내장 마크다운 스키마(`walkthrough.md`, `task.md` 등) 활용을 강제하십시오.
 
-## 5. 엔터프라이즈 마인드셋 락킹 (Enterprise Architecture)
-클라우드 등 다른 도메인 룰북 작성 시 아래 철학을 강제하십시오.
-1. **Zero-Trust Security:** 최소 권한(PoLP), 하드코딩 시크릿 차단.
-2. **Day-2 Operations & SRE:** 복구(Mitigation) 최우선, 비난 없는 분석(Blameless RCA).
-3. **FinOps & Autoscaling:** 정량화된 비용 분석 및 탄력적 스케일링 고려.
+## 5. 방어적 로컬 환경 철학 (Defensive Environment Architecture)
+Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시오.
+1. **Zero-Trust Security:** 최소 권한, Git 저장소 내 시크릿 하드코딩 엄격 차단.
+2. **Idempotency First:** 여러 번 실행해도 시스템 환경이 망가지지 않도록 멱등성 검증 로직 강제.
+3. **Fail-Fast & Recovery:** 에러 발생 시 무한 루프를 막고, 핵심 설정 덮어쓰기 전 항상 `.bak` 백업을 수행하도록 유도.
 
 ## 6. 프롬프트 최적화 (Readability)
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
@@ -296,6 +294,42 @@ limits:
 
 - **[Trigger: Prompt Authored] 자가 비판 (Self-Critique):** 새로운 프롬프트 모듈(`.md`) 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **추상적이고 장황한 문장(`~하는 것이 좋습니다` 등)이 포함되었는지, 그리고 핵심 예시가 XML(`<examples>`)로 명확히 격리되지 않았거나 다른 파일과 중복(SSOT 파괴)되는지** 집중 비판하십시오.
 </dotfiles_prompt_engineering_standard>
+</domain_specific_rules>
+
+
+
+<domain_specific_rules instruction="Apply these rules ONLY when troubleshooting, debugging shell environments, or fixing errors in the dotfiles workspace.">
+<dotfiles_troubleshooting_standard role="Senior System Engineer" priority="high">
+# 컨텍스트 모듈: Dotfiles 로컬 디버깅 및 트러블슈팅 표준
+
+본 모듈은 `dotfiles` 환경에서 에러(PATH 충돌, 패키지 설치 실패, 셸 문법 에러 등)를 마주했을 때 AI 에이전트의 실용적이고 방어적인 디버깅 절차를 규정합니다.
+
+## 1. 능동적 에러 추적 (Active Tracing)
+- **[MUST] Bash/Zsh Debug Mode:** 스크립트 실행 오류나 터미널 로드 오류 시, 섣불리 코드나 설정 파일을 수정하지 마십시오. 반드시 `run_command`를 통해 `bash -x <script_name>` 또는 `zsh -x -i -c exit`를 먼저 실행하여 병목 지점이나 에러 발생 라인을 정확히 추적하십시오.
+- **[MUST] PATH Override Tracking:** "Command not found" 에러 발생 시, 단순히 `export PATH=...`를 `.zshrc` 하단에 덮어쓰지 마십시오. 먼저 `echo $PATH` 및 `which <tool>`을 통해 기존 PATH가 어디서 잘못 덮어씌워졌는지(Override) 근본 원인을 역추적하십시오.
+
+## 2. 충돌 및 권한 문제 해결 (Conflict & Permission)
+- **[MUST] Stow Conflict Resolution:** GNU Stow 사용 중 심볼릭 링크 에러(File exists) 발생 시, 원본 충돌 파일을 무작정 삭제하지 마십시오. 해당 파일의 성격(로컬 설정 등)을 먼저 파악하고, 필요한 경우 반드시 `.bak` 확장자로 백업본을 만든 후 링크를 재시도하십시오.
+- **[MUST] Cross-Platform Awareness:** WSL2나 특정 Linux 배포판에서 퍼미션(chmod) 또는 파일 소유권 이슈가 발생할 경우, 시스템 레벨(`sudo`) 접근보다 로컬 사용자 환경(`~/.local/bin`)에서의 우회 및 격리된 해결책을 최우선으로 탐색하십시오.
+
+## 3. 디버깅 후 자가 비판 및 기록 (Post-Debugging)
+- **[Trigger: Error Resolved] 멱등성 파괴 검증:** 에러를 해결하기 위해 스크립트나 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **"나의 수정 사항이 기존의 멱등성(Idempotency)을 파괴하지는 않았는지, 임시방편(Hardcoding)이 아닌 영구적이고 선언적인 해결책인지"** 집중 비판하십시오.
+- **[Trigger: User requests bug fix] 분석 결과 구조화:** 사용자가 복잡한 버그 픽스를 요구하여 성공적으로 해결한 경우, 채팅으로 장황하게 설명하지 말고 문제의 원인과 해결 방법을 요약한 `troubleshooting-report.md` 문서를 선제적으로 생성하여 제공하십시오.
+
+### 방어적 디버깅 예시 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- 능동적 추적: "PATH 문제로 보입니다. `.zshrc`를 수정하기 전에 `echo $PATH`와 `zsh -x -i -c 'echo test'`를 실행하여 어디서 PATH가 끊겼는지 먼저 확인하겠습니다."
+- 안전한 충돌 해결: "Stow 충돌 파일인 `~/.zshrc`를 덮어쓰지 않고, `mv ~/.zshrc ~/.zshrc.bak.$(date +%F)`로 백업한 후 다시 링크하겠습니다."
+</example>
+<example>
+[Bad]
+- 무지성 덮어쓰기: "명령어를 찾을 수 없네요. `.zshrc` 맨 아래에 `export PATH=$PATH:/new/path`를 무조건 추가하겠습니다."
+- 맹목적 삭제: "Stow 링크를 위해 충돌하는 기존 `~/.tmux.conf` 파일을 삭제하겠습니다."
+</example>
+</examples>
+</dotfiles_troubleshooting_standard>
 </domain_specific_rules>
 
 
