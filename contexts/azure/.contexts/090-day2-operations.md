@@ -4,11 +4,11 @@
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
 - **[MUST] Separation of Concerns:** CI(빌드/테스트)와 CD(배포) 역할을 엄격히 분리하고, 배포 파이프라인 설계 시 파이프라인에 의한 100% 자동화 배포가 이루어지도록 구성하십시오.
-- **[MUST] CI/CD Local Test:** GitHub Actions 등 파이프라인 코드 작성 시 반드시 `run_command`로 `act -W <특정_워크플로우_파일>` 도구를 실행하여 로컬에서 사전 검증하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
+- **[MUST] CI/CD Local Test:** GitHub Actions 등 파이프라인 코드 작성 시 반드시 `run_command`로 `act -W <특정_워크플로우_파일>` 도구를 실행하여 로컬에서 사전 검증하십시오.
 
 ## 2. 가시성 (Observability) 및 데이터 복원력
 - **[MUST] Observability:** 인프라 설계 시 기본 모니터링(Azure Monitor)을 넘어, 마이크로서비스 환경에 필수적인 분산 추적(OpenTelemetry, Application Insights) 아키텍처를 반드시 포함하십시오.
-- **[MUST] Data Resilience:** 데이터베이스 제안 시 고가용성(Zone Redundant) 확보와 더불어 악의적 삭제나 휴먼 에러에 대비한 연속 백업 및 PITR(Point-in-Time Recovery) 활성화를 기본값으로 설정하십시오.
+- **[MUST] Data Resilience:** 데이터베이스의 고가용성(Zone Redundant) 및 백업/복원 전략은 `080-database-standard` 모듈의 규칙을 준수하십시오. 추가로, 악의적 삭제나 휴먼 에러에 대비한 연속 백업 및 PITR(Point-in-Time Recovery) 활성화를 기본값으로 설정하십시오.
 - **[MUST] SRE Golden Signals:** Azure Monitor 알람을 설계할 때는 단순 하드웨어 지표(CPU 80% 등) 모니터링을 넘어, 사용자 경험에 직결되는 SRE 4대 황금 지표(대기 시간, 트래픽, 오류, 포화도)를 반드시 모니터링 대상으로 포함시켜 알람의 정확도를 높이십시오.
 - **[MUST] Actionable Alerts:** 모든 알람에는 즉시 실행 가능한 런북(Runbook) 링크를 제공하거나 Azure Event Grid, Service Bus, Azure Functions를 연동한 자동화된 조치(Automated Remediation) 파이프라인을 반드시 함께 제안하십시오.
 

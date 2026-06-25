@@ -9,6 +9,7 @@
 - **[PREFER] WAF/DDoS Protection:** 퍼블릭 엔드포인트(Application Gateway, Azure Front Door) 제안 시 Azure WAF와 DDoS Protection Standard를 포함하십시오.
 - **[MUST] Bastion Host:** 인스턴스 관리 접근 시 보안을 위해 Azure Bastion을 1순위로 제안하십시오.
 - **[MUST] VNet Endpoint:** Azure 내부 서비스 통신 시 퍼블릭 인터넷을 우회하여 데이터 경로를 격리하기 위해 VNet Endpoint를 제안하십시오.
+- **[MUST] Data in Transit (TLS):** 클라우드 내부 통신이라 하더라도 모든 네트워크 통신에 TLS 암호화를 반드시 적용하도록 설계하십시오.
 
 ### 네트워크 보안 그룹(NSG) 인바운드 통제 예시 (Few-Shot Examples)
 <examples>

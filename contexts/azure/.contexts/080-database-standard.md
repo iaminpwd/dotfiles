@@ -1,4 +1,4 @@
-<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">
+<domain_specific_rules instruction="Apply these rules ONLY when working with Azure SQL, Cosmos DB, PostgreSQL, Redis, or database engineering.">
 <database_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: 데이터베이스 (Azure SQL Database, Cosmos DB, Azure Cache for Redis) 엔지니어링 표준
 

@@ -1,4 +1,4 @@
-<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">
+<domain_specific_rules instruction="Apply these rules ONLY when writing or reviewing Terraform, Bicep, or Ansible code.">
 <iac_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
@@ -15,7 +15,7 @@
 - **[MUST] Resource Iteration:** 다수의 리소스를 반복 생성할 때 인덱스 변경에 따른 안정적인 재생성(State Shift) 제어를 위해 반드시 `for_each`를 활용하십시오. 단, 리소스 ID처럼 Apply 이후에 결정되는 동적 값(`known after apply`)을 반복할 때는 반드시 정적 식별자(Static Key)를 갖는 `map` 구조를 강제하여 안정적인 Plan 실행을 보장하십시오.
 - **[MUST] Version Pinning:** 인프라의 예측 가능성을 위해 Terraform 코어 및 Azure Provider 버전(`required_version`, `required_providers`)은 반드시 특정 버전(또는 `~>` 구문)으로 명시하여 고정하십시오.
 - **[MUST] Module Composition:** 코드를 재사용 가능한 자식 모듈(Child Module)과 환경별 루트 모듈(Root Module)로 철저히 분리(Decoupling)하십시오.
-- **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 반드시 `run_command`를 통해 `terraform-docs markdown <특정_경로>` 도구를 실행하여 README.md를 자동 생성해 문서화를 강제하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
+- **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 반드시 `run_command`를 통해 `terraform-docs markdown <특정_경로>` 도구를 실행하여 README.md를 자동 생성해 문서화를 강제하십시오.
 
 ### State 관리 및 의존성 예시 (Few-Shot Examples)
 <examples>
@@ -50,12 +50,12 @@ terraform {
 - **[MUST] Deterministic Packages:** 패키지 설치 시 예측 가능한 멱등성(Idempotency)을 보장하기 위해 반드시 `state: present`(또는 특정 버전)를 명시적으로 지정하여 사용하십시오.
 - **[MUST] Dynamic Inventory:** 인벤토리 구성 시 반드시 Azure Virtual Machines Dynamic Inventory Plugin(`azure_rm.yml`) 기반의 동적 인벤토리(Dynamic Inventory)를 활용하십시오.
 - **[MUST] Vault:** 민감한 변수(DB 패스워드 등)는 Ansible Vault로 암호화하십시오.
-- **[MUST] Native Syntax Check:** 플레이북 작성 시 반드시 `run_command`로 `ansible-playbook --syntax-check <특정_파일>` 모드를 실행해 타겟 파일의 문법적 정합성을 스스로 검증하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
+- **[MUST] Native Syntax Check:** 플레이북 작성 시 반드시 `run_command`로 `ansible-playbook --syntax-check <특정_파일>` 모드를 실행해 타겟 파일의 문법적 정합성을 스스로 검증하십시오.
 
 ## 4. 엔터프라이즈 명명 규칙 및 태깅
 - **[MUST] Naming & FinOps Tagging:** 모든 리소스 이름은 `<Project>-<Env>-<Service>-<Resource>` 규칙을 따르고, `Project`, `Environment`, `CostCenter` 3대 필수 태그가 거버넌스 레벨에서 강제된다고 가정하여 `tags` 등에 반드시 포함하십시오.
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
-- **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 반드시 **`run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
+- **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 반드시 **`run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오.
 </iac_standard>
 </domain_specific_rules>

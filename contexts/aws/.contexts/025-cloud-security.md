@@ -9,6 +9,7 @@
 - **[PREFER] WAF/Shield:** 퍼블릭 엔드포인트(ALB, CloudFront) 제안 시 AWS WAF와 Shield Advanced를 포함하십시오.
 - **[MUST] Session Manager:** 인스턴스 관리 접근 시 보안을 위해 AWS SSM Session Manager를 1순위로 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스 통신 시 퍼블릭 인터넷을 우회하여 데이터 경로를 격리하기 위해 VPC Endpoint를 제안하십시오.
+- **[MUST] Data in Transit (TLS):** 클라우드 내부 통신이라 하더라도 모든 네트워크 통신에 TLS 암호화를 반드시 적용하도록 설계하십시오.
 
 ### 보안 그룹(SG) 인바운드 통제 예시 (Few-Shot Examples)
 <examples>

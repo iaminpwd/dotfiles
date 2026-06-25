@@ -1,4 +1,4 @@
-<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">
+<domain_specific_rules instruction="Apply these rules ONLY when working with Kubernetes, EKS, Helm, or container orchestration.">
 <kubernetes_standard role="Senior Cloud Architect" priority="high">
 # 컨텍스트 모듈: Kubernetes (EKS) 및 컨테이너 엔지니어링 표준
 
@@ -10,8 +10,8 @@
 
 ## 2. 클러스터 워크로드 배포 전략 (Deployment Strategy)
 - **[MUST] GitOps:** Kubernetes 워크로드 배포 시 반드시 ArgoCD 등 GitOps 기반 파이프라인을 통해 자동화된 배포가 이루어지도록 설계하십시오.
-- **[Trigger: After Editing K8s Manifest/Helm] K8s 로컬 테스트 (K8s Local Test):** Kubernetes 매니페스트나 Helm 차트를 수정했을 때 반드시 `run_command`를 통해 `k3d`나 `minikube`를 이용한 로컬 클러스터 배포 테스트(`dry-run` 포함)를 실행하여 설정 유효성을 확인하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
-- **[MUST] Static Analysis:** 매니페스트나 Helm 차트 리뷰 시 반드시 `run_command`로 `helm lint <특정_경로>` 및 `kube-linter lint <특정_파일>`을 직접 실행하여 문법적 무결성과 보안 규정 준수 여부를 검증하십시오. 만약 로컬에 도구가 설치되어 있지 않다면 절대 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)한 뒤 사용자에게 설치를 요구하십시오.
+- **[Trigger: After Editing K8s Manifest/Helm] K8s 로컬 테스트 (K8s Local Test):** Kubernetes 매니페스트나 Helm 차트를 수정했을 때 반드시 `run_command`를 통해 `k3d`나 `minikube`를 이용한 로컬 클러스터 배포 테스트(`dry-run` 포함)를 실행하여 설정 유효성을 확인하십시오.
+- **[MUST] Static Analysis:** 매니페스트나 Helm 차트 리뷰 시 반드시 `run_command`로 `helm lint <특정_경로>` 및 `kube-linter lint <특정_파일>`을 직접 실행하여 문법적 무결성과 보안 규정 준수 여부를 검증하십시오.
 
 ### 리소스 제어 및 안정성 예시 (Few-Shot Examples)
 <examples>
