@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Apply these rules ONLY when generating Post-mortem reports, SLA summaries, or incident response artifacts.">
 <aiops_quality_report role="Senior AIOps Engineer" priority="high">
 # 컨텍스트 모듈: DevSecOps 통합, 컴플라이언스 및 사후 분석(Post-Mortem) 자동화
 
@@ -10,18 +11,19 @@
 ## 2. 사후 분석 (Post-Mortem) 자동화 파이프라인
 - **[MUST] Automated Timeline Extraction:** 장애(Incident) 종료 시, AI 파이프라인은 단순히 "해결 완료"로 끝나지 않고 CloudWatch Logs, Slack 메신저 커뮤니케이션 히스토리, Git 변경 관리(Commit) 내역을 종합 수집 및 분석하여 시간대별 사건 전개(Timeline)를 자동 추출하는 워크플로우를 갖춰야 합니다.
 - **[Trigger: Post-Incident / Resolution] Blameless RCA Generation (사후 분석 보고서 생성):**
-  > 장애 파이프라인 복구가 완료되었거나 분석 요청을 처리한 직후, `<thinking>` 태그 내에서 시스템적 약점(Systemic Remediation)을 철저히 추론하십시오. 이후 개인에 대한 비난 없는 근본 원인 분석 보고서(Blameless RCA Report)를 반드시 전용 산출물인 `post-mortem-report.md` 파일로 자동 생성하십시오.
-  > 보고서에는 다음 항목이 필수로 포함되어야 합니다:
-  > - 현상(Symptom) 및 타임라인
-  > - 근본 원인(Root Cause - 시스템 구조적 한계점)
-  > - 즉각적 완화 조치(Resolution)
-  > - 향후 재발 방지를 위한 자동화 및 인프라 Action Items
+장애 파이프라인 복구가 완료되었거나 분석 요청을 처리한 직후, `<thinking>` 태그 내에서 시스템적 약점(Systemic Remediation)을 철저히 추론하십시오. 이후 개인에 대한 비난 없는 근본 원인 분석 보고서(Blameless RCA Report)를 반드시 전용 산출물인 `post-mortem-report.md` 파일로 자동 생성하십시오.
+보고서에는 다음 항목이 필수로 포함되어야 합니다:
+- 현상(Symptom) 및 타임라인
+- 근본 원인(Root Cause - 시스템 구조적 한계점)
+- 즉각적 완화 조치(Resolution)
+- 향후 재발 방지를 위한 자동화 및 인프라 Action Items
 
 ## 3. 에러 분석 및 디버깅 결과의 구조화
 - **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화 (Structured Analysis):**
-  > 챗 창에서 에러 코드 분석 시 전체 컨텍스트 보존을 위해 반드시 산출물 파일인 `troubleshooting-report.md`에 다음 순서로 결과를 문서화하십시오:
-  > 1. Root Cause Analysis (근본 원인 분석)
-  > 2. Logical Basis (시스템 로그 및 터미널 출력 기반 증거)
-  > 3. Step-by-Step Solution & Modified Code (해결 절차)
-  > 4. Prevention Plan (베스트 프랙티스 기반 재발 방지책)
+챗 창에서 에러 코드 분석 시 전체 컨텍스트 보존을 위해 반드시 산출물 파일인 `troubleshooting-report.md`에 다음 순서로 결과를 문서화하십시오:
+1. Root Cause Analysis (근본 원인 분석)
+2. Logical Basis (시스템 로그 및 터미널 출력 기반 증거)
+3. Step-by-Step Solution & Modified Code (해결 절차)
+4. Prevention Plan (베스트 프랙티스 기반 재발 방지책)
 </aiops_quality_report>
+</domain_specific_rules>
