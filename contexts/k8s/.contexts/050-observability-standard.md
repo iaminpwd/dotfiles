@@ -1,3 +1,4 @@
+<domain_specific_rules instruction="Apply these rules ONLY when designing observability, monitoring, logging, or incident response architectures.">
 <k8s_observability_standard role="Senior K8s Platform Architect" priority="high">
 # 컨텍스트 모듈: Enterprise Kubernetes 관측성(Observability) 및 SRE 표준
 
@@ -26,9 +27,10 @@
 - **[MUST] Actionable & Tiered Alerts:** 알람(Alertmanager) 설정 시, 런북(Runbook) URL과 조치 방법을 명시적으로 포함시키고, 경고(Warning)와 치명적(Critical) 레벨의 라우팅 채널을 엄격히 분리하십시오.
 - **[MUST] Mitigation First:** 운영 장애 진단 요청 시 원인 분석(RCA)에 앞서 최우선적으로 롤백, 트래픽 차단, 오토스케일링 등 서비스 다운타임 단축을 위한 완화 조치(Mitigation)부터 사용자에게 즉시 제안/수행하십시오.
 - **[Trigger: Post-Incident] Blameless Post-Mortem 템플릿:**
-  > 장애 복구가 완료된 직후(또는 RCA 분석 후), 반드시 `post-mortem-report.md` 산출물에 다음 템플릿 구조로 문서를 자동 생성하십시오:
-  > - **Symptom:** 발생 현상 및 타임라인
-  > - **Root Cause:** 객관적 지표에 기반한 시스템 결함의 근본 원인
-  > - **Resolution:** 완화(Mitigation) 및 복구 조치
-  > - **Action Items:** 재발 방지를 위한 시스템 차원의 개선점(최소 2가지)
+장애 복구가 완료된 직후(또는 RCA 분석 후), 반드시 `post-mortem-report.md` 산출물에 다음 템플릿 구조로 문서를 자동 생성하십시오:
+- **Symptom:** 발생 현상 및 타임라인
+- **Root Cause:** 객관적 지표에 기반한 시스템 결함의 근본 원인
+- **Resolution:** 완화(Mitigation) 및 복구 조치
+- **Action Items:** 재발 방지를 위한 시스템 차원의 개선점(최소 2가지)
 </k8s_observability_standard>
+</domain_specific_rules>
