@@ -73,12 +73,8 @@ alias src='source ~/.zshrc'
 # 🤖 AI 프롬프트 자동 상속 훅 (Auto-Symlink)
 # =============================================================================
 # ~/aws, ~/kubernetes 등 부모 폴더에 RULES.md가 존재하는 상태에서,
-# 하위의 Git 레포지토리 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
+# 하위의 프로젝트(src) 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
 function auto_symlink_ai_rules() {
-  # 1. 현재 폴더가 Git 레포지토리 루트인지 확인
-  if [ ! -d ".git" ]; then
-    return
-  fi
 
   # 2. 현재 경로에서 환경명 추출 (패턴: */workspace/<env_name>/src/*)
   local env_name=""
