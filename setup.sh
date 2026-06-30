@@ -32,11 +32,11 @@ fi
 
 echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
 # 백업 추가 (안전성 향상)
-cp ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
-cp ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
-cp ~/.mise.toml ~/.mise.toml.backup 2>/dev/null || true
-cp ~/.gitconfig ~/.gitconfig.backup 2>/dev/null || true
-cp ~/.gitignore_global ~/.gitignore_global.backup 2>/dev/null || true
+cp -n ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
+cp -n ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
+cp -n ~/.mise.toml ~/.mise.toml.backup 2>/dev/null || true
+cp -n ~/.gitconfig ~/.gitconfig.backup 2>/dev/null || true
+cp -n ~/.gitignore_global ~/.gitignore_global.backup 2>/dev/null || true
 
 # Stow 충돌 방지를 위해 기존의 실제 파일들을 삭제 (바로가기가 생길 자리를 비워줌)
 rm -f ~/.zshrc ~/.vimrc ~/.mise.toml ~/.gitconfig ~/.gitignore_global
@@ -162,20 +162,24 @@ echo "========================================================="
 # 로컬 Git 설정
 echo -e "\n[선택] Git 로컬 사용자 설정"
 if [ ! -f ~/.gitconfig.local ]; then
-    exec < /dev/tty
-    echo "💡 입력을 원치 않으시면 아무것도 적지 않고 엔터(Enter)를 누르세요. 안전하게 스킵됩니다."
-    read -p "=> 사용할 Git 이름 (예: Gildong Hong): " GIT_NAME
-    read -p "=> 사용할 Git 이메일 (예: user@example.com): " GIT_EMAIL
-    
-    if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
-        cat << EOF > ~/.gitconfig.local
+    if [ -t 0 ]; then
+        exec < /dev/tty
+        echo "💡 입력을 원치 않으시면 아무것도 적지 않고 엔터(Enter)를 누르세요. 안전하게 스킵됩니다."
+        read -p "=> 사용할 Git 이름 (예: Gildong Hong): " GIT_NAME
+        read -p "=> 사용할 Git 이메일 (예: user@example.com): " GIT_EMAIL
+        
+        if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
+            cat << EOF > ~/.gitconfig.local
 [user]
     name = $GIT_NAME
     email = $GIT_EMAIL
 EOF
-        echo "✅ ~/.gitconfig.local 파일이 안전하게 생성되었습니다!"
+            echo "✅ ~/.gitconfig.local 파일이 안전하게 생성되었습니다!"
+        else
+            echo "⏭️ 입력값이 없어 Git 설정을 건너뜁니다. 나중에 직접 파일을 만들어도 됩니다."
+        fi
     else
-        echo "⏭️ 입력값이 없어 Git 설정을 건너뜁니다. 나중에 직접 파일을 만들어도 됩니다."
+        echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Git 설정을 스킵합니다."
     fi
 else
     echo "✅ 이미 ~/.gitconfig.local 파일이 존재하여 설정을 건너뜁니다."

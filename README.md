@@ -336,5 +336,5 @@ touch references/010-gcp-core.md
 ```
 
 > [!NOTE]
-> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 디렉토리 추가 후 재실행만으로 `~/workspace/gcp/src/` 워크스페이스와 `RULES.md` 빌드가 자동으로 수행됩니다.
+> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 디렉토리 추가 후 재실행만으로 `~/workspace/gcp/src/` 워크스페이스 환경과 `SKILL.md` 기반의 스킬 폴더 자동 링킹 셋업이 완벽하게 수행됩니다.
 

@@ -2,6 +2,8 @@
 # ZSH Configuration (Optimized for Infrastructure Engineers)
 # =============================================================================
 
+autoload -Uz add-zsh-hook
+
 # --- [Oh My Zsh Core] ---
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
@@ -85,6 +87,10 @@ function auto_symlink_contexts_core() {
       case "$PWD" in
         */references)
           target_dir="${PWD%/references}"
+          local target_parent=$(dirname "$target_dir")
+          if [[ "${target_parent}" != */contexts ]]; then
+            return
+          fi
           ;;
         *)
           # 현재 경로의 부모 폴더가 contexts 인지 확인하여 1-depth 폴더에만 발동 (예: contexts/gcp)
