@@ -90,7 +90,7 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   fi
 
   # [NEW] AI 스킬 동적 매칭을 위한 SKILL.md 자동 생성 (존재하지 않을 경우)
-  if [ ! -f "$TARGET_DIR/SKILL.md" ] && [ "$ENV_NAME" != "dotfiles" ] && [ "$ENV_NAME" != "basic" ]; then
+  if [ ! -f "$TARGET_DIR/SKILL.md" ] && [ "$ENV_NAME" != "dotfiles" ]; then
     cat << EOF > "$TARGET_DIR/SKILL.md"
 ---
 name: $ENV_NAME
