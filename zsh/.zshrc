@@ -69,57 +69,6 @@ alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
 alias src='source ~/.zshrc'
 
-# =============================================================================
-# 🤖 AI 프롬프트 자동 상속 훅 (Auto-Symlink)
-# =============================================================================
-# ~/aws, ~/kubernetes 등 부모 폴더에 RULES.md가 존재하는 상태에서,
-# 하위의 프로젝트(src) 폴더로 `cd`하여 진입할 경우 자동으로 글로벌 룰북을 로컬로 링크합니다.
-function auto_symlink_ai_rules() {
-
-  # 2. 현재 경로에서 환경명 추출 (패턴: */workspace/<env_name>/src/*)
-  local env_name=""
-  case "$PWD" in
-    */workspace/*/src/*)
-      env_name="${PWD#*/workspace/}"
-      env_name="${env_name%%/src/*}"
-      ;;
-    *)
-      return
-      ;;
-  esac
-
-  local dotfiles_env_dir="$HOME/dotfiles/contexts/$env_name"
-  
-  # 3. 환경 원본 폴더 존재 여부 확인
-  if [ ! -d "$dotfiles_env_dir" ]; then
-    return
-  fi
-  
-  # 1. AI 룰북 자동 링크 (Gemini 단일)
-  local target_md="$dotfiles_env_dir/RULES.md"
-  if [ -f "$target_md" ]; then
-    local current_link=""
-    [ -L ".gemini/00-global-rules.md" ] && current_link=$(readlink ".gemini/00-global-rules.md")
-    if [ "$current_link" != "$target_md" ]; then
-      mkdir -p .gemini
-      ln -sfn "$target_md" .gemini/00-global-rules.md
-      echo "🤖 AI 룰북(RULES.md) 동적 링크 주입(갱신) 완료 (Gemini)"
-    fi
-  fi
-
-  # 2. AI 최적화 룰 다이렉트 자동 링크
-  local target_aiexclude="$dotfiles_env_dir/.aiexclude"
-  if [ -f "$target_aiexclude" ]; then
-    local current_aiexclude_link=""
-    [ -L ".aiexclude" ] && current_aiexclude_link=$(readlink ".aiexclude")
-    if [ "$current_aiexclude_link" != "$target_aiexclude" ]; then
-      ln -sfn "$target_aiexclude" .aiexclude
-      echo "🤖 AI 최적화 룰(.aiexclude) 다이렉트 자동 상속(갱신) 완료: .aiexclude 링크 생성됨"
-    fi
-  fi
-}
-# 디렉토리 이동(cd) 이벤트 발생 시 위 함수를 자동으로 실행하도록 Zsh 훅 등록
-add-zsh-hook chpwd auto_symlink_ai_rules
 
 # =============================================================================
 # 🤖 컨텍스트 000 마스터 코어 자동 링크 훅 (SSOT Auto-Symlink)
@@ -178,3 +127,56 @@ function auto_symlink_contexts_core() {
   esac
 }
 add-zsh-hook chpwd auto_symlink_contexts_core
+
+# 🤖 워크스페이스 스킬 자동 링크 훅 (Workspace Skills Auto-Symlink)
+# =============================================================================
+# ~/workspace/*/src/* (프로젝트 폴더) 로 진입할 경우,
+# 프로젝트가 속한 상위 환경(aws, k8s 등)을 추출하여,
+# 해당 도메인의 .contexts 하위 파일들을 선별(000 제외)하여 핀셋 주입합니다.
+function auto_symlink_workspace_skills() {
+  case "$PWD" in
+    $HOME/workspace/*/src/*)
+      # 현재 경로가 src/ 바로 아래 1-depth 인지 확인 (루트 프로젝트 디렉토리)
+      local rel_path="${PWD#$HOME/workspace/*/src/}"
+      if [[ "$rel_path" != */* ]]; then
+        # 워크스페이스 환경명 추출 (예: aws, k8s, azure)
+        local env_path="${PWD#$HOME/workspace/}"
+        local env_name="${env_path%%/*}"
+        
+        local target_skills_dir="$PWD/.agents/skills"
+        local contexts_dir="$HOME/dotfiles/contexts"
+        local env_contexts_dir="$contexts_dir/$env_name/.contexts"
+        
+        if [ -d "$env_contexts_dir" ]; then
+          # 기존 엉뚱한 스킬 링크 완전 초기화
+          \rm -rf "$target_skills_dir" 2>/dev/null || true
+          
+          local skill_dir="$target_skills_dir/$env_name"
+          local ref_dir="$skill_dir/references"
+          mkdir -p "$ref_dir"
+          
+          # SKILL.md 동적 생성 (에이전트가 도메인 스킬을 인지하도록 필수)
+          echo "---" > "$skill_dir/SKILL.md"
+          echo "name: ${env_name} Operations" >> "$skill_dir/SKILL.md"
+          echo "description: Rules and guidelines for ${env_name} environment." >> "$skill_dir/SKILL.md"
+          echo "---" >> "$skill_dir/SKILL.md"
+          echo "# ${env_name} Skill" >> "$skill_dir/SKILL.md"
+          echo "Please refer to the files in the \`references/\` directory for detailed instructions." >> "$skill_dir/SKILL.md"
+          
+          # .contexts 내의 파일들 중 000-universal-core.md 등 000 제외하고 링크
+          for ctx_file in "$env_contexts_dir"/*.md; do
+            [ -e "$ctx_file" ] || continue
+            local fname=$(basename "$ctx_file")
+            if [[ "$fname" != 000* ]]; then
+              ln -sfn "$ctx_file" "$ref_dir/$fname"
+            fi
+          done
+          
+          echo "🚀 [AI Auto-Setup] 도메인 특화 프롬프트 룰북(${env_name}) 선별 주입 완료"
+          echo "🔒 [AI Auto-Setup] AI 컨텍스트 접근 제어(.aiexclude) 적용 완료"
+        fi
+      fi
+      ;;
+  esac
+}
+add-zsh-hook chpwd auto_symlink_workspace_skills
