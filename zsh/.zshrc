@@ -147,23 +147,20 @@ function auto_symlink_workspace_skills() {
         local env_contexts_dir="$contexts_dir/$env_name/references"
         
         if [ -d "$env_contexts_dir" ]; then
-          # 기존 엉뚱한 스킬 링크 완전 초기화
-          \rm -rf "$target_skills_dir" 2>/dev/null || true
-          
           local skill_dir="$target_skills_dir/$env_name"
+          
+          # 이미 설정되어 있으면 스킵 (심볼릭 링크이므로 원본 수정 시 자동 반영됨)
+          if [ -d "$skill_dir" ]; then
+            return
+          fi
+          
           local ref_dir="$skill_dir/references"
           mkdir -p "$ref_dir"
           
-          # SKILL.md 동적 생성 및 템플릿 복사 (에이전트가 도메인 스킬을 인지하도록 필수)
-          if [ -f "$contexts_dir/$env_name/SKILL.md" ]; then
-            cp "$contexts_dir/$env_name/SKILL.md" "$skill_dir/SKILL.md"
-          else
-            echo "---" > "$skill_dir/SKILL.md"
-            echo "name: ${env_name} Operations" >> "$skill_dir/SKILL.md"
-            echo "description: Rules and guidelines for ${env_name} environment." >> "$skill_dir/SKILL.md"
-            echo "---" >> "$skill_dir/SKILL.md"
-            echo "# ${env_name} Skill" >> "$skill_dir/SKILL.md"
-            echo "Please refer to the files in the \`references/\` directory for detailed instructions." >> "$skill_dir/SKILL.md"
+          # SKILL.md 심볼릭 링크
+          local skill_file="$env_contexts_dir/../SKILL.md"
+          if [ -f "$skill_file" ]; then
+            ln -sfn "$skill_file" "$skill_dir/SKILL.md"
           fi
           
           # references 내의 파일들 중 000-universal-core.md 등 000 제외하고 링크
