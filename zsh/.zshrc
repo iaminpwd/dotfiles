@@ -83,8 +83,8 @@ function auto_symlink_contexts_core() {
       
       # 2차 판별: 진입한 곳이 .contexts 안인지, 아니면 상위 도메인 폴더인지
       case "$PWD" in
-        */\.contexts)
-          target_dir="${PWD%/.contexts}"
+        */references)
+          target_dir="${PWD%/references}"
           ;;
         *)
           # 현재 경로의 부모 폴더가 contexts 인지 확인하여 1-depth 폴더에만 발동 (예: contexts/gcp)
@@ -102,9 +102,9 @@ function auto_symlink_contexts_core() {
       # dotfiles 워크스페이스는 자체 000 파일이 있으므로 심볼릭 링크 생성을 제외합니다.
       if [ -f "$master_core" ] && [ "$(basename "$target_dir")" != "dotfiles" ]; then
           # 디렉토리가 없으면 즉시 생성
-          mkdir -p "$target_dir/.contexts"
+          mkdir -p "$target_dir/references"
           
-          local target_link="$target_dir/.contexts/000-universal-core.md"
+          local target_link="$target_dir/references/000-universal-core.md"
           local current_link=""
           
           [ -L "$target_link" ] && current_link=$(readlink "$target_link")
@@ -132,7 +132,7 @@ add-zsh-hook chpwd auto_symlink_contexts_core
 # =============================================================================
 # ~/workspace/*/src/* (프로젝트 폴더) 로 진입할 경우,
 # 프로젝트가 속한 상위 환경(aws, k8s 등)을 추출하여,
-# 해당 도메인의 .contexts 하위 파일들을 선별(000 제외)하여 핀셋 주입합니다.
+# 해당 도메인의 references 하위 파일들을 선별(000 제외)하여 핀셋 주입합니다.
 function auto_symlink_workspace_skills() {
   case "$PWD" in
     $HOME/workspace/*/src/*)
@@ -145,7 +145,7 @@ function auto_symlink_workspace_skills() {
         
         local target_skills_dir="$PWD/.agents/skills"
         local contexts_dir="$HOME/dotfiles/contexts"
-        local env_contexts_dir="$contexts_dir/$env_name/.contexts"
+        local env_contexts_dir="$contexts_dir/$env_name/references"
         
         if [ -d "$env_contexts_dir" ]; then
           # 기존 엉뚱한 스킬 링크 완전 초기화
@@ -155,15 +155,19 @@ function auto_symlink_workspace_skills() {
           local ref_dir="$skill_dir/references"
           mkdir -p "$ref_dir"
           
-          # SKILL.md 동적 생성 (에이전트가 도메인 스킬을 인지하도록 필수)
-          echo "---" > "$skill_dir/SKILL.md"
-          echo "name: ${env_name} Operations" >> "$skill_dir/SKILL.md"
-          echo "description: Rules and guidelines for ${env_name} environment." >> "$skill_dir/SKILL.md"
-          echo "---" >> "$skill_dir/SKILL.md"
-          echo "# ${env_name} Skill" >> "$skill_dir/SKILL.md"
-          echo "Please refer to the files in the \`references/\` directory for detailed instructions." >> "$skill_dir/SKILL.md"
+          # SKILL.md 동적 생성 및 템플릿 복사 (에이전트가 도메인 스킬을 인지하도록 필수)
+          if [ -f "$contexts_dir/$env_name/SKILL.md" ]; then
+            cp "$contexts_dir/$env_name/SKILL.md" "$skill_dir/SKILL.md"
+          else
+            echo "---" > "$skill_dir/SKILL.md"
+            echo "name: ${env_name} Operations" >> "$skill_dir/SKILL.md"
+            echo "description: Rules and guidelines for ${env_name} environment." >> "$skill_dir/SKILL.md"
+            echo "---" >> "$skill_dir/SKILL.md"
+            echo "# ${env_name} Skill" >> "$skill_dir/SKILL.md"
+            echo "Please refer to the files in the \`references/\` directory for detailed instructions." >> "$skill_dir/SKILL.md"
+          fi
           
-          # .contexts 내의 파일들 중 000-universal-core.md 등 000 제외하고 링크
+          # references 내의 파일들 중 000-universal-core.md 등 000 제외하고 링크
           for ctx_file in "$env_contexts_dir"/*.md; do
             [ -e "$ctx_file" ] || continue
             local fname=$(basename "$ctx_file")
@@ -171,6 +175,11 @@ function auto_symlink_workspace_skills() {
               ln -sfn "$ctx_file" "$ref_dir/$fname"
             fi
           done
+          
+          # .aiexclude 동적 주입 (프로젝트 루트)
+          if [ -f "$contexts_dir/$env_name/.aiexclude" ]; then
+            cp "$contexts_dir/$env_name/.aiexclude" "$PWD/.aiexclude"
+          fi
           
           echo "🚀 [AI Auto-Setup] 도메인 특화 프롬프트 룰북(${env_name}) 선별 주입 완료"
           echo "🔒 [AI Auto-Setup] AI 컨텍스트 접근 제어(.aiexclude) 적용 완료"
