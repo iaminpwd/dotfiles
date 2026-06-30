@@ -44,7 +44,7 @@ cd ~/dotfiles
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
 | **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 컨텍스트 빌드 | `contexts/*/` 순회하여 `RULES.md` 병합, 워크스페이스 생성, `GEMINI.md` symlink |
+| **[5/6]** AI 커스터마이징 구조 주입 | `contexts/*/` 순회하며 글로벌 룰(`AGENTS.md`) 셋업 및 워크스페이스별 `SKILL.md` 생성 |
 | **[6/6]** 시크릿 보안 훅 | Trufflehog 기반 Git `pre-commit` 보안 스캔 훅 자동 구성 (시크릿 유출 원천 차단) |
 
 ### Step 3. 터미널 재시작
@@ -63,8 +63,8 @@ mise ls
 # Stow symlink 확인
 ls -la ~/.zshrc ~/.gitconfig ~/.mise.toml
 
-# AI 컨텍스트 빌드 확인
-ls ~/workspace/aws/src && cat ~/dotfiles/GEMINI.md | head -5
+# AI 컨텍스트 주입 확인
+ls ~/workspace/aws/src && cat ~/.gemini/config/AGENTS.md | head -5
 
 # 훅 동작 확인: aws workspace로 이동 후 확인
 cd ~/workspace/aws/src
@@ -99,9 +99,7 @@ ls -la .gemini/
 ├── zsh/
 │   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
 │
-├── .aiexclude            # 루트: contexts/ 내 원본 소스 중복 인덱싱 차단
 ├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
-├── GEMINI.md             # symlink -> contexts/dotfiles/RULES.md
 ├── README.md             # 본 문서
 └── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
 ```
@@ -127,13 +125,13 @@ ls -la .gemini/
 - **계획 수립 및 RAG (Planning & Agentic RAG):** 인프라 구축 전 스스로 사내 규정(FinOps, K8s 등)을 탐색하여 계획서(`implementation_plan.md`)에 강제로 녹여내고(Agentic RAG), 사용자의 명시적 승인을 득한 후 실행하십시오.
 - **전문성 락킹 (Persona):** 수석 DevOps/SRE 아키텍트 페르소나를 부여받아, 사용자의 무리한 요구를 맹목적으로 따르지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오.
 
-### 3. Shadow AI Architecture (컨텍스트 자동 상속)
+### 3. AI Customization Architecture (AI 스킬 동적 주입)
 
-개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하는 독자적 아키텍처입니다.
+개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
 
-- **AI 룰북 자동 상속:** `cd ~/workspace/aws/src/my-repo` 시, Zsh `chpwd` 훅이 자동으로 환경별 AI 룰북(`RULES.md`)을 `.gemini/00-global-rules.md`로 심볼릭 링크합니다.
-- **Git 커밋 완전 차단:** 자동 생성된 AI 컨텍스트 파일들은 전역 `.gitignore_global`에 의해 원격 저장소와 팀원 PC를 오염시키지 않습니다.
-- **`.aiexclude` 이중 차단:** 워크스페이스에 주입된 `.aiexclude`는 분할된 원본 모듈 파일들이 AI 컨텍스트에 중복 인덱싱을 사전에 차단합니다. 이를 통해 토큰 낭비와 할루시네이션을 예방합니다.
+- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`000-universal-core.md`)이 글로벌 Customizations Root인 `~/.gemini/config/AGENTS.md`로 주입되어 항상 백그라운드에서 동작합니다.
+- **도메인 스킬 자동 주입:** `cd ~/workspace/aws/src/my-repo` 시, Zsh `chpwd` 훅이 자동으로 환경별 특화 룰(`references/*.md`)과 `SKILL.md`를 해당 워크스페이스의 `.agents/skills/aws/` 하위로 심볼릭 링크하여 해당 환경에 진입할 때만 스킬이 활성화되도록 합니다.
+- **Git 커밋 완전 차단:** 자동 생성된 `.agents` 디렉토리와 글로벌 룰은 전역 `.gitignore_global`에 의해 원격 저장소와 팀원 PC를 오염시키지 않습니다.
 
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 
@@ -183,9 +181,9 @@ ls -la .gemini/
 Zsh 디렉토리 이동(`cd`) 이벤트를 감지하여 두 가지 핵심 심볼릭 링크를 자동 주입합니다.
 
 1. **마스터 코어 룰북 주입 훅 (`auto_symlink_contexts_core`)**
-   - 개발자가 새로운 AI 룰 폴더(예: `~/dotfiles/contexts/gcp/`)로 진입하기만 하면, 즉시 최상단 `000-universal-core.md` SSOT 마스터 파일을 해당 폴더 내부에 동적으로 링크 생성하여 멱등성을 보장합니다.
-2. **워크스페이스 작업용 주입 훅 (`auto_symlink_ai_rules`)**
-   - 개발자가 인프라 작업 폴더(예: `~/workspace/aws/src/my-repo`)로 진입하면, 해당 환경의 `RULES.md` 룰북과 `.aiexclude`를 자동으로 주입하여 작업용 AI 컨텍스트를 완성합니다.
+   - 개발자가 새로운 AI 룰 폴더(예: `~/dotfiles/contexts/gcp/`)로 진입하기만 하면, 즉시 최상단 `000-universal-core.md` SSOT 마스터 파일을 해당 폴더 내 `references/` 디렉토리에 동적으로 링크 생성하여 멱등성을 보장합니다.
+2. **워크스페이스 스킬 주입 훅 (`auto_symlink_workspace_skills`)**
+   - 개발자가 인프라 작업 폴더(예: `~/workspace/aws/src/my-repo`)로 진입하면, 해당 환경 도메인(aws)의 `SKILL.md`와 참조 룰 문서들을 `.agents/skills/aws/` 하위로 자동 주입하여 상황별 스킬 컨텍스트를 동적으로 완성합니다.
 
 <p align="center">
   <img src="assets/auto-symlink-hook.png" alt="Auto-Symlink Hook Workflow" width="480">
@@ -196,21 +194,14 @@ Zsh 디렉토리 이동(`cd`) 이벤트를 감지하여 두 가지 핵심 심볼
 ```text
 my-terraform-repo/
 ├── .git/
-├── .gemini/
-│   └── 00-global-rules.md  → ~/dotfiles/contexts/aws/RULES.md (symlink)
+├── .agents/
+│   └── skills/
+│       └── aws/
+│           ├── SKILL.md
+│           └── references/ (도메인 특화 룰 마크다운 파일들의 symlink)
 ├── .aiexclude              → ~/dotfiles/contexts/aws/.aiexclude (symlink)
 └── main.tf
 ```
-
-### GEMINI.md 심볼릭 링크 구조 (dotfiles 레포 자체)
-
-`~/dotfiles/` 레포를 AI IDE에서 열었을 때, dotfiles 관리를 위한 전용 룰북이 자동 적용됩니다.
-
-```text
-~/dotfiles/GEMINI.md  →  contexts/dotfiles/RULES.md  (심볼릭 링크)
-```
-
-`GEMINI.md`는 Gemini CLI/IDE가 자동으로 인식하는 특수 파일명입니다. 실제 본체(`RULES.md`)를 `.aiexclude`로 차단하고 심볼릭 링크만 노출함으로써, 동일 내용이 두 번 인덱싱되는 것을 방지합니다.
 
 ### 컨텍스트 빌드 파이프라인
 
@@ -316,18 +307,15 @@ src
 
 ### AI 룰 수정 및 추가 (Zero-Config)
 
-특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `references/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행하십시오.
+특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `references/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행할 필요 없이 즉시 적용됩니다. 단, 새로운 도메인이나 스킬을 추가할 때는 `setup.sh`를 실행해 구조를 셋업해야 합니다.
 
 > [!TIP]
 > **신규 룰 추가 시 가이드 (태그 내재화)**
-> 특정 기술 스택에만 조건부로 적용되어야 하는 룰이라면, 파일 내용 전체를 `<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">` 태그로 감싸주십시오. `setup.sh`가 내부에 태그가 포함되어 있는지 자동 감지(grep)하여 글로벌 룰과 도메인 룰을 스마트하게 분리 및 병합하는 **Zero-Config 아키텍처**로 동작합니다.
+> 특정 기술 스택에만 조건부로 적용되어야 하는 룰이라면, 파일 내용 전체를 `<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">` 태그로 감싸주십시오. 도메인 스킬이 발동되었을 때, 이 태그로 묶인 내용이 관련 작업에서만 집중력(Attention)을 갖게 됩니다.
 
 ```bash
 # 예: AWS 보안 규칙 수정
 vim ~/dotfiles/contexts/aws/references/020-security-compliance.md
-
-# 수정 후 RULES.md 재빌드
-~/dotfiles/setup.sh
 ```
 
 ### 신규 워크스페이스 추가
