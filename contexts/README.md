@@ -87,12 +87,15 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 ### 3.1. Anthropic (Claude) 핵심 기법
 #### 3.1.1. XML 태그 구조화 및 속성 맵핑 (Use XML tags & Attributes)
-**이론:** 지시사항, 참고 문서, 출력 예시를 XML 태그로 격리하고, 속성(`role`, `priority`)을 주입하여 어텐션(Attention) 입체 구성.
+**이론:** Anthropic 공식 가이드에서는 지시사항, 참고 문서, 출력 예시를 XML 태그로 격리하고, 태그의 속성(`role`, `priority`)을 주입하여 어텐션(Attention)을 입체적으로 구성할 것을 권장합니다.
 
-**통합 워크스페이스 적용 사례:**
-```xml
-<universal_core role="Universal Meta-Cognitive Engine" priority="highest" goal="Safety and Simplicity">
-<aws_architecture role="Senior Cloud Architect" priority="critical">
+**통합 워크스페이스 적용 사례 (YAML Frontmatter 변형):**
+우리 환경에서는 마크다운 시스템과의 호환성을 위해, 최상단 XML 태그 대신 **YAML Frontmatter**를 사용하여 전역 메타데이터(`role`, `priority`)를 맵핑하고, 내부 데이터 격리에만 XML 태그를 사용하는 형태로 변형하여 적용하고 있습니다.
+```yaml
+---
+role: Universal Meta-Cognitive Engine
+priority: highest
+---
 ```
 
 #### 3.1.2. 격리된 퓨샷 프롬프팅 (Use examples - Few-shot)
@@ -270,7 +273,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 **이론:** 수많은 도메인 참조 룰들이 발동되어 동시에 로드되었을 때, 지시 간 모순이 발생할 경우 에이전트가 우왕좌왕하지 않고 스스로 계급을 판단하여 하위 룰을 가차 없이 덮어쓰도록(Override) 강제하는 논리 회로.
 
 **통합 워크스페이스 적용 사례:**
-- 각 룰 파일 최상단 XML 태그의 `priority` 속성(`highest`, `critical`, `high`)을 기계적으로 해석.
+- 각 룰 파일 최상단 YAML Frontmatter의 `priority` 속성(`highest`, `critical`, `high`)을 기계적으로 해석.
 - `AGENTS.md`를 통해 전역으로 주입되는 000번 마스터 코어(`highest`)의 룰은 그 어떤 예외도 허용하지 않는 **절대 타협 불가능한 헌법(Hard Constraint)**으로 작동하여 모든 스킬 모듈 간의 충돌을 종식시킵니다.
 
 ### 6.2. Prompt Self-Evolution (프롬프트 자가 진화 메타인지)
