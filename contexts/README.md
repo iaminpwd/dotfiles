@@ -66,7 +66,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:** (퓨샷 예제 적용)
 ```markdown
-- [Good Behavior]: "run_command 로 aws ec2 describe-instances 선행 실행 후 원인 파악."
+- [Good]: "VPC ID를 확인하기 위해, run_command로 aws ec2 describe-vpcs 선행 실행"
 ```
 
 ### 2.2. Tree of Thoughts (ToT, 생각의 트리)
@@ -159,11 +159,12 @@ priority: highest
 ```
 
 #### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)
-**이론:** 200만 토큰에 달하는 방대한 Context Window를 가졌더라도 모든 정보에 집중력(Attention)을 강제하면 환각(Hallucination)과 오버엔지니어링이 발생합니다. 조건부 태그(`<domain_specific_rules instruction="...">`)를 통해 현재 태스크와 무관한 룰은 어텐션 연산에서 완전히 배제(Mute)시켜, 신호 대 잡음비(SNR)를 극대화하는 기법입니다.
+**이론:** Gemini는 최대 200만 토큰의 방대한 Context Window를 가졌지만, 모든 정보에 억지로 집중력을 강제하면 환각(Hallucination)이 발생할 수 있습니다. 이를 막기 위해 조건부 태그(`<domain_specific_rules instruction="...">`) 등을 통해 현재 태스크와 무관한 룰은 어텐션에서 배제(Mute)시켜 신호 대 잡음비(SNR)를 극대화하는 것이 공식 권장 기법입니다.
 
-**통합 워크스페이스 적용 사례:**
+**통합 워크스페이스 적용 사례 (물리적 SNR 최적화로 진화):**
 ```markdown
-- `[SNR Optimization]`: 단순 스크립트 작업 시 K8s, WAF, FinOps 등 인프라 특화 룰은 태그 조건에 의해 억제되어, AI가 코어 룰(보안/메타인지)에만 100%의 연산력을 집중하게 만듭니다.
+- 우리 환경은 이 "SNR 최적화 철학"을 수용하되, 통짜 프롬프트 내에서 태그로 가리는(Mute) 방식을 넘어 아예 **물리적으로 컨텍스트를 차단(Dynamic RAG)**하도록 진화시켰습니다.
+- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 원천 차단하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
 ```
 
 #### 3.3.4. 부정어보다 긍정어 우선 (Positive Directives)
@@ -286,7 +287,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 **이론:** 200만 토큰을 감당할 수 있더라도 불필요한 정보는 Mute 처리하고, 최상위 코어 룰에 특수 트리거를 심어두어 필요할 때만 스스로 030(FinOps) 등의 특정 도메인을 찾아 읽게 만드는 컨텍스트 통제 기법.
 
 **통합 워크스페이스 적용 사례:**
-- [MUST] Implicit Cost Estimation: K8s/Serverless 제안 시 무조건 예상 비용을 명시하도록 최상위 룰에 강제하여, 에이전트가 자연스럽게 FinOps 지식을 검색(RAG)하도록 유도합니다.
+- `[MUST] FinOps Delegation`: "비용 추정은 `030-finops-optimization` 모듈을 참조하라"고 최상위 아키텍처 룰(`010-aws-core`)에 강제하여, 에이전트가 자연스럽게 FinOps 지식을 검색(RAG)하도록 유도합니다.
 - 005 계획서 템플릿(Plan) 작성 전 사내 룰을 무조건 샅샅이 검색하여 ADR 포맷에 맞춰 문서에 100% 반영하도록 강제(Agentic RAG)합니다.
 
 ---
