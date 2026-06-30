@@ -119,6 +119,17 @@ mkdir -p "$HOME/.gemini/config"
 ln -sfn "$CONTEXTS_DIR/000-universal-core.md" "$HOME/.gemini/config/AGENTS.md"
 echo "   ✅ 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.md"
 
+# 로컬 dotfiles 워크스페이스용 AI 룰셋 및 스킬 링크 주입
+echo "=> [AI Local Rules] dotfiles 전용 스킬 링크 주입 중..."
+mkdir -p "$DOTFILES_DIR/.agents/skills/dotfiles"
+if [ -d "$CONTEXTS_DIR/dotfiles/references" ]; then
+  ln -sfn "$CONTEXTS_DIR/dotfiles/references" "$DOTFILES_DIR/.agents/skills/dotfiles/references"
+fi
+if [ -f "$CONTEXTS_DIR/dotfiles/SKILL.md" ]; then
+  ln -sfn "$CONTEXTS_DIR/dotfiles/SKILL.md" "$DOTFILES_DIR/.agents/skills/dotfiles/SKILL.md"
+fi
+echo "   ✅ 로컬 스킬 세팅 완료: $DOTFILES_DIR/.agents/"
+
 
 
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."

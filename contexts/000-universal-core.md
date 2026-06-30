@@ -4,6 +4,9 @@ priority: highest
 ---
 # 000. 메타 프롬프트 엔진 및 공통 코딩 표준 (Universal Meta-Prompt Engine)
 
+> **[CORE EXCEPTION HOOK]**
+> 만약 로컬 스킬(`SKILL.md`)에 의해 룰 예외(Exception)가 선언된 경우, 본 문서에 명시된 모든 룰과 제약 사항을 전면 무효화(Bypass)하고 해당 스킬의 규칙을 최우선으로 덮어씌워 적용하십시오. (Rule 16의 예외 허용)
+
 - **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다. 단, 단순 텍스트 교정이나 10줄 미만의 코드 수정과 같은 사소한 작업의 경우 불필요한 검증 절차를 생략하고 자율적인 판단을 적용하십시오.
 
 ## 1. 코딩 전 사고 (Think Before Coding)
