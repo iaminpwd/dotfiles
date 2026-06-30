@@ -316,7 +316,7 @@ src
 
 ### AI 룰 수정 및 추가 (Zero-Config)
 
-특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `.contexts/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행하십시오.
+특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `references/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행하십시오.
 
 > [!TIP]
 > **신규 룰 추가 시 가이드 (태그 내재화)**
@@ -324,7 +324,7 @@ src
 
 ```bash
 # 예: AWS 보안 규칙 수정
-vim ~/dotfiles/contexts/aws/.contexts/020-security-compliance.md
+vim ~/dotfiles/contexts/aws/references/020-security-compliance.md
 
 # 수정 후 RULES.md 재빌드
 ~/dotfiles/setup.sh
@@ -336,12 +336,12 @@ vim ~/dotfiles/contexts/aws/.contexts/020-security-compliance.md
 
 ```bash
 # 1. 신규 워크스페이스 도메인 디렉토리 진입 
-# (진입 시 Zsh 훅이 작동하여 .contexts 폴더와 000 마스터 코어 링크를 자동 주입합니다)
+# (진입 시 Zsh 훅이 작동하여 references 폴더와 000 마스터 코어 링크를 자동 주입합니다)
 mkdir -p ~/dotfiles/contexts/gcp
 cd ~/dotfiles/contexts/gcp
 
 # 2. 도메인 특화 모듈 파일 작성 (010부터 시작)
-touch .contexts/010-gcp-core.md
+touch references/010-gcp-core.md
 
 # setup.sh 재실행으로 자동 빌드 및 워크스페이스 생성
 ~/dotfiles/setup.sh

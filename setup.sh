@@ -75,11 +75,11 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
 
   echo "=> [$ENV_NAME] 기본 컨텍스트 파일 셋업 중..."
 
-  # .contexts 폴더가 존재하는 경우에만 수행
-  if [ -d "$TARGET_DIR/.contexts" ]; then
+  # references 폴더가 존재하는 경우에만 수행
+  if [ -d "$TARGET_DIR/references" ]; then
     # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
     if [ "$ENV_NAME" != "dotfiles" ]; then
-      ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
+      ln -sf "../../000-universal-core.md" "$TARGET_DIR/references/000-universal-core.md"
     fi
 
     # [NEW] 공통 .aiexclude 베이스 템플릿 복사 (존재하지 않을 경우에만, 멱등성 유지)
@@ -99,7 +99,7 @@ description: $ENV_NAME 환경의 아키텍처, 인프라 배포, 트러블슈팅
 # $ENV_NAME Skill
 
 이 스킬은 $ENV_NAME 관련 작업 시 발동됩니다.
-상세한 가이드라인 및 규칙은 \`.contexts/\` 디렉토리 내부의 문서들을 참조하십시오.
+상세한 가이드라인 및 규칙은 \`references/\` 디렉토리 내부의 문서들을 참조하십시오.
 EOF
     echo "   Adding Base: SKILL.md for $ENV_NAME"
   fi
