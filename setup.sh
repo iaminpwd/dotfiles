@@ -68,22 +68,16 @@ echo "[5/6] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
-# 모든 컨텍스트 디렉토리를 순회하여 RULES.md 병합 출력 (dotfiles 포함, 패턴 통일)
+# 모든 컨텍스트 디렉토리를 순회하여 환경 설정 (스킬 동적 배포 포함)
 for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
   ENV_NAME=$(basename "$TARGET_DIR")
 
-  echo "=> [$ENV_NAME] 컨텍스트 룰북(RULES.md) 빌드 중..."
-  MERGED_MD="$TARGET_DIR/RULES.md"
-  rm -f "$MERGED_MD"
+  echo "=> [$ENV_NAME] 기본 컨텍스트 파일 셋업 중..."
 
-  # .contexts 폴더가 존재하는 경우에만 병합 수행
+  # .contexts 폴더가 존재하는 경우에만 수행
   if [ -d "$TARGET_DIR/.contexts" ]; then
-    echo "<system_instructions>" >> "$MERGED_MD"
-    echo -e "\n" >> "$MERGED_MD"
-    
     # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
-    # dotfiles 워크스페이스는 자체 000 파일이 있으므로 심볼릭 링크 생성을 제외합니다.
     if [ "$ENV_NAME" != "dotfiles" ]; then
       ln -sf "../../000-universal-core.md" "$TARGET_DIR/.contexts/000-universal-core.md"
     fi
@@ -93,51 +87,39 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
       cp "$CONTEXTS_DIR/.base.aiexclude" "$TARGET_DIR/.aiexclude"
       echo "   Adding Base: .aiexclude"
     fi
+  fi
 
-    # 위계적 병합 (Zero-Config Hierarchical Merge) 처리
-    # - <domain_specific_rules> 태그가 내장되지 않은 파일만 모아서 한 번에 글로벌 코어로 감쌉니다.
-    echo "<global_core_rules>" >> "$MERGED_MD"
-    for md_file in "$TARGET_DIR/.contexts/"*.md; do
-      [ -f "$md_file" ] || continue
-      if ! grep -q "<domain_specific_rules" "$md_file"; then
-        echo "   Adding Global: $(basename "$md_file")"
-        cat "$md_file" >> "$MERGED_MD"
-        echo -e "\n\n" >> "$MERGED_MD"
-      fi
-    done
-    echo "</global_core_rules>" >> "$MERGED_MD"
-    echo -e "\n" >> "$MERGED_MD"
+  # [NEW] AI 스킬 동적 매칭을 위한 SKILL.md 자동 생성 (존재하지 않을 경우)
+  if [ ! -f "$TARGET_DIR/SKILL.md" ] && [ "$ENV_NAME" != "dotfiles" ] && [ "$ENV_NAME" != "basic" ]; then
+    cat << EOF > "$TARGET_DIR/SKILL.md"
+---
+name: $ENV_NAME
+description: $ENV_NAME 환경의 아키텍처, 인프라 배포, 트러블슈팅 및 보안 정책 컨텍스트
+---
+# $ENV_NAME Skill
 
-    # - <domain_specific_rules> 태그가 이미 내장된 파일들은 태그 래핑 없이 그대로 이어붙입니다.
-    for md_file in "$TARGET_DIR/.contexts/"*.md; do
-      [ -f "$md_file" ] || continue
-      if grep -q "<domain_specific_rules" "$md_file"; then
-        echo "   Adding Domain: $(basename "$md_file")"
-        cat "$md_file" >> "$MERGED_MD"
-        echo -e "\n\n" >> "$MERGED_MD"
-      fi
-    done
-    
-    echo "</system_instructions>" >> "$MERGED_MD"
-    echo -e "\n" >> "$MERGED_MD"
+이 스킬은 $ENV_NAME 관련 작업 시 발동됩니다.
+상세한 가이드라인 및 규칙은 \`.contexts/\` 디렉토리 내부의 문서들을 참조하십시오.
+EOF
+    echo "   Adding Base: SKILL.md for $ENV_NAME"
   fi
 
   # 단일 워크스페이스(Workspace) 동적 할당 및 생성 (예: ~/workspace/aws)
-  # dotfiles는 workspace 생성 대상에서 제외
   if [ "$ENV_NAME" != "dotfiles" ]; then
     WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
     mkdir -p "$WORKSPACE_DIR/src"
   fi
 
-  echo "   ✅ [$ENV_NAME] 룰북 빌드 및 워크스페이스 생성 완료"
+  echo "   ✅ [$ENV_NAME] 룰북 빌드 및 스킬 동적 배포 완료"
 done
 
-# GEMINI.md (루트): contexts/dotfiles/RULES.md를 가리키는 심볼릭 링크 생성
-echo "=> [GEMINI.md] 심볼릭 링크 생성 중..."
-DOTFILES_RULES="$CONTEXTS_DIR/dotfiles/RULES.md"
-rm -f "$DOTFILES_DIR/GEMINI.md"
-ln -sf "$DOTFILES_RULES" "$DOTFILES_DIR/GEMINI.md"
-echo "   ✅ [GEMINI.md] -> $DOTFILES_RULES"
+# 글로벌 AI 룰셋 링크 주입 (새 PC 환경 셋업용)
+echo "=> [AI Global Rules] 글로벌 AGENTS.md 링크 주입 중..."
+mkdir -p "$HOME/.gemini/config"
+ln -sfn "$CONTEXTS_DIR/000-universal-core.md" "$HOME/.gemini/config/AGENTS.md"
+echo "   ✅ 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.md"
+
+
 
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
 export PATH="$HOME/.local/share/mise/shims:$PATH"
