@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing platform engineering, internal developer portals, or self-service workflows.">
-<k8s_platform_engineering_standard role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these rules ONLY when designing platform engineering, internal developer portals, or self-service workflows.
+---
 # 컨텍스트 모듈: Enterprise Platform Engineering 및 고급 아키텍처 패턴
 
 ## 1. 플랫폼 추상화 (Platform Engineering & IDP)
@@ -23,4 +26,3 @@
 3. 단계별 해결 방법 및 리팩토링된 코드
 4. 재발 방지를 위한 아키텍처 개선책(Best Practice)
 </k8s_platform_engineering_standard>
-</domain_specific_rules>

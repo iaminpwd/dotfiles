@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when troubleshooting, debugging shell environments, or fixing errors in the dotfiles workspace.">
-<dotfiles_troubleshooting_standard role="Senior System Engineer" priority="high">
+---
+role: Senior System Engineer
+priority: high
+trigger: Apply these rules ONLY when troubleshooting, debugging shell environments, or fixing errors in the dotfiles workspace.
+---
 # 컨텍스트 모듈: Dotfiles 로컬 디버깅 및 트러블슈팅 표준
 
 본 모듈은 `dotfiles` 환경에서 에러(PATH 충돌, 패키지 설치 실패, 셸 문법 에러 등)를 마주했을 때 AI 에이전트의 실용적이고 방어적인 디버깅 절차를 규정합니다.
@@ -29,5 +32,3 @@
 - 맹목적 삭제: "Stow 링크를 위해 충돌하는 기존 `~/.tmux.conf` 파일을 삭제하겠습니다."
 </example>
 </examples>
-</dotfiles_troubleshooting_standard>
-</domain_specific_rules>

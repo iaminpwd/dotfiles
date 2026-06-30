@@ -1,5 +1,8 @@
+---
+role: Senior Security Architect
+priority: high
+---
 <!-- 이 파일은 전역 적용되므로 domain_specific_rules 태그를 사용하지 않습니다. -->
-<security_core role="Senior Security Architect" priority="high">
 # 컨텍스트 모듈: 020. 시크릿 및 핵심 보안 원칙 (Security Core)
 
 ## 1. 자격 증명 (Secrets) 관리
@@ -63,4 +66,3 @@ password = "SuperSecret123!" # 하드코딩 절대 금지
 </examples>
 
 - **[Trigger: Entra ID Policy Created] 자가 비판 (Self-Critique):** Entra ID 정책 초안 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **와일드카드(`*`) 사용으로 인한 권한 상승(Privilege Escalation) 가능성 및 의도치 않은 리소스 접근 위험성**을 집중 비판하십시오.
-</security_core>

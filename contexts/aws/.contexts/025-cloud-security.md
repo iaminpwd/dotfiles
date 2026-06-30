@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing cloud network architecture, container deployments, or enterprise multi-account environments.">
-<cloud_security role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when designing cloud network architecture, container deployments, or enterprise multi-account environments.
+---
 # 컨텍스트 모듈: 025. 클라우드 인프라 및 네트워크 보안 (Cloud Security)
 
 ## 1. 네트워크 및 엣지 보안(Edge Security)
@@ -35,5 +38,3 @@
 ## 3. 컨테이너 및 공급망 보안
 - **[Trigger: Pipeline Design / Dockerfile Edit] 공급망 보안 및 네이티브 스캔:** 반드시 `run_command`로 실제 `trivy fs <특정_경로>` 스캐닝을 실행하여 취약점을 사전에 검증하십시오.
 - **[Trigger: Security Scan Completion] 보안 감사 보고서:** 보안 스캔이 완료되면 검증 결과와 완화 조치 내역을 `security-audit-report.md` 파일 내에 마크다운 표 형태로 문서화하십시오.
-</cloud_security>
-</domain_specific_rules>

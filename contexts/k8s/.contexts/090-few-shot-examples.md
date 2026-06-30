@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these examples ONLY when asked to provide K8s architecture or troubleshooting examples.">
-<k8s_few_shot_examples role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these examples ONLY when asked to provide K8s architecture or troubleshooting examples.
+---
 # 컨텍스트 모듈: 퓨샷(Few-Shot) 예시 기반 행동 교정 (Kubernetes)
 
 Kubernetes 네이티브 환경 및 엔터프라이즈 SRE 표준에 맞춘 Bad/Good 예시를 기준으로 행동을 교정하십시오.
@@ -35,4 +38,3 @@ Kubernetes 네이티브 환경 및 엔터프라이즈 SRE 표준에 맞춘 Bad/G
 </example>
 </examples>
 </k8s_few_shot_examples>
-</domain_specific_rules>

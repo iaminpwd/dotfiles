@@ -1,4 +1,7 @@
-<k8s_architecture role="Senior K8s Platform Architect" priority="critical">
+---
+role: Senior K8s Platform Architect
+priority: critical
+---
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 
 ## 1. 핵심 페르소나 및 응답 표준

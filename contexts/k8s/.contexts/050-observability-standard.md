@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing observability, monitoring, logging, or incident response architectures.">
-<k8s_observability_standard role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these rules ONLY when designing observability, monitoring, logging, or incident response architectures.
+---
 # 컨텍스트 모듈: Enterprise Kubernetes 관측성(Observability) 및 SRE 표준
 
 ## 1. 관측성 아키텍처 (Observability Architecture)
@@ -33,4 +36,3 @@
 - **Resolution:** 완화(Mitigation) 및 복구 조치
 - **Action Items:** 재발 방지를 위한 시스템 차원의 개선점(최소 2가지)
 </k8s_observability_standard>
-</domain_specific_rules>

@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these examples ONLY when you need concrete code patterns for Agent pipelines or Event-driven automation.">
-<aiops_examples role="Senior AIOps Engineer" priority="high">
+---
+role: Senior AIOps Engineer
+priority: high
+trigger: Apply these examples ONLY when you need concrete code patterns for Agent pipelines or Event-driven automation.
+---
 # 컨텍스트 모듈: 퓨샷(Few-Shot) 예시 기반 행동 교정 (AIOps)
 
 AIOps 파이프라인 및 SRE 환경에 맞춘 Bad/Good 예시를 기준으로 행동을 교정하십시오.
@@ -33,5 +36,3 @@ AIOps 파이프라인 및 SRE 환경에 맞춘 Bad/Good 예시를 기준으로 �
   "이번 인시던트의 근본 원인은 작업자의 실수가 아닌, CI/CD 파이프라인 단에서 잘못된 설정을 필터링하는 정책(Policy-as-Code) 자동화의 부재입니다. `post-mortem-report.md` 산출물에 향후 OPA 기반의 파이프라인 개선안(Action Items)을 명확히 제시하겠습니다."
 </example>
 </examples>
-</aiops_examples>
-</domain_specific_rules>

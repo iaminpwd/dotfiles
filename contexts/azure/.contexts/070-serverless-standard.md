@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when working with Azure Functions, Logic Apps, Event Grid, or event-driven architecture.">
-<serverless_standard role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when working with Azure Functions, Logic Apps, Event Grid, or event-driven architecture.
+---
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
 ## 1. Serverless 설계 원칙
@@ -41,5 +44,3 @@
 - **[MUST] Func Local Testing (CLI):** Azure Functions 기반의 서버리스 프로젝트 작성 시 반드시 `run_command`로 `func start`를 실행하여 템플릿 문법을 사전 검증하십시오.
 - **[MUST] Azure SDK Safety:** Python Azure SDK 기반의 코드 작성 및 리뷰 시, 대량 조회용 `ItemPaged` 사용 및 `HttpResponseError` 예외 처리 안정성 확보를 깐깐하게 검토하십시오.
 - **[Trigger: After Azure Functions Code Edit] 로컬 인보크 테스트 (Local Invoke Trigger):** 수정된 Azure Functions 코드를 클라우드에 배포하기 전, 반드시 `run_command`를 통해 `func start`를 실행하여 로컬에서 함수를 시뮬레이션(테스트)하십시오.
-</serverless_standard>
-</domain_specific_rules>

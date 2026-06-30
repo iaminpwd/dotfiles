@@ -1,4 +1,7 @@
-<azure_architecture role="Senior Cloud Architect" priority="critical">
+---
+role: Senior Cloud Architect
+priority: critical
+---
 # Azure DevOps 아키텍처 가이드 (AI Prompt Context)
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -52,4 +55,3 @@
 ## 6. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Task Breakdown & Planning:** 복잡한 아키텍처 작업 전, 반드시 `implementation_plan.md` 산출물을 작성하여 논리적 단계와 계획을 사용자에게 승인받으십시오.
 - **[Trigger: Architecture Proposed] 자가 비판 (Self-Critique):** 아키텍처 초안을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 **단일 장애점(SPOF) 존재 여부 및 트래픽 폭증 시 병목 지점**을 집중 비판하십시오.
-</azure_architecture>

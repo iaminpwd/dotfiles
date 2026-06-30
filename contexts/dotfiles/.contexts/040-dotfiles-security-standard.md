@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when handling sensitive credentials, SSH private keys, or running security/secret scans.">
-<dotfiles_security_standard role="Senior Prompt Architect" priority="high">
+---
+role: Senior Prompt Architect
+priority: high
+trigger: Apply these rules ONLY when handling sensitive credentials, SSH private keys, or running security/secret scans.
+---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 
 본 모듈은 `dotfiles` 퍼블릭 저장소 노출 위험을 방지하기 위한 시크릿 통제 아키텍처에 적용됩니다.
@@ -39,5 +42,3 @@ export GITHUB_TOKEN="ghp_xxx..." # 절대 금지 (퍼블릭 저장소 유출 위
 </examples>
 
 - **[Trigger: Before Commit / File Authored] 자가 비판 (Self-Critique):** 자동화 스크립트나 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **AWS Access Key나 PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되어 퍼블릭 저장소에 노출될 위험성**을 집중 비판하십시오.
-</dotfiles_security_standard>
-</domain_specific_rules>

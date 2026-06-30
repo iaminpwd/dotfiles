@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when investigating an error, bug, or system incident.">
-<incident_response role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when investigating an error, bug, or system incident.
+---
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 
 ## 1. 트러블슈팅 및 장애 대응 대원칙 (Mitigation First)
@@ -39,5 +42,3 @@
 </examples>
 
 - **[Trigger: RCA Completed] 자가 비판 (Self-Critique):** 장애 사후 분석(Post-Mortem) 보고서 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **장애의 원인을 '사람의 실수(Human Error)'로 단정짓지 않았는지, 시스템적/구조적 예방책(Action Item)이 명확히 도출되었는지** 집중 비판하십시오.
-</incident_response>
-</domain_specific_rules>

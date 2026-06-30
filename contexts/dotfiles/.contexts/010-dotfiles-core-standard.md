@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when managing the dotfiles repository, committing changes, or running global formatters.">
-<dotfiles_core_standard role="Senior Prompt Architect" priority="high">
+---
+role: Senior Prompt Architect
+priority: high
+trigger: Apply these rules ONLY when managing the dotfiles repository, committing changes, or running global formatters.
+---
 # 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
 
 본 모듈은 `dotfiles` 워크스페이스에서 시스템 구성 및 메타 프롬프팅 작업 시 적용되는 최상위 행동 강령입니다.
@@ -33,5 +36,3 @@ git commit -m "fix bugs and add new features"
 </examples>
 
 - **[Trigger: Before Commit] 자가 비판 (Self-Critique):** `git commit` 명령어를 실행하기 직전, 스스로 `<self_critique>` 태그를 열어 **현재 Staging된 변경 사항이 단일 책임 원칙(Atomic Commit)을 위배하여 너무 거대하게 뭉쳐지지 않았는지, 시맨틱 커밋 컨벤션(feat/fix 등)을 준수했는지** 집중 비판하십시오.
-</dotfiles_core_standard>
-</domain_specific_rules>

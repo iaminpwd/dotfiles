@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing, refactoring, or authoring Meta-Prompts and rulebooks (.contexts/*.md).">
-<dotfiles_prompt_engineering_standard role="Senior Prompt Architect" priority="high">
+---
+role: Senior Prompt Architect
+priority: high
+trigger: Apply these rules ONLY when designing, refactoring, or authoring Meta-Prompts and rulebooks (.contexts/*.md).
+---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 
 본 모듈은 새로운 작업 환경을 위한 룰북(`.contexts/` 내부 마크다운)을 설계하거나 리팩토링할 때 적용되는 메타 프롬프팅 지침입니다.
@@ -61,5 +64,3 @@ Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시�
 - **[MUST] Conciseness:** 장황한 부연 설명을 모두 걷어내고, 즉시 행동 가능한 짧은 단문 명령형으로 프롬프트를 압축하십시오.
 
 - **[Trigger: Prompt Authored] 자가 비판 (Self-Critique):** 새로운 프롬프트 모듈(`.md`) 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **추상적이고 장황한 문장(`~하는 것이 좋습니다` 등)이 포함되었는지, 그리고 핵심 예시가 XML(`<examples>`)로 명확히 격리되지 않았거나 다른 파일과 중복(SSOT 파괴)되는지** 집중 비판하십시오.
-</dotfiles_prompt_engineering_standard>
-</domain_specific_rules>

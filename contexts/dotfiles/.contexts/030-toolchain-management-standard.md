@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when installing packages, managing global toolchains (mise, pipx), or modifying version dependencies.">
-<dotfiles_toolchain_management_standard role="Senior Prompt Architect" priority="high">
+---
+role: Senior Prompt Architect
+priority: high
+trigger: Apply these rules ONLY when installing packages, managing global toolchains (mise, pipx), or modifying version dependencies.
+---
 # 컨텍스트 모듈: 시스템 환경 패키지 도구(Toolchain) 셋업 관리 표준
 
 본 모듈은 터미널 CLI 도구, 로컬 인프라 패키지, 데브옵스 유틸리티 설치 및 버전 관리 시 적용됩니다.
@@ -35,5 +38,3 @@ terraform = "latest" # 절대 금지 (미래에 멱등성 깨짐)
 </examples>
 
 - **[Trigger: Toolchain Configured] 자가 비판 (Self-Critique):** `mise.toml` 등의 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **설치 도구의 버전이 `latest`로 지정되어 있어 1년 뒤에 실행했을 때 빌드가 깨지거나 멱등성이 파괴될 위험성**을 집중 비판하십시오.
-</dotfiles_toolchain_management_standard>
-</domain_specific_rules>

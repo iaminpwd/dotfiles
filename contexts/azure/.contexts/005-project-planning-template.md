@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new Azure/Cloud project.">
-<project_planning_standard role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new Azure/Cloud project.
+---
 # 컨텍스트 모듈: Azure 프로젝트 마스터 플랜(계획서) 작성 표준
 
 본 모듈은 새로운 클라우드 프로젝트를 시작하기 전, 다방면의 아키텍처와 리스크를 종합적으로 고려한 '마스터 플랜'을 작성할 때 적용하십시오.
@@ -60,5 +63,3 @@
   - 보안(Security)과 비용(FinOps)이 상호 보완적으로 최적화되었음을 입증하십시오.
   - 생성될 파일들이 의존성이 완벽하게 해결된 배포 가능한 순서로 설계되었음을 입증하십시오.
   - 작성된 계획서가 추후 AI 전용 규칙 파일(`10-localrule.md`)로 즉시 변환될 수 있도록 명확한 제약 조건으로 정리되었음을 입증하십시오.
-</project_planning_standard>
-</domain_specific_rules>

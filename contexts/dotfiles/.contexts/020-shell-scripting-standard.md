@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when creating or modifying shell scripts (e.g. setup.sh), bashrc, zshrc, or terminal configurations.">
-<dotfiles_shell_scripting_standard role="Senior Prompt Architect" priority="high">
+---
+role: Senior Prompt Architect
+priority: high
+trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. setup.sh), bashrc, zshrc, or terminal configurations.
+---
 # 컨텍스트 모듈: Dotfiles 환경 설정 및 셸 스크립트 작성 표준
 
 본 모듈은 자동화 스크립트(`setup.sh`, `install.sh`) 및 시스템 셸 설정(`zshrc`, `bashrc`, `tmux.conf` 등) 작성 시 적용됩니다.
@@ -44,5 +47,3 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 </examples>
 
 - **[Trigger: Bash Script Authored] 자가 비판 (Self-Critique):** 자동화 셸 스크립트 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **에러 발생 시 스크립트가 멈추지 않고 폭주할 가능성(Fail-Fast 누락) 및 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복으로 무한 증식될 위험성**을 집중 비판하십시오.
-</dotfiles_shell_scripting_standard>
-</domain_specific_rules>

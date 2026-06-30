@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when working with Kubernetes, AKS, Helm, or container orchestration.">
-<kubernetes_standard role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when working with Kubernetes, AKS, Helm, or container orchestration.
+---
 # 컨텍스트 모듈: Kubernetes (AKS) 및 컨테이너 엔지니어링 표준
 
 ## 1. 클러스터 보안 및 인증 (Security & Auth)
@@ -41,5 +44,3 @@ livenessProbe:
 - **[Trigger: Before K8s Apply] 자가 비판 및 편차 검증 (Self-Critique):** K8s 변경 사항(`kubectl apply` 등)을 배포하기 전, 반드시 `kubectl diff -f <file>`을 통해 편차를 확인하고, 스스로 `<self_critique>` 태그를 열어 **메모리 Limit 누락으로 인한 OOMKilled 위험성 및 Liveness 설정 오류로 인한 파드 재시작 폭주(CrashLoopBackOff) 가능성**을 집중 비판하십시오.
 - **[Trigger: K8s Local Test Completion] K8s 테스트 보고서 (K8s Test Report):** 로컬 클러스터 배포 테스트를 완료한 후, 테스트 결과와 구성 검토 세부 사항을 전용 `k8s-test-report.md` 산출물에 문서화하십시오.
 - **[MUST] Graceful Shutdown:** 모든 Pod 설계 시 `SIGTERM` 신호 처리 및 `preStop` 훅을 통한 우아한 종료(Graceful Shutdown) 구성을 필수화하여 무중단 배포(Zero-Downtime)를 달성하십시오.
-</kubernetes_standard>
-</domain_specific_rules>

@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when writing edge-case validations, testing automation scripts, or configuring error handling logic.">
-<aiops_validation_edgecases role="Senior AIOps Engineer" priority="high">
+---
+role: Senior AIOps Engineer
+priority: high
+trigger: Apply these rules ONLY when writing edge-case validations, testing automation scripts, or configuring error handling logic.
+---
 # 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 카오스 엔지니어링
 
 ## 1. 분산 시스템의 극한 엣지 케이스 방어 로직
@@ -14,5 +17,3 @@
 ## 3. 장애 시뮬레이션 및 복원력 검증 (Chaos Engineering)
 - **[MUST] Fault Injection Testing:** 정상 동작(Happy Path) 케이스만 테스트하는 코드는 프로덕션 퀄리티가 아닙니다. 의도적으로 네트워크 타임아웃, 권한 오류(403), 비정상적으로 큰 페이로드(Payload)를 주입하는 방어 로직 검증 코드(Fault Injection)를 반드시 포함하십시오.
 - **[PREFER] Chaos Engineering (AWS FIS / Gremlin):** 인프라의 실제 복원력을 실증하기 위해, AWS Fault Injection Simulator (FIS)나 Gremlin을 도입하여 데이터베이스 페일오버(Failover), 존(AZ) 장애, CPU 스파이크 상황을 정기적으로 시뮬레이션하는 SRE 문화를 워크플로우 제안에 포함시키십시오.
-</aiops_validation_edgecases>
-</domain_specific_rules>

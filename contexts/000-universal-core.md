@@ -1,4 +1,7 @@
-<universal_meta_cognitive_engine role="Universal Meta-Cognitive Engine" priority="highest">
+---
+role: Universal Meta-Cognitive Engine
+priority: highest
+---
 # 000. 메타 프롬프트 엔진 및 공통 코딩 표준 (Universal Meta-Prompt Engine)
 
 - **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다. 단, 단순 텍스트 교정이나 10줄 미만의 코드 수정과 같은 사소한 작업의 경우 불필요한 검증 절차를 생략하고 자율적인 판단을 적용하십시오.
@@ -94,4 +97,3 @@
 - **[Trigger: Persistent Errors] Prompt Self-Evolution (프롬프트 자가 진화):** 에러 발생 시 단순 코드 자가 치유(Self-Healing)를 3회 이상 시도해도 해결되지 않거나 논리적 엣지 케이스를 마주친 경우, 이를 사용자의 지시나 코드 문제가 아닌 **"현재 적용된 AI 프롬프트 룰이나 컨텍스트 가이드라인 자체의 논리적 허점"**으로 간주하십시오. 즉각 코드 수정을 멈추고, 어느 프롬프트 룰이 문제인지 진단한 후 가이드라인 문서 원본에 대한 리팩토링을 사용자에게 역제안(Reverse Proposal)하십시오.
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
 - **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오.
-</universal_meta_cognitive_engine>

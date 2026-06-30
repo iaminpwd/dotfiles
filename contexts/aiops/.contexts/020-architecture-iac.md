@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing GitOps, IaC pipelines, or AI Model Serving infrastructure.">
-<aiops_architecture_iac role="Senior AIOps Engineer" priority="high">
+---
+role: Senior AIOps Engineer
+priority: high
+trigger: Apply these rules ONLY when designing GitOps, IaC pipelines, or AI Model Serving infrastructure.
+---
 # 컨텍스트 모듈: Enterprise AIOps IaC 및 GitOps 아키텍처 표준
 
 ## 1. 배포 아키텍처 및 상태(State) 격리
@@ -21,5 +24,3 @@
 ## 4. AI 인프라 및 모델 서빙 보안 (Zero-Trust)
 - **[MUST] Zero-Trust 기반 모델 엔드포인트 통제:** LLM, 추론 모델 엔드포인트나 SageMaker 주피터 노트북 배포 시 IP `0.0.0.0/0` 전체 개방을 사전에 승인을 취득하십시오. 모든 AI 인프라는 반드시 VPC/VNet 내부망에 프라이빗하게 배치하고, 인증된 내부망(VPN 등) 또는 명시적인 API Gateway 리버스 프록시를 통해서만 접근하도록 Default Deny 네트워크 룰을 강제하십시오.
 - **[MUST] Data in Transit / Rest:** 모델이 처리하는 모든 데이터는 네트워크 전송 구간(TLS 1.2 이상)과 스토리지(KMS 암호화)에서 모두 암호화되어야 합니다.
-</aiops_architecture_iac>
-</domain_specific_rules>

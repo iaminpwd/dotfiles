@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when working with Azure SQL, Cosmos DB, PostgreSQL, Redis, or database engineering.">
-<database_standard role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when working with Azure SQL, Cosmos DB, PostgreSQL, Redis, or database engineering.
+---
 # 컨텍스트 모듈: 데이터베이스 (Azure SQL Database, Cosmos DB, Azure Cache for Redis) 엔지니어링 표준
 
 ## 1. 관계형 데이터베이스 (Azure SQL Database & PostgreSQL Flexible Server)
@@ -30,5 +33,3 @@
 
 ## 3. 인메모리 데이터 저장소 (Azure Cache for Redis)
 - **[MUST] Redis Security:** Azure Cache for Redis 인스턴스 생성 시 단순 퍼블릭 접근 통제와 더불어, 반드시 `AUTH` 토큰(비밀번호) 인증과 전송 중 데이터 암호화(TLS in transit) 기능을 활성화하도록 설계하십시오.
-</database_standard>
-</domain_specific_rules>

@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows, or ArgoCD/Flux deployments.">
-<k8s_cicd_gitops_standard role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows, or ArgoCD/Flux deployments.
+---
 # 컨텍스트 모듈: Enterprise GitOps 및 CI/CD 파이프라인 표준
 
 ## 1. 아키텍처 및 패러다임 (Architecture & Paradigm)
@@ -26,4 +29,3 @@ ArgoCD Sync나 Helm 배포가 성공적으로 완료되면, 변경된 리소스 
 - **[PREFER] Canary & Argo Rollouts:** 트래픽 규모가 큰 비즈니스 핵심 서비스 배포 시, 전체 파드 롤아웃 대신 Argo Rollouts 또는 Service Mesh를 연동하여 트래픽의 % 단위를 세밀하게 제어하는 Canary 배포 파이프라인을 제안하십시오.
 - **[MUST] Automated Rollback:** 신규 배포 후 에러율(5xx HTTP 코드)이나 지연 시간 메트릭이 임계치를 초과할 경우, 즉각적으로 이전 버전으로 되돌아가는 자동 롤백(Automated AnalysisTemplate) 체계를 기본 인프라로 구성하십시오.
 </k8s_cicd_gitops_standard>
-</domain_specific_rules>

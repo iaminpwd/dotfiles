@@ -1,4 +1,7 @@
-<aws_architecture role="Senior Cloud Architect" priority="critical">
+---
+role: Senior Cloud Architect
+priority: critical
+---
 # AWS DevOps 아키텍처 가이드 (AI Prompt Context)
 
 ## 1. 핵심 페르소나 및 응답 표준
@@ -57,4 +60,3 @@
 - **[MUST] FinOps Delegation:** 비용 추정, Right-Sizing 등 FinOps 관련 상세 규칙은 `030-finops-optimization` 모듈을 참조하십시오.
 - **[MUST] Infra-Specific LLM-as-a-Judge:** 아키텍처 설계나 중대 인프라 스크립트 작성을 완료한 직후, 스스로 '평가자' 페르소나로 전환하여 **보안, 비용, 멱등성 3가지 측면**에서 산출물을 가혹하게 평가하고 자가 수정하십시오.
 - **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라/클라우드 글로벌 포매팅 도구의 전역 실행을 금지하고, 의도치 않은 변경을 막기 위해 반드시 타겟 파일명을 명시하여 실행하십시오.
-</aws_architecture>

@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing advanced security, container supply chains, or threat detection.">
-<k8s_advanced_security_standard role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these rules ONLY when designing advanced security, container supply chains, or threat detection.
+---
 # 컨텍스트 모듈: Enterprise Kubernetes 고급 보안, Supply Chain 및 런타임 보호 표준
 
 ## 1. 런타임 보안 방어 (Runtime Security)
@@ -13,4 +16,3 @@
 - **[Trigger: Code Review / Security Scan] 네이티브 스캐닝 및 보고서 생성:**
 사용자가 매니페스트 보안 리뷰를 요청하거나 보안 구성을 완료하면, 로컬 터미널에 설치된 `trivy` (예: `trivy image <특정_이미지>`, `trivy fs <특정_경로>`, `trivy k8s <특정_리소스>`) 명령어를 `run_command`로 즉시 실행하여 실질적인 취약점 존재 여부를 확인하십시오. 스캔이 완료되면 발견된 위반 내역과 완화 가이드를 전용 산출물 파일인 `security-audit-report.md`에 Markdown 표 형태로 명확히 문서화하십시오.
 </k8s_advanced_security_standard>
-</domain_specific_rules>

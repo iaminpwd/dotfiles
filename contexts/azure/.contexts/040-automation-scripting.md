@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.">
-<automation_scripting role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.
+---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
 ## 1. 셸 스크립트 작성 (Bash Scripting)
@@ -39,5 +42,3 @@ apt-get install azure-cli -y # 무조건 설치 시도
 ## 2. 운영 체제 (OS) 패키지 및 도구 관리
 - **[MUST] Strict User-Level Installation (Sudo 권한 통제):** 시스템 패키지 및 개발 도구 설치 시, 시스템 소유권(Ownership) 보호를 위해 항상 사용자 수준(User-level) 설치를 최우선으로 강제하십시오.
 - **[PREFER] Tool Isolation (Pipx & Mise):** 전역 CLI 도구 설치 시 시스템 의존성 오염을 방지하기 위해 `pipx` 또는 `mise` 선언적 설정을 통한 가상환경 격리 배포를 우선적으로 제안하십시오.
-</automation_scripting>
-</domain_specific_rules>

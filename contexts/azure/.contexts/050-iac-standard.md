@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when writing or reviewing Terraform, Bicep, or Ansible code.">
-<iac_standard role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when writing or reviewing Terraform, Bicep, or Ansible code.
+---
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
 ## 1. 공통 원칙 (Provisioning & Configuration)
@@ -57,5 +60,3 @@ terraform {
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
 - **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 반드시 **`run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오.
-</iac_standard>
-</domain_specific_rules>

@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing CI/CD pipelines, high-availability architecture, or production deployments.">
-<day2_operations role="Senior Cloud Architect" priority="high">
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when designing CI/CD pipelines, high-availability architecture, or production deployments.
+---
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
 ## 1. 선언적 배포 및 파이프라인 (CI/CD)
@@ -35,4 +38,3 @@
 - **[Trigger: DB Schema Modification Request] 무중단 DB 마이그레이션 (Zero-Downtime DB):** 데이터베이스 스키마 변경 요청 시, 무중단 스키마 마이그레이션 전략을 최우선으로 고려하여 `db-migration-plan.md` 산출물로 제안하십시오.
 - **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
 </day2_operations>
-</domain_specific_rules>

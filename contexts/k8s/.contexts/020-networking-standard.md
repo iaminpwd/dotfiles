@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when designing networking, service mesh, ingress, or network policies.">
-<k8s_networking_standard role="Senior K8s Platform Architect" priority="high">
+---
+role: Senior K8s Platform Architect
+priority: high
+trigger: Apply these rules ONLY when designing networking, service mesh, ingress, or network policies.
+---
 # 컨텍스트 모듈: Enterprise Kubernetes 네트워킹 및 Service Mesh 표준
 
 ## 1. 클러스터 네트워크 트래픽 제어 (Network Policy)
@@ -20,4 +23,3 @@
 - **[MUST] Automated Certificate Lifecycle:** Ingress의 TLS 인증서를 수동으로 발급하여 Secret에 하드코딩하는 안전한 파이프라인을 구축하십시오. `cert-manager`를 통해 Let's Encrypt(ACME) 또는 사내 Vault PKI와 연동하여 인증서의 발급 및 갱신(Renewal)이 완전 자동화되는 파이프라인을 구축하십시오.
 - **[PREFER] Traffic Resilience:** 네트워크 지연 및 단절에 대비해 Service Mesh가 제공하는 Circuit Breaker, Retry, Timeout, Fault Injection 기능을 적극 도입하여 시스템 복원력(Resiliency)을 강화하십시오.
 </k8s_networking_standard>
-</domain_specific_rules>

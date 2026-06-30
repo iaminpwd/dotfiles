@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when generating Post-mortem reports, SLA summaries, or incident response artifacts.">
-<aiops_quality_report role="Senior AIOps Engineer" priority="high">
+---
+role: Senior AIOps Engineer
+priority: high
+trigger: Apply these rules ONLY when generating Post-mortem reports, SLA summaries, or incident response artifacts.
+---
 # 컨텍스트 모듈: DevSecOps 통합, 컴플라이언스 및 사후 분석(Post-Mortem) 자동화
 
 ## 1. 보안 규정 준수 (Shift-Left Security & PaC)
@@ -25,5 +28,3 @@
 2. Logical Basis (시스템 로그 및 터미널 출력 기반 증거)
 3. Step-by-Step Solution & Modified Code (해결 절차)
 4. Prevention Plan (베스트 프랙티스 기반 재발 방지책)
-</aiops_quality_report>
-</domain_specific_rules>

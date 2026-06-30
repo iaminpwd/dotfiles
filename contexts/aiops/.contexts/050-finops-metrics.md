@@ -1,5 +1,8 @@
-<domain_specific_rules instruction="Apply these rules ONLY when working with FinOps, DORA metrics, CloudWatch, Datadog, Prometheus, or infrastructure cost optimization.">
-<aiops_finops_metrics role="Senior AIOps Engineer" priority="high">
+---
+role: Senior AIOps Engineer
+priority: high
+trigger: Apply these rules ONLY when working with FinOps, DORA metrics, CloudWatch, Datadog, Prometheus, or infrastructure cost optimization.
+---
 # 컨텍스트 모듈: 고급 FinOps 및 DORA 지표 관측성 (Observability)
 
 ## 1. DORA Metrics 및 시스템 가시성 (Observability Pipeline)
@@ -12,5 +15,3 @@
 - **[MUST] Anomaly Billing Detection (AWS Budgets):** LLM 무한 루프, 토큰 초과, 파이프라인 알람 폭주로 인한 돌발적인 비용 급증(Billing Spike)을 사전에 차단하기 위해, AWS Budgets 및 Anomaly Detection 기반의 즉각적 비용 이상 탐지 알람 코드를 반드시 인프라에 포함하십시오.
 - **[Trigger: Cost Analysis Completion] FinOps Cost Report (비용 정량화 분석):**
 아키텍처 스케일링을 제안하거나 인프라 파이프라인의 변경 사항(IaC)을 검토할 때, 반드시 `run_command`로 `infracost breakdown` 등을 실행하여 설계가 초래할 비용 증감을 정량적으로 파악하십시오. 시뮬레이션 및 분석 결과는 챗 창에 던지지 말고 반드시 전용 산출물 `finops-cost-report.md`에 Markdown 표 형태로 명확히 문서화하십시오.
-</aiops_finops_metrics>
-</domain_specific_rules>
