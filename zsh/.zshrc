@@ -63,9 +63,7 @@ if command -v fzf &> /dev/null; then
 fi
 # ------------------------------------
 
-# 🤖 AI Prompt Context Generator (전체 인프라 코드 한 방에 추출하기)
-# 확장자 지정 순서를 변경하고 실행 셸을 bash로 명시하여 충돌을 원천 차단한 수정본
-alias catcode='fdfind -H -E .git -E .terraform -e tf -e tfvars -e json -e yml -e yaml -e j2 -e ps1 -e py -e toml -e txt -e sh -x bash -c '\''printf "\n# FILE: %s\n" "{}"; cat "{}"'\'' > all_code.txt'
+
 # 로컬 환경 변수(GitHub Token, 클라우드 API Key 등 시크릿)를 안전하게 관리하기 위한 분리 파일 로드
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
@@ -81,41 +79,24 @@ function auto_symlink_contexts_core() {
   # 1차 필터링: contexts 폴더 하위일 때만 발동
   case "$PWD" in
     */contexts/*)
-      local target_dir=""
+      # 2차 판별: 진입한 곳이 references 안인지 1-depth 도메인 폴더인지 단일 로직으로 정규화
+      local target_dir="${PWD%/references}"
+      local parent_dir="${target_dir%/*}"
       
-      # 2차 판별: 진입한 곳이 .contexts 안인지, 아니면 상위 도메인 폴더인지
-      case "$PWD" in
-        */references)
-          target_dir="${PWD%/references}"
-          local target_parent=$(dirname "$target_dir")
-          if [[ "${target_parent}" != */contexts ]]; then
-            return
-          fi
-          ;;
-        *)
-          # 현재 경로의 부모 폴더가 contexts 인지 확인하여 1-depth 폴더에만 발동 (예: contexts/gcp)
-          local parent_dir=$(dirname "$PWD")
-          if [[ "${parent_dir}" == */contexts ]]; then
-            target_dir="$PWD"
-          else
-            return
-          fi
-          ;;
-      esac
+      if [[ "${parent_dir}" != */contexts ]]; then
+        return
+      fi
       
       # 000 마스터 코어가 상위에 존재하는 정상적인 AI 컨텍스트 폴더인지 검증
       local master_core="$target_dir/../000-universal-core.md"
-      if [ -f "$master_core" ] && [ "$(basename "$target_dir")" != "dotfiles" ]; then
+      if [ -f "$master_core" ] && [ "${target_dir##*/}" != "dotfiles" ]; then
           # 디렉토리가 없으면 즉시 생성
-          mkdir -p "$target_dir/references"
+          [ ! -d "$target_dir/references" ] && mkdir -p "$target_dir/references"
           
           local target_link="$target_dir/references/000-universal-core.md"
-          local current_link=""
-          
-          [ -L "$target_link" ] && current_link=$(readlink "$target_link")
           
           # cd(이동) 명령어 없이 제자리에서 절대/상대 경로 조합으로 심볼릭 링크 꽂기 (무한루프 방지)
-          if [ "$current_link" != "../../000-universal-core.md" ]; then
+          if [ ! -L "$target_link" ]; then
               ln -sfn "../../000-universal-core.md" "$target_link"
               echo "🤖 마스터 프롬프트 엔진(000-universal-core) 동적 링크 주입 완료"
           fi
@@ -172,7 +153,7 @@ function auto_symlink_workspace_skills() {
           # references 내의 파일들 중 000-universal-core.md 등 000 제외하고 링크
           for ctx_file in "$env_contexts_dir"/*.md; do
             [ -e "$ctx_file" ] || continue
-            local fname=$(basename "$ctx_file")
+            local fname="${ctx_file##*/}"
             if [[ "$fname" != 000* ]]; then
               ln -sfn "$ctx_file" "$ref_dir/$fname"
             fi
