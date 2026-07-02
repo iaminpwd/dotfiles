@@ -14,8 +14,11 @@ fi
 # 스크립트가 실행된 위치와 무관하게 dotfiles 경로를 안전하게 가져옴
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "[1/6] 필수 패키지 설치 중 (pipx 및 fd-find 포함)..."
-sudo apt update && sudo apt install -y git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree
+echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 및 fd-find 포함)..."
+PACKAGES="git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree"
+if ! dpkg -s $PACKAGES >/dev/null 2>&1; then
+  sudo apt update && sudo apt install -y $PACKAGES
+fi
 
 echo "[2/6] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -60,7 +63,11 @@ export PATH="$HOME/.local/bin:$PATH"
 
 echo "[+] Helm 플러그인 설치 중 (helm-diff)..."
 export PATH="$HOME/.local/share/mise/shims:$PATH"
-helm plugin install https://github.com/databus23/helm-diff --verify=false || echo "helm-diff 플러그인이 이미 설치되어 있거나 실패했습니다."
+if ! helm plugin list | grep -q "^diff"; then
+  helm plugin install https://github.com/databus23/helm-diff --verify=false || echo "helm-diff 플러그인 설치 실패"
+else
+  echo "helm-diff 플러그인이 이미 설치되어 있습니다."
+fi
 
 
 
@@ -71,7 +78,8 @@ CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 # 모든 컨텍스트 디렉토리를 순회하여 환경 설정 (스킬 동적 배포 포함)
 for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
-  ENV_NAME=$(basename "$TARGET_DIR")
+  _tmp="${TARGET_DIR%/}"
+  ENV_NAME="${_tmp##*/}"
 
   echo "=> [$ENV_NAME] 기본 컨텍스트 파일 셋업 중..."
 
@@ -133,7 +141,6 @@ echo "   ✅ 로컬 스킬 세팅 완료: $DOTFILES_DIR/.agents/"
 
 
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
-export PATH="$HOME/.local/share/mise/shims:$PATH"
 if command -v trufflehog &> /dev/null; then
   echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."
   trufflehog filesystem "$DOTFILES_DIR" --no-update || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
