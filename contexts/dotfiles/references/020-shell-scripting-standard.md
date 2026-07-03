@@ -21,7 +21,7 @@ trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. s
 
 ## 3. 검증 및 런타임 환경 보호
 - **[Trigger: After Script Edit] Syntax Validation:** `setup.sh`나 `.zshrc` 수정 후 백그라운드 검증 시, 반드시 `bash -n <file>` 또는 `zsh -n <file>`로 문법 자가 검증을 수행하십시오.
-- **[MUST] Preserve Core Architecture:** `auto_symlink_gemini_rules` 훅이나 `batcat` 앨리어스 등 코어 엔진 구조는 임의로 변경하지 마십시오.
+- **[MUST] Preserve Core Architecture:** `auto_symlink_gemini_rules` 훅이나 `batcat` 앨리어스 등 코어 엔진 구조는 항상 원형 그대로 보존하십시오.
 
 ### 방어적 셸 스크립트 예시 (Few-Shot Examples)
 <examples>

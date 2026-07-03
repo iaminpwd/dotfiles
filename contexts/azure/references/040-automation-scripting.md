@@ -32,7 +32,7 @@ fi
 ```bash
 # set -e 없음
 rm -rf /tmp/mytemp # 하드코딩된 삭제
-apt-get install azure-cli -y # 무조건 설치 시도
+apt-get install awscli -y # 무조건 설치 시도
 ```
 </example>
 </examples>

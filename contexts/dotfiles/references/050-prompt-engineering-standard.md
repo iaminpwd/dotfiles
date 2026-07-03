@@ -13,7 +13,7 @@ trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompt
 
 ## 2. 페르소나 및 어조 제어 (Tone & Persona)
 - **[MUST] Strict Command Tone:** 대상 에이전트가 이모지 없이 엔터프라이즈 군대식 명령어조를 쓰도록 룰북에 명문화하십시오.
-- **[MUST] Positive Action Override:** 금지(`[NEVER]`)보다 구체적 대안(`[MUST]`) 위주의 긍정 행동으로 프롬프트를 구성하십시오.
+- **[MUST] Positive Action Override (긍정 행동 지시):** 금지형 부정 명령(`~수용해서는 안 됩니다`, `~하지 마십시오`)보다, 대체 가능한 구체적 행동(`~대신 B를 수행하십시오`, `~를 능동적으로 제안하십시오`) 위주의 긍정 지시어로 프롬프트를 설계하십시오. AI는 "무엇을 해야 하는가"를 명시할 때 가장 정확하게 작동합니다.
 
 ## 3. AI 추론 및 컨텍스트 제어 (Reasoning & Context)
 - **[MUST] Long Context Strategy:** 방대한 로그나 공식 문서는 최상단에, 핵심 지시사항은 맨 아래에 배치하여 위치 편향(Position Bias)을 막으십시오.
@@ -21,7 +21,7 @@ trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompt
 - **[MUST] Context Isolation:** 룰과 데이터(로그, 코드)가 섞이지 않도록 반드시 `<example>`, `<context>` 등 XML 태그로 격리하십시오.
 - **[MUST] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입하십시오.
 - **[MUST] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
-- **[MUST] CoT 예외:** 추론 네이티브 모델(o3, o4-mini, DeepSeek-R1, Qwen3 thinking)에는 CoT 및 추론 스캐폴딩을 적용하지 마십시오. 짧고 깔끔한 목표 지시만 제공하십시오.
+- **[MUST] CoT 예외:** 추론 네이티브 모델(o3, o4-mini, DeepSeek-R1, Qwen3 thinking)에는 CoT 및 추론 스캐폴딩 대신, 짧고 깔끔한 최종 목표 지시만 직접 제공하십시오.
 
 ### 메타 프롬프트 예시 주입 (Few-Shot Examples)
 <examples>
@@ -49,7 +49,7 @@ limits:
 ## 4. 자율 실행 통제 및 제약 (Autonomous Ops)
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력(`write_to_file`)으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
 - **[MUST] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
-- **[MUST] Split Complex Tasks:** 복잡한 셋업은 한 번에 하지 말고 넘버링(Step-by-Step)하여 쪼개 실행하도록 강제하십시오.
+- **[MUST] Split Complex Tasks:** 복잡한 셋업은 반드시 넘버링(Step-by-Step)된 단계별 지시로 분할하여 순차적으로 실행하도록 강제하십시오.
 - **[Trigger] Autonomous Action:** 에이전트의 자율 개입을 위해 `[Trigger: 이벤트명]` 형태의 조건문을 적극 설계하십시오.
 - **[MUST] Artifact Generation Rules:** 산출물 작성 시 대상 에이전트(Antigravity)의 내장 마크다운 스키마(`walkthrough.md`, `task.md` 등) 활용을 강제하십시오.
 
@@ -86,9 +86,10 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
 프롬프트를 작성하거나 기존 프롬프트를 검토할 때, 아래 원칙을 적용하십시오.
 
 ### 8.1 범용 원칙
-- **[MUST] 명시적 지시:** 모든 지시를 구체적이고 명시적으로 작성하십시오. 누락된 맥락을 AI가 추론하리라 가정하지 마십시오.
+- **[MUST] 명시적 지시:** 모든 지시와 맥락을 구체적이고 명시적으로 제공하십시오. 누락된 정보를 AI가 스스로 추론하도록 방치하지 말고, 판단에 필요한 모든 데이터를 프롬프트 내에 직접 주입하십시오.
 - **[MUST] 동사 정밀도:** 모든 작업 동사를 구체적인 오퍼레이션(생성, 변환, 비교, 추출 등)으로 명시하십시오.
 - **[MUST] 단일 목표:** 프롬프트당 하나의 목표만 지정하십시오. 두 가지 이상의 목표는 별도 프롬프트로 분리하십시오.
+- **[MUST] 룰 충돌 해결 설계:** 룰 간의 충돌(예: 원형 보존 vs 아키텍처 Best Practice)이 예상되는 영역에서는 항상 더 높은 가치(아키텍처 표준)를 최우선으로 두도록 명시적 우선순위를 긍정문으로 설계하십시오.
 - **[MUST] 성공 기준:** 완료 상태를 이진(pass/fail) 판단이 가능한 기준으로 명시하십시오.
 - **[MUST] 출력 계약:** 결과물의 형식, 길이, 완료 조건을 명시하십시오.
 - **[MUST] 프론트 로딩:** 의도, 제약조건, 수락 기준을 프롬프트 상위 30% 이내에 배치하십시오.
@@ -99,7 +100,7 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
 
 ### 8.2 에이전트 프롬프트 필수 구조 (Claude Code, Antigravity, Cursor, Cline, Devin)
 - **[MUST] 필수 5요소:** 시작 상태 + 목표 상태 + 허용 동작 + 금지 동작 + 중단 조건(Stop Conditions)을 포함하십시오.
-- **[MUST] 범위 잠금:** 대상 파일/디렉토리 범위를 명시적으로 잠그십시오. 경로 앵커 없는 글로벌 지시를 사용하지 마십시오.
+- **[MUST] 범위 잠금:** 모든 작업 지시에 반드시 특정 대상 파일이나 디렉토리 경로 앵커를 포함하여 작업 범위를 명시적으로 제한하십시오.
 - **[MUST] 파괴적 동작 게이트:** 파일 삭제, 의존성 추가, DB 스키마 변경 전 사용자 확인 트리거를 포함하십시오.
 - **[MUST] 완료 조건:** `"Done when:"` 조건을 필수로 명시하십시오.
 

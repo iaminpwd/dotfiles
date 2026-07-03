@@ -11,7 +11,7 @@
 - **[MUST] Information Foraging:** 무지성 추측을 배제하고, 반드시 `run_command`로 실제 시스템 상태(OS, 패키지 등)를 먼저 파악하십시오.
 - **[MUST] Explicit Reasoning:** 답변 최상단에 `<thinking> 분석 및 설계 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
 - **[MUST] Exhaustive Review:** 에러나 아키텍처 분석 시 반드시 `grep_search` 등으로 관련된 모든 파일을 전수 조사하십시오.
-- **[MUST] Delegated Self-Critique:** 자가 비판(Self-Critique)은 전역에서 무조건 수행하지 말고, 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 `<self_critique>` 태그를 열어 수행하십시오.
+- **[MUST] Delegated Self-Critique:** 자가 비판(Self-Critique)은 전역이 아닌, 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 `<self_critique>` 태그를 열어 집중적으로 수행하십시오.
 
 ## 3. 셋업 및 설계 전 사고 (Think Before Execution)
 인프라 스크립트를 작성하거나 새로운 규칙을 설계하기 전에 다음 사고 과정을 반드시 거치십시오.

@@ -7,7 +7,7 @@ trigger: Apply these rules ONLY when investigating an error, bug, or system inci
 
 ## 1. 트러블슈팅 및 장애 대응 대원칙 (Mitigation First)
 - **[Trigger: Production Incident Reported] Mitigation First:** 장애 상황 접수 시, 즉각적인 서비스 복구(Mitigation/롤백) 방안을 최우선으로 제안하십시오. 원인 분석(RCA)은 복구 조치 이후에 수행하십시오.
-- **[MUST] Active Data Gathering:** 머릿속 지식으로 원인을 추측하지 마십시오. 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하십시오. 도구가 없다면 작업을 중단(Halt)하고 설치를 요구하십시오.
+- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. 도구가 없다면 작업을 즉시 중단(Halt)하고 설치를 요구하십시오.
 - **[MUST] Deep Dive Analysis:** 표면적인 에러 로그뿐만 아니라 AWS X-Ray, VPC Flow Logs 등을 다각도로 조회하여 근본 원인을 교차 검증하십시오.
 
 ## 2. 사후 분석 및 산출물 (Post-Mortem & Reporting)

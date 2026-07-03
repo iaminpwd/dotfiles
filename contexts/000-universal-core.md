@@ -5,7 +5,7 @@ priority: highest
 # 000. 메타 프롬프트 엔진 및 공통 코딩 표준 (Universal Meta-Prompt Engine)
 
 > **[CORE EXCEPTION HOOK]**
-> 만약 로컬 스킬(`SKILL.md`)에 의해 룰 예외(Exception)가 선언된 경우, 본 문서에 명시된 모든 룰과 제약 사항을 전면 무효화(Bypass)하고 해당 스킬의 규칙을 최우선으로 덮어씌워 적용하십시오. (Rule 16의 예외 허용)
+> 만약 로컬 스킬(`SKILL.md`)에 의해 룰 예외(Exception)가 선언된 경우, 본 문서에 명시된 모든 룰과 제약 사항을 전면 무효화(Bypass)하고 해당 스킬의 규칙을 최우선으로 덮어씌워 적용하십시오. (이는 '1. 코딩 전 사고'의 [충돌 해결 원칙]에 대한 유일한 예외입니다.)
 
 - **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다. 단, 단순 텍스트 교정이나 10줄 미만의 코드 수정과 같은 사소한 작업의 경우 불필요한 검증 절차를 생략하고 자율적인 판단을 적용하십시오.
 
@@ -16,7 +16,8 @@ priority: highest
 - **[MUST] Present Alternatives:** 여러 해석이 가능할 경우, 가능한 모든 대안과 장단점을 명시적으로 제시하여 사용자의 선택을 유도하십시오.
 - **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 무비판적으로 수용하지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오.
 - **[MUST] Halt on Confusion:** 요구사항이 모호하다면 즉시 작업을 멈추고(Halt) 질문하여 명확히 하십시오.
-- **[MUST] Rule Conflict Resolution (충돌 해결 원칙):** 제공된 여러 가이드라인이나 룰 간에 아키텍처 충돌이 발생할 경우, 코어 룰(Core Engine)을 최우선 순위로 강제(Hard Constraint) 적용하며 예외를 허용하지 마십시오.
+- **[MUST] Rule Conflict Resolution (충돌 해결 원칙):** 제공된 여러 가이드라인이나 룰 간에 아키텍처 충돌이 발생할 경우, 코어 룰(Core Engine)을 최우선 순위로 강제(Hard Constraint) 적용하며, 모든 하위 룰은 코어 룰에 종속시키십시오.
+- **[MUST] Architecture vs Code-Level Separation (아키텍처와 코드 수정의 분리):** "외과적 수정(Scope Isolation)" 규칙은 '코드 레벨의 로직이나 포매팅'에만 한정하여 적용됩니다. 인프라 설계, 클라우드 리소스 할당, 시스템 토폴로지와 같은 아키텍처 레벨에서는 항상 아키텍처 표준(Best Practice)을 최우선으로 적용하십시오. 기존 구조 유지가 안티패턴(예: 동적 IP 강제 고정)을 유발할 경우, 구조를 과감히 폐기하고 아키텍처 표준에 맞는 근본적 리팩토링을 최우선으로 역제안하십시오.
 
 ## 2. 단순성 우선 (Simplicity First)
 문제를 해결하는 최소한의 코드만 작성하십시오.
@@ -26,10 +27,10 @@ priority: highest
 - **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류 등)만 방어하십시오. 발생 가능성이 희박한 이론적 엣지 케이스 방어 코드는 생략하십시오.
 - **[MUST] Continuous Simplification:** 코드를 작성한 후 복잡성을 스스로 평가(`<self_critique>`)하고, 코드를 가장 단순한 형태로 즉시 리팩토링하십시오.
 
-## 3. 외과적 수정 (Surgical Changes)
-명령받은 목표만 수정하고 주변 코드는 원형을 보존하십시오.
+## 3. 외과적 코드 수정 (Surgical Code Changes)
+코드(함수, 클래스, 설정 파일 등)를 수정할 때, 명령받은 로직 영역만 수정하고 주변 코드는 원형을 보존하십시오.
 
-- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하십시오. 주변 코드의 포매팅이나 주석을 임의로 건드리지 마십시오.
+- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하십시오. 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오.
   <examples>
   <example>
   [Good] 기존 들여쓰기와 주석 스타일을 완벽히 유지하며 타겟 함수 1개만 수정

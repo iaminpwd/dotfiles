@@ -10,7 +10,7 @@ priority: critical
 - **[MUST] Explicit Naming:** 아키텍처나 리소스 구조를 예시로 들 때는 `deployment-app`, `tgw-attachment-vpc-a` 처럼 직관적인 네이밍만을 엄수하십시오.
 
 ## 2. 정밀성과 신뢰성 보장
-- **[MUST] Information Foraging (능동적 탐색):** 리소스 ID(VPC, Subnet 등)를 임의로 추측하지 마십시오. 작업 전 반드시 `run_command`를 통해 `aws ec2 describe-vpcs` 등으로 실제 인프라 상태를 먼저 조회하십시오.
+- **[MUST] Information Foraging (능동적 탐색):** 작업 시 리소스 ID(VPC, Subnet 등)는 반드시 `run_command`를 통해 `aws ec2 describe-vpcs` 등으로 실제 인프라 상태를 선제적으로 조회하여 정확한 팩트 기반으로 확보하십시오.
 
 ## 3. 아키텍처 설계 철학
 - **[PREFER] Cloud-Native First:** IaaS(EC2 등) 직접 구축보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
@@ -22,7 +22,7 @@ priority: critical
 <example>
 [Good]
 - 능동적 데이터 수집: "VPC ID를 정확히 확인하기 위해, 먼저 `run_command`로 `aws ec2 describe-vpcs`를 실행하겠습니다." (절대 할루시네이션으로 ID를 추측하지 않음)
-- 강제 검증 및 중단: "보안 스캔 도구(`trufflehog`)가 로컬에 설치되어 있지 않습니다. 임의로 스캔을 건너뛰지 않고 작업을 즉시 중단(Halt & Clarify)하겠습니다."
+- 강제 검증 및 중단: "보안 스캔 도구(`trufflehog`)가 로컬에 설치되어 있지 않습니다. 스캔을 건너뛰는 대신 작업을 즉시 중단(Halt & Clarify)하고 도구 설치를 요청하겠습니다."
 </example>
 <example>
 [Bad]

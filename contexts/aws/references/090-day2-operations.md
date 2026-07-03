@@ -19,7 +19,7 @@ trigger: Apply these rules ONLY when designing CI/CD pipelines, high-availabilit
 <examples>
 <example>
 [Good]
-- "CPU 사용률이 단순 80%를 넘었다고 알람을 보내지 말고, p99 지연 시간(Latency)이 2초를 초과하고 500 에러 비율이 1%를 넘었을 때만 P1 알람을 발송하도록 설정하십시오."
+- "단순 CPU 사용률 80% 초과 알람 대신, p99 지연 시간(Latency)이 2초를 초과하고 500 에러 비율이 1%를 넘었을 때만 P1 알람을 발송하도록 설정하십시오."
 </example>
 <example>
 [Bad]

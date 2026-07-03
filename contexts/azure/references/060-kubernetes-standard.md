@@ -6,10 +6,10 @@ trigger: Apply these rules ONLY when working with Kubernetes, AKS, Helm, or cont
 # 컨텍스트 모듈: Kubernetes (AKS) 및 컨테이너 엔지니어링 표준
 
 ## 1. 클러스터 보안 및 인증 (Security & Auth)
-- **[MUST] Least Privilege (Workload Identity):** AKS 워크로드(Pod)에 권한을 부여할 때 반드시 Entra ID Workload Identity를 적용하여 최소 권한을 달성하십시오.
-- **[MUST] Envelope Encryption:** K8s Secret은 반드시 Azure Key Vault와 연동한 봉투 암호화(Envelope Encryption)를 적용하여 안전하게 저장되도록 구성하십시오.
+- **[MUST] Least Privilege (Workload Identity):** AKS 워크로드(Pod)에 권한을 부여할 때 반드시 Azure RBAC Roles for Service Accounts (Workload Identity)를 적용하여 최소 권한을 달성하십시오.
+- **[MUST] Envelope Encryption:** K8s Secret은 반드시 Azure KMS와 연동한 봉투 암호화(Envelope Encryption)를 적용하여 안전하게 저장되도록 구성하십시오.
 - **[MUST] Zero Trust (mTLS):** 클라우드 내부망이라 하더라도 K8s 아키텍처 설계 시 서비스 매시(Istio, Linkerd) 기반의 **mTLS(상호 TLS)** 통신 적용을 반드시 최우선으로 제안하십시오.
-- **[PREFER] Node Security:** 워커 노드의 보안 강화를 위해 컨테이너에 최적화된 Azure Linux OS 사용을 우선 제안하십시오.
+- **[PREFER] Node Security:** 워커 노드의 보안 강화를 위해 컨테이너에 최적화된 Bottlerocket OS 사용을 우선 제안하십시오.
 
 ## 2. 클러스터 워크로드 배포 전략 (Deployment Strategy)
 - **[MUST] GitOps:** Kubernetes 워크로드 배포 시 반드시 ArgoCD 등 GitOps 기반 파이프라인을 통해 자동화된 배포가 이루어지도록 설계하십시오.
