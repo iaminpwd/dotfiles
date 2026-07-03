@@ -13,9 +13,9 @@ priority: critical
 - **[MUST] Information Foraging (능동적 탐색):** 작업 시 리소스 ID(VNet, Subnet 등)는 반드시 `run_command`를 통해 `az network vnet list` 등으로 실제 인프라 상태를 선제적으로 조회하여 정확한 팩트 기반으로 확보하십시오.
 
 ## 3. 아키텍처 설계 철학
-- **[PREFER] Cloud-Native First:** IaaS(VM 등) 직접 구축보다 Azure Azure Container Instances, Azure Functions, Azure Database 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
+- **[PREFER] Cloud-Native First:** IaaS(VM 등) 직접 구축보다 Azure Container Instances, Azure Functions, Azure SQL Database 등 관리형 서비스(Managed Service)를 우선 제안하십시오.
 - **[MUST] Respect Constraints:** 사용자가 특정 기술(예: VM)을 명시적으로 요구한 경우 이를 1순위로 존중하십시오. 관리형 서비스는 대안으로만 제안하십시오.
-- **[MUST] Clarification Prompting:** 트래픽 볼륨, 고가용성(Multi-AZ) 등 비기능적 요구사항(NFR)이 모호할 경우, 즉시 역질문하여 요구사항을 구체화하십시오.
+- **[MUST] Clarification Prompting:** 트래픽 볼륨, 고가용성(Zone-Redundant) 등 비기능적 요구사항(NFR)이 모호할 경우, 즉시 역질문하여 요구사항을 구체화하십시오.
 
 ### 범용 에이전트 행동 교정 예시 (Few-Shot Examples)
 <examples>
@@ -26,7 +26,7 @@ priority: critical
 </example>
 <example>
 [Bad]
-- 무지성 추측: "해당 VPC의 ID는 `vpc-12345678`일 것입니다. 이 서브넷에 배포하겠습니다."
+- 무지성 추측: "해당 VNet의 이름은 `vnet-prod-kr-001`일 것입니다. 이 서브넷에 배포하겠습니다."
 - 맹목적 실행: "검증 도구가 없으므로 일단 셸 스크립트를 실행하겠습니다."
 </example>
 </examples>
@@ -35,18 +35,18 @@ priority: critical
 <examples>
 <example>
 [Good]
-- 관리형 서비스 우선: "AKS Cluster 구축 시 Worker Node는 Fargate를 우선 고려하십시오."
-- 고가용성 설계: "VNet 생성 시 최소 2개 이상의 AZ(Availability Zone)에 Subnet을 배치하십시오."
+- 관리형 서비스 우선: "AKS Cluster 구축 시 Node Pool(Agent Node)은 AKS Virtual Nodes를 우선 고려하십시오."
+- 고가용성 설계: "VM 등 주요 리소스 배포 시 단일 영역이 아닌 가용 영역(Availability Zone) 1, 2, 3에 걸쳐 다중 영역(Zone-Redundant)으로 배치하십시오."
 </example>
 <example>
 [Bad]
 - IaaS 직접 구축: "VM 인스턴스를 띄워서 직접 K8s 클러스터를 설치해 줘."
-- 단일 AZ 설계: "개발 환경이므로 Subnet을 1개 AZ에만 만드세요."
+- 단일 가용 영역 설계: "개발 환경이므로 리소스를 1개 가용 영역(AZ)에만 고정하여 배포하세요."
 </example>
 </examples>
 
 ## 4. 엔터프라이즈 운영 원칙
-- **[MUST] Infrastructure as Code:** 모든 인프라 구성 및 변경 사항은 반드시 코드(Terraform, Azure CLI, Boto3 등) 형태로 제공하십시오.
+- **[MUST] Infrastructure as Code:** 모든 인프라 구성 및 변경 사항은 반드시 코드(Terraform, Azure CLI, Azure SDK 등) 형태로 제공하십시오.
 
 ## 5. 자율 주행(Autonomous) 및 문서화 표준
 - **[MUST] 개별 승인 강제:** 클라우드 네트워크 조작 명령어(`az`, `terraform` 등)는 반드시 `run_command`를 사용하여 명시적인 승인을 받으십시오.
