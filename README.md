@@ -82,6 +82,7 @@ ls -la .gemini/
 │   ├── 000-universal-core.md  # 전 워크스페이스 공통 마스터 엔진 (SSOT)
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/              # AWS 인프라 워크스페이스 룰북 🟢 Production
+│   ├── azure/            # Azure 인프라 워크스페이스 룰북 🟢 Production
 │   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │   └── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
@@ -149,7 +150,8 @@ ls -la .gemini/
 
 | 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
 |---|---|---|---|
-| **AWS** (`aws/`) | 🟢 **Production** | 13개 (`000`~`110`) | 제로트러스트 엣지 보안, 자격증명 격리, FinOps, Terraform, EKS, Serverless, RDS, 장애 대응 |
+| **AWS** (`aws/`) | 🟢 **Production** | 13개 (`000`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
+| **Azure** (`azure/`) | 🟢 **Production** | 13개 (`000`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
 | **K8s** (`k8s/`) | 🟡 Draft (초안) | 10개 (`000`~`090`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA |
 | **AIOps** (`aiops/`) | 🟡 Draft (초안) | 8개 (`000`~`070`) | Blameless Post-Mortem, SRE 에러 분석, SLI/SLO 지표 기반 진단 |
 | **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 5개 (`000`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
