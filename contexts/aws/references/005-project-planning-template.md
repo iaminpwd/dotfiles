@@ -26,7 +26,7 @@ trigger: Apply these rules ONLY when planning, architecting, or creating a Maste
   7. **운영 및 리스크 관리 (Risk Management & Day-2)**: 시스템 장애 시 복구(Mitigation) 및 비난 없는 분석(Blameless RCA) 전략을 수립하십시오.
   8. **구현 청사진 (Implementation Blueprint)**: 워크스페이스에 생성될 파일 트리, 적용 순서, 공통 환경 변수를 명시하십시오.
   9. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 기계적으로 확인하는 자동화 평가 스크립트(Eval) 작성 계획을 포함하십시오.
-  10. **AI 및 개발자 제약사항 (AI & Developer Constraints)**: 로컬 룰(`10-localrule.md`) 추출을 위한 프로젝트 특화 제약사항(강제 행동, 도구 고정 버전 등)을 명시하십시오.
+  10. **AI 및 개발자 제약사항 (AI & Developer Constraints)**: 로컬 룰(`.agents/AGENTS.md` 파일 하단에 Append) 추출을 위한 프로젝트 특화 제약사항(강제 행동, 도구 고정 버전 등)을 명시하십시오.
 
 ## 3. 예시 기반 프롬프팅 (Few-Shot Examples)
 
@@ -62,4 +62,4 @@ trigger: Apply these rules ONLY when planning, architecting, or creating a Maste
 - **[Trigger: Before Finalizing Plan] Pre-Flight Checklist:** 계획서 작성을 완료하기 전, 스스로 `<self_critique>` 태그를 열어 다음 항목을 철저히 검증하십시오.
   - 보안(Security)과 비용(FinOps)이 상호 보완적으로 최적화되었음을 입증하십시오.
   - 생성될 파일들이 의존성이 완벽하게 해결된 배포 가능한 순서로 설계되었음을 입증하십시오.
-  - 작성된 계획서가 추후 AI 전용 규칙 파일(`10-localrule.md`)로 즉시 변환될 수 있도록 명확한 제약 조건으로 정리되었음을 입증하십시오.
+  - 작성된 계획서가 추후 AI 전용 규칙 파일(`.agents/AGENTS.md` 파일 하단에 Append)로 즉시 변환될 수 있도록 명확한 제약 조건으로 정리되었음을 입증하십시오.
