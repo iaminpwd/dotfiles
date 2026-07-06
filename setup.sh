@@ -20,6 +20,21 @@ if ! dpkg -s $PACKAGES >/dev/null 2>&1; then
   sudo apt update && sudo apt install -y $PACKAGES
 fi
 
+# Docker 설치 및 사용자 권한 설정 (Best Practice: 공식 Convenience Script 활용)
+if ! command -v docker &> /dev/null; then
+  echo "=> 최신 Docker Engine(docker-ce)을 공식 레포지토리에서 설치합니다..."
+  curl -fsSL https://get.docker.com | sudo sh
+fi
+
+if systemctl list-unit-files | grep -qw "docker.service"; then
+  sudo systemctl enable --now docker
+  if ! groups "$USER" | grep -qw "docker"; then
+    echo "=> 현재 사용자를 docker 그룹에 추가합니다..."
+    sudo usermod -aG docker "$USER"
+    echo "💡 안내: Docker 그룹 권한이 부여되었습니다. 적용을 위해 터미널 재시작 또는 'newgrp docker'가 필요합니다."
+  fi
+fi
+
 echo "[2/6] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
