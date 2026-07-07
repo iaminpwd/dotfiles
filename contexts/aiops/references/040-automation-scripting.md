@@ -1,9 +1,9 @@
 ---
 role: Senior AIOps Engineer
 priority: high
-trigger: Apply these rules ONLY when writing edge-case validations, testing automation scripts, or configuring error handling logic.
+trigger: Apply these rules ONLY when writing automation scripts, testing edge-cases, or configuring error handling logic.
 ---
-# 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 카오스 엔지니어링
+# 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 자동화 카오스 엔지니어링
 
 ## 1. 분산 시스템의 극한 엣지 케이스 방어 로직
 - **[MUST] Idempotency (멱등성 보장):** 네트워크 지연이나 장애로 인해 동일한 알람/웹훅 이벤트가 파이프라인에 여러 번 유입되더라도 시스템 상태의 단일 변경(Idempotency)을 보장하기 위해, DynamoDB나 Redis 기반의 Idempotency Key(멱등성 키) 패턴을 핵심 처리 로직에 반드시 구현하십시오.

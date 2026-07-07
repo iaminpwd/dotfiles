@@ -3,7 +3,7 @@ role: Senior AIOps Engineer
 priority: high
 trigger: Apply these rules ONLY when designing LLM agent workflows, RAG systems, Vector DBs, or automated incident resolution.
 ---
-# 컨텍스트 모듈: AI 에이전트 설계 및 RAG / Guardrails 패턴
+# 컨텍스트 모듈: AI 에이전트 워크플로우 설계 및 RAG / Guardrails 패턴
 
 ## 1. LLM 워크로드 및 RAG(Retrieval-Augmented Generation) 연동
 - **[MUST] Runbook Integration:** 에이전트가 단편적인 웹 검색이나 사전 학습된 지식에만 의존을 탈피하여 다각도의 팩트를 능동적으로 수집하십시오. 사내 장애 대응 런북(Runbook), 플레이북(Playbook) 및 과거 사후 분석 리포트(Post-mortem)를 Vector DB(예: OpenSearch, Pinecone)에 저장하고 RAG를 통해 참조하여 근거 기반으로 답변하도록 아키텍처를 설계하십시오.
@@ -21,6 +21,17 @@ trigger: Apply these rules ONLY when designing LLM agent workflows, RAG systems,
 - **[Trigger: Script or Pipeline Error] 자동 자가 치유:** 파이프라인 자동화 스크립트 실행 중 예기치 않은 오류가 발생할 경우, 사용자에게 즉각 묻지 말고 즉시 로그를 파싱/분석하여 백그라운드에서 스스로 코드를 수정하고 최대 3회까지 재시도(Retry)하십시오.
 - **[Trigger: Validation Failed 3 times] 빠른 실패 및 중단 (Fail-Fast & Halt):**
 자가 치유를 3회 시도한 후에도 로직이 정상화되지 않는다면, 즉시 모든 도구 호출을 멈추고 안전 상태를 확보한 뒤 다음 포맷으로 정리하여 사용자(Human Intervention)에게 보고하십시오.
-- `[Incident Summary]`: 발생한 자동화 파이프라인 장애 요약
-- `[Root Cause Hypothesis]`: 파악된 에이전트 로직 결함 또는 권한 부족 가설
-- `[Manual Action Required]`: 엔지니어가 수동으로 승인/수행해야 할 즉각적 조치
+  - `[Incident Summary]`: 발생한 자동화 파이프라인 장애 요약
+  - `[Root Cause Hypothesis]`: 파악된 에이전트 로직 결함 또는 권한 부족 가설
+  - `[Manual Action Required]`: 엔지니어가 수동으로 승인/수행해야 할 즉각적 조치
+
+## 4. 예시 기반 행동 교정 (Few-Shot Examples)
+
+<examples>
+<example>
+[Bad] 자율 100% 강제 수행: "메모리 누수가 확인되었으므로, 장애 파드를 즉시 강제 삭제(`kubectl delete pod --force`) 하겠습니다."
+</example>
+<example>
+[Good] Human-in-the-loop 제안: "OOM의 1차 완화(Mitigation)를 위해 대상 파드의 삭제가 필요합니다. 하지만 이는 클러스터 상태를 직접 변경하는 파괴적 조치이므로, 실행 전 안전을 위해 귀하의 최종 승인(Y/N)을 기다리겠습니다."
+</example>
+</examples>
