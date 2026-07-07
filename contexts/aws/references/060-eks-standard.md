@@ -1,0 +1,14 @@
+---
+role: Senior Cloud Architect
+priority: high
+trigger: Apply these rules ONLY when working with Kubernetes, EKS, Helm, or container orchestration.
+---
+# 컨텍스트 모듈: Kubernetes (EKS) 특화 표준
+
+## 1. 클러스터 보안 및 인증 (Security & Auth)
+- **[MUST] Least Privilege (IRSA):** EKS 워크로드(Pod)에 권한을 부여할 때 반드시 IAM Roles for Service Accounts (IRSA)를 적용하여 최소 권한을 달성하십시오.
+- **[MUST] Envelope Encryption:** K8s Secret은 반드시 AWS KMS와 연동한 봉투 암호화(Envelope Encryption)를 적용하여 안전하게 저장되도록 구성하십시오.
+- **[PREFER] Node Security:** 워커 노드의 보안 강화를 위해 컨테이너에 최적화된 Bottlerocket OS 사용을 우선 제안하십시오.
+
+## 2. 공통 K8s 코어 룰 참조 (Lazy Routing)
+- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 현재 폴더에 지식이 없다고 임의 추론하지 마십시오. 반드시 **`../../k8s/SKILL.md`** 파일을 가장 먼저 읽고(View), 그 안에 명시된 라우팅 가이드(description)에 따라 `references/` 하위의 적절한 코어 룰을 찾아 팩트를 수집한 뒤 작업하십시오.
