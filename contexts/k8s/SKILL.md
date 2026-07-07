@@ -9,7 +9,7 @@ description: |
   - 오토스케일링 (HPA, VPA) 및 FinOps 비용 최적화 -> references/060-autoscaling-finops-standard.md
   - 고급 클러스터 보안 (RBAC, OPA, NetworkPolicy) -> references/070-advanced-security-standard.md
   - 플랫폼 엔지니어링 및 멀티테넌시 -> references/080-platform-engineering-standard.md
-  - 프롬프트/예제(Few-shot) 기반 K8s 매니페스트 학습 -> references/090-few-shot-examples.md
+  - K8s 장애 대응, 트러블슈팅(CrashLoopBackOff 등) 및 사후 분석(RCA) -> references/100-incident-response.md
   그 외 기본 K8s 코어 아키텍처는 010-k8s-core.md 참조.
 ---
 # k8s Skill
