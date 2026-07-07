@@ -23,8 +23,8 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Self-Critique: 최종 답변 전 <self_critique> 로 취약점/멱등성 점검.
-- [Trigger: After Code Change] 자율적 자가 치유: 수정 후 백그라운드 자가 검증. 최대 3회 재시도.
+- **[Trigger: RCA Completed] 자가 비판 (Self-Critique):** 장애 사후 분석(Post-Mortem) 보고서 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 장애 원인을 사람의 실수로 단정짓지 않았는지 집중 비판하십시오. (출처: 100-incident-response.md)
+- **[Trigger: Before K8s Apply] 자가 비판 및 편차 검증 (Self-Critique):** K8s 배포 전 `kubectl diff`로 편차를 확인하고, 스스로 `<self_critique>` 태그를 열어 메모리 Limit 누락 위험성을 집중 비판하십시오. (출처: 060-kubernetes-standard.md)
 ```
 
 ### 1.2. Tool Use (도구 사용)
@@ -32,8 +32,8 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Active Environment Verification: 로컬 터미널 능동 조회로 100% 컨텍스트 확보.
-- [MUST] Independent Verification: 최종 결과 확정 전 독립적 성공 기준 능동 설정.
+- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
+- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 `run_command`로 `trufflehog filesystem <특정_경로>` 스캐닝을 실행하여 하드코딩된 시크릿을 사전에 차단하십시오. (출처: 020-security-compliance.md)
 ```
 
 ### 1.3. Planning (계획 수립)
@@ -41,8 +41,8 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Explicit Planning: 다단계 작업 시 "작업 -> 검증" 짧은 단계별 계획 명시.
-- [MUST] Explicit Assumptions: 구현 전 가정 명시. 불확실 시 질문.
+- **[MUST] Explicit Planning:** 다단계 작업 시 "작업 -> 검증"의 3단계 이내의 간결한 단계별 계획을 명시하십시오. (출처: 000-universal-core.md)
+- **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하십시오. 불확실한 부분은 임의로 추측하지 말고 반드시 사용자에게 질문하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 1.4. Multi-Agent Collaboration (다중 에이전트 협업)
@@ -50,7 +50,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] LLM-as-a-Judge Evaluation: 중대 변경 시 AI 스스로 평가자 페르소나 전환/채점 강제.
+- **[MUST] Infra-Specific LLM-as-a-Judge:** 아키텍처 설계나 중대 인프라 스크립트 작성을 완료한 직후, 스스로 '평가자' 페르소나로 전환하여 보안, 비용, 멱등성 3가지 측면에서 산출물을 가혹하게 평가하고 자가 수정하십시오. (출처: 010-aws-core.md)
 ```
 
 ---
@@ -66,7 +66,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:** (퓨샷 예제 적용)
 ```markdown
-- [Good]: "VPC ID를 확인하기 위해, run_command로 aws ec2 describe-vpcs 선행 실행"
+- [Good]: "이 작업은 CloudWatch Logs 조회가 선행되어야 하므로, 먼저 `aws logs filter-log-events`를 실행하겠습니다." (출처: 100-incident-response.md)
 ```
 
 ### 2.2. Tree of Thoughts (ToT, 생각의 트리)
@@ -74,7 +74,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Present Alternatives: 대안과 장단점 명시적 제시로 사용자 선택 유도.
+- **[MUST] Present Alternatives:** 여러 해석이 가능할 경우, 가능한 모든 대안과 장단점을 명시적으로 제시하여 사용자의 선택을 유도하십시오. (출처: 000-universal-core.md)
 ```
 
 ---
@@ -113,7 +113,7 @@ priority: highest
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Explicit Reasoning (CoT): 복잡 작업 전 <thinking> 으로 논리 추론.
+- **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 3.2. OpenAI 핵심 기법
@@ -121,9 +121,11 @@ priority: highest
 **이론:** 단순한 지시 대신 모델에게 명확한 직업과 역할을 부여하면 답변의 전문성과 일관성이 비약적으로 상승함.
 
 **통합 워크스페이스 적용 사례:**
-```markdown
-- [MUST] Persona: 데브옵스 환경 및 AI 프롬프트 규칙을 설계하는 수석 프롬프트 아키텍트.
+```yaml
+role: Senior Cloud Architect
+priority: high
 ```
+(출처: 010-aws-core.md의 Frontmatter 구조 적용)
 
 #### 3.2.2. 복잡한 작업 분할 (Split Complex Tasks)
 **이론:** 복잡한 요청을 한 번에 던지지 않고, 모델이 이해하기 쉽도록 Step-by-Step으로 쪼개서 지시하는 기법.
@@ -188,8 +190,7 @@ priority: highest
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Explicit Idempotency: 중복 설치/설정 방지 위한 상태 검증 로직 강제.
-- [MUST] Safe Configuration Appending: 파일 Append 전 grep -q 설정 중복 검사 필수.
+- **[MUST] Bash Idempotency & Safe Appending:** 리소스 중복 생성 방지를 위한 멱등성을 보장하고, 설정 파일 수정 시 반드시 `grep` 등으로 기존 존재 여부를 검증한 후 안전하게 추가(Append)하십시오. (출처: 040-automation-scripting.md)
 ```
 
 ### 4.2. Fail-Fast & Safety Boundary (빠른 실패와 안전선 패턴)
@@ -197,8 +198,8 @@ priority: highest
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [Trigger: Validation Failed 3 times] 빠른 실패 및 중단: 3회 실패 시 도구 중단 및 개입 요청.
-- [MUST] Permission Boundary: 로컬 조작 시 ask_permission 최소 권한 확보.
+- **[Trigger: Validation Failed 3 Times] Fast Fail & Halt (빠른 실패 및 중단):** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오. (출처: 000-universal-core.md)
+- **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 `ask_permission`을 호출하여 최소 경로 권한만 확보하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 4.3. Eval-Driven Verification (평가 주도 검증 패턴)
@@ -206,8 +207,8 @@ priority: highest
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Eval-Driven Testing: 텍스트 성공 기준을 넘어 자동화 Eval 테스트 스크립트 강제.
-- [MUST] Success Criteria over Manual Instructions: 완료 보고 시 수동 검증 명령어 제공.
+- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오. (출처: 000-universal-core.md)
+- **[MUST] Success Criteria over Manual Instructions:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 4.4. Break-Glass & Compliance (예외 로깅 및 기술 부채 패턴)
@@ -215,7 +216,7 @@ priority: highest
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Break-Glass: 의도적 룰 위반 지시 수행 시 tech-debt-log.md 기술 부채 기록 강제.
+- **[MUST] Break-Glass (예외 승인 및 기술 부채 기록):** 사용자가 보안/아키텍처 규칙 위반 지시를 고집할 경우, 반드시 템플릿 구조를 사용하여 `tech-debt-log.md`를 생성해 감사(Audit) 기록을 남기십시오. (출처: 000-universal-core.md)
 ```
 
 ---
@@ -231,8 +232,8 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Strict Scope Isolation: 요청 로직 영역 내에서만 포매팅/주석 수정 엄격 격리.
-- [MUST] Match Existing Style: 기존 코드 스타일 무조건 유지.
+- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하십시오. 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오. (출처: 000-universal-core.md)
+- **[MUST] Match Existing Style:** 개인적 선호도를 배제하고 기존 코드 스타일을 무조건 따르십시오. (출처: 000-universal-core.md)
 ```
 
 ### 5.2. Push-Back & Simplicity (단순성 방어 패턴)
@@ -240,8 +241,8 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Push Back for Simplicity: 불필요한 복잡성을 구조적으로 경계하고 더 단순한 아키텍처를 능동적으로 역제안할 것.
-- [MUST] Strictly Limit Features: 명시적 요청 기능만 제한적 구현.
+- **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 무비판적으로 수용하지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오. (출처: 000-universal-core.md)
+- **[MUST] Strictly Limit Features:** 명시적으로 요청된 기능만 구현하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 5.3. Artifact-Driven Communication (산출물 기반 커뮤니케이션 패턴)
@@ -249,8 +250,8 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [Trigger: User requests bug fix] 분석 결과 구조화: 에러 리뷰 시 troubleshooting-report.md 선제 작성.
-- [Trigger: Task Completion] 산출물 생성: 완료 시 도메인 특화 명시적 Artifact 생성.
+- **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화:** 에러 분석 완료 시 반드시 지정된 템플릿을 사용하여 `troubleshooting-report.md`를 생성하십시오. (출처: 100-incident-response.md)
+- **[Trigger: Task Completion] Generate Artifacts (산출물 생성):** 작업 완료 시 도메인에 특화된 명시적인 산출물(Artifact)을 생성하십시오. (출처: 000-universal-core.md)
 ```
 
 ### 5.4. Pragmatic Verification (실용적 검증 및 팩트 수집 패턴)
@@ -258,8 +259,8 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Realistic Error Handling: 현실적 발생 가능 에러 시나리오만 처리.
-- [MUST] Active Data Gathering: 장애 원인 분석 전 run_command로 로그/메트릭 능동적 팩트 수집.
+- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류 등)만 방어하십시오. 발생 가능성이 희박한 이론적 엣지 케이스 방어 코드는 생략하십시오. (출처: 000-universal-core.md)
+- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
 ```
 
 ---

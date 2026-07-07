@@ -64,9 +64,9 @@ priority: highest
 - **[MUST] Tool Availability Gate:** `run_command`로 CLI 도구 실행을 지시받았을 때, 해당 도구의 로컬 설치 여부를 사전에 확인하십시오. 미설치 시 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구하십시오.
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 `ask_permission`을 호출하여 최소 경로 권한만 확보하십시오.
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한 번에', '전체 출력' 등 일괄 완성을 요구할 경우, 불필요한 중간 질문이나 확인 절차를 완전히 차단하고, 실무 Best Practice를 기준으로 빈칸을 스스로 채워 단 한 번에 완벽한 최종 산출물(코드/프롬프트)을 출력하십시오.
-- **[Trigger: After Code Change] 자율적 자가 치유:** 수정 완료 후 백그라운드에서 자가 검증을 수행하고, 실패 시 최대 3회 스스로 재시도하십시오.
-- **[Trigger: Validation Failed 3 times] 빠른 실패 및 중단:** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오.
-- **[Trigger: Task Completion] 산출물 생성:** 작업 완료 시 도메인에 특화된 명시적인 산출물(Artifact)을 생성하십시오.
+- **[Trigger: After Code Change] Autonomous Self-Healing (자율적 자가 치유):** 수정 완료 후 백그라운드에서 자가 검증을 수행하고, 실패 시 최대 3회 스스로 재시도하십시오.
+- **[Trigger: Validation Failed 3 Times] Fast Fail & Halt (빠른 실패 및 중단):** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오.
+- **[Trigger: Task Completion] Generate Artifacts (산출물 생성):** 작업 완료 시 도메인에 특화된 명시적인 산출물(Artifact)을 생성하십시오.
 - **[MUST] Success Criteria over Manual Instructions:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오.
 - **[MUST] Break-Glass (예외 승인 및 기술 부채 기록):** 사용자가 보안/아키텍처 규칙 위반 지시를 고집할 경우, 반드시 아래 템플릿 구조를 사용하여 `tech-debt-log.md`를 생성해 감사(Audit) 기록을 남기십시오.
   ```markdown
