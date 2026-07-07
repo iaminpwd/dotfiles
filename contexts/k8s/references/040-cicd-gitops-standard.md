@@ -28,4 +28,4 @@ ArgoCD Sync나 Helm 배포가 성공적으로 완료되면, 변경된 리소스 
 - **[MUST] Zero-Downtime Rolling Update:** K8s 기본 `Deployment` 롤아웃 시 커넥션 유실을 방지하기 위해 `maxSurge`, `maxUnavailable` 세부 튜닝과 함께 애플리케이션의 `readinessProbe`를 결합하여 완벽한 무중단 배포를 달성하십시오.
 - **[PREFER] Canary & Argo Rollouts:** 트래픽 규모가 큰 비즈니스 핵심 서비스 배포 시, 전체 파드 롤아웃 대신 Argo Rollouts 또는 Service Mesh를 연동하여 트래픽의 % 단위를 세밀하게 제어하는 Canary 배포 파이프라인을 제안하십시오.
 - **[MUST] Automated Rollback:** 신규 배포 후 에러율(5xx HTTP 코드)이나 지연 시간 메트릭이 임계치를 초과할 경우, 즉각적으로 이전 버전으로 되돌아가는 자동 롤백(Automated AnalysisTemplate) 체계를 기본 인프라로 구성하십시오.
-</k8s_cicd_gitops_standard>
+

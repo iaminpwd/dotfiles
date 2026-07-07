@@ -19,4 +19,4 @@ trigger: Apply these rules ONLY when designing autoscaling, finops, or resource 
 - **[PREFER] Cost Visibility (Kubecost / OpenCost):** 네임스페이스, 라벨(Project, CostCenter) 레벨로 클러스터 사용 비용을 모니터링하고 사내 과금(Chargeback)을 지원하는 Kubecost 또는 OpenCost 관측 아키텍처를 인프라 제안에 포함하십시오.
 - **[Trigger: Infrastructure Design / Scaling Check] 비용 영향 시뮬레이션:**
 클러스터 노드 스케일링 구조를 제안하거나 IaC 리소스를 설계할 때, 반드시 `run_command`로 `infracost breakdown --path <특정_경로>`를 실행하여 설계 변경이 초래할 월별 비용 증감을 정량적으로 파악하십시오. 분석된 상세 결과는 챗 창이 아닌 `finops-cost-report.md` 산출물에 Markdown 테이블 포맷으로 정리하여 사용자에게 보고하십시오.
-</k8s_autoscaling_finops_standard>
+

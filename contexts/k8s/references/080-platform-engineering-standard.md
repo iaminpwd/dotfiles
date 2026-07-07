@@ -25,4 +25,4 @@ trigger: Apply these rules ONLY when designing platform engineering, internal de
 2. 터미널 및 로그 기반 논리적 증거
 3. 단계별 해결 방법 및 리팩토링된 코드
 4. 재발 방지를 위한 아키텍처 개선책(Best Practice)
-</k8s_platform_engineering_standard>
+

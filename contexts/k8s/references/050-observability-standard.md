@@ -35,4 +35,4 @@ trigger: Apply these rules ONLY when designing observability, monitoring, loggin
 - **Root Cause:** 객관적 지표에 기반한 시스템 결함의 근본 원인
 - **Resolution:** 완화(Mitigation) 및 복구 조치
 - **Action Items:** 재발 방지를 위한 시스템 차원의 개선점(최소 2가지)
-</k8s_observability_standard>
+

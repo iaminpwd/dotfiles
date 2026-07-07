@@ -20,4 +20,4 @@ trigger: Apply these rules ONLY when designing stateful workloads, PVs, or clust
 - **[MUST] Velero for Cluster DR:** 클러스터 전면 장애에 대비하여 K8s 메타데이터(YAML)와 PV 스냅샷을 주기적으로 오브젝트 스토리지(S3 등)에 백업 및 복원하는 **Velero** 솔루션을 DR 표준으로 제시하십시오.
 - **[MUST] Application-Level Consistency:** PV 스냅샷만으로는 메모리에 상주하는 데이터 트랜잭션의 정합성을 보장할 수 없습니다. 데이터베이스 워크로드의 경우, 애플리케이션 레벨의 덤프 로직(예: `pg_dump`)이나 WAL(Write-Ahead Logging) 백업 파이프라인을 병행 설계하십시오.
 - **[MUST] Ephemeral Storage Hard Limits:** 파드에서 `/tmp` 등 임시 데이터를 저장하기 위해 `emptyDir`을 사용할 때, 노드의 디스크를 고갈(Disk Pressure)시키는 현상을 방지하기 위해 `limits.ephemeral-storage` 값을 명시적으로 할당하십시오.
-</k8s_storage_stateful_standard>
+
