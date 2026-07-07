@@ -2,8 +2,7 @@
 
 > [!WARNING]
 > **Workspace Status Note**
-> 현재 **AWS 워크스페이스(`aws/`)**와 **Azure 워크스페이스(`azure/`)**의 프롬프트 세트는 최적화 및 튜닝이 완료된 🟢 프로덕션(Production) 레벨입니다. 
-> `k8s/` 및 `aiops/` 워크스페이스의 프롬프트들은 아키텍처 설계를 위해 **임시(Draft)**로 만들어 둔 상태이므로 사용 시 주의가 필요합니다.
+> 현재 **AWS(`aws/`)**, **Azure(`azure/`)**, **Kubernetes(`k8s/`)**, **Multi-Cloud(`multi-cloud/`)**, 그리고 **AIOps(`aiops/`)** 워크스페이스의 프롬프트 세트는 최적화 및 튜닝이 완전히 끝난 🟢 **프로덕션(Production) 레벨**입니다.
 
 > [!NOTE]
 > 이 문서는 최신 대형 언어 모델(LLM)의 성능을 극대화하고, 단순한 챗봇을 넘어 자율형 에이전트(Autonomous Agent)로 진화시키기 위해 업계 학계에서 검증된 **SOTA(State-of-the-Art) 프롬프트 및 워크플로우 이론**을 집대성한 백과사전입니다.  
@@ -289,7 +288,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 - `[MUST] FinOps Delegation`: "비용 추정은 `030-finops-optimization` 모듈을 참조하라"고 최상위 아키텍처 룰(`010-aws-core`)에 강제하여, 에이전트가 자연스럽게 FinOps 지식을 검색(RAG)하도록 유도합니다.
-- 005 계획서 템플릿(Plan) 작성 전 사내 룰을 무조건 샅샅이 검색하여 ADR 포맷에 맞춰 문서에 100% 반영하도록 강제(Agentic RAG)합니다.
+- **[Dynamic Cross-Cloud Routing]**: `multi-cloud/SKILL.md`를 통해 멀티 클라우드 질문 발생 시에만 `aws/SKILL.md`와 `azure/SKILL.md`를 동적으로 융합(Fusion)하고, 평소 단일 클라우드 작업 시에는 완벽히 격리(Isolation)하여 환각을 0%로 통제합니다.
 
 ---
 
