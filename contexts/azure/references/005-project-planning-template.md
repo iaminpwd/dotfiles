@@ -53,7 +53,7 @@ trigger: Apply these rules ONLY when planning, architecting, or creating a Maste
 </example>
 <example>
 [Bad]
-- VM 사용 금지
+- 서버는 무조건 VM으로 할 것
 - terraform apply 전 무조건 plan부터 돌릴 것
 </example>
 </examples>

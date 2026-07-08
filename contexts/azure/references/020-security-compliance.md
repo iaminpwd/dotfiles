@@ -62,7 +62,7 @@ password = data.azurerm_key_vault_secret.db_pass.value
 <example>
 [Bad]
 ```hcl
-password = "SuperSecret123!" # 하드코딩 절대 금지
+password = "SuperSecret123!" # 평문 패스워드 직접 입력 (취약점)
 ```
 </example>
 </examples>

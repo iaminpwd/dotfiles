@@ -59,4 +59,14 @@ priority: critical
 ## 7. 인프라 특화 검증 (Infra-Specific)
 - **[MUST] FinOps Delegation:** 비용 추정, Right-Sizing 등 FinOps 관련 상세 규칙은 `030-finops-optimization` 모듈을 참조하십시오.
 - **[MUST] Infra-Specific LLM-as-a-Judge:** 아키텍처 설계나 중대 인프라 스크립트 작성을 완료한 직후, 스스로 '평가자' 페르소나로 전환하여 **보안, 비용, 멱등성 3가지 측면**에서 산출물을 가혹하게 평가하고 자가 수정하십시오.
-- **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라/클라우드 글로벌 포매팅 도구의 전역 실행을 금지하고, 의도치 않은 변경을 막기 위해 반드시 타겟 파일명을 명시하여 실행하십시오.
+- **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라/클라우드 글로벌 포매팅 도구 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시하여 안전하게 실행하십시오.
+- **[MUST] 5D Integration Matrix (5차원 서비스 연동 검증):** 모든 Azure 인프라 코드를 작성하기 전, 단일 리소스 변경이라 할지라도 반드시 다음 절차를 따르십시오.
+  
+  **Step 0. Active Investigation (기존 인프라 실태 조사):** 코드 작성 전 `run_command`를 통해 연동 대상 서비스들의 **현재 실제 상태**(NSG 룰, RBAC Role Assignment, UDR, Private Endpoint 등)를 조회하여 팩트를 확보하십시오. 반드시 실제 조회 결과(팩트)만을 근거로 검증하십시오.
+  
+  그 후, 확보한 팩트를 바탕으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
+  1. **Network & Endpoint Topology:** VNet/Subnet 라우팅(UDR), Network Security Group(NSG) 양방향 포트, 그리고 Azure 내부 통신을 위한 **Private Endpoint (Private Link)** 매핑 상태.
+  2. **IAM/RBAC Dependency:** Azure AD(Entra ID) 기반 Role Assignment, Managed Identity 매핑 상태 및 최소 권한 원칙(Principle of Least Privilege) 누락 검증.
+  3. **Quotas & Limitations:** 리전별 Subscription Quotas 한계치 도달 여부 및 API Throttling 리스크 검토.
+  4. **Encryption & Security:** 리소스 간 통신 및 저장 시 **Azure Key Vault(AKV)** 권한 누락 방지 및 TLS/SSL 인증서 종속성.
+  5. **Lifecycle Ordering:** `depends_on`, 대기 스크립트 등을 통한 상/하위 리소스 프로비저닝 순서 보장.
