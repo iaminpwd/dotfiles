@@ -2,7 +2,8 @@
 
 > [!WARNING]
 > **Workspace Status Note**
-> 현재 **AWS(`aws/`)**, **Azure(`azure/`)**, **Kubernetes(`k8s/`)**, **Multi-Cloud(`multi-cloud/`)**, 그리고 **AIOps(`aiops/`)** 워크스페이스의 프롬프트 세트는 최적화 및 튜닝이 완전히 끝난 🟢 **프로덕션(Production) 레벨**입니다.
+> 현재 **AWS(`aws/`)**, **Azure(`azure/`)**, 그리고 **Dotfiles(`dotfiles/`)** 워크스페이스의 프롬프트 세트는 최적화 및 튜닝이 완전히 끝난 🟢 **프로덕션(Production) 레벨**입니다.
+> (그 외 K8s, Multi-Cloud, AIOps는 현재 🟡 **Draft** 상태로 튜닝 진행 중입니다.)
 
 > [!NOTE]
 > 이 문서는 최신 대형 언어 모델(LLM)의 성능을 극대화하고, 단순한 챗봇을 넘어 자율형 에이전트(Autonomous Agent)로 진화시키기 위해 업계 학계에서 검증된 **SOTA(State-of-the-Art) 프롬프트 및 워크플로우 이론**을 집대성한 백과사전입니다.  

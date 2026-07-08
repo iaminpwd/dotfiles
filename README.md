@@ -83,9 +83,9 @@ ls -la .gemini/
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/              # AWS 인프라 워크스페이스 룰북 🟢 Production
 │   ├── azure/            # Azure 인프라 워크스페이스 룰북 🟢 Production
-│   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟢 Production
-│   ├── multi-cloud/      # 멀티 클라우드(하이브리드) 워크스페이스 라우터 🟢 Production
-│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟢 Production
+│   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
+│   ├── multi-cloud/      # 멀티 클라우드(하이브리드) 워크스페이스 라우터 🟡 Draft
+│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │
 ├── git/
@@ -153,9 +153,9 @@ ls -la .gemini/
 |---|---|---|---|
 | **AWS** (`aws/`) | 🟢 **Production** | 13개 (`000`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
 | **Azure** (`azure/`) | 🟢 **Production** | 13개 (`000`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
-| **K8s** (`k8s/`) | 🟢 **Production** | 10개 (`000`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
-| **Multi-Cloud** (`multi-cloud/`) | 🟢 **Production** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
-| **AIOps** (`aiops/`) | 🟢 **Production** | 9개 (`000`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
+| **K8s** (`k8s/`) | 🟡 **Draft** | 10개 (`000`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
+| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
+| **AIOps** (`aiops/`) | 🟡 **Draft** | 9개 (`000`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
 | **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 5개 (`000`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
 
 ---
