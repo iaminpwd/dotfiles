@@ -10,6 +10,7 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt,
 - **[MUST] Declarative Configuration Management (선언적 구성 관리 강제):** 멱등성(Idempotency)을 유지하기 위해 시스템 설정 시 반드시 전용 구성 관리 도구(예: Ansible)나 네이티브 OS 스크립트(`user_data`)를 사용하십시오.
 
 ## 2. Terraform 엔지니어링 표준
+- **[MUST] Active Investigation (Step 0. 사전 팩트 검증):** Terraform(IaC) 코드 작성 전, 반드시 `run_command`로 `aws [서비스] describe-*` 명령어를 실행하여 현재 AWS 계정의 실제 리소스(VPC, Subnet, IAM Role 등) 상태를 먼저 물리적으로 조회하고, 그 팩트만을 유일한 근거로 삼아 코드를 제안하십시오.
 - **[PREFER] TGW:** 글로벌 확장성 확보를 위해 AWS Transit Gateway(TGW) 기반의 중앙 집중형 라우팅을 적극 제안하십시오.
 - **[MUST] State Management:** State 저장은 반드시 AWS S3 Backend와 DynamoDB State Locking을 사용하여 원격으로 안전하게 구성하십시오.
 - **[MUST] Multi-Env (Terragrunt):** 다중 환경 관리 시 **Terragrunt**를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입(Variable Injection) 아키텍처를 우선적으로 적용하십시오.

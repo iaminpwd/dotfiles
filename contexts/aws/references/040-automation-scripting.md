@@ -30,9 +30,9 @@ fi
 <example>
 [Bad]
 ```bash
-# set -e 없음
-rm -rf /tmp/mytemp # 하드코딩된 삭제
-apt-get install awscli -y # 무조건 설치 시도
+# 에러 방어 로직 누락
+rm -rf /tmp/mytemp # 변수 처리 없이 직접 삭제
+apt-get install awscli -y # 상태 확인 없이 즉시 설치 시도
 ```
 </example>
 </examples>

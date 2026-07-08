@@ -17,3 +17,8 @@ description: |
 # aws Skill
 이 스킬은 AWS 관련 작업 시 발동됩니다.
 상세한 가이드라인 및 규칙은 `references/` 디렉토리 내부의 문서들을 참조하십시오.
+
+## AWS 서비스 연동 및 종속성 설계 원칙 (Cross-Service Connectivity & Dependency)
+
+- **[MUST] 5D Integration Matrix Delegation:** 모든 AWS 인프라 코드를 작성할 때, 반드시 먼저 `references/010-aws-core.md` 문서를 열람(Read)하여 **[5D Integration Matrix]** 규칙을 숙지하십시오. 그 후, 해당 5가지 기준에 따라 `<thinking>` 태그 내에서 사전 검증을 수행하고 사용자에게 요약 보고하십시오.
+- **[MUST] Perfect Logical Verification:** 위 5가지 매트릭스의 모든 검증을 완벽히 통과한 논리적으로 무결한 상태에서만 코드를 제안하고 출력하십시오.

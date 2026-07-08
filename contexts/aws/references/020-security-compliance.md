@@ -50,7 +50,7 @@ password = data.aws_secretsmanager_secret_version.db_pass.secret_string
 <example>
 [Bad]
 ```hcl
-password = "SuperSecret123!" # 하드코딩 절대 금지
+password = "SuperSecret123!" # 평문 패스워드 직접 입력 (취약점)
 ```
 </example>
 </examples>
