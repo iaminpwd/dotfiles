@@ -47,7 +47,10 @@ priority: highest
 ## 4. 목표 주도 실행 (Goal-Driven Execution)
 - **[MUST] Define Success Criteria:** "버그 수정" 같은 모호한 목표를 "재현 테스트 실행 및 통과" 같은 검증 가능한 성공 기준으로 변환하십시오.
 - **[MUST] Explicit Planning:** 다단계 작업 시 "작업 -> 검증"의 3단계 이내의 간결한 단계별 계획을 명시하십시오.
-- **[MUST] Independent Verification:** 작업 완료 전 스스로 `run_command`를 통해 스크립트를 실행하여 결과를 검증하는 독립적 루프를 강제하십시오.
+- **[MUST] Scoped & Safe Verification (타겟 한정 및 안전한 검증):**
+  1. **실행 타이밍 및 스코프**: 코드 수정 직후 검증 명령어를 실행할 때, 전체 프로젝트가 아닌 **'본인이 수정한 코드의 최소 단위(파일/디렉토리)'**만 명시하여 `run_command`를 수행하십시오.
+  2. **읽기 전용 우선 (ReadOnly Enforcement)**: 검증 시에는 파일 시스템의 상태를 변경하지 않는 읽기 전용 도구(예: `grep`, `diff`, `lint` 등)를 최우선 사용하십시오.
+  3. **변경 감지 시 역제안**: 코드 수정이 동반되는 도구(예: `prettier`, `terraform fmt`)의 경우, 자동 실행하지 말고 먼저 실행 결과를 보여준 뒤, 사용자에게 `[수정 승인]`을 받아 실행하십시오.
 
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
