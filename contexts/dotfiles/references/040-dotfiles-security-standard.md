@@ -36,7 +36,7 @@ export GITHUB_TOKEN="ghp_xxx..."
 [Bad]
 ```bash
 # ~/.zshrc (Git으로 추적됨)
-export GITHUB_TOKEN="ghp_xxx..." # 절대 금지 (퍼블릭 저장소 유출 위험)
+export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위험)
 ```
 </example>
 </examples>
