@@ -46,3 +46,15 @@ priority: critical
 ## 6. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Task Breakdown & Planning:** 복잡한 아키텍처 작업 전, 반드시 `implementation_plan.md` 산출물을 작성하여 논리적 단계와 계획을 사용자에게 승인받으십시오.
 - **[Trigger: Architecture Proposed] 자가 비판 (Self-Critique):** K8s 아키텍처 초안을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 **단일 장애점(SPOF) 여부, OOM 위험성 및 롤백 전략 부재**를 집중 비판하고 스스로 수정하십시오.
+
+## 7. 인프라 특화 검증 (Infra-Specific)
+- **[MUST] 5D Integration Matrix (5차원 K8s 종속성 검증):** 모든 Kubernetes 매니페스트나 배포 스크립트를 작성하기 전, 파드 하나를 배포하더라도 반드시 다음 절차를 따르십시오.
+  
+  **Step 0. Active Investigation (기존 클러스터 실태 조사):** 코드 작성 전 `run_command`를 통해 연동 대상 리소스들의 **현재 실제 상태**(NetworkPolicy, RoleBinding, ConfigMap/Secret, ResourceQuota 등)를 `kubectl get`, `kubectl describe` 등으로 조회하여 팩트를 확보하십시오. 반드시 실제 조회 결과(팩트)만을 근거로 검증하십시오.
+  
+  그 후, 확보한 팩트를 바탕으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
+  1. **Network & Connectivity Topology:** Namespace 내/외부 통신을 제어하는 `NetworkPolicy` 양방향 룰, Ingress/Egress 라우팅, `Service` 포트 및 Service Mesh 엔드포인트 매핑 상태.
+  2. **IAM/RBAC Dependency:** `ServiceAccount`, `Role`, `RoleBinding`의 최소 권한 원칙(Principle of Least Privilege) 적용 여부 및 외부 클라우드 인증(OIDC 등) 매핑 검증.
+  3. **Quotas & Resource Limits:** Namespace 단위의 `ResourceQuota`, `LimitRange` 한계치 도달 여부 및 CPU/Memory Throttling (OOMKilled 등) 리스크 검토.
+  4. **Encryption & Secrets:** `Secret` 평문 노출 방지, External Secrets Operator 연동 상태 및 `cert-manager`를 통한 TLS/SSL 인증서 종속성 확인.
+  5. **Lifecycle & Probes:** `initContainers`를 통한 선행 파드 기동 확인, Helm Hooks 순서 보장, 그리고 무중단 배포를 위한 `readinessProbe`, `livenessProbe`, `preStop` 훅 구성의 무결성.
