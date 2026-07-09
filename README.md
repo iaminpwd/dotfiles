@@ -99,7 +99,7 @@ ls -la .gemini/
 │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
 │
 ├── zsh/
-│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어, auto_symlink 훅)
+│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
 │
 ├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
 ├── README.md             # 본 문서
@@ -132,8 +132,8 @@ ls -la .gemini/
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
 
 - **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`000-universal-core.md`)이 글로벌 Customizations Root인 `~/.gemini/config/AGENTS.md`로 주입되어 항상 백그라운드에서 동작합니다.
-- **도메인 스킬 자동 주입:** `cd ~/workspace/aws/src/my-repo` 시, Zsh `chpwd` 훅이 자동으로 환경별 특화 룰(`references/*.md`)과 `SKILL.md`를 해당 워크스페이스의 `.agents/skills/aws/` 하위로 심볼릭 링크하여 해당 환경에 진입할 때만 스킬이 활성화되도록 합니다.
-- **Git 커밋 완전 차단:** 자동 생성된 `.agents` 디렉토리와 글로벌 룰은 전역 `.gitignore_global`에 의해 원격 저장소와 팀원 PC를 오염시키지 않습니다.
+- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills.json`에 글로벌 스킬로 동적 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
+- **Git 커밋 차단:** 로컬에 생성된 보안/AI 설정들은 전역 `.gitignore_global`에 의해 원격 저장소를 오염시키지 않습니다.
 
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 
@@ -180,18 +180,6 @@ ls -la .gemini/
 
 > **[MUST] 수정 원칙:** 설정 파일을 직접 편집할 때는 반드시 `~/dotfiles/` 내의 원본 소스 파일만 조작하십시오. `~/.zshrc`를 직접 편집하면 symlink 아키텍처가 파괴됩니다.
 
-### 이중 Auto-Symlink 훅 동작 원리 (Zsh `chpwd`)
-
-Zsh 디렉토리 이동(`cd`) 이벤트를 감지하여 두 가지 핵심 심볼릭 링크를 자동 주입합니다.
-
-1. **마스터 코어 룰북 주입 훅 (`auto_symlink_contexts_core`)**
-   - 개발자가 새로운 AI 룰 폴더(예: `~/dotfiles/contexts/gcp/`)로 진입하기만 하면, 즉시 최상단 `000-universal-core.md` SSOT 마스터 파일을 해당 폴더 내 `references/` 디렉토리에 동적으로 링크 생성하여 멱등성을 보장합니다.
-2. **워크스페이스 스킬 주입 훅 (`auto_symlink_workspace_skills`)**
-   - 개발자가 인프라 작업 폴더(예: `~/workspace/aws/src/my-repo`)로 진입하면, 해당 환경 도메인(aws)의 `SKILL.md`와 참조 룰 문서들을 `.agents/skills/aws/` 하위로 자동 주입하여 상황별 스킬 컨텍스트를 동적으로 완성합니다.
-
-<p align="center">
-  <img src="assets/auto-symlink-hook.png" alt="Auto-Symlink Hook Workflow" width="480">
-</p>
 
 **결과 파일 구조 (예: `~/workspace/aws/src/my-terraform-repo/`)**
 

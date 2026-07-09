@@ -86,61 +86,51 @@ fi
 
 
 
-echo "[5/6] 제미나이 AI 에이전트 인프라 표준 가이드라인 동적 연결 중..."
+echo "[5/6] 사용자 워크스페이스 생성 및 제미나이 AI 글로벌 룰셋 등록 중..."
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
-# 모든 컨텍스트 디렉토리를 순회하여 환경 설정 (스킬 동적 배포 포함)
-for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
-  [ -d "$TARGET_DIR" ] || continue
-  _tmp="${TARGET_DIR%/}"
-  ENV_NAME="${_tmp##*/}"
-
-  echo "=> [$ENV_NAME] 기본 컨텍스트 파일 셋업 중..."
-
-  # references 폴더가 존재하는 경우에만 수행
-  if [ -d "$TARGET_DIR/references" ]; then
-    # [NEW] 자동 심볼릭 링크 생성 (새 워크스페이스 추가 시 SSOT 마스터 000 코어 연결)
-    if [ "$ENV_NAME" != "dotfiles" ]; then
-      ln -sf "../../000-universal-core.md" "$TARGET_DIR/references/000-universal-core.md"
-    fi
-
-    # [NEW] 공통 .aiexclude 베이스 템플릿 복사 (존재하지 않을 경우에만, 멱등성 유지)
-    if [ -f "$CONTEXTS_DIR/.base.aiexclude" ] && [ ! -f "$TARGET_DIR/.aiexclude" ]; then
-      cp "$CONTEXTS_DIR/.base.aiexclude" "$TARGET_DIR/.aiexclude"
-      echo "   Adding Base: .aiexclude"
-    fi
-  fi
-
-  # [NEW] AI 스킬 동적 매칭을 위한 SKILL.md 자동 생성 (존재하지 않을 경우)
-  if [ ! -f "$TARGET_DIR/SKILL.md" ] && [ "$ENV_NAME" != "dotfiles" ]; then
-    cat << EOF > "$TARGET_DIR/SKILL.md"
----
-name: $ENV_NAME
-description: $ENV_NAME 환경의 아키텍처, 인프라 배포, 트러블슈팅 및 보안 정책 컨텍스트
----
-# $ENV_NAME Skill
-
-이 스킬은 $ENV_NAME 관련 작업 시 발동됩니다.
-상세한 가이드라인 및 규칙은 \`references/\` 디렉토리 내부의 문서들을 참조하십시오.
-EOF
-    echo "   Adding Base: SKILL.md for $ENV_NAME"
-  fi
-
-  # 단일 워크스페이스(Workspace) 동적 할당 및 생성 (예: ~/workspace/aws)
-  if [ "$ENV_NAME" != "dotfiles" ]; then
-    WORKSPACE_DIR="$HOME/workspace/$ENV_NAME"
-    mkdir -p "$WORKSPACE_DIR/src"
-  fi
-
-  echo "   ✅ [$ENV_NAME] 룰북 빌드 및 스킬 동적 배포 완료"
-done
+# 사용자 실제 작업용 기본 워크스페이스 폴더 생성
+mkdir -p "$HOME/workspace"
+echo "   ✅ 기본 워크스페이스 생성 완료: ~/workspace"
 
 # 글로벌 AI 룰셋 링크 주입 (새 PC 환경 셋업용)
 echo "=> [AI Global Rules] 글로벌 AGENTS.md 링크 주입 중..."
 mkdir -p "$HOME/.gemini/config"
 ln -sfn "$CONTEXTS_DIR/000-universal-core.md" "$HOME/.gemini/config/AGENTS.md"
 echo "   ✅ 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.md"
+
+echo "=> [AI Global Rules] 글로벌 스킬 레지스트리(skills.json) 동적 생성 중..."
+SKILLS_JSON="$HOME/.gemini/config/skills.json"
+echo '{' > "$SKILLS_JSON"
+echo '  "entries": [' >> "$SKILLS_JSON"
+
+# 모든 컨텍스트 디렉토리 스캔 및 JSON 엔트리 생성
+entries=()
+for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
+  [ -d "$TARGET_DIR" ] || continue
+  ENV_NAME="$(basename "${TARGET_DIR%/}")"
+  
+  # dotfiles 컨텍스트는 글로벌 등록에서 제외
+  if [ "$ENV_NAME" = "dotfiles" ]; then
+    continue
+  fi
+  
+  entries+=("    { \"path\": \"$DOTFILES_DIR/contexts/$ENV_NAME\" }")
+done
+
+# 콤마 분리 처리 (마지막 요소 제외)
+for i in "${!entries[@]}"; do
+  if [ $i -lt $((${#entries[@]} - 1)) ]; then
+    echo "${entries[$i]}," >> "$SKILLS_JSON"
+  else
+    echo "${entries[$i]}" >> "$SKILLS_JSON"
+  fi
+done
+
+echo '  ]' >> "$SKILLS_JSON"
+echo '}' >> "$SKILLS_JSON"
+echo "   ✅ 글로벌 스킬 레지스트리 생성 완료: $SKILLS_JSON"
 
 # 로컬 dotfiles 워크스페이스용 AI 룰셋 및 스킬 링크 주입
 echo "=> [AI Local Rules] dotfiles 전용 스킬 링크 주입 중..."
