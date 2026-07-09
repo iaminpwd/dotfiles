@@ -44,7 +44,7 @@ cd ~/dotfiles
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
 | **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 커스터마이징 구조 주입 | `contexts/*/` 순회하며 글로벌 룰(`AGENTS.md`) 셋업 및 워크스페이스별 `SKILL.md` 생성 |
+| **[5/6]** AI 커스터마이징 구조 주입 | `contexts/*/` 순회하며 글로벌 룰(`AGENTS.md`) 셋업 및 글로벌 레지스트리(`skills.json`)에 도메인 스킬 자동 등록 |
 | **[6/6]** 시크릿 보안 훅 | Trufflehog 기반 Git `pre-commit` 보안 스캔 훅 자동 구성 (시크릿 유출 원천 차단) |
 
 ### Step 3. 터미널 재시작
@@ -63,13 +63,9 @@ mise ls
 # Stow symlink 확인
 ls -la ~/.zshrc ~/.gitconfig ~/.mise.toml
 
-# AI 컨텍스트 주입 확인
-ls ~/workspace/aws/src && cat ~/.gemini/config/AGENTS.md | head -5
-
-# 훅 동작 확인: aws workspace로 이동 후 확인
-cd ~/workspace/aws/src
-mkdir -p test-repo && cd test-repo && git init
-ls -la .gemini/
+# AI 글로벌 룰 및 스킬 레지스트리 등록 확인
+cat ~/.gemini/config/AGENTS.md | head -5
+cat ~/.gemini/config/skills.json
 ```
 
 ---
@@ -164,9 +160,30 @@ ls -la .gemini/
 
 ### 전체 아키텍처 흐름
 
-<p align="center">
-  <img src="assets/setup-pipeline.png" alt="setup.sh Installation Pipeline" width="520">
-</p>
+```mermaid
+flowchart LR
+    %% Definitions
+    classDef script fill:#1a73e8,stroke:#0f52ba,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef config fill:#34a853,stroke:#228b22,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef registry fill:#fbbc04,stroke:#d4af37,stroke-width:2px,color:#000,rx:8,ry:8
+    classDef skill fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef local fill:#ea4335,stroke:#b31b1b,stroke-width:2px,color:#fff,stroke-dasharray: 5 5,rx:8,ry:8
+
+    A("setup.sh Execution"):::script -->|Creates| B("Global Config Root"):::config
+    B --> C{"skills.json Registry"}:::registry
+    
+    C -->|Registers| D("AWS Skills"):::skill
+    C -->|Registers| E("Azure Skills"):::skill
+    C -->|Registers| F("AIOps Skills"):::skill
+
+    subgraph No_Local_Pollution ["Clean Workspace Architecture"]
+        G("Local Workspaces\n(Bypassed)"):::local
+    end
+
+    C -.->|No Symlinks| G
+    
+    style No_Local_Pollution fill:#f8f9fa,stroke:#dadce0,stroke-width:2px,color:#3c4043,stroke-dasharray: 5 5
+```
 
 ### GNU Stow 심볼릭 링크 구조
 
@@ -181,25 +198,37 @@ ls -la .gemini/
 > **[MUST] 수정 원칙:** 설정 파일을 직접 편집할 때는 반드시 `~/dotfiles/` 내의 원본 소스 파일만 조작하십시오. `~/.zshrc`를 직접 편집하면 symlink 아키텍처가 파괴됩니다.
 
 
-**결과 파일 구조 (예: `~/workspace/aws/src/my-terraform-repo/`)**
+**글로벌 스킬 적용**
 
-```text
-my-terraform-repo/
-├── .git/
-├── .agents/
-│   └── skills/
-│       └── aws/
-│           ├── SKILL.md
-│           └── references/ (도메인 특화 룰 마크다운 파일들의 symlink)
-├── .aiexclude              → ~/dotfiles/contexts/aws/.aiexclude (symlink)
-└── main.tf
-```
+모든 도메인 스킬은 `~/.gemini/config/skills.json` 글로벌 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
 ### 컨텍스트 빌드 파이프라인
 
-<p align="center">
-  <img src="assets/context-build.png" alt="AI Context Build Pipeline" width="680">
-</p>
+```mermaid
+flowchart TD
+    %% Definitions
+    classDef user fill:#ea4335,stroke:#b31b1b,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef agent fill:#8a2be2,stroke:#4b0082,stroke-width:3px,color:#fff,rx:10,ry:10
+    classDef core fill:#0f9d58,stroke:#0b8043,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef registry fill:#f4b400,stroke:#f09300,stroke-width:2px,color:#000,rx:8,ry:8
+    classDef domain fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff,rx:8,ry:8
+
+    A("User Request"):::user --> B{"AI Agent"}:::agent
+    
+    subgraph Global_Domain_Context ["Global Domain Context"]
+        C("000-universal-core.md"):::core
+        D{"skills.json Registry"}:::registry
+        E("Domain Skills"):::domain
+    end
+    
+    B -->|Direct Query| D
+    D -->|Loads Skill| E
+    
+    C -.->|Core Rules Injection| B
+    E -.->|Domain Rules Injection| B
+
+    style Global_Domain_Context fill:#f8f9fa,stroke:#dadce0,stroke-width:2px,color:#3c4043
+```
 
 ---
 
@@ -310,23 +339,22 @@ src
 vim ~/dotfiles/contexts/aws/references/020-security-compliance.md
 ```
 
-### 신규 워크스페이스 추가
+### 신규 도메인 스킬 추가
 
-새로운 환경(예: GCP)을 추가하려면 기존 워크스페이스 구조를 참고하여 디렉토리를 구성한 후 `setup.sh`를 재실행하십시오.
+새로운 환경(예: GCP)을 위한 AI 스킬을 추가하려면 `contexts/` 디렉토리에 폴더를 구성한 후 `setup.sh`를 재실행하십시오.
 
 ```bash
-# 1. 신규 워크스페이스 도메인 디렉토리 진입 
-# (진입 시 Zsh 훅이 작동하여 references 폴더와 000 마스터 코어 링크를 자동 주입합니다)
-mkdir -p ~/dotfiles/contexts/gcp
+# 1. 신규 도메인 컨텍스트 디렉토리 생성 
+mkdir -p ~/dotfiles/contexts/gcp/references
 cd ~/dotfiles/contexts/gcp
 
 # 2. 도메인 특화 모듈 파일 작성 (010부터 시작)
 touch references/010-gcp-core.md
 
-# setup.sh 재실행으로 자동 빌드 및 워크스페이스 생성
+# 3. setup.sh 재실행으로 글로벌 레지스트리(skills.json)에 자동 등록
 ~/dotfiles/setup.sh
 ```
 
 > [!NOTE]
-> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 디렉토리 추가 후 재실행만으로 `~/workspace/gcp/src/` 워크스페이스 환경과 `SKILL.md` 기반의 스킬 폴더 자동 링킹 셋업이 완벽하게 수행됩니다.
+> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`skills.json`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
 
