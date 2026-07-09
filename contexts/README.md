@@ -157,7 +157,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- Zsh `chpwd` 훅이 작업 폴더 진입 시 프로젝트 루트의 `.agents/skills/<도메인>/` 경로에 해당 환경의 스킬(`SKILL.md`)과 참조 룰들을 주입하여 동적으로 능력을 부여함.
+- `setup.sh` 실행 시 글로벌 레지스트리 `~/.gemini/config/skills.json`에 모든 도메인 스킬을 동적 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
 ```
 
 #### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)

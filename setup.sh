@@ -132,16 +132,7 @@ echo '  ]' >> "$SKILLS_JSON"
 echo '}' >> "$SKILLS_JSON"
 echo "   ✅ 글로벌 스킬 레지스트리 생성 완료: $SKILLS_JSON"
 
-# 로컬 dotfiles 워크스페이스용 AI 룰셋 및 스킬 링크 주입
-echo "=> [AI Local Rules] dotfiles 전용 스킬 링크 주입 중..."
-mkdir -p "$DOTFILES_DIR/.agents/skills/dotfiles"
-if [ -d "$CONTEXTS_DIR/dotfiles/references" ]; then
-  ln -sfn "$CONTEXTS_DIR/dotfiles/references" "$DOTFILES_DIR/.agents/skills/dotfiles/references"
-fi
-if [ -f "$CONTEXTS_DIR/dotfiles/SKILL.md" ]; then
-  ln -sfn "$CONTEXTS_DIR/dotfiles/SKILL.md" "$DOTFILES_DIR/.agents/skills/dotfiles/SKILL.md"
-fi
-echo "   ✅ 로컬 스킬 세팅 완료: $DOTFILES_DIR/.agents/"
+
 
 
 
