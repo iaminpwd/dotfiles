@@ -117,6 +117,7 @@ cat ~/.gemini/config/skills.json
 
 최신 AI 연구(OpenAI, Anthropic)에서 증명된 자율 주행 에이전트 원칙을 로컬 프롬프트 아키텍처에 강제(Hard Constraint)로 탑재했습니다. **에이전트는 다음의 5대 원칙을 무조건 준수해야 합니다.**
 
+
 - **도구 사용 (Tool Use):** 뇌피셜(Hallucination)에 의존한 이론적 처방을 엄격히 금지합니다. 반드시 `run_command`로 터미널을 능동 제어하여 상태를 검증하십시오.
 - **반성 및 자가 치유 (Reflection):** 코드 출력 전 `<self_critique>` 태그를 열어 멱등성과 보안 결함을 스스로 비판하십시오. 에러 발생 시 최대 3회 자가 치유 루프를 실행하며, 실패 시 Fail-Fast 서킷 브레이커가 작동합니다.
 - **프롬프트 자가 진화 (Prompt Self-Evolution):** 코드가 아닌 논리적 모순이나 엣지 케이스에 부딪힐 경우, 즉각 사내 규정(프롬프트 마크다운 원본) 자체의 허점을 의심하고 프롬프트 리팩토링을 사용자에게 역제안(Reverse Proposal)하십시오.
@@ -158,77 +159,22 @@ cat ~/.gemini/config/skills.json
 
 ## 작동 논리 및 아키텍처
 
-### 전체 아키텍처 흐름
+### setup.sh 설치 파이프라인
 
-```mermaid
-flowchart LR
-    %% Definitions
-    classDef script fill:#1a73e8,stroke:#0f52ba,stroke-width:2px,color:#fff,rx:8,ry:8
-    classDef config fill:#34a853,stroke:#228b22,stroke-width:2px,color:#fff,rx:8,ry:8
-    classDef registry fill:#fbbc04,stroke:#d4af37,stroke-width:2px,color:#000,rx:8,ry:8
-    classDef skill fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff,rx:8,ry:8
-    classDef local fill:#ea4335,stroke:#b31b1b,stroke-width:2px,color:#fff,stroke-dasharray: 5 5,rx:8,ry:8
-
-    A("setup.sh Execution"):::script -->|Creates| B("Global Config Root"):::config
-    B --> C{"skills.json Registry"}:::registry
-    
-    C -->|Registers| D("AWS Skills"):::skill
-    C -->|Registers| E("Azure Skills"):::skill
-    C -->|Registers| F("AIOps Skills"):::skill
-
-    subgraph No_Local_Pollution ["Clean Workspace Architecture"]
-        G("Local Workspaces\n(Bypassed)"):::local
-    end
-
-    C -.->|No Symlinks| G
-    
-    style No_Local_Pollution fill:#f8f9fa,stroke:#dadce0,stroke-width:2px,color:#3c4043,stroke-dasharray: 5 5
-```
+![setup.sh Installation Pipeline](assets/setup-pipeline.png)
 
 ### GNU Stow 심볼릭 링크 구조
 
-```text
-~/dotfiles/          (원본 소스)          ~/         (홈 디렉토리)
-├── zsh/.zshrc    ──────symlink──────►  ~/.zshrc
-├── vim/.vimrc    ──────symlink──────►  ~/.vimrc
-├── mise/.mise.toml ───symlink──────►  ~/.mise.toml
-└── git/.gitconfig ────symlink──────►  ~/.gitconfig
-```
-
-> **[MUST] 수정 원칙:** 설정 파일을 직접 편집할 때는 반드시 `~/dotfiles/` 내의 원본 소스 파일만 조작하십시오. `~/.zshrc`를 직접 편집하면 symlink 아키텍처가 파괴됩니다.
+![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
 
 
 **글로벌 스킬 적용**
 
 모든 도메인 스킬은 `~/.gemini/config/skills.json` 글로벌 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
-### 컨텍스트 빌드 파이프라인
+### AI 컨텍스트 빌드 파이프라인
 
-```mermaid
-flowchart TD
-    %% Definitions
-    classDef user fill:#ea4335,stroke:#b31b1b,stroke-width:2px,color:#fff,rx:8,ry:8
-    classDef agent fill:#8a2be2,stroke:#4b0082,stroke-width:3px,color:#fff,rx:10,ry:10
-    classDef core fill:#0f9d58,stroke:#0b8043,stroke-width:2px,color:#fff,rx:8,ry:8
-    classDef registry fill:#f4b400,stroke:#f09300,stroke-width:2px,color:#000,rx:8,ry:8
-    classDef domain fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff,rx:8,ry:8
-
-    A("User Request"):::user --> B{"AI Agent"}:::agent
-    
-    subgraph Global_Domain_Context ["Global Domain Context"]
-        C("000-universal-core.md"):::core
-        D{"skills.json Registry"}:::registry
-        E("Domain Skills"):::domain
-    end
-    
-    B -->|Direct Query| D
-    D -->|Loads Skill| E
-    
-    C -.->|Core Rules Injection| B
-    E -.->|Domain Rules Injection| B
-
-    style Global_Domain_Context fill:#f8f9fa,stroke:#dadce0,stroke-width:2px,color:#3c4043
-```
+![AI Context Build Pipeline](assets/ai-context-pipeline.png)
 
 ---
 

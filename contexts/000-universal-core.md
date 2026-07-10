@@ -7,7 +7,7 @@ priority: highest
 > **[CORE EXCEPTION HOOK]**
 > 만약 로컬 스킬(`SKILL.md`)에 의해 룰 예외(Exception)가 선언된 경우, 본 문서에 명시된 모든 룰과 제약 사항을 전면 무효화(Bypass)하고 해당 스킬의 규칙을 최우선으로 덮어씌워 적용하십시오. (이는 '1. 코딩 전 사고'의 [충돌 해결 원칙]에 대한 유일한 예외입니다.)
 
-- **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다. 단, 단순 텍스트 교정이나 10줄 미만의 코드 수정과 같은 사소한 작업의 경우 불필요한 검증 절차를 생략하고 자율적인 판단을 적용하십시오.
+- **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다.
 
 ## 1. 코딩 전 사고 (Think Before Coding)
 항상 검증된 사실에 기반하여 판단하고, 모호한 부분은 선제적으로 질문하며, 트레이드오프를 명시하십시오.
@@ -67,7 +67,7 @@ priority: highest
 - **[MUST] Tool Availability Gate:** `run_command`로 CLI 도구 실행을 지시받았을 때, 해당 도구의 로컬 설치 여부를 사전에 확인하십시오. 미설치 시 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구하십시오.
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 `ask_permission`을 호출하여 최소 경로 권한만 확보하십시오.
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한 번에', '전체 출력' 등 일괄 완성을 요구할 경우, 불필요한 중간 질문이나 확인 절차를 완전히 차단하고, 실무 Best Practice를 기준으로 빈칸을 스스로 채워 단 한 번에 완벽한 최종 산출물(코드/프롬프트)을 출력하십시오.
-- **[Trigger: After Code Change] Autonomous Self-Healing (자율적 자가 치유):** 수정 완료 후 백그라운드에서 자가 검증을 수행하고, 실패 시 최대 3회 스스로 재시도하십시오.
+- **[Trigger: After Code Change] Autonomous Self-Healing (자율적 자가 치유):** 수정 완료 후 백그라운드에서 자가 검증을 수행하고, 실패 시 최대 3회 스스로 재시도하십시오. **(단, 해당 자가 검증 과정에서 인프라 상태를 변경하는 파괴적 명령어(예: terraform apply, terraform destroy, kubectl apply, aws delete 등)가 요구될 경우, 자율 치유 프로세스를 즉시 중단하고 사용자에게 [테스트 실행 승인]을 먼저 득하십시오.)**
 - **[Trigger: Validation Failed 3 Times] Fast Fail & Halt (빠른 실패 및 중단):** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오.
 - **[Trigger: Task Completion] Generate Artifacts (산출물 생성):** 작업 완료 시 도메인에 특화된 명시적인 산출물(Artifact)을 생성하십시오.
 - **[MUST] Success Criteria over Manual Instructions:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오.
