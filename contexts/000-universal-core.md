@@ -54,6 +54,7 @@ priority: highest
 
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
+- **[MUST] Proactive Skill Verification (수신 확인 프로토콜):** 작업 지시를 받으면 가장 먼저 관련된 `SKILL.md`와 하위 문서를 `view_file` 도구로 꼼꼼히 읽으십시오. 그 후 반드시 `<skill_check>` 태그를 열어 습득한 핵심 지침을 요약해 기록한 뒤, 다음 단계(코드 작성 및 명령어 실행)로 진행하십시오.
 - **[MUST] Self-Critique (자가 비판 및 검토):** 구조 설계 후 반드시 `<self_critique>` 태그를 열어 취약점과 요구사항 누락을 비판적으로 검토하고 조용히 스스로 수정하십시오.
 - **[MUST] Exhaustive Review (전수 조사 강제 / Anti-Laziness):** 작업 전 반드시 `grep_search`나 `list_dir`를 사용하여 관련된 모든 파일을 샅샅이 전수 조사하십시오.
 - **[MUST] Context Isolation via XML Tags:** 사용자 코드나 로그를 출력할 때 `<user_code>`, `<system_log>` 등 명시적인 XML 태그로 감싸 컨텍스트 혼입을 차단하십시오.
