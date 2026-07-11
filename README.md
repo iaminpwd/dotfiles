@@ -44,8 +44,8 @@ cd ~/dotfiles
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
 | **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 커스터마이징 구조 주입 | `contexts/*/` 순회하며 글로벌 룰(`AGENTS.md`) 셋업 및 글로벌 레지스트리(`skills.json`)에 도메인 스킬 자동 등록 |
-| **[6/6]** 시크릿 보안 훅 | Trufflehog 기반 Git `pre-commit` 보안 스캔 훅 자동 구성 (시크릿 유출 원천 차단) |
+| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업 및 로컬 전용 스킬(`.agents/skills.json`) 동적 생성을 통한 Git 트리 클린 아키텍처 |
+| **[6/6]** 시크릿 보안 훅 | Trufflehog 보안 스캔 훅 + **Shadow State(스테이징 메모리 잔류) 방어 로직 내장 및 스캐너 오탐 최적화** |
 
 ### Step 3. 터미널 재시작
 
@@ -75,7 +75,8 @@ cat ~/.gemini/config/skills.json
 ```text
 ~/dotfiles
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
-│   ├── 000-universal-core.md  # 전 워크스페이스 공통 마스터 엔진 (SSOT)
+│   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
+│   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/              # AWS 인프라 워크스페이스 룰북 🟢 Production
 │   ├── azure/            # Azure 인프라 워크스페이스 룰북 🟢 Production
@@ -128,7 +129,7 @@ cat ~/.gemini/config/skills.json
 
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
 
-- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`000-universal-core.md`)이 글로벌 Customizations Root인 `~/.gemini/config/AGENTS.md`로 주입되어 항상 백그라운드에서 동작합니다.
+- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`base.AGENTS.md`)과 전역 무시 룰(`.base.aiexclude`)이 글로벌 Customizations Root(`~/.gemini/config/`)로 동적 주입됩니다.
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills.json`에 글로벌 스킬로 동적 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **Git 커밋 차단:** 로컬에 생성된 보안/AI 설정들은 전역 `.gitignore_global`에 의해 원격 저장소를 오염시키지 않습니다.
 
