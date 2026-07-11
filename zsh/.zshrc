@@ -41,6 +41,10 @@ alias kdp='kubectl describe pod'
 alias klogs='kubectl logs -f'
 alias kex='kubectl exec -i -t'
 alias knet='kubectl run netshoot --image=nicolaka/netshoot --rm -it --restart=Never -- zsh'
+alias kgd='kubectl get deployments'
+alias kgn='kubectl get nodes'
+alias krm='kubectl delete'
+alias kw='watch kubectl'
 
 # 2.5. Docker & Helm 관련
 alias d='docker'
@@ -53,6 +57,8 @@ alias tfi='terraform init'
 alias tff='terraform fmt -recursive'
 alias tfv='terraform validate'
 alias tfp='terraform plan'
+alias tfa='terraform apply'
+alias tfw='terraform workspace'
 
 # 4. 도구 환경 활성화 (Mise)
 eval "$(~/.local/bin/mise activate zsh)"
@@ -63,6 +69,10 @@ if command -v fzf &> /dev/null; then
 fi
 # ------------------------------------
 
+
+# --- [기타 도구 및 유틸리티] ---
+alias ap='ansible-playbook'
+alias myip='curl -s ifconfig.me'
 
 # 로컬 환경 변수(GitHub Token, 클라우드 API Key 등 시크릿)를 안전하게 관리하기 위한 분리 파일 로드
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local

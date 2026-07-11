@@ -213,21 +213,22 @@ cat ~/.gemini/config/skills.json
 | 카테고리 | 단축어 | 명령어 | 단축어 | 명령어 |
 | :--- | :--- | :--- | :--- | :--- |
 | **Terraform** | `tf` | `terraform` | `tfi` | `terraform init` |
-| | `tfp` | `terraform plan` | `tfv` | `terraform validate` |
-| | `tff` | `terraform fmt -recursive` | | |
+| | `tfp` / `tfa` | `plan` / `apply` | `tfv` | `terraform validate` |
+| | `tff` | `terraform fmt -recursive` | `tfw` | `terraform workspace` |
 | **Kubernetes** | `k` | `kubectl` | `kx` / `kn` | `kubectx` / `kubens` |
-| | `kgp` | `kubectl get pods` | `kgs` | `kubectl get svc` |
+| | `kgp` / `kgd` | `get pods` / `get deployments` | `kgs` / `kgn` | `get svc` / `get nodes` |
 | | `kga` | `kubectl get all` | `kdp` | `kubectl describe pod` |
 | | `klogs` | `kubectl logs -f` | `kex` | `kubectl exec -i -t` |
-| | `knet` | `netshoot 실행 (트러블슈팅)` | | |
+| | `krm` / `kw` | `kubectl delete` / `watch kubectl` | `knet` | `netshoot 실행 (트러블슈팅)` |
 | **Docker/Helm** | `d` | `docker` | `dc` / `h`| `docker-compose` / `helm`|
+| **Ansible** | `ap` | `ansible-playbook` | | |
 | **Git** | `git st` | `status` | `git co` | `checkout` |
 | | `git cb` | `checkout -b` | `git br` | `branch` |
 | | `git cm` | `commit -m` | `git df` | `diff` |
 | | `git amend` | `commit --amend --no-edit` | `git lg` | `컬러 그래프 히스토리` |
 | **시스템/기타** | `src` | `source ~/.zshrc (설정 재로드)` | `ll` | `ls -alF` |
 | | `fd` | `fdfind (충돌 해결)` | `c` / `e` | `code .` / `explorer.exe .` |
-| | `catcode` | `인프라 코드 전체 추출 (all_code.txt)` | | |
+| | `myip` | `curl -s ifconfig.me` | | |
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
 
