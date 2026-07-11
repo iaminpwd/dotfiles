@@ -100,6 +100,9 @@ mkdir -p "$HOME/.gemini/config"
 ln -sfn "$CONTEXTS_DIR/000-universal-core.md" "$HOME/.gemini/config/AGENTS.md"
 echo "   ✅ 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.md"
 
+ln -sfn "$CONTEXTS_DIR/.base.aiexclude" "$HOME/.gemini/config/.aiexclude"
+echo "   ✅ 글로벌 AI 제외 목록(aiexclude) 세팅 완료: ~/.gemini/config/.aiexclude"
+
 echo "=> [AI Global Rules] 글로벌 스킬 레지스트리(skills.json) 동적 생성 중..."
 SKILLS_JSON="$HOME/.gemini/config/skills.json"
 echo '{' > "$SKILLS_JSON"
@@ -132,8 +135,18 @@ echo '  ]' >> "$SKILLS_JSON"
 echo '}' >> "$SKILLS_JSON"
 echo "   ✅ 글로벌 스킬 레지스트리 생성 완료: $SKILLS_JSON"
 
-
-
+echo "=> [AI Local Rules] 워크스페이스 전용 로컬 스킬(.agents/skills.json) 동적 생성 중..."
+LOCAL_AGENTS_DIR="$DOTFILES_DIR/.agents"
+mkdir -p "$LOCAL_AGENTS_DIR"
+cat << 'EOF' > "$LOCAL_AGENTS_DIR/skills.json"
+{
+  "_comment": "이 워크스페이스(dotfiles) 전용 스킬 등록 파일. 스킬 발동 시 전역 룰을 무시하고 contexts/dotfiles 내부의 전용 프롬프트를 따릅니다.",
+  "entries": [
+    { "path": "contexts/dotfiles" }
+  ]
+}
+EOF
+echo "   ✅ 로컬 스킬 레지스트리 생성 완료: $LOCAL_AGENTS_DIR/skills.json"
 
 
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
