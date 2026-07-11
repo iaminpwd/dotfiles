@@ -97,7 +97,7 @@ echo "   ✅ 기본 워크스페이스 생성 완료: ~/workspace"
 # 글로벌 AI 룰셋 링크 주입 (새 PC 환경 셋업용)
 echo "=> [AI Global Rules] 글로벌 AGENTS.md 링크 주입 중..."
 mkdir -p "$HOME/.gemini/config"
-ln -sfn "$CONTEXTS_DIR/000-universal-core.md" "$HOME/.gemini/config/AGENTS.md"
+ln -sfn "$CONTEXTS_DIR/base.AGENTS.md" "$HOME/.gemini/config/AGENTS.md"
 echo "   ✅ 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.md"
 
 ln -sfn "$CONTEXTS_DIR/.base.aiexclude" "$HOME/.gemini/config/.aiexclude"
