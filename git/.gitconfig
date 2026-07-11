@@ -3,7 +3,7 @@
     # 로컬에만 존재하는 별도 파일을 불러와서 적용합니다.
     path = ~/.gitconfig.local
 
-[includeIf "gitdir:~/workspace/**/src/"]
+[includeIf "gitdir:~/workspace/**/"]
     path = ~/.gitconfig-workspace
 
 [core]
