@@ -152,7 +152,7 @@ echo "   ✅ 로컬 스킬 레지스트리 생성 완료: $LOCAL_AGENTS_DIR/skil
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
 if command -v trufflehog &> /dev/null; then
   echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."
-  trufflehog filesystem "$DOTFILES_DIR" --no-update || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
+  trufflehog filesystem "$DOTFILES_DIR" --exclude-paths="$DOTFILES_DIR/.git" --no-update || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
 else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi
@@ -170,6 +170,16 @@ if command -v trufflehog &> /dev/null; then
   if [ -z "$STAGED_FILES" ]; then
     exit 0
   fi
+  
+  # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
+  for FILE in $STAGED_FILES; do
+    if [ ! -f "$FILE" ]; then
+      echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
+      echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
+      echo "    반드시 'git rm --cached $FILE' 명령어로 Git 캐시에서도 완전히 지워야 합니다!)"
+      exit 1
+    fi
+  done
   
   # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
   trufflehog filesystem $STAGED_FILES --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
