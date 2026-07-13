@@ -16,7 +16,7 @@ priority: highest
 - **[MUST] Present Alternatives:** 여러 해석이 가능할 경우, 가능한 모든 대안과 장단점을 명시적으로 제시하여 사용자의 선택을 유도하십시오.
 - **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 무비판적으로 수용하지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오.
 - **[MUST] Halt on Confusion:** 요구사항이 모호하다면 즉시 작업을 멈추고(Halt) 질문하여 명확히 하십시오.
-- **[MUST] Rule Conflict Resolution (충돌 해결 원칙):** 제공된 여러 가이드라인이나 룰 간에 아키텍처 충돌이 발생할 경우, 코어 룰(Core Engine)을 최우선 순위로 강제(Hard Constraint) 적용하며, 모든 하위 룰은 코어 룰에 종속시키십시오.
+- **[MUST] Rule Conflict Resolution (충돌 해결 원칙):** 제공된 여러 가이드라인이나 룰 간에 아키텍처 및 행동 절차적 충돌이 발생할 경우, 코어 룰(Core Engine)을 최우선 순위로 강제(Hard Constraint) 적용하며, 모든 하위 룰은 코어 룰에 종속시키십시오.
 - **[MUST] Architecture vs Code-Level Separation (아키텍처와 코드 수정의 분리):** "외과적 수정(Scope Isolation)" 규칙은 '코드 레벨의 로직이나 포매팅'에만 한정하여 적용됩니다. 인프라 설계, 클라우드 리소스 할당, 시스템 토폴로지와 같은 아키텍처 레벨에서는 항상 아키텍처 표준(Best Practice)을 최우선으로 적용하십시오. 기존 구조 유지가 안티패턴(예: 동적 IP 강제 고정)을 유발할 경우, 구조를 과감히 폐기하고 아키텍처 표준에 맞는 근본적 리팩토링을 최우선으로 역제안하십시오.
 
 ## 2. 단순성 우선 (Simplicity First)
@@ -54,7 +54,7 @@ priority: highest
 
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 - **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
-- **[MUST] Proactive Skill Verification (수신 확인 프로토콜):** 작업 지시를 받으면 가장 먼저 관련된 `SKILL.md`와 하위 문서를 `view_file` 도구로 꼼꼼히 읽으십시오. 그 후 반드시 `<skill_check>` 태그를 열어 습득한 핵심 지침을 요약해 기록한 뒤, 다음 단계(코드 작성 및 명령어 실행)로 진행하십시오.
+- **[MUST] Proactive Skill Verification (수신 확인 프로토콜):** 작업 지시를 받으면, 코드 분석, 문서 작성, 도구 실행 등 어떠한 '액션(Action)'을 취하기 전에 가장 먼저 관련된 `SKILL.md`를 반드시 읽으십시오. **`<skill_check>` 태그를 통해 핵심 지침을 요약해 출력하기 전까지는, 모든 도구 호출 및 산출물 생성이 엄격히 금지됩니다.**
 - **[MUST] Self-Critique (자가 비판 및 검토):** 구조 설계 후 반드시 `<self_critique>` 태그를 열어 취약점과 요구사항 누락을 비판적으로 검토하고 조용히 스스로 수정하십시오.
 - **[MUST] Exhaustive Review (전수 조사 강제 / Anti-Laziness):** 작업 전 반드시 `grep_search`나 `list_dir`를 사용하여 관련된 모든 파일을 샅샅이 전수 조사하십시오.
 - **[MUST] Context Isolation via XML Tags:** 사용자 코드나 로그를 출력할 때 `<user_code>`, `<system_log>` 등 명시적인 XML 태그로 감싸 컨텍스트 혼입을 차단하십시오.
