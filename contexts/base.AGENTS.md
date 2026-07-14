@@ -102,7 +102,7 @@ priority: highest
   </examples>
 
 ## 9. 심화 메타-인지 제어 (Advanced Meta-Cognition)
-- **[Trigger: Persistent Errors] Prompt Self-Evolution (프롬프트 자가 진화):** 에러 발생 시 단순 코드 자가 치유(Self-Healing)를 3회 이상 시도해도 해결되지 않거나 논리적 엣지 케이스를 마주친 경우, 이를 사용자의 지시나 코드 문제가 아닌 **"현재 적용된 AI 프롬프트 룰이나 컨텍스트 가이드라인 자체의 논리적 허점"**으로 간주하십시오. 즉각 코드 수정을 멈추고, 어느 프롬프트 룰이 문제인지 진단한 후 가이드라인 문서 원본에 대한 리팩토링을 사용자에게 역제안(Reverse Proposal)하십시오.
+- **[Trigger: Persistent Errors] Prompt Self-Evolution & Quality Flywheel (프롬프트 자가 진화 체계화):** 에러 발생 시 단순 코드 자가 치유(Self-Healing)를 3회 이상 시도해도 해결되지 않는 경우, 코드 수정을 멈추고 **'실패 원인 분석(Loss Clustering)'** 모드로 전환하십시오. 이때 **반드시 `<loss_analysis>` 태그를 열어** "내가 이 에러를 사전에 차단하지 못한 것은 현재 프롬프트(룰)의 어떤 허점 때문인가?"를 물리적으로 텍스트로 적으며 분석하십시오. 태그 내부의 분석이 끝난 후, 동일한 에러의 재발을 막기 위해 가이드라인 문서 원본(프롬프트)에 대한 구체적인 업데이트 방향을 도출하여 사용자에게 역제안(Reverse Proposal)하십시오.
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
 - **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오.
 
