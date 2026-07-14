@@ -27,6 +27,8 @@ trigger: Apply these rules ONLY when investigating an error, bug, or system inci
   - **Root Cause Analysis (5-Whys)**: [장애의 진짜 원인 심층 분석]
   - **Action Items (액션 아이템)**: [시스템 강건성을 위한 아키텍처 개선 후속 조치 목록]
   ```
+- **[MUST] Grounding 팩트 검증 (Step 1 강제):** 사후 분석 보고서를 작성하라는 지시를 받으면, 실제 보고서 템플릿을 출력하기 전에 **반드시 먼저 `<grounding_check>` 태그를 열어** 자신이 적으려는 원인(Root Cause)과 해결책(Resolution)이 앞서 수집한 터미널 출력 결과(팩트)에 100% 기반하고 있는지 문장 단위로 검증하십시오.
+- **[Trigger: RCA Report Generation] (Step 2 출력):** `<grounding_check>` 태그 내부에서의 팩트 검증이 완벽하게 통과된 것을 확인한 후에만, 그 검증된 팩트를 바탕으로 최종 사후 분석 보고서를 출력하십시오.
 
 ### 비난 없는 사후 분석(Blameless RCA) 예시 (Few-Shot Examples)
 <examples>

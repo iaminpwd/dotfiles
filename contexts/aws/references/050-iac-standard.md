@@ -46,7 +46,10 @@ terraform {
 </example>
 </examples>
 
-- **[Trigger: Before Terraform Apply] 자가 비판 및 편차 검증 (Self-Critique):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform plan`을 실행하고 스스로 `<self_critique>` 태그를 열어 **의도치 않은 리소스 재생성(Destroy & Recreate)에 따른 프로덕션 다운타임 및 데이터 유실 가능성**을 집중 비판하십시오. 통과한 경우에만 `terraform apply`를 실행하십시오.
+- **[Trigger: Before Terraform Apply] 자가 비판 및 구조화된 채점 (Self-Critique & Structured Judge):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform plan`을 실행하고 스스로 `<self_critique>` 태그를 열어 다음 2가지 기준(Metric)으로 현재 Plan 결과를 1~5점으로 채점하십시오. (채점 시 반드시 `- [기준명]: [점수]점 - 사유: ...` 포맷을 명시적으로 사용하십시오.)
+  - Criteria 1 (안전성): 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하는가?
+  - Criteria 2 (보안성): Security Group이나 IAM 권한이 과도하게 열려있지 않은가? (5점: 완벽히 안전 / 3점: 경고 수준 / 1점: 치명적 위험)
+  채점 결과가 두 기준 모두 5점 만점일 경우에만 사용자에게 Plan 결과와 채점 내용을 보고하고 명시적인 `[Apply 승인]`을 요청하십시오. 5점 미만일 경우 코드를 안전하게 수정하여 재작성하십시오.
 - **[MUST] SG Lazy Deletion Control:** Lambda 등 VPC ENI와 강하게 결합되는 Security Group을 다룰 때는, AWS의 ENI 지연 삭제(Lazy Deletion) 과정에서 안정적인 리소스 수명 주기 제어(Lifecycle Management)를 보장하기 위해 `name_prefix = "..."`를 적극 사용하고, `lifecycle { create_before_destroy = true }` 블록을 필수로 포함하십시오.
 - **[Trigger: Terraform Apply Completion] IaC 배포 요약 (IaC Deployment Summary):** Terraform Apply가 성공적으로 완료된 직후, 추가/변경/삭제된 리소스 목록(Drift)과 `infracost`를 통한 예상 비용 영향을 `iac-deployment-summary.md` 산출물에 문서화하십시오.
 
