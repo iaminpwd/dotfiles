@@ -83,7 +83,7 @@ cat ~/.gemini/config/skills.json
 │   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
 │   ├── multi-cloud/      # 멀티 클라우드(하이브리드) 워크스페이스 라우터 🟡 Draft
 │   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
-│   ├── pre-flight-check/ # 사전 안전성 검증 룰북 및 스크립트 🟢 Production
+│   ├── pre-flight-check/ # 사전 안전성 검증 룰북 및 스크립트 🟡 Draft
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │
 ├── git/
