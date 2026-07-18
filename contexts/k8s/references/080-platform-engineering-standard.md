@@ -6,7 +6,7 @@ trigger: Apply these rules ONLY when designing platform engineering, internal de
 # 컨텍스트 모듈: Enterprise Platform Engineering 및 고급 아키텍처 패턴
 
 ## 1. 플랫폼 추상화 (Platform Engineering & IDP)
-- **[MUST] Developer Experience (DevEx) & Abstraction:** 인지 부하(Cognitive Load)를 줄이기 위해 애플리케이션 개발자에게 순수 K8s YAML 매니페스트 덩어리를 추상화하여 제공하십시오. 파드 스케일링, 인그레스 라우팅 설정 등을 사내 전용 커스텀 Helm Chart나 Kustomize Base로 추상화하여 제공하는 플랫폼 엔지니어링 패러다임을 준수하십시오.
+- **[MUST] Developer Experience (DevEx) & Abstraction:** 인지 부하(Cognitive Load)를 줄이기 위해 애플리케이션 개발자에게 순수 K8s YAML 매니페스트를 직접 노출하는 방식 대신, 이를 추상화하여 제공하십시오. 파드 스케일링, 인그레스 라우팅 설정 등을 사내 전용 커스텀 Helm Chart나 Kustomize Base로 추상화하여 제공하는 플랫폼 엔지니어링 패러다임을 준수하십시오.
 - **[PREFER] Internal Developer Platform (IDP):** 다수의 개발팀이 존재하는 엔터프라이즈의 경우, 개발자가 CLI 명령어를 학습할 필요 없이 **Backstage**와 같은 포털에서 마이크로서비스 골격과 인프라를 셀프 서비스(Self-Service)로 프로비저닝할 수 있는 최상위 거버넌스 아키텍처를 권장하십시오.
 - **[MUST] Hard Isolation via vCluster:** Multi-tenant 환경 설계 시 네임스페이스 기반의 소프트 격리(Soft Isolation) 한계를 극복하기 위해, 테넌트(개발팀)마다 독립적인 API 서버와 제어 평면(Control Plane)을 제공하는 **vcluster (Virtual Cluster)** 아키텍처를 최우선으로 제안하십시오. 이를 통해 CRD 충돌 방지와 완벽한 격리(Hard Isolation)를 달성하십시오.
 

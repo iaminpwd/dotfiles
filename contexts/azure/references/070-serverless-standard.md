@@ -49,6 +49,7 @@ resource "azurerm_eventgrid_event_subscription" "example" {
 
 ## 3. 배포 및 패키징
 - **[PREFER] Container Image:** 배포 패키징 시 종속성(Dependencies) 용량 한계를 극복하고 로컬 테스트 용이성을 확보하기 위해, Zip 파일 방식보다 **컨테이너 이미지(Container Image) 배포** 방식을 우선 고려하십시오.
-- **[MUST] Bicep Validation (CLI):** Bicep 기반의 인프라 코드 작성 시 반드시 `run_command`로 `az bicep build -f <특정_템플릿_파일>`을 실행하여 템플릿 문법을 사전 검증하십시오.
+- **[MUST] Bicep Validation (CLI):** Bicep 기반의 인프라 코드 작성 시, 로컬에 Azure CLI 및 `bicep` 확장이 설치되어 있다면 `run_command`로 `az bicep build -f <특정_템플릿_파일>`을 실행하여 템플릿 문법을 사전 검증하십시오.
 - **[MUST] Azure SDK Safety:** Azure SDK for Python 기반의 Azure Functions 코드 작성 및 리뷰 시, 대량 조회용 페이징(Paging) 처리 및 `azure.core.exceptions` 예외 처리의 안정성 확보를 깐깐하게 검토하십시오.
-- **[Trigger: After Azure Functions Code Edit] 로컬 인보크 테스트 (Local Invoke Trigger):** 수정된 Azure Functions 코드를 클라우드에 배포하기 전, 반드시 `run_command`를 통해 `func start`를 실행하여 로컬에서 함수를 시뮬레이션(테스트)하십시오.
+- **[Trigger: After Azure Functions Code Edit] 로컬 인보크 테스트 (Local Invoke Trigger):** 수정된 Azure Functions 코드를 클라우드에 배포하기 전, 로컬에 `Azure Functions Core Tools(func)`가 설치되어 있다면 반드시 `run_command`를 통해 `func start`를 실행하여 로컬에서 함수를 시뮬레이션(테스트)하십시오.
+- **[MUST] API Call Idempotency (ClientRequestId):** Azure SDK나 Azure CLI를 활용해 리소스를 동적으로 생성하는 스크립트를 작성할 때, 요청 재시도 시의 중복 생성을 원천 차단하기 위해 반드시 고유 식별자(`client-request-id` 헤더 등)를 포함하여 요청을 전송하십시오.

@@ -65,8 +65,8 @@ priority: critical
   **Step 0. Active Investigation (기존 인프라 실태 조사):** 코드 작성 전 `run_command`를 통해 연동 대상 서비스들의 **현재 실제 상태**(NSG 룰, RBAC Role Assignment, UDR, Private Endpoint 등)를 조회하여 팩트를 확보하십시오. 반드시 실제 조회 결과(팩트)만을 근거로 검증하십시오.
   
   그 후, 확보한 팩트를 바탕으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
-  1. **Network & Endpoint Topology:** VNet/Subnet 라우팅(UDR), Network Security Group(NSG) 양방향 포트, 그리고 Azure 내부 통신을 위한 **Private Endpoint (Private Link)** 매핑 상태.
-  2. **IAM/RBAC Dependency:** Azure AD(Entra ID) 기반 Role Assignment, Managed Identity 매핑 상태 및 최소 권한 원칙(Principle of Least Privilege) 누락 검증.
+  1. **Network & Endpoint Topology:** VNet/Subnet 라우팅(UDR), Network Security Group(NSG) 양방향 포트, 그리고 Azure 내부 통신을 위한 **Private Endpoint (Private Link)** 매핑 상태. 특히 Private Endpoint 설계 시, 대상 서비스가 서브넷(Subnet) 및 프라이빗 DNS 존(Private DNS Zone)에 유효하게 통합/연동되었는지 네트워크 흐름을 검증하십시오.
+  2. **IAM/RBAC Dependency:** Azure AD(Entra ID) 기반 Role Assignment, Managed Identity 매핑 상태 및 최소 권한 원칙(Principle of Least Privilege) 누락 검증. 특히 Role Assignment 작성 시 대상 Principal ID(사용자/Managed Identity)는 반드시 동적 변수로 바인딩하고, Scope 정의의 정확성을 검증하십시오.
   3. **Quotas & Limitations:** 리전별 Subscription Quotas 한계치 도달 여부 및 API Throttling 리스크 검토.
-  4. **Encryption & Security:** 리소스 간 통신 및 저장 시 **Azure Key Vault(AKV)** 권한 누락 방지 및 TLS/SSL 인증서 종속성.
+  4. **Encryption & Security:** 리소스 간 통신 및 저장 시 **Azure Key Vault(AKV)** 권한 누락 방지 및 TLS/SSL 인증서 종속성. 특히 고객 관리형 키(CMK) 암호화 사용 시, Key Vault의 액세스 정책(Access Policy) 또는 Azure RBAC 권한에 대상 Managed Identity의 키 사용 권한(가져오기, 래프 해제 등)이 양방향으로 연동되었는지 검증하십시오.
   5. **Lifecycle Ordering:** `depends_on`, 대기 스크립트 등을 통한 상/하위 리소스 프로비저닝 순서 보장.

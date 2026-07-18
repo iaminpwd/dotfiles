@@ -7,8 +7,8 @@ trigger: Apply these rules ONLY when designing Azure infrastructure, provisionin
 
 ## 1. FinOps 설계 철학
 - **[PREFER] Cost Optimization:** 적정 리소스 사이징(Right-Sizing)을 달성하기 위해 Spot Virtual Machines 활용, ARM/Ampere Altra 프로세서 전환, Autoscaling(VMSS) 최적화 등 클라우드 비용 효율성을 적극 제안하십시오.
-- **[Trigger: Infrastructure Design / Terraform Edit] 비용 추정 (Cost Estimation):** 인프라 설계나 코드를 제안할 때 반드시 `run_command`를 통해 `infracost breakdown --path <특정_경로>`를 실행하여 변경 사항에 따른 비용 영향을 정량적으로 제시하십시오.
-- **[Trigger: Cost Estimation Completion] 핀옵스 비용 보고서 (FinOps Cost Report):** 비용 추정을 완료한 후, 반드시 각 리소스별 상세 비용 분석을 마크다운 표 형태로 `finops-cost-report.md` 산출물에 문서화하십시오.
+- **[Trigger: Infrastructure Design / Terraform Edit] 비용 추정 (Cost Estimation):** 인프라 설계나 코드를 제안할 때, 로컬에 `infracost` 도구가 설치되어 있고 API key 등 환경이 준비되어 있다면 `run_command`를 통해 `infracost breakdown --path <특정_경로>`를 실행하여 변경 사항에 따른 비용 영향을 정량적으로 제시하십시오.
+- **[Trigger: Cost Estimation Completion] 핀옵스 비용 보고서 (FinOps Cost Report):** 위의 비용 추정이 실제로 완료된 후, 반드시 각 리소스별 상세 비용 분석을 마크다운 표 형태로 `finops-cost-report.md` 산출물에 문서화하십시오.
 - **[MUST] Anomaly Detection:** 인프라 구축 제안 시 Azure Budgets 및 Cost Management 기반의 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수 아키텍처 요소로 포함하여 안정적인 예산 통제를 달성하십시오.
 - **[PREFER] Storage Tiering:** Blob Storage 설계 시, 장기 보관 데이터의 스토리지 비용을 최적화하기 위해 객체 수명 주기(Lifecycle) 정책(예: 30일 이후 Archive 계층 전환)을 기본 아키텍처로 우선 제안하십시오.
 - **[PREFER] Managed Disk Optimization:** VM 인스턴스의 관리형 디스크(Managed Disk) 제안 시, 일반적인 I/O 요구사항 환경에서는 비용 효율성이 뛰어난 `Standard SSD` 또는 `Premium SSD v2` 볼륨 타입을 기본값으로 제안하십시오.

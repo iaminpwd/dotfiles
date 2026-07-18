@@ -6,8 +6,8 @@ trigger: Apply these rules ONLY when designing stateful workloads, PVs, or clust
 # 컨텍스트 모듈: Enterprise Kubernetes 스토리지, 상태 보존(Stateful) 워크로드 및 DR 표준
 
 ## 1. Storage 및 볼륨 프로비저닝 (Storage Provisioning)
-- **[PREFER] Managed Database Delegation:** 클러스터 내부에 데이터베이스(MySQL, PostgreSQL 등)를 직접 대신 관리형 서비스를 우선 제안하십시오. 데이터 정합성 보장을 위해 AWS RDS 등 클라우드 관리형 데이터베이스 사용을 원칙으로 하되, **Crossplane**이나 Terraform을 통해 K8s 내부에서 관리형 인프라를 프로비저닝하는 선언적 패턴을 우선 제안하십시오.
-- **[MUST] CSI (Container Storage Interface) Drivers:** In-tree 스토리지 최신 CSI 기반 설정을 강제하십시오. 반드시 최신 CSI 드라이버(EBS CSI, EFS CSI 등) 기반의 `StorageClass` 설정을 표준으로 강제하십시오.
+- **[PREFER] Managed Database Delegation:** 클러스터 내부에 데이터베이스(MySQL, PostgreSQL 등)를 직접 구축하는 방식 대신, 관리형 서비스를 우선 제안하십시오. 데이터 정합성 보장을 위해 AWS RDS 등 클라우드 관리형 데이터베이스 사용을 원칙으로 하되, **Crossplane**이나 Terraform을 통해 K8s 내부에서 관리형 인프라를 프로비저닝하는 선언적 패턴을 우선 제안하십시오.
+- **[MUST] CSI (Container Storage Interface) Drivers:** 기존 In-tree 스토리지 프로비저너 대신, 최신 CSI 기반 설정을 강제하십시오. 반드시 최신 CSI 드라이버(EBS CSI, EFS CSI 등) 기반의 `StorageClass` 설정을 표준으로 강제하십시오.
 - **[MUST] Explicit Performance Parameters:** `StorageClass` 선언 시 맹목적인 기본값 사용을 대신, 엔터프라이즈 워크로드 요구사항에 맞게 `type` (예: `gp3`), `iopsPerGB`, `throughput` 파라미터를 명시적으로 할당하십시오.
 - **[MUST] Topology-Aware Volume Provisioning:** 멀티 AZ 클러스터에서는 파드가 스케줄링된 가용 영역(AZ)과 동일한 위치에 볼륨이 생성되어야 합니다. 반드시 `volumeBindingMode: WaitForFirstConsumer`를 설정하여 파드 스케줄링 전까지 프로비저닝을 지연(Lazy Provisioning)시키십시오.
 

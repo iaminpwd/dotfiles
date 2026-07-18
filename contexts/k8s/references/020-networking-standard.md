@@ -20,6 +20,6 @@ trigger: Apply these rules ONLY when designing networking, service mesh, ingress
 - **[MUST] Service Mesh L7 mTLS (Istio/Linkerd):** 마이크로서비스 간의 강력한 인증(Identity) 및 L7 레벨 인가(Authorization)가 필요하다면, 프록시 단에서 상호 인증(mTLS)을 `STRICT` 모드로 강제하는 Service Mesh 아키텍처를 우선 제안하십시오.
 
 ## 4. 인증서 및 TLS 관리 (TLS & Certificates)
-- **[MUST] Automated Certificate Lifecycle:** Ingress의 TLS 인증서를 수동으로 발급하여 Secret에 하드코딩하는 안전한 파이프라인을 구축하십시오. `cert-manager`를 통해 Let's Encrypt(ACME) 또는 사내 Vault PKI와 연동하여 인증서의 발급 및 갱신(Renewal)이 완전 자동화되는 파이프라인을 구축하십시오.
+- **[MUST] Automated Certificate Lifecycle:** Ingress의 TLS 인증서를 수동으로 발급하여 Secret에 하드코딩하는 안전하지 않은 방식 대신, `cert-manager`를 통해 Let's Encrypt(ACME) 또는 사내 Vault PKI와 연동하여 인증서의 발급 및 갱신(Renewal)이 완전 자동화되는 파이프라인을 구축하십시오.
 - **[PREFER] Traffic Resilience:** 네트워크 지연 및 단절에 대비해 Service Mesh가 제공하는 Circuit Breaker, Retry, Timeout, Fault Injection 기능을 적극 도입하여 시스템 복원력(Resiliency)을 강화하십시오.
 

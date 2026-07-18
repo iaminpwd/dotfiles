@@ -63,9 +63,9 @@ priority: critical
 - **[MUST] 5D Integration Matrix (5차원 서비스 연동 검증):** 모든 AWS 인프라 코드를 작성하기 전, 단일 리소스 변경이라 할지라도 반드시 다음 절차를 따르십시오.
   **Step 0. Active Investigation (기존 인프라 실태 조사):** 코드 작성 전 `run_command`를 통해 연동 대상 서비스들의 **현재 실제 상태**(Security Group 룰, IAM Policy, Route Table, VPC Endpoint 등)를 조회하여 팩트를 확보하십시오. 반드시 실제 조회 결과(팩트)만을 근거로 검증하십시오.
   그 후, 확보한 팩트를 바탕으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
-  1. **Network & Endpoint Topology:** VPC 라우팅(IGW/NAT), Security Group 양방향 포트, 그리고 AWS 내부 통신을 위한 **VPC Endpoint(PrivateLink)** 매핑 상태.
-  2. **IAM Dependency:** IAM Trust Relationship, Resource Policy 양방향 일치 및 3요소(Principal, Resource, Action) 누락 검증.
+  1. **Network & Endpoint Topology:** VPC 라우팅(IGW/NAT), Security Group 양방향 포트, 그리고 AWS 내부 통신을 위한 **VPC Endpoint(PrivateLink)** 매핑 상태. 특히 VPC Endpoint(Gateway 등) 설계 시, 대상 엔드포인트가 실제 라우트 테이블(Route Table)에 유효하게 연동(Association)되었는지 네트워크 흐름을 검증하십시오.
+  2. **IAM Dependency:** IAM Trust Relationship, Resource Policy 양방향 일치 및 3요소(Principal, Resource, Action) 누락 검증. 특히 Trust Relationship 작성 시 계정 ID는 반드시 동적 변수(`aws_caller_identity` 등)로 바인딩하고, Service Principal 도메인 식별자의 정확성을 검증하십시오.
   3. **Quotas & Limitations:** 리전별 서비스 할당량(Service Quotas) 한계치 도달 여부 및 API Throttling 리스크 검토.
-  4. **Encryption & Security:** 리소스 간 통신 및 저장 시 **KMS(CMK)** 권한(Key Policy) 누락 방지 및 TLS/SSL 인증서 종속성.
+  4. **Encryption & Security:** 리소스 간 통신 및 저장 시 **KMS(CMK)** 권한(Key Policy) 누락 방지 및 TLS/SSL 인증서 종속성. 특히 고객 관리형 키(CMK) 사용 시, KMS 키 정책(Key Policy)에 대상 IAM Role의 복호화/데이터 키 생성 권한(`kms:Decrypt`, `kms:GenerateDataKey*`)이 양방향으로 연동되었는지 검증하십시오.
   5. **Lifecycle Ordering:** `depends_on`, 대기 스크립트 등을 통한 상/하위 리소스 프로비저닝 순서 보장.
 

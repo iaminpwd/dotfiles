@@ -11,16 +11,16 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt,
 
 ## 2. Terraform 엔지니어링 표준
 - **[MUST] Active Investigation (Step 0. 사전 팩트 검증):** Terraform(IaC) 코드 작성 전, 반드시 `run_command`로 `aws [서비스] describe-*` 명령어를 실행하여 현재 AWS 계정의 실제 리소스(VPC, Subnet, IAM Role 등) 상태를 먼저 물리적으로 조회하고, 그 팩트만을 유일한 근거로 삼아 코드를 제안하십시오.
-- **[MUST] Static Code Analysis (tflint 강제):** 코드를 검증하거나 모의 실행(Dry-Run)하기 전, 가장 먼저 `tflint --init` 및 `tflint` 명령어를 실행하여 AWS Provider 문법 및 Best Practice 위반 사항이 없는지 정적 분석을 1순위로 수행하십시오.
+- **[MUST] Static Code Analysis (tflint 검증):** Terraform 코드 검증 시, 로컬에 `tflint` 도구가 설치되어 있다면 `run_command`로 `tflint --init` 및 `tflint` 명령어를 실행하여 AWS Provider 문법 및 Best Practice 위반 사항이 없는지 정적 분석을 수행하고, 미설치 시에는 사용자에게 경고 후 진행하십시오.
 - **[PREFER] TGW:** 글로벌 확장성 확보를 위해 AWS Transit Gateway(TGW) 기반의 중앙 집중형 라우팅을 적극 제안하십시오.
 - **[MUST] State Management:** State 저장은 반드시 AWS S3 Backend와 DynamoDB State Locking을 사용하여 원격으로 안전하게 구성하십시오.
 - **[MUST] Multi-Env (Terragrunt):** 다중 환경 관리 시 **Terragrunt**를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입(Variable Injection) 아키텍처를 우선적으로 적용하십시오.
 - **[MUST] Dynamic Mapping:** 글로벌 리전 확장성을 위해 리소스 가용 영역(AZ)은 `data "aws_availability_zones"` 블록 등을 활용하여 동적으로 매핑하십시오.
-- **[MUST] Stateful Protection:** DB나 스토리지 리소스 제안 시 `prevent_destroy = true`를 반드시 포함하십시오.
+- **[MUST] Stateful Protection (prevent_destroy 환경 분리):** DB나 스토리지의 `prevent_destroy = true` 설정은 오직 프로덕션(Prod) 및 스테이징(Stage) 환경에만 적용하십시오. 개발(Dev) 및 임시 테스트 환경에서는 자원 파괴가 차단되지 않도록 환경 변수 분기 처리를 구현하십시오.
 - **[MUST] Resource Iteration:** 다수의 리소스를 반복 생성할 때 인덱스 변경에 따른 안정적인 재생성(State Shift) 제어를 위해 반드시 `for_each`를 활용하십시오. 단, 리소스 ID처럼 Apply 이후에 결정되는 동적 값(`known after apply`)을 반복할 때는 반드시 정적 식별자(Static Key)를 갖는 `map` 구조를 강제하여 안정적인 Plan 실행을 보장하십시오.
 - **[MUST] Version Pinning:** 인프라의 예측 가능성을 위해 Terraform 코어 및 AWS Provider 버전(`required_version`, `required_providers`)은 반드시 특정 버전(또는 `~>` 구문)으로 명시하여 고정하십시오.
 - **[MUST] Module Composition:** 코드를 재사용 가능한 자식 모듈(Child Module)과 환경별 루트 모듈(Root Module)로 철저히 분리(Decoupling)하십시오.
-- **[MUST] Auto Documentation:** 인프라 코드 작성 및 수정 후, 반드시 `run_command`를 통해 `terraform-docs markdown <특정_경로>` 도구를 실행하여 README.md를 자동 생성해 문서화를 강제하십시오.
+- **[MUST] Auto Documentation:** 모듈화된 인프라 코드를 새로 작성하거나 주요 변경 완료 후, 로컬에 `terraform-docs` 도구가 설치되어 있다면 `run_command`를 통해 `terraform-docs markdown <특정_경로>`를 실행하여 README.md 문서화를 최신화하십시오.
 
 ### State 관리 및 의존성 예시 (Few-Shot Examples)
 <examples>
@@ -58,10 +58,11 @@ terraform {
 - **[MUST] Deterministic Packages:** 패키지 설치 시 예측 가능한 멱등성(Idempotency)을 보장하기 위해 반드시 `state: present`(또는 특정 버전)를 명시적으로 지정하여 사용하십시오.
 - **[MUST] Dynamic Inventory:** 인벤토리 구성 시 반드시 AWS EC2 Dynamic Inventory Plugin(`aws_ec2.yml`) 기반의 동적 인벤토리(Dynamic Inventory)를 활용하십시오.
 - **[MUST] Vault:** 민감한 변수(DB 패스워드 등)는 Ansible Vault로 암호화하십시오.
-- **[MUST] Native Syntax Check:** 플레이북 작성 시 반드시 `run_command`로 `ansible-playbook --syntax-check <특정_파일>` 모드를 실행해 타겟 파일의 문법적 정합성을 스스로 검증하십시오.
+- **[MUST] Native Syntax Check:** 플레이북 작성 시 로컬에 `ansible-playbook` 환경이 설치되어 있는 경우, `run_command`로 `ansible-playbook --syntax-check <특정_파일>` 모드를 실행해 타겟 파일의 문법적 정합성을 검증하십시오.
 
 ## 4. 엔터프라이즈 명명 규칙 및 태깅
 - **[MUST] Naming & FinOps Tagging:** 모든 리소스 이름은 `<Project>-<Env>-<Service>-<Resource>` 규칙을 따르고, `Project`, `Environment`, `CostCenter` 3대 필수 태그가 거버넌스 레벨에서 강제된다고 가정하여 `default_tags` 등에 반드시 포함하십시오.
+- **[MUST] Provider-Level Default Tagging:** 모든 Terraform 루트 모듈의 `provider "aws"` 블록에는 반드시 `default_tags`를 지정하여 `Project`, `Environment` 태그가 자동으로 하위 리소스에 상속되도록 설정하고, 개별 리소스 단에서의 중복 태그 기재를 배제하십시오.
 
 ## 5. Policy-as-Code (PaC) 및 거버넌스
-- **[MUST] PaC & Native Validation:** 단순한 IaC를 넘어 Open Policy Agent(OPA) Rego 정책 구성을 강제하고, 반드시 **`run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 작성한 코드의 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)**하십시오.
+- **[MUST] PaC & Native Validation:** 프로젝트 내에 OPA(Open Policy Agent) 또는 Conftest 관련 설정 및 Rego 파일이 존재하는 경우에 한해, 반드시 `run_command`를 통해 `conftest test <특정_파일>` 터미널 명령어를 실행하여 사내 규정(Policy) 준수 여부를 사전 검증(Pre-flight)하십시오.

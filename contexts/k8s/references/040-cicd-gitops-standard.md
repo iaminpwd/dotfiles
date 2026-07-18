@@ -12,7 +12,7 @@ trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows
 
 ## 2. 코드 품질, 정적 분석 (Static Analysis & DevSecOps)
 - **[MUST] Shift-Left DevSecOps:** 배포 파이프라인 전면에 코드 분석 및 보안 스캐닝을 배치하십시오. 매니페스트 문법 검증(`kube-linter`), 이미지 취약점 스캐닝(`trivy`), K8s 정책 검증(`checkov`)을 도입하여 위반 시 파이프라인을 Hard Block 처리하십시오.
-- **[Trigger: Before Manifest Creation] Static Validation:** K8s 매니페스트나 Helm Chart를 작성하거나 리뷰할 때, 반드시 `run_command`로 `helm lint <특정_경로>`, `kube-linter lint <특정_파일>`을 실행하여 문법 무결성과 보안 베스트 프랙티스를 사전 증명하십시오.
+- **[Trigger: Before Manifest Creation] Static Validation:** K8s 매니페스트나 Helm Chart를 작성하거나 리뷰할 때, 로컬에 관련 도구(`helm`, `kube-linter` 등)가 설치되어 있다면 `run_command`로 `helm lint <특정_경로>` 또는 `kube-linter lint <특정_파일>`을 실행하여 문법 무결성과 보안 베스트 프랙티스를 사전 증명하십시오.
 - **[MUST] Strict Secret Elimination:** CI/CD 파이프라인 내 평문 시크릿 완전히 대체하십시오. 파이프라인 인증은 OIDC(OpenID Connect) 기반의 단기 자격 증명을 우선 도입하고, K8s 매니페스트의 시크릿은 External Secrets Operator (ESO) 아키텍처로 완전히 대체하십시오.
 
 ## 3. 지속적 배포 (GitOps) & ArgoCD
@@ -20,7 +20,7 @@ trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows
 - **[MUST] App of Apps Pattern:** 수십 개의 마이크로서비스 배포 관리 시, 수동 등록을 대신 `App of Apps` 패턴이나 `ApplicationSet`을 통해 다중 클러스터 배포를 코드 기반으로 자동 스케일링하는 구성을 강제하십시오.
 - **[PREFER] Ephemeral Preview Environments:** 개발 생산성 극대화를 위해, 개발자가 Pull Request(PR)를 생성하면 ArgoCD ApplicationSet(또는 vCluster)와 연동하여 일회성 테스트 환경(Preview Environment)을 동적으로 프로비저닝하고, PR이 병합(Merge) 또는 닫히면 즉시 인프라를 파괴(Destroy)하는 FinOps 친화적 자동화 파이프라인을 제안하십시오.
 - **[Trigger: Before Manual Apply] Explicit Drift Check (편차 검증 강제):**
-사용자가 로컬 터미널에서 `kubectl apply`나 `helm upgrade`와 같은 고위험 배포 명령을 명시적으로 요구할 경우, 실제 상태(Drift) 간의 파급 효과를 사전에 분석하십시오. 반드시 `run_command`로 `kubectl diff` 또는 `helm diff`를 선행 실행하여 실제 클러스터 상태와 변경될 상태(Drift) 간의 파급 효과를 사전에 분석하고 사용자에게 가시적으로 보고하십시오.
+사용자가 로컬 터미널에서 `kubectl apply`나 `helm upgrade`와 같은 고위험 배포 명령을 명시적으로 요구할 경우, 실제 상태(Drift) 간의 파급 효과를 사전에 분석하십시오. 로컬 터미널에 `kubectl`, `helm` 환경이 연결되어 있고 클러스터 통신이 유효한 상태라면, 반드시 `run_command`로 `kubectl diff` 또는 `helm diff`를 선행 실행하여 실제 클러스터 상태와 변경될 상태(Drift) 간의 파급 효과를 사전에 분석하고 사용자에게 가시적으로 보고하십시오.
 - **[Trigger: CI/CD Deployment Completion] Deployment Report:**
 ArgoCD Sync나 Helm 배포가 성공적으로 완료되면, 변경된 리소스 목록, 파드 시작 상태(`kubectl rollout status`), 비용 영향 등을 `k8s-deployment-report.md` 산출물에 문서화하십시오.
 - **[MUST] Agent Action Audit Logging:** 에이전트가 GitOps 상태를 변경하거나 파이프라인 설정을 수정했을 경우, 사람이 추적할 수 있도록 커밋 메시지나 이벤트 로그에 반드시 `[K8s-Agent-Action]` 감사 마커를 포함하십시오.

@@ -9,7 +9,7 @@ priority: high
 - **[MUST] 시크릿 자격 증명 외부 저장소 연동 강제:** Azure Client ID/Secret이나 패스워드 등 민감한 자격 증명은 반드시 `data` 블록을 사용하여 외부 시크릿 관리 서비스(Azure Key Vault 등)에서 동적으로 로드하십시오.
 - **[MUST] Sensitive Output:** Terraform Output 중 민감 정보는 `sensitive = true`를 선언하십시오.
 - **[MUST] Pipeline OIDC:** CI/CD 파이프라인 구성 시 반드시 OIDC를 통한 단기 자격 증명(Short-lived credentials)을 사용하십시오.
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 `run_command`로 `trufflehog filesystem <특정_경로>` 스캐닝을 실행하여 하드코딩된 시크릿을 사전에 차단하십시오.
+- **[Trigger: Before Commit / Code Review] 시크릿 스캐닝:** 코드를 커밋하거나 중대한 외부 배포용 리뷰 준비 시, 로컬에 `trufflehog` 도구가 설치되어 있다면 반드시 `run_command`로 `trufflehog filesystem <특정_경로>` 스캐닝을 실행하여 하드코딩된 시크릿이 없는지 검증하십시오.
 
 ## 2. 최소 권한 및 데이터 보안 (Least Privilege & Data Security)
 - **[MUST] 명시적 최소 권한 부여 (Least Privilege):** Azure RBAC 커스텀 역할(Custom Role) 작성 시, 반드시 정확한 작업(Actions/DataActions) 이름과 할당 범위(AssignableScopes)를 최소한으로 지정하여 권한을 부여하십시오.
