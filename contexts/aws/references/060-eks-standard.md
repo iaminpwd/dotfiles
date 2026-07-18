@@ -11,4 +11,4 @@ trigger: Apply these rules ONLY when working with Kubernetes, EKS, Helm, or cont
 - **[PREFER] Node Security:** 워커 노드의 보안 강화를 위해 컨테이너에 최적화된 Bottlerocket OS 사용을 우선 제안하십시오.
 
 ## 2. 공통 K8s 코어 룰 참조 (Lazy Routing)
-- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 현재 폴더에 지식이 없다면 반드시 **`../../k8s/SKILL.md`** 파일을 가장 먼저 읽고(View), 그 안에 명시된 라우팅 가이드(description)에 따라 `references/` 하위의 적절한 코어 룰을 찾아 팩트를 수집한 뒤 작업하십시오.
+- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 현재 폴더에 지식이 없다면 반드시 **`k8s` 스킬의 `SKILL.md`** 파일을 가장 먼저 읽고(View), 그 안에 명시된 라우팅 가이드(description)에 따라 `references/` 하위의 적절한 코어 룰을 찾아 팩트를 수집한 뒤 작업하십시오.

@@ -20,7 +20,7 @@ trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. s
 - **[MUST] User-Level Isolation:** 시스템 권한 대신 `~/.local/bin` 기반의 User-Level 격리 설치를 최우선 제안하십시오.
 
 ## 3. 검증 및 런타임 환경 보호
-- **[Trigger: After Script Edit] Syntax Validation:** `setup.sh`나 `.zshrc` 수정 후 백그라운드 검증 시, 반드시 `bash -n <file>` 또는 `zsh -n <file>`로 문법 자가 검증을 수행하십시오.
+- [Trigger: After Script Edit] Syntax Validation: 스크립트 수정 후 정량 문법 검증은 활성화된 `pre-flight-check` 스킬의 `pre-flight-check.sh` 절차를 따르십시오.
 - **[MUST] Preserve Core Architecture:** `batcat` 앨리어스 등 코어 엔진 구조는 항상 원형 그대로 보존하십시오.
 
 ### 방어적 셸 스크립트 예시 (Few-Shot Examples)

@@ -83,6 +83,7 @@ cat ~/.gemini/config/skills.json
 │   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
 │   ├── multi-cloud/      # 멀티 클라우드(하이브리드) 워크스페이스 라우터 🟡 Draft
 │   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
+│   ├── pre-flight-check/ # 사전 안전성 검증 룰북 및 스크립트 🟢 Production
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │
 ├── git/
@@ -186,7 +187,7 @@ cat ~/.gemini/config/skills.json
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
 **보안 & 정책 검증**
-`trivy` · `conftest` · `cosign` · `trufflehog` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint`
+`trivy` · `conftest` · `cosign` · `trufflehog` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint` · `hadolint`
 
 **IaC & 구성 관리**
 `terraform` · `terragrunt` · `tflint` · `terraform-docs` · `infracost` · `ansible` · `ansible-lint`

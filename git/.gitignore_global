@@ -48,3 +48,6 @@ Thumbs.db
 # AI Context Files (Prevent AI rule pollution in remote repos)
 .agents/
 .aiexclude
+
+# Local validation helper scripts
+pre-flight-check.sh

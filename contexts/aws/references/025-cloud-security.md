@@ -8,7 +8,7 @@ trigger: Apply these rules ONLY when designing cloud network architecture, conta
 ## 1. 네트워크 및 엣지 보안(Edge Security)
 - **[MUST] Zero-Trust 기반 인바운드 통제 (Default Deny):** 대국민 서비스용 Public ALB나 CloudFront의 웹 포트(80, 443) 외 기타 **모든 포트**(SSH, DB, Redis, 내부 API 등)의 Inbound 규칙은 반드시 사내 VPN IP 대역(예: `10.10.0.0/16`)으로만 한정하여 구성하십시오.
 - **[MUST] IaC 레벨의 CIDR 유효성 검증 강제 (Code Validation):** Terraform 등에서 Public 웹 서비스(80/443) 목적이 아닌 모든 리소스의 CIDR 블록을 변수로 받을 때, 만약 값이 `0.0.0.0/0`이라면 '웹 포트 외의 전체 개방 시 보안 규정 위반으로 처리됩니다'라는 에러 메시지를 출력하고 배포를 중단시키는 `validation` 블록을 반드시 포함하십시오.
-- **[MUST] Assume Breach & SG Validation:** 모든 네트워크 트래픽은 이미 침해되었다고 가정(Assume Breach)하고 설계하십시오. VPC 및 인스턴스 간 통신 시 보안 그룹(SG)의 인바운드/아웃바운드를 최소 권한으로 구성하고, 로컬에 `checkov` 도구가 설치되어 있다면 `run_command`로 `checkov -f <특정_파일>`을 실행해 과도한 허용 정책을 사전에 탐지하여 수정하십시오.
+- **[MUST] Assume Breach & SG Validation:** 모든 네트워크 트래픽은 이미 침해되었다고 가정(Assume Breach)하고 설계하십시오. VPC 및 인스턴스 간 통신 시 보안 그룹(SG)의 인바운드/아웃바운드를 최소 권한으로 구성하고, 정량 보안 검증은 활성화된 `pre-flight-check` 스킬의 `pre-flight-check.sh` 절차에 따르십시오.
 - **[PREFER] WAF/Shield:** 퍼블릭 엔드포인트(ALB, CloudFront) 제안 시 AWS WAF와 Shield Advanced를 포함하십시오.
 - **[MUST] Session Manager:** 인스턴스 관리 접근 시 보안을 위해 AWS SSM Session Manager를 1순위로 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스 통신 시 퍼블릭 인터넷을 우회하여 데이터 경로를 격리하기 위해 VPC Endpoint를 제안하십시오.
@@ -36,5 +36,5 @@ trigger: Apply these rules ONLY when designing cloud network architecture, conta
 - **[PREFER] SCP/Boundary:** 다중 계정 설계 시 AWS Organizations의 SCP 및 IAM Permission Boundary를 활용하십시오.
 
 ## 3. 컨테이너 및 공급망 보안
-- **[Trigger: Pipeline Design / Dockerfile Edit] 공급망 보안 및 네이티브 스캔:** 파이프라인이나 Dockerfile 편집 시, 로컬에 `trivy` 도구가 설치되어 있다면 반드시 `run_command`로 실제 `trivy fs <특정_경로>` 스캐닝을 실행하여 취약점을 사전에 검증하십시오.
+- **[Trigger: Pipeline Design / Dockerfile Edit] 공급망 보안 및 네이티브 스캔:** 파이프라인이나 Dockerfile 편집 시, 정량 보안 검증은 활성화된 `pre-flight-check` 스킬의 `pre-flight-check.sh` 절차를 참조하여 실행하십시오.
 - **[Trigger: Security Scan Completion] 보안 감사 보고서:** 보안 스캔이 완료되면 검증 결과와 완화 조치 내역을 `security-audit-report.md` 파일 내에 마크다운 표 형태로 문서화하십시오.

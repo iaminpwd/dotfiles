@@ -11,8 +11,8 @@ trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows
 - **[MUST] Immutable Release Tags:** 컨테이너 이미지 태그에 `latest`나 `dev`를 고정된 버저닝을 강제하십시오. 클러스터 환경의 완벽한 재현성(Traceability)을 위해 반드시 Git Commit SHA 또는 시맨틱 버저닝(v1.x.x)을 사용하십시오.
 
 ## 2. 코드 품질, 정적 분석 (Static Analysis & DevSecOps)
-- **[MUST] Shift-Left DevSecOps:** 배포 파이프라인 전면에 코드 분석 및 보안 스캐닝을 배치하십시오. 매니페스트 문법 검증(`kube-linter`), 이미지 취약점 스캐닝(`trivy`), K8s 정책 검증(`checkov`)을 도입하여 위반 시 파이프라인을 Hard Block 처리하십시오.
-- **[Trigger: Before Manifest Creation] Static Validation:** K8s 매니페스트나 Helm Chart를 작성하거나 리뷰할 때, 로컬에 관련 도구(`helm`, `kube-linter` 등)가 설치되어 있다면 `run_command`로 `helm lint <특정_경로>` 또는 `kube-linter lint <특정_파일>`을 실행하여 문법 무결성과 보안 베스트 프랙티스를 사전 증명하십시오.
+- **[MUST] Shift-Left DevSecOps:** 배포 파이프라인 전면에 코드 분석 및 보안 스캐닝을 배치하십시오. 매니페스트 문법 검증, 취약점 스캔, 정책 준수 여부를 검사하고 위반 시 파이프라인을 Hard Block 처리하십시오.
+- [Trigger: Before Manifest Creation] Static Validation: 매니페스트나 Helm 차트 수정 후 정량 문법 검증은 활성화된 `pre-flight-check` 스킬의 `pre-flight-check.sh` 절차를 따르십시오.
 - **[MUST] Strict Secret Elimination:** CI/CD 파이프라인 내 평문 시크릿 완전히 대체하십시오. 파이프라인 인증은 OIDC(OpenID Connect) 기반의 단기 자격 증명을 우선 도입하고, K8s 매니페스트의 시크릿은 External Secrets Operator (ESO) 아키텍처로 완전히 대체하십시오.
 
 ## 3. 지속적 배포 (GitOps) & ArgoCD
