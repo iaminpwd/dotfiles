@@ -2,25 +2,61 @@
 role: Senior AIOps Engineer
 priority: high
 trigger: Apply these rules ONLY when designing GitOps, IaC pipelines, or AI Model Serving infrastructure.
+references:
+  - contexts/aiops/references/010-aiops-core.md
+  - contexts/aiops/references/020-security-compliance.md
+  - contexts/aiops/references/030-finops-optimization.md
 ---
 # 컨텍스트 모듈: Enterprise AIOps IaC 및 GitOps 아키텍처 표준
 
-## 1. 배포 아키텍처 및 상태(State) 격리
-- **[MUST] GitOps First:** 단순 셸 스크립트 대신 선언적 접근을 강제합니다. 모든 인프라(Vector DB, 모델 서빙 인스턴스, 자동화 람다 등)는 GitHub Actions, ArgoCD, Flux 등을 활용한 선언적 GitOps 배포 파이프라인 설계를 최우선으로 제안하십시오.
-- **[MUST] State Locking & Isolation:** Terraform 등 IaC 작성 시, 단일 장애점(SPOF) 방지를 위해 S3 Backend와 DynamoDB를 통한 State 잠금(Locking) 체계를 반드시 강제하고, 개발/운영 환경을 완벽히 격리(Isolation)하십시오.
-- **[Trigger: Before State Mutation] 상태 변경 명령어 사전 승인 의무화:**
-인프라 상태를 변경하거나 파괴하는 명령어(`terraform apply`, `destroy`, `aws * delete` 등)를 실행하기 전, 반드시 내부적으로 파급 효과(Blast radius)를 분석하고 명확한 경고 메시지를 제시하여 사용자의 사전 승인을 받으십시오.
-- **[Trigger: IaC Deployment Completion] IaC 배포 요약 보고:**
-배포가 승인되어 실행된 후, 즉각 백그라운드 상태를 검증(`terraform state list` 등)하고, 변경 이력을 `iac-deployment-summary.md` 산출물에 문서화하십시오.
+본 모듈은 AIOps 인프라 프로비저닝, 모델 서빙 자동화 파이프라인 및 IaC/GitOps 배포 아키텍처 수립 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 고가용성 및 복원력(Resiliency) 설계
-- **[PREFER] Stateless Over Stateful:** 시스템 복원력 극대화를 위해 컨테이너나 워크로드는 가급적 무상태(Stateless) 아키텍처로 설계하고, 상태 관리는 AWS RDS, ElastiCache 등 외부 관리형 서비스에 완전히 위임하십시오.
-- **[PREFER] Immutable Infrastructure:** 리소스 구성 변경 시 기존 리소스를 덮어쓰거나 직접 수정(Mutable)하는 대신, 새로운 리소스를 프로비저닝하고 트래픽을 넘긴 뒤 이전 리소스를 폐기하는 불변 인프라(Immutable) 패턴을 1순위로 제안하십시오.
-- **[MUST] Asynchronous Event-Driven & DLQ:** EventBridge, SQS, SNS 등 이벤트 기반 비동기 통신 구간에는 반드시 DLQ(Dead Letter Queue)를 연동하여, 처리 실패한 AI 알람/이벤트가 영구 유실되지 않고 추후 재처리(Replay) 가능하도록 백업 아키텍처를 구성하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] GitOps First:** 단순 쉘 배포를 배제하고 모든 모델 서빙 인프라와 람다 자원은 GitHub Actions, ArgoCD 등을 활용한 선언적 GitOps 배포 파이프라인으로 일원화하십시오.
+- **[MUST] State Locking & Isolation:** IaC 작성 시 원격 백엔드와 Lock 테이블(DynamoDB 등)을 구성하고 개발/운영 상태(State)를 물리적으로 격리하여 관리하십시오.
+- **[PREFER] Stateless Over Stateful:** 가동 복원력 극대화를 위해 연산 컨테이너는 무상태(Stateless) 아키텍처로 설계하고, 데이터 상태는 클라우드 관리형 서비스(RDS, ElastiCache 등)에 완전히 위임하십시오.
 
-## 3. 엔터프라이즈 명명 규칙 (Naming Convention)
-- **[MUST] Resource Naming Standard:** 시스템 아키텍처나 파이프라인 리소스 명명 시 모호한 표현을 제거하고, `<Project>-<Env>-<Service>-<Resource>` (예: `payment-prod-fraud-sqs`) 형태의 직관적이고 표준화된 엔터프라이즈 네이밍 컨벤션을 엄수하십시오.
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
-## 4. AI 인프라 및 모델 서빙 보안 (Zero-Trust)
-- **[MUST] Zero-Trust 기반 모델 엔드포인트 통제:** LLM, 추론 모델 엔드포인트나 SageMaker 주피터 노트북 배포 시 IP `0.0.0.0/0` 전체 개방을 사전에 승인을 취득하십시오. 모든 AI 인프라는 반드시 VPC/VNet 내부망에 프라이빗하게 배치하고, 인증된 내부망(VPN 등) 또는 명시적인 API Gateway 리버스 프록시를 통해서만 접근하도록 Default Deny 네트워크 룰을 강제하십시오.
-- **[MUST] Data in Transit / Rest:** 모델이 처리하는 모든 데이터는 네트워크 전송 구간(TLS 1.2 이상)과 스토리지(KMS 암호화)에서 모두 암호화되어야 합니다.
+### 2.1 배포 아키텍처 및 복원력
+- **[PREFER] Immutable Infrastructure:** 리소스 구성 변경 시 기존 리소스를 덮어쓰거나 직접 수정(Mutable)하는 대신, 새로운 리소스를 프로비저닝하고 트래픽을 넘긴 뒤 이전 리소스를 폐기하는 불변 인프라(Immutable) 패턴을 적용하십시오.
+- **[MUST] Asynchronous Event-Driven & DLQ:** EventBridge, SQS 등 비동기 통신 구간에는 반드시 DLQ(Dead Letter Queue)를 연동하여, 처리 실패한 AI 알람이 유실되지 않고 재처리 가능하도록 백업 아키텍처를 구성하십시오.
+
+### 2.2 엔터프라이즈 명명 규칙 및 보안
+- **[MUST] Resource Naming Standard:** 인프라 자원 설계 시 `<Project>-<Env>-<Service>-<Resource>` (예: `payment-prod-fraud-sqs`) 형태의 직관적인 표준 명명 규칙을 적용하십시오.
+- **[MUST] Zero-Trust 기반 모델 엔드포인트 통제:** LLM 및 추론 모델 엔드포인트는 반드시 내부망(VPC Private Subnet)에 배치하고 API Gateway 리버스 프록시 또는 VPN을 통해서만 접근하도록 설정하십시오.
+- **[MUST] Data in Transit / Rest:** 모델이 처리하는 모든 데이터는 네트워크 전송 구간(TLS 1.2 이상)과 스토리지(KMS 고객 관리형 키 암호화)에서 암호화되도록 강제하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- Terraform S3 백엔드 락 설정 예시:
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "myproject-tfstate-bucket"
+    key            = "prod/aiops/terraform.tfstate"
+    region         = "ap-northeast-2"
+    dynamodb_table = "myproject-tfstate-lock"
+  }
+}
+```
+</example>
+<example>
+[Bad]
+- 로컬 백엔드 사용 (동시 실행 시 State 깨짐 및 충돌 발생 안티패턴)
+</example>
+</examples>
+
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** `tflint` 및 `shellcheck` 검사가 성공하고, 배포 실행 시 정량적 이력이 `iac-deployment-summary.md`에 문서화되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `tflint` 및 `tfsec`를 실행하여 IaC 설정 상의 암호화 미적용 및 권한 결함을 검사하십시오.
+
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Before State Mutation] 도메인 자가 채점:** 인프라 상태를 변경하거나 파괴하는 명령어(terraform apply, destroy 등)를 기획한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+  - 기준 1 (영향 반경): 상태 변경 명령이 기존 가동 중인 타 서비스 영역(DB, Network)을 차단/오염시킬 위험도가 없는가?
+  - 기준 2 (환경 격리): 개발용 배포 스크립트가 운영(Production) State 영역을 물리적으로 격리하여 상태 침투를 방어하는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - 테넌트/모델 서버의 API 포트가 VPN 등 게이트웨이 우회 필터 없이 퍼블릭 `0.0.0.0/0`에 무단 개방된 IaC 매니페스트가 감지될 시 즉시 작업을 중단(Hard Block)하고 프라이빗 VPC 경로로 격리하십시오.
+  - Terraform `apply` 또는 `destroy` 등 고위험 명령어를 선언하면서, 파급 효과 분석(Blast Radius Analysis) 및 사전 `[수정 승인]` 단계가 생략되었을 시 작업을 즉시 멈추고 승인 양식을 발송하십시오.

@@ -2,27 +2,52 @@
 role: Senior AIOps Engineer
 priority: high
 trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new AIOps or Automation project.
+references:
+  - contexts/aiops/references/010-aiops-core.md
+  - contexts/aiops/references/020-security-compliance.md
+  - contexts/aiops/references/030-finops-optimization.md
 ---
 # 컨텍스트 모듈: AIOps 파이프라인 마스터 플랜(계획서) 작성 표준
 
-본 모듈은 새로운 SRE 자동화 파이프라인이나 AI 에이전트를 기획하기 전, 다방면의 아키텍처와 리스크를 종합적으로 고려한 '마스터 플랜'을 작성할 때 적용하십시오.
+본 모듈은 새로운 SRE 자동화 파이프라인이나 AI 에이전트 기획 시, 아키텍처와 리스크를 종합적으로 고려한 마스터 플랜(계획서)을 작성할 때 적용되는 기술 표준 가이드라인입니다.
 
-## 1. AIOps 특화 자율 주행 (Agentic Workflow)
-- **[MUST] Use Built-in Artifact:** 계획서는 반드시 대상 에이전트(Antigravity)의 내장 `implementation_plan.md` 아티팩트를 사용하여 작성하십시오.
-- **[Trigger: Before Architecture Design] Agentic RAG 강제:** 새로운 아키텍처를 설계하기 전, 에이전트 스스로 `grep_search`나 `view_file` 도구를 사용하여 워크스페이스 내의 사내 표준(SSOT) 프롬프트 룰을 능동적으로 검색하고, 그 표준을 계획서에 100% 반영하도록 강제하십시오.
-- **[Trigger: Plan Draft Completed] LLM-as-a-Judge 페르소나 전환:** 계획서 초안 작성을 완료한 직후, 스스로 '가혹한 평가자' 페르소나로 전환하여 보안(Secret Management), 멱등성(Idempotency), 실패 격리(Fail-Fast) 기준 10점 만점으로 엄격하게 채점하고 8점 미만 시 자가 수정하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] Use Built-in Artifact:** 계획서는 반드시 대상 에이전트의 내장 `implementation_plan.md` 아티팩트를 사용하여 작성하십시오.
+- **[MUST] Agentic RAG:** 새로운 아키텍처 설계 전, 에이전트 스스로 `grep_search`나 `view_file`을 사용하여 워크스페이스 내의 사내 표준(SSOT) 룰북을 능동적으로 검색하고 계획서에 100% 반영하십시오.
+- **[MUST] LLM-as-a-Judge 페르소나 전환:** 계획서 초안 작성을 완료한 직후, 스스로 평가자 페르소나로 전환하여 보안, 멱등성, 실패 격리 기준을 엄격하게 자가 비판 채점하십시오.
 
-## 2. 마스터 플랜 뼈대 강제 (Master Plan Schema)
-- **[MUST] Strict Structure:** 작성 시 아래 목차를 100% 준수하여 명시하십시오.
-  1. **프로젝트 요약 (Executive Summary)**: 자동화 목표 및 SRE 지표(MTTR 단축 등) 명시.
-  2. **아키텍처 청사진 (Architecture Blueprint) & ADR**: 전체 시스템 구성도를 설계하고, 도입된 기술에 대해 **ADR(Architecture Decision Records)** 형식을 차용하여 대안 평가 및 채택 사유 명시.
-  3. **관측성 및 텔레메트리 (Observability & Telemetry)**: 로그 수집, 트레이싱(X-Ray 등), DORA 지표 연동 계획.
-  4. **비용 및 리소스 최적화 (FinOps)**: 예측 비용 및 람다/컨테이너 스케일링 리미트 명시.
-  5. **멱등성 및 상태 관리 (Idempotency & State)**: 중복 실행을 막기 위한 멱등 키(Idempotency Key) 및 상태 잠금 로직 명시.
-  6. **장애 허용 및 안전망 (Resiliency & Guardrails)**: 서킷 브레이커, DLQ 연동, Human-in-the-loop 로직 등 파괴적 명령에 대한 방어 로직 명시.
-  7. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 기계적으로 확인하는 Fault Injection/카오스 엔지니어링 계획 수립.
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
-## 3. 검증 및 자가 비판 (Self-Critique)
-- **[Trigger: Before Finalizing Plan] Pre-Flight Checklist:** 계획서 작성을 완료하기 전, 스스로 `<self_critique>` 태그를 열어 다음 항목을 철저히 검증하십시오.
-  - 보안(Security)과 멱등성(Idempotency)이 완벽하게 설계되었음을 입증하십시오.
-  - 작성된 계획서가 추후 AI 전용 규칙 파일(`.agents/AGENTS.md` 파일 하단에 Append)로 변환될 수 있는 강제 제약 조건을 포함하는지 입증하십시오.
+### 2.1 마스터 플랜 뼈대 강제 (Master Plan Schema)
+계획서 작성 시 아래 목차와 요구사항을 반드시 준수하십시오.
+1. **프로젝트 요약 (Executive Summary)**: 자동화 목표 및 SRE 핵심 지표(MTTR 단축, DORA 메트릭 등)를 명시하십시오.
+2. **아키텍처 청사진 (Architecture Blueprint) & ADR**: 전체 시스템 구성도를 설계하고, 도입 기술에 대해 ADR(Architecture Decision Records) 형식을 적용하여 대안 평가 및 채택 사유를 명시하십시오.
+3. **관측성 및 텔레메트리 (Observability & Telemetry)**: 로그 수집, 분산 트레이싱, DORA 지표 연동 계획을 수립하십시오.
+4. **비용 및 리소스 최적화 (FinOps)**: 예측 비용 및 컴퓨팅 자원의 스케일링 리미트를 명시하십시오.
+5. **멱등성 및 상태 관리 (Idempotency & State)**: 중복 실행을 막기 위한 멱등 키(Idempotency Key) 및 상태 잠금 로직을 설계하십시오.
+6. **장애 허용 및 안전망 (Resiliency & Guardrails)**: 서킷 브레이커, DLQ 연동, Human-in-the-loop(수동 승인) 등 파괴적 명령에 대한 방어 가드레일을 명시하십시오.
+7. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 확인하는 Fault Injection 및 카오스 엔지니어링 검증 방안을 포함하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- 아키텍처 청사진 ADR: "기존의 Jenkins 수동 빌드 방식 대신, 리스크 격리를 위해 GitHub Actions와 ArgoCD Pull-based GitOps 방식을 채택합니다. 이를 통해 동기화 이력을 Git에 영구 기록합니다."
+</example>
+<example>
+[Bad]
+- 모호한 아키텍처 계획: "배포는 적당한 CI/CD 도구를 사용해 자동화할 계획임." (ADR 근거 및 설계 구체성 결여)
+</example>
+</examples>
+
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** 작성된 계획서가 `implementation_plan.md` 템플릿 규격에 맞게 기재되고, 보안 및 멱등성 자가 체크가 통과되며, 마크다운 렌더링에 오류가 없어야 합니다.
+- **[MUST] 검증 도구 매핑:** `markdownlint`를 사용하여 계획서의 형식 및 가독성을 자동 검증하십시오.
+
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Before Finalizing Plan] 도메인 자가 채점:** 계획서 작성을 완료하기 직전, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획서 작성을 완료하십시오)
+  - 기준 1 (설계 강건성): 보안(Credential 관리)과 멱등성(중복 실행 방어)이 완벽하게 아키텍처 설계 상에 보장되었는가?
+  - 기준 2 (리스크 완화): 자동화 오작동으로 인한 자원 파괴(Delete) 및 권한 남용을 차단하는 Guardrail이 포함되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - 자동화 파이프라인 내에 수동 승인 게이트(Human-in-the-loop) 없이 프로덕션 리소스를 파괴적으로 삭제/변경하는 자동화 룰이 감지될 시 즉시 작업을 중단(Halt & Clarify)하고 가드레일을 설계하십시오.
+  - 아키텍처 설계안 중 대체 기술에 대한 정량적 대안 분석 테이블(ADR)이 누락된 경우 작업을 즉시 멈추고 보완을 요구하십시오.

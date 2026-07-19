@@ -2,27 +2,47 @@
 role: Senior AIOps Engineer
 priority: high
 trigger: Apply these rules ONLY when working with FinOps, DORA metrics, CloudWatch, Datadog, Prometheus, or infrastructure cost optimization.
+references:
+  - contexts/aiops/references/010-aiops-core.md
+  - contexts/aiops/references/020-security-compliance.md
 ---
 # 컨텍스트 모듈: 고급 FinOps 및 DORA 지표 관측성 (Observability)
 
-## 1. DORA Metrics 및 시스템 가시성 (Observability Pipeline)
-- **[MUST] Full Observability Pipeline:** 시스템 상태를 완벽히 가시화하기 위해 단순 로깅을 넘어 애플리케이션 추적(Distributed Tracing: X-Ray, OpenTelemetry)과 메트릭(Prometheus)을 결합한 완벽한 관측성 체계를 인프라 파이프라인에 필수적으로 구성하십시오.
-- **[MUST] MTTR & MTTD Tracking:** 장애 알람 발생 시점부터 에이전트의 1차 원인 분석(MTTD) 및 우회/복구 조치(MTTR) 완료까지의 리드 타임을 정밀하게 측정하여 CloudWatch 커스텀 메트릭 또는 Datadog 대시보드로 시각화하는 DORA 지표 추적 시스템을 구축하십시오.
+본 모듈은 AIOps 모니터링 가시성 파이프라인 수립, DORA 성능 지표(MTTR 등) 측정 및 인프라 자원 비용 최적화(FinOps) 설계 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 엔터프라이즈 FinOps 통제 및 비용 최적화
-- **[MUST] Cost Allocation Tagging:** AI 및 데이터 파이프라인에서 생성되는 모든 클라우드 리소스(임시 스토리지, Lambda, Vector DB, EC2 등)에 `CostCenter`, `Project`, `Environment` 등 조직 수준에서 강제되는 엄격한 비용 할당 태그(Cost Allocation Tags) 매핑을 필수 적용하십시오.
-- **[MUST] GPU/ML Workload Spot Instances:** AI 모델 훈련 및 비동기 추론 작업 제안 시, 온디맨드 인스턴스 남용을 막고 AWS EC2 Spot Instances 또는 EKS Karpenter 혼합 노드 그룹을 우선 제안하여 막대한 GPU 컴퓨팅 비용을 방어(FinOps)하십시오.
-- **[MUST] Anomaly Billing Detection (AWS Budgets):** LLM 무한 루프, 토큰 초과, 파이프라인 알람 폭주로 인한 돌발적인 비용 급증(Billing Spike)을 사전에 차단하기 위해, AWS Budgets 및 Anomaly Detection 기반의 즉각적 비용 이상 탐지 알람 코드를 반드시 인프라에 포함하십시오.
-- **[Trigger: Cost Analysis Completion] FinOps Cost Report (비용 정량화 분석):**
-  아키텍처 스케일링을 제안하거나 인프라 파이프라인의 변경 사항(IaC)을 검토할 때, 로컬에 `infracost` 도구가 설치되어 있고 API key 등 환경이 준비되어 있다면 `run_command`로 `infracost breakdown` 등을 실행하여 설계가 초래할 비용 증감을 정량적으로 파악하십시오. 시뮬레이션 및 분석 결과는 위의 비용 추정이 실제로 완료된 이후에만 챗 창에 던지지 말고 반드시 전용 산출물 `finops-cost-report.md`에 Markdown 표 형태로 명확히 문서화하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] Full Observability Pipeline:** 시스템 화이트박스 검증을 위해 분산 추적(OpenTelemetry)과 모니터링 메트릭(Prometheus)을 결합한 통합 관측성 파이프라인을 구축하십시오.
+- **[MUST] MTTR & MTTD Tracking:** 알람 발생부터 에이전트의 장애 원인 진단(MTTD) 및 자동 복구 완료(MTTR) 리드 타임을 정교히 측정해 CloudWatch 커스텀 메트릭 또는 Datadog 대시보드로 가시화하는 DORA 지표 추적망을 구성하십시오.
+- **[MUST] Cost Allocation Tagging:** AI 및 데이터 파이프라인 리소스에 `CostCenter`, `Project`, `Environment` 비용 할당 태그(Cost Allocation Tags)를 필수 매핑하십시오.
 
-## 3. 예시 기반 메트릭 조회 강제 (Few-Shot Examples)
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
+### 2.1 GPU 및 ML 워크로드 최적화
+- **[MUST] GPU/ML Workload Spot Instances:** AI 모델 훈련 및 비동기 배치 추론 설계 시, 온디맨드 사용을 배제하고 EC2 Spot 인스턴스 또는 EKS Karpenter 혼합 노드 그룹을 적용하여 컴퓨팅 비용을 최소화하십시오.
+
+### 2.2 예산 경보 및 이상 비용 통제
+- **[MUST] Anomaly Billing Detection:** LLM 무한 루프, 토큰 폭주 등으로 인한 돌발적 비용 급증(Spike)을 조기 탐지하도록 AWS Budgets 및 Anomaly Detection 비용 경보 알람 코드를 인프라에 결합하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
-[Bad] 추측성 진단: "CPU 사용량이 일시적으로 높아서 서버가 다운되었을 것입니다."
+[Good]
+- 팩트 기반 데이터 분석: "추측을 배제하고 실제 장애 시점의 지표를 확인하기 위해, PromQL로 CPU, 메모리, 네트워크 패킷 드롭 데이터를 조회하는 스크립트를 `run_command`로 실행하여 교차 검증을 수행하겠습니다."
 </example>
 <example>
-[Good] 관측성 도구 연동: "추측을 대신 실제 장애 시점의 지표를 확인하기 위해, PromQL로 CPU, 메모리, 네트워크 패킷 드롭 데이터를 조회하는 스크립트를 `run_command`로 실행하여 교차 검증(Cross-validation)을 수행하겠습니다."
+[Bad]
+- 추측성 진단: "CPU 사용률이 일시적으로 올랐던 것으로 추정되므로 서버가 그냥 죽었을 것입니다." (지표 근거 없음)
 </example>
 </examples>
+
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 비용 최적화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `infracost` CLI를 실행하여 설계 변경으로 발생하는 비용 변화를 정량적으로 도출하십시오.
+
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Cost Analysis Completion] 도메인 자가 채점:** 인프라 자원 변경안을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 설계를 최종 제안하십시오)
+  - 기준 1 (자원 최적화): GPU/ML 모델 훈련 배치용 자원이 Spot 및 멱등적 Karpenter 스케일러로 저비용 설계되었는가?
+  - 기준 2 (이상 비용 방어): 급격한 자원 누수나 람다 폭주 시 파이프라인을 자동 정지하고 이상 알람을 전송하는 예산 방어막이 가동되는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - AI 모델 훈련 인프라 설계 중, 비용 절감을 위한 Spot Instance 옵션이 제외되고 고가의 온디맨드 GPU 인스턴스 전용 24/7 상시 기동 설계가 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 개선하십시오.
+  - AWS Budgets 및 비용 이상 감지(Anomaly Detection)를 통한 자동 차단/알람 매니페스트가 누락된 채 대규모 분산 파이프라인이 기획될 시 작업을 즉시 멈추고 안전 가드를 구성하십시오.

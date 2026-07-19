@@ -2,20 +2,33 @@
 role: Senior Cloud Architect
 priority: high
 trigger: Apply these rules ONLY when working with AWS Lambda, API Gateway, Step Functions, or event-driven architecture.
+references:
+  - contexts/aws/references/050-iac-standard.md
+  - contexts/aws/references/020-security-compliance.md
+  - contexts/aws/references/025-cloud-security.md
+  - contexts/aws/references/030-finops-optimization.md
 ---
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
-## 1. Serverless 설계 원칙
-- **[PREFER] Event-driven:** SQS, SNS, EventBridge, **Kinesis Data Streams** 등을 활용한 비동기식(Asynchronous) 이벤트 기반 아키텍처를 최우선으로 제안하십시오.
-- **[MUST] State Isolation:** AWS Lambda 함수 설계 시 반드시 무상태(Stateless)로 설계하고 필요한 데이터는 DynamoDB 등 외부 저장소를 활용하도록 구성하십시오.
-- **[MUST] Orchestration:** 복잡한 비즈니스 로직(Workflow) 구현 시 AWS Step Functions를 활용한 오케스트레이션을 적극 제안하십시오.
-- **[MUST] Performance Optimization (Cold Start):** 지연 시간(Latency)에 민감한 API 설계 시, 콜드 스타트 이슈를 극복하기 위해 Provisioned Concurrency 설정이나 구동이 빠른 런타임(Rust, Go 등) 전환을 필수 대안으로 제시하십시오.
+본 모듈은 AWS Lambda, API Gateway, Step Functions 및 서버리스 기반 이벤트 구동형 아키텍처 설계와 구현 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 보안 및 오류 처리
-- **[MUST] Failure Handling & Retry:** 모든 비동기 Lambda 호출 및 이벤트 트리거(SQS, EventBridge, **Kinesis** 등)에는 메시지 처리의 신뢰성을 보장하기 위해 **Dead Letter Queue (DLQ), On-Failure Destinations 또는 스트림 에러 제어(예: BisectBatchOnFunctionError)**를 구성하고 재시도(Retry) 정책을 명시하십시오.
-- **[MUST] API Security:** API Gateway 제안 시 반드시 IAM 인증, Cognito User Pool, 또는 Lambda Custom Authorizer를 필수 구성 요소로 포함하여 퍼블릭 접근을 통제하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] State Isolation:** AWS Lambda 함수 설계 시 반드시 무상태(Stateless)로 설계하고, 상태나 지속성 데이터는 DynamoDB 등 외부 분리 저장소를 활용하도록 하십시오.
+- **[MUST] Failure Handling & Retry:** 모든 비동기 Lambda 호출 및 이벤트 트리거(SQS, SNS, Kinesis 등)에는 메시지 처리 신뢰성 확보를 위해 Dead Letter Queue (DLQ) 또는 On-Failure Destinations를 필수 구성하십시오.
 
-### 비동기 오류 제어 예시 (Few-Shot Examples)
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
+
+### 2.1 이벤트 소스 및 API 게이트웨이 보안
+- **[PREFER] Event-driven:** EventBridge, SQS, Kinesis Data Streams 등을 활용한 비동기식 이벤트 기반 흐름을 최우선 제안하고, 복잡한 비즈니스 로직은 Step Functions 오케스트레이션으로 분리하십시오.
+- **[MUST] API Security:** API Gateway 제안 시 반드시 IAM 인증, Cognito User Pool, 또는 Lambda Custom Authorizer를 필수 구성하여 퍼블릭 무단 접근을 차단하십시오.
+- **[MUST] Performance Optimization:** 레이턴시 민감 API 설계 시, 콜드 스타트 극복을 위해 Provisioned Concurrency 설정 또는 Rust/Go 등 빠른 구동 런타임 사용을 대안으로 검토하십시오.
+
+### 2.2 배포 패키징 및 Boto3 개발 표준
+- **[PREFER] Container Image:** Lambda 종속성 용량 한계 극복을 위해 Zip 파일보다 컨테이너 이미지 배포 아키텍처를 우선 제안하십시오.
+- **[MUST] Boto3 Safety:** Python AWS SDK(Boto3) 사용 시, 대량 조회용 `Paginator` 적용 및 `botocore` 예외 처리(`ClientError`)를 반드시 포함하십시오.
+- **[MUST] API Call Idempotency:** Boto3/CLI를 통한 리소스 생성 스크립트 작성 시, 중복 생성을 막기 위해 반드시 고유 식별자(`ClientRequestToken` 등)를 포함하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
@@ -35,16 +48,19 @@ resource "aws_lambda_function_event_invoke_config" "example" {
 </example>
 <example>
 [Bad]
-# maximum_retry_attempts 설정 누락 (무한 재시도 위험)
-# DLQ(on_failure destination) 누락 (메시지 유실)
+# maximum_retry_attempts 설정 누락 (이벤트 유실 및 무한 루프 위험)
+# failure destination 누락 (에러 시 유실된 메시지 추적 불가)
 </example>
 </examples>
 
-- **[Trigger: Serverless Deployed] 자가 비판 (Self-Critique):** 서버리스 아키텍처(Lambda, SQS, SNS 등) 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 **비동기 이벤트 처리 실패 시 무한 재시도(Infinite Loop) 발생 가능성 및 Dead Letter Queue (DLQ) 누락으로 인한 메시지 영구 유실 가능성**을 집중 비판하십시오.
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** AWS SAM CLI를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`sam local invoke` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
+- **[MUST] 검증 도구 매핑:** `sam validate -t <template_file>` 및 `tflint`를 사용하여 서버리스 템플릿과 권한 설정을 점검하십시오.
 
-## 3. 배포 및 패키징
-- **[PREFER] Container Image:** 배포 패키징 시 종속성(Dependencies) 용량 한계를 극복하고 로컬 테스트 용이성을 확보하기 위해, Zip 파일 방식보다 **컨테이너 이미지(Container Image) 배포** 방식을 우선 고려하십시오.
-- **[MUST] SAM Local Testing (CLI):** AWS SAM(Serverless Application Model) 기반의 인프라 코드 작성 시, 로컬에 AWS SAM CLI가 설치되어 있다면 `run_command`로 `sam validate -t <특정_템플릿_파일>`을 실행하여 템플릿 문법을 사전 검증하십시오.
-- **[MUST] Boto3 Safety:** Python AWS SDK(Boto3) 기반의 Lambda 코드 작성 및 리뷰 시, 대량 조회용 `Paginator` 사용 및 `botocore` 예외 처리(ClientError) 안정성 확보를 깐깐하게 검토하십시오.
-- **[Trigger: After Lambda Code Edit] 로컬 인보크 테스트 (Local Invoke Trigger):** 수정된 Lambda 코드를 클라우드에 배포하기 전, 로컬에 AWS SAM 및 Docker 환경이 준비되어 있다면 반드시 `run_command`를 통해 `sam local invoke` 또는 `sam local start-api`를 실행하여 로컬에서 함수를 시뮬레이션(테스트)하십시오.
-- **[MUST] API Call Idempotency (ClientRequestToken):** Boto3 SDK나 AWS CLI를 활용해 리소스를 동적으로 생성하는 스크립트를 작성할 때, 요청 재시도 시의 중복 생성을 원천 차단하기 위해 반드시 고유 식별자(`ClientRequestToken` 등)를 포함하여 요청을 전송하십시오.
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Serverless Deployed] 도메인 자가 채점:** 서버리스 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+  - 기준 1 (오류 격리): 비동기 이벤트 처리 실패 시 Dead Letter Queue (DLQ)로 자동 격리(On-Failure)되는 경로가 설정되었는가?
+  - 기준 2 (보안 통제): API Gateway의 퍼블릭 엔드포인트에 인증(IAM/Cognito 등) 장치가 누락 없이 결합되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - Lambda 함수의 메모리 및 타임아웃 제한이 비합리적으로 과도하게 높게 설정(예: 타임아웃 15분 및 메모리 10GB 상시 적용)되어 리소스 낭비 위험성이 확인될 시 작업을 즉시 중단(Halt & Clarify)하고 최적화를 요청하십시오.
+  - SQS/SNS 비동기 파이프라인에서 DLQ 유실이 확인되고 수동 재처리 복구 계획이 부재할 시 작업을 멈추고 대체 설계를 구현하십시오.

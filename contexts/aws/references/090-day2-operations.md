@@ -2,39 +2,52 @@
 role: Senior Cloud Architect
 priority: high
 trigger: Apply these rules ONLY when designing CI/CD pipelines, high-availability architecture, or production deployments.
+references:
+  - contexts/aws/references/050-iac-standard.md
+  - contexts/aws/references/080-database-standard.md
+  - contexts/aws/references/030-finops-optimization.md
 ---
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
-## 1. 선언적 배포 및 파이프라인 (CI/CD)
-- **[MUST] Separation of Concerns:** CI(빌드/테스트)와 CD(배포) 역할을 엄격히 분리하고, 배포 파이프라인 설계 시 파이프라인에 의한 100% 자동화 배포가 이루어지도록 구성하십시오.
-- **[MUST] CI/CD Local Test:** GitHub Actions 등 파이프라인 코드 작성 시, 로컬에 `act` 도구가 설치되어 있다면 `run_command`로 `act -W <특정_워크플로우_파일>` 도구를 실행하여 로컬에서 사전 검증하십시오.
+본 모듈은 CI/CD 배포 파이프라인 설계, SRE 모니터링 가시성(Observability) 및 재해 복구(DR) 아키텍처 수립 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 가시성 (Observability) 및 데이터 복원력
-- **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch)을 넘어, 마이크로서비스 환경에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray) 아키텍처를 반드시 포함하십시오.
-- **[MUST] Data Resilience:** 데이터베이스의 고가용성(Multi-AZ) 및 백업/복원 전략은 `080-database-standard` 모듈의 규칙을 준수하십시오. 추가로, 악의적 삭제나 휴먼 에러에 대비한 연속 백업 활성화를 기본값으로 설정하십시오.
-- **[MUST] SRE Golden Signals:** CloudWatch 알람을 설계할 때는 단순 하드웨어 지표(CPU 80% 등) 모니터링을 넘어, 사용자 경험에 직결되는 SRE 4대 황금 지표(대기 시간, 트래픽, 오류, 포화도)를 반드시 모니터링 대상으로 포함시켜 알람의 정확도를 높이십시오.
-- **[MUST] Actionable Alerts:** 모든 알람에는 즉시 실행 가능한 런북(Runbook) 링크를 제공하거나 SNS, EventBridge, Lambda를 연동한 자동화된 조치(Automated Remediation) 파이프라인을 반드시 함께 제안하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] Separation of Concerns:** CI(빌드/테스트)와 CD(배포) 역할을 엄격히 분리하고, 배포 파이프라인에 의한 100% 자동화 배포를 구현하십시오.
+- **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch) 외에 마이크로서비스에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray)을 포함하십시오.
+- **[MUST] Rollback:** 배포 실패 시 안전한 트래픽 전환(Blue/Green, Canary)과 자동 롤백 메커니즘을 배포 파이프라인 아키텍처에 보증하십시오.
 
-### 모니터링 및 알람 구성 예시 (Few-Shot Examples)
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
+
+### 2.1 가시성 및 모니터링 알람
+- **[MUST] SRE Golden Signals:** 사용자 경험 메트릭(P99 Latency, 5xx Error Rate 등) 위주로 알람을 설계하여 알람의 실질적인 유효성을 높이십시오.
+- **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 SNS/Lambda를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
+
+### 2.2 재해 복구(DR) 및 무중단 마이그레이션
+- **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Pilot Light 또는 Warm Standby 모델을 명시적으로 구분하여 적용하십시오.
+- **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴과 Flyway/Liquibase 버전 관리 도구를 적용하여 무중단 마이그레이션을 구현하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
-- "단순 CPU 사용률 80% 초과 알람 대신, p99 지연 시간(Latency)이 2초를 초과하고 500 에러 비율이 1%를 넘었을 때만 P1 알람을 발송하도록 설정하십시오."
+- "CPU 사용률 단일 알람 대신, 5xx 에러 응답 비율이 1%를 초과할 때 슬랙 알람과 런북 가이드를 자동 발송하십시오."
+- "DB 마이그레이션 시 컬럼명을 즉시 변경하지 말고, 신규 컬럼 생성(Expand) 후 이관 완료 뒤 구형 컬럼을 제거(Contract)하십시오."
 </example>
 <example>
 [Bad]
-- "CPU 70% 초과 시 모든 개발자에게 슬랙 알람을 보냅니다." (알람 피로도 유발)
+- "CPU 70% 초과 시 무조건 호출(PagerDuty) 알람을 전송합니다." (알람 피로 유발)
+- "마이그레이션 시 구형 컬럼과 신규 컬럼을 한 릴리즈에 일괄 교체 배포합니다."
 </example>
 </examples>
 
-- **[Trigger: Monitoring Configured] 자가 비판 (Self-Critique):** 모니터링 알람이나 로깅 설계를 제안한 직후, 스스로 `<self_critique>` 태그를 열어 **과도한 알람 발생으로 인한 피로도(Alert Fatigue) 유발 가능성 및 실제 장애를 놓칠 수 있는 사각지대 존재 여부**를 집중 비판하십시오.
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** CI/CD 파이프라인 구문 검증이 에러 없이 패스되고, 스키마 변경 시 `db-migration-plan.md`가 유효하게 작성되어야 합니다.
+- **[MUST] 검증 도구 매핑:** GitHub Actions의 경우 `actionlint`를 실행하여 워크플로우 구문을 자동 검증하고, 로컬 테스트 도구(`act`)를 활용하여 배포를 시뮬레이션하십시오.
 
-## 3. 재해 복구(DR) 및 롤백 전략
-- **[MUST] DR Model:** 멀티 리전 아키텍처 제안 시 RTO/RPO를 고려한 Pilot Light 또는 Warm Standby 모델을 포함하십시오.
-- **[MUST] Rollback:** 배포 실패 시 안전한 트래픽 전환(Blue/Green, Canary)과 자동 롤백 파이프라인을 아키텍처에 포함하십시오.
-- **[PREFER] Chaos Engineering:** 대규모 엔터프라이즈 환경에서는 서비스 복원력 검증을 위해 AWS FIS (Fault Injection Simulator)를 활용한 카오스 엔지니어링 도입을 고려사항으로 제안하십시오.
-
-## 4. 상태 저장소(DB) 무중단 마이그레이션
-- **[Trigger: DB Schema Modification Request] 무중단 DB 마이그레이션 (Zero-Downtime DB):** 데이터베이스 스키마 변경 요청 시, 무중단 스키마 마이그레이션 전략을 최우선으로 고려하여 `db-migration-plan.md` 산출물로 제안하십시오.
-- **[MUST] Expand and Contract:** 이전 버전 앱과 호환성을 유지하는 하위 호환성 스키마 마이그레이션(Expand and Contract 패턴)과 Flyway, Liquibase 같은 마이그레이션 버전 관리 도구 도입을 반드시 제안하십시오.
-</day2_operations>
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Monitoring Configured] 도메인 자가 채점:** 로깅 및 모니터링 알람 규칙 설계를 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+  - 기준 1 (알람 피로 방지): 정상적인 스파이크 성 트래픽이나 정기 작업으로 인한 오탐(False Alarm) 피로가 배제되었는가?
+  - 기준 2 (사각지대 제거): 실질적인 사용자 장애(응답 레이턴시 지연 등)를 탐지할 수 있는 종단 간 모니터링이 확보되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - CI/CD 워크플로우 내에 외부 시크릿(Access Key 등)이 평문으로 직접 주입되어 배포 준비가 된 패턴이 스캔 감지되면 즉시 작업을 중단(Hard Block)하고 유출 상태를 보고하십시오.
+  - 무중단 DB 스키마 마이그레이션이 요구되는 배포 시, 하위 호환성 검증(Expand and Contract) 절차나 롤백 경로가 누락된 경우 작업을 즉시 멈추고 수정을 요구하십시오.

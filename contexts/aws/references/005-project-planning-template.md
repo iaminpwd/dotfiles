@@ -2,64 +2,60 @@
 role: Senior Cloud Architect
 priority: high
 trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new AWS/Cloud project.
+references:
+  - contexts/aws/references/010-aws-core.md
+  - contexts/aws/references/020-security-compliance.md
+  - contexts/aws/references/030-finops-optimization.md
+  - contexts/aws/references/060-eks-standard.md
 ---
 # 컨텍스트 모듈: AWS 프로젝트 마스터 플랜(계획서) 작성 표준
 
-본 모듈은 새로운 클라우드 프로젝트를 시작하기 전, 다방면의 아키텍처와 리스크를 종합적으로 고려한 '마스터 플랜'을 작성할 때 적용하십시오.
+본 모듈은 새로운 클라우드 프로젝트를 시작하기 전, 다방면의 아키텍처와 리스크를 종합적으로 고려한 '마스터 플랜'을 기획하고 수립할 때 적용되는 표준 가이드라인입니다.
 
-## 1. 클라우드 특화 자율 주행 (Cloud Agentic Workflow)
-- **[MUST] Use Built-in Artifact:** 계획서는 반드시 대상 에이전트(Antigravity)의 내장 `implementation_plan.md` 아티팩트를 사용하여 작성하십시오.
-- **[Trigger: Before Architecture Design] Agentic RAG 강제:** 새로운 아키텍처를 설계하기 전, 에이전트 스스로 `grep_search`나 `view_file` 도구를 사용하여 `030`(FinOps), `060`(K8s) 등 워크스페이스 내의 사내 표준(SSOT) 프롬프트 룰을 능동적으로 검색하고, 그 표준을 계획서에 100% 반영하도록 강제하십시오.
-- **[Trigger: Before Architecture Design] AWS Account Foraging:** 아키텍처 설계에 착수하기 전, 반드시 `run_command`로 `aws sts get-caller-identity`, `aws ec2 describe-vpcs`, `aws service-quotas` 등을 실행하여 현재 계정의 리전, VPC, Quota 상태를 팩트 기반으로 확보하십시오.
-- **[Trigger: Designing Architecture] Cloud Alternatives Table:** 핵심 컴퓨팅/스토리지 선택 시 반드시 2~3개의 AWS 서비스 대안(예: EC2 vs Fargate vs Lambda)과 비용/운영 복잡도를 Markdown Table로 제시하여 사용자의 선택을 유도하십시오.
-- **[Trigger: Cloud Quota Bottleneck] Serverless Mitigation:** 리소스 할당량(Quota) 초과 등 확장성 병목이 감지될 경우, 즉시 Fargate나 Lambda 기반의 서버리스 아키텍처로 전환하는 대안을 선제적으로 제시하십시오.
-- **[Trigger: Plan Draft Completed] Enterprise Auditor Persona:** 계획서 초안 작성을 완료한 직후, 스스로 'Zero-Trust 보안 및 FinOps 비용 감사관' 페르소나로 전환하여 보안 무결성과 비용 효율성을 10점 만점으로 엄격하게 채점하십시오.
-
-## 2. 마스터 플랜 뼈대 강제 (Master Plan Schema)
+## 1. 핵심 설계 원칙
+- **[MUST] Use Built-in Artifact:** 계획서는 반드시 에이전트의 내장 `implementation_plan.md` 아티팩트를 사용하여 작성하십시오.
 - **[MUST] Strict Structure:** 작성 시 아래 10개 목차를 한국어 제목으로 100% 준수하여 명시하십시오.
-  1. **프로젝트 요약 (Executive Summary)**: 프로젝트 개요 및 비즈니스 목표를 명시하십시오.
-  2. **아키텍처 청사진 (Architecture Blueprint) & ADR**: 전체 시스템 구성도를 설계하고, 도입된 기술에 대해 **ADR(Architecture Decision Records)** 형식을 차용하여 "대안 B를 검토했으나 비용/보안 문제로 기각하고 대안 A를 최종 채택함"이라는 명시적 기각 사유와 트레이드오프를 반드시 기록하십시오.
-  3. **네트워크 및 연결성 (Network & Connectivity)**: VPC, 서브넷(Public/Private), 라우팅 전략을 설계하십시오.
-  4. **보안 및 자격 증명 (Security & IAM)**: 최소 권한(PoLP) 및 시크릿 물리적 분리 원칙을 적용하십시오.
-  5. **비용 최적화 (FinOps & Cost Estimation)**: 초기 예상 비용 및 탄력적 스케일링(Autoscaling) 비용 최적화 방안을 명시하십시오.
-  6. **코드형 인프라 (IaC & Idempotency)**: 멱등성이 보장된 인프라 스크립트 작성 및 배포 자동화 계획을 수립하십시오.
-  7. **운영 및 리스크 관리 (Risk Management & Day-2)**: 시스템 장애 시 복구(Mitigation) 및 비난 없는 분석(Blameless RCA) 전략을 수립하십시오.
-  8. **구현 청사진 (Implementation Blueprint)**: 워크스페이스에 생성될 파일 트리, 적용 순서, 공통 환경 변수를 명시하십시오.
-  9. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 기계적으로 확인하는 자동화 평가 스크립트(Eval) 작성 계획을 포함하십시오.
-  10. **AI 및 개발자 제약사항 (AI & Developer Constraints)**: 로컬 룰(`.agents/AGENTS.md` 파일 하단에 Append) 추출을 위한 프로젝트 특화 제약사항(강제 행동, 도구 고정 버전 등)을 명시하십시오.
+  1. 프로젝트 요약 (Executive Summary)
+  2. 아키텍처 청사진 (Architecture Blueprint) & ADR (Architecture Decision Records)
+  3. 네트워크 및 연결성 (Network & Connectivity)
+  4. 보안 및 자격 증명 (Security & IAM)
+  5. 비용 최적화 (FinOps & Cost Estimation)
+  6. 코드형 인프라 (IaC & Idempotency)
+  7. 운영 및 리스크 관리 (Risk Management & Day-2)
+  8. 구현 청사진 (Implementation Blueprint)
+  9. 자동화 검증 (Eval-Driven Testing)
+  10. AI 및 개발자 제약사항 (AI & Developer Constraints)
 
-## 3. 예시 기반 프롬프팅 (Few-Shot Examples)
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
-### 8. 구현 청사진
+### 2.1 아키텍처 설계 기획 표준
+- **[MUST] Agentic RAG:** 설계 전 에이전트 스스로 `grep_search`나 `view_file`을 사용하여 `030`(FinOps), `060`(K8s) 등 사내 표준 프롬프트 룰을 능동 조사하여 반영하십시오.
+- **[MUST] AWS Account Foraging:** 설계 착수 전 반드시 `run_command`로 `aws sts get-caller-identity`, `aws ec2 describe-vpcs` 등을 실행하여 계정 실제 상태를 팩트 기반으로 확보하십시오.
+- **[MUST] Cloud Alternatives Table:** 컴퓨팅/스토리지 선택 시 2~3개의 AWS 서비스 대안과 비용/운영 복잡도를 Markdown Table로 제시하여 의사결정을 유도하십시오.
+- **[MUST] Architecture Blueprint & ADR:** 도입된 기술에 대해 ADR 형식을 차용하여 명시적인 채택/기각 사유와 트레이드오프를 기록하십시오.
+- **[MUST] Step-by-Step Execution:** 구현 청사진 설계 시 복잡도를 낮추기 위해 `vpc.tf` -> `iam.tf` -> `eks.tf` 등 의존성을 분리하여 순차적 생성 흐름을 작성하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
-- **[MUST] Step-by-Step Execution**: 복잡도를 낮추기 위해 `vpc.tf` -> `iam.tf` -> `eks.tf` 순서로 의존성을 분리하여 순차적으로 생성하십시오.
-- **[MUST] Explicit Variables**: 인프라 생성 시 VPC CIDR은 `10.0.0.0/16`으로, 접두사(Prefix)는 `prd-streaming-`으로 명시적으로 하드코딩하여 사용하십시오.
+- 구현 청사진: "VPC CIDR은 `10.0.0.0/16`으로, 리소스 접두사는 `prd-streaming-`으로 지정합니다."
+- AI 제약사항: "- **[MUST] Serverless First**: 이 프로젝트에서는 Fargate나 Lambda 자원을 우선적으로 채택하십시오."
 </example>
 <example>
 [Bad]
-- 생성 순서: vpc, iam, eks
-- 공통 변수: VPC는 10.0.0.0/16
+- 모호한 청사진: "VPC CIDR 및 리소스 접두사는 환경 변수들을 적당히 사용해 알아서 만드시오."
+- 모호한 제약사항: "서버는 Fargate로 할 것."
 </example>
 </examples>
 
-### 10. AI 및 개발자 제약사항
-<examples>
-<example>
-[Good]
-- **[MUST] Serverless First**: 이 프로젝트에서는 반드시 Fargate나 Lambda 같은 서버리스 컴퓨팅 자원을 우선적으로 채택하십시오.
-- **[Trigger: Before Terraform Apply] Mandatory Dry-Run**: 변경 사항 배포 전, 반드시 `terraform plan`을 선행하고 `<self_critique>`를 통해 파급 효과를 확인하십시오.
-</example>
-<example>
-[Bad]
-- 서버는 무조건 Fargate로 할 것
-- terraform apply 전 무조건 plan부터 돌릴 것
-</example>
-</examples>
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** 작성된 계획서가 `implementation_plan.md` 규격에 정확히 들어맞으며, 마크다운 렌더링에 린트 에러가 없어야 합니다.
+- **[MUST] 검증 도구 매핑:** markdown linter를 사용하여 계획서의 형식 및 가독성을 자동 검사하십시오.
 
-## 4. 검증 및 자가 비판 (Self-Critique)
-- **[Trigger: Before Finalizing Plan] Pre-Flight Checklist:** 계획서 작성을 완료하기 전, 스스로 `<self_critique>` 태그를 열어 다음 항목을 철저히 검증하십시오.
-  - 보안(Security)과 비용(FinOps)이 상호 보완적으로 최적화되었음을 입증하십시오.
-  - 생성될 파일들이 의존성이 완벽하게 해결된 배포 가능한 순서로 설계되었음을 입증하십시오.
-  - 작성된 계획서가 추후 AI 전용 규칙 파일(`.agents/AGENTS.md` 파일 하단에 Append)로 즉시 변환될 수 있도록 명확한 제약 조건으로 정리되었음을 입증하십시오.
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Before Finalizing Plan] 도메인 자가 채점:** 계획서 작성을 완료하기 전, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획서 작성을 완료하십시오)
+  - 기준 1 (설계 합치성): 보안(Least Privilege)과 비용(FinOps)이 타당한 ADR 근거와 함께 보완적으로 설계되었는가?
+  - 기준 2 (의존성 무결성): 생성될 파일들이 완벽하게 종속성이 해결된 순서로 구현 청사진에 기재되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - 가상 아키텍처가 해당 리전의 서비스 할당량(Quota)을 초과하는 사양이 감지되면, 이를 무시하지 말고 즉시 Fargate/Lambda 등으로의 서버리스 우회 전환 설계를 구성하거나, 작업을 멈추고 사용자에게 Quota 상향 조정을 정식 보고하십시오.

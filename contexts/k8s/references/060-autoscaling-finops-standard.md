@@ -2,21 +2,62 @@
 role: Senior K8s Platform Architect
 priority: high
 trigger: Apply these rules ONLY when designing autoscaling, finops, or resource optimization.
+references:
+  - contexts/k8s/references/010-k8s-core.md
+  - contexts/k8s/references/050-observability-standard.md
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 오토스케일링 및 FinOps 최적화 표준
 
-## 1. 워크로드 오토스케일링 (Pod Autoscaling)
-- **[MUST] Metric-based Scaling (HPA / KEDA):** Production 워크로드 레플리카 개수를 수동(정적)으로 지정하는 대신 HPA나 KEDA 도입을 제안하십시오. CPU/Memory 사용량에 반응하는 HPA(Horizontal Pod Autoscaler)를 기본으로 장착하되, SQS, Kafka, 외부 API 등 커스텀 이벤트 기반 스케일링이 필요할 경우 **KEDA** 도입을 최우선으로 제안하십시오.
-- **[MUST] VPA/HPA Conflict Avoidance:** 메모리 최적화를 위해 VPA(Vertical Pod Autoscaler)를 제안할 때, HPA와 동일한 메트릭(CPU/Memory)을 기반으로 동시 구동하여 발생하는 스케일링 충돌(Thrashing)을 차단하십시오. VPA는 `Off` 또는 `Initial` 모드로 사용하여 권장치만 도출(Recommendation)하는 전략을 제안하십시오.
+본 모듈은 Kubernetes HPA/KEDA 파드 오토스케일링, Karpenter/MIG 노드 오토스케일링 및 클러스터 리소스 비용 최적화(FinOps) 설계 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 클러스터 오토스케일링 (Node Autoscaling)
-- **[MUST] Dynamic Provisioning (Autoscaler):** 기존 CA(Cluster Autoscaler)의 한계를 넘기 위해 AWS EKS 환경인 경우 Karpenter 도입을 표준으로 제안하고, Azure AKS 등 타 클라우드에서는 클라우드 네이티브 오토스케일링 엔진(AKS Managed Autoscaler 등)을 활용해 프로비저닝을 자동화하십시오.
-- **[MUST] Multi-Architecture & Spot Instances:** 비용 효율성을 극대화하기 위해, Karpenter NodePool(또는 Provisioner) 설계 시 Spot 인스턴스와 다중 인스턴스 패밀리(amd64, arm64) 구성을 혼합(Mixed Instances)하여 안정적인 Spot 공급 역량(Capacity)을 확보하는 아키텍처를 필수적으로 구성하십시오.
-- **[MUST] Spot Interruption Handling:** Spot 인스턴스 회수(Reclaim)에 대비하기 위해, 클라우드 환경별 적절한 Spot 회수 처리기(AWS NTH, Azure Scheduled Events 등) 또는 Karpenter 네이티브 이벤트를 연동하십시오. 이와 동시에 애플리케이션의 우아한 종료(Graceful Shutdown)와 파드 Eviction 파이프라인 설계를 강제하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] Metric-based Scaling:** 파드 레플리카 수동 지정을 배제하고, CPU/Memory 기반 HPA 또는 Kafka/SQS 이벤트 기반 KEDA 스케일러를 적용하십시오.
+- **[MUST] VPA/HPA Conflict Avoidance:** HPA와 VPA가 동일 메트릭(CPU/Memory)을 기반으로 동시 작동하여 리소스 Thrashing(충돌)을 일으키는 아키텍처를 배제하고, VPA는 `Off` 또는 `Initial` 모드로 작동시켜 권장 권고치만 수집하도록 하십시오.
+- **[MUST] Dynamic Provisioning:** Karpenter 또는 클라우드 관리형 오토스케일러를 제안하여 동적 노드 프로비저닝을 가속화하십시오.
 
-## 3. FinOps 및 클라우드 리소스 최적화 (Cost Optimization)
-- **[MUST] Resource Quota Tightening:** 리소스 누수 방지(FinOps)를 위해 클러스터의 모든 네임스페이스(특히 개발/스테이징)에는 하드 리밋(Hard Limit)이 부여된 `ResourceQuota` 및 `LimitRange`를 강제 매핑하여 개발자 실수로 인한 과금 폭탄을 원천 차단하십시오.
-- **[PREFER] Cost Visibility (Kubecost / OpenCost):** 네임스페이스, 라벨(Project, CostCenter) 레벨로 클러스터 사용 비용을 모니터링하고 사내 과금(Chargeback)을 지원하는 Kubecost 또는 OpenCost 관측 아키텍처를 인프라 제안에 포함하십시오.
-- **[Trigger: Infrastructure Design / Scaling Check] 비용 영향 시뮬레이션:**
-  클러스터 노드 스케일링 구조를 제안하거나 IaC 리소스를 설계할 때, 로컬에 `infracost` 도구가 설치되어 있고 API key 등 환경이 준비되어 있다면 `run_command`로 `infracost breakdown --path <특정_경로>`를 실행하여 설계 변경이 초래할 월별 비용 증감을 정량적으로 파악하십시오. 분석된 상세 결과는 위의 비용 추정이 실제로 완료된 이후에만 챗 창이 아닌 `finops-cost-report.md` 산출물에 Markdown 테이블 포맷으로 정리하여 사용자에게 보고하십시오.
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
+### 2.1 클러스터 및 노드 스케일링
+- **[MUST] Multi-Architecture & Spot Instances:** 비용 절감을 위해 Spot Virtual Machines/Instances 사용을 우선 제안하고, Karpenter NodePool 설계 시 Spot 인스턴스와 다중 인스턴스 패밀리(amd64, arm64) 구성을 혼합하도록 기재하십시오.
+- **[MUST] Spot Interruption Handling:** Spot 회수에 대비하기 위해 Node Termination Handler(NTH) 또는 Karpenter native 이벤트를 연동하고, 파드에 Graceful Shutdown(preStop 훅) 설정을 보증하십시오.
+
+### 2.2 FinOps 및 리소스 최적화
+- **[MUST] Resource Quota Tightening:** 비프로덕션 네임스페이스의 리소스 남용 방지를 위해, 하드 리밋이 명시된 `ResourceQuota` 및 `LimitRange`를 필수 매핑하십시오.
+- **[PREFER] Cost Visibility:** 네임스페이스 및 비용 중심(CostCenter) 라벨 단위로 과금 조회를 지원하는 Kubecost 또는 OpenCost 적용을 제안하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
+<examples>
+<example>
+[Good]
+- VPA 권장 모드 설정 (충돌 회피):
+```yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: payment-api-vpa
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: payment-api
+  updatePolicy:
+    updateMode: "Initial"
+```
+</example>
+<example>
+[Bad]
+- updateMode: "Auto" 설정 및 HPA가 동일 CPU 메트릭으로 동시 구동 (스케일 업/다운 충돌 및 무한 대기 유발 안티패턴)
+</example>
+</examples>
+
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `infracost` CLI를 실행하여 스케일링 설정 변경으로 발생하는 비용 영향을 정량 분석하십시오.
+
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Infrastructure Design / Scaling Check] 도메인 자가 채점:** 오토스케일링 및 노드 리소스 코드를 작성한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+  - 기준 1 (자원 격리): 개발 네임스페이스 내에 무단 프로비저닝을 차단하기 위한 ResourceQuota 하드 상한선이 정의되었는가?
+  - 기준 2 (탄력성): 트래픽 스파이크 발생 시 Pod과 Node가 연쇄적으로 즉시 스케일 아웃(Scale-out) 가능한가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - HPA와 VPA가 동일 CPU/Memory 메트릭을 타겟팅한 상태에서 동시에 활성화(updateMode = "Auto")된 매니페스트가 발견될 시 즉시 작업을 중단(Halt & Clarify)하고 VPA 모드를 Initial로 전환하십시오.
+  - 네임스페이스 리소스 할당량(`ResourceQuota`) 설정 중 Limits의 최대 상한선(hard limits)이 정의되지 않은 무제한 구성이 감지될 시 즉시 작업을 멈추고 자원 정책을 보완하십시오.

@@ -2,20 +2,33 @@
 role: Senior Cloud Architect
 priority: high
 trigger: Apply these rules ONLY when working with Azure Functions, API Management, Logic Apps, or event-driven architecture.
+references:
+  - contexts/azure/references/050-iac-standard.md
+  - contexts/azure/references/020-security-compliance.md
+  - contexts/azure/references/025-cloud-security.md
+  - contexts/azure/references/030-finops-optimization.md
 ---
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
-## 1. Serverless 설계 원칙
-- **[PREFER] Event-driven:** Service Bus, Event Grid, **Event Hubs** 등을 활용한 비동기식(Asynchronous) 이벤트 기반 아키텍처를 최우선으로 제안하십시오.
-- **[MUST] State Isolation:** Azure Functions 설계 시 반드시 무상태(Stateless)로 설계하고 필요한 데이터는 Cosmos DB 등 외부 저장소를 활용하도록 구성하십시오.
-- **[MUST] Orchestration:** 복잡한 비즈니스 로직(Workflow) 구현 시 Azure Logic Apps 또는 Durable Functions를 활용한 오케스트레이션을 적극 제안하십시오.
-- **[MUST] Performance Optimization (Cold Start):** 지연 시간(Latency)에 민감한 API 설계 시, 콜드 스타트 이슈를 극복하기 위해 Premium 플랜(Always Ready 인스턴스) 설정이나 구동이 빠른 런타임(Rust, Go 등) 전환을 필수 대안으로 제시하십시오.
+본 모듈은 Azure Functions, API Management, Logic Apps 및 서버리스 기반 이벤트 구동형 아키텍처 설계와 구현 시 적용되는 기술 표준 가이드라인입니다.
 
-## 2. 보안 및 오류 처리
-- **[MUST] Failure Handling & Retry:** 모든 비동기 Azure Functions 호출 및 이벤트 트리거(Service Bus, Event Grid 등)에는 메시지 처리의 신뢰성을 보장하기 위해 **Dead Letter Queue (DLQ) 및 재시도(Retry) 정책**을 명확히 구성하십시오.
-- **[MUST] API Security:** API Management 제안 시 반드시 Azure RBAC 인증, Microsoft Entra ID(Azure AD) 연동, 또는 Azure Functions 연동(Custom Authorization)을 필수 구성 요소로 포함하여 퍼블릭 접근을 통제하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] State Isolation:** Azure Functions 설계 시 반드시 무상태(Stateless)로 설계하고, 상태나 지속성 데이터는 Cosmos DB 등 외부 분리 저장소를 활용하도록 하십시오.
+- **[MUST] Failure Handling & Retry:** 모든 비동기 Azure Functions 호출 및 이벤트 트리거(Service Bus, Event Grid 등)에는 메시지 처리 신뢰성 확보를 위해 Dead Letter Queue (DLQ) 또는 Event Subscription의 dead_letter_endpoint를 필수 구성하십시오.
 
-### 비동기 오류 제어 예시 (Few-Shot Examples)
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
+
+### 2.1 이벤트 소스 및 API 게이트웨이 보안
+- **[PREFER] Event-driven:** Event Grid, Service Bus, Event Hubs 등을 활용한 비동기식 이벤트 기반 흐름을 최우선 제안하고, 복잡한 비즈니스 로직은 Logic Apps 또는 Durable Functions 오케스트레이션으로 분리하십시오.
+- **[MUST] API Security:** API Management 제안 시 반드시 Azure RBAC 인증, Microsoft Entra ID 연동, 또는 Functions API Key 연동을 필수 구성하여 퍼블릭 무단 접근을 차단하십시오.
+- **[MUST] Performance Optimization:** 레이턴시 민감 API 설계 시, 콜드 스타트 극복을 위해 Premium 플랜(Always Ready 인스턴스) 설정 또는 Rust/Go 등 빠른 구동 런타임 사용을 대안으로 검토하십시오.
+
+### 2.2 배포 패키징 및 Azure SDK 개발 표준
+- **[PREFER] Container Image:** Functions 종속성 용량 한계 극복을 위해 Zip 파일보다 컨테이너 이미지 배포 아키텍처를 우선 제안하십시오.
+- **[MUST] Azure SDK Safety:** Python Azure SDK 사용 시, 대량 조회용 Pager 클래스 적용 및 `azure.core.exceptions` 예외 처리를 반드시 포함하십시오.
+- **[MUST] API Call Idempotency:** Azure SDK/CLI를 통한 리소스 생성 스크립트 작성 시, 중복 생성을 막기 위해 반드시 고유 식별자(`client-request-id` 헤더 등)를 포함하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
@@ -40,16 +53,19 @@ resource "azurerm_eventgrid_event_subscription" "example" {
 </example>
 <example>
 [Bad]
-# max_delivery_attempts 설정 누락 (무한 재시도 위험)
-# DLQ(dead_letter_endpoint) 누락 (메시지 유실)
+# max_delivery_attempts 설정 누락 (이벤트 유실 및 무한 루프 위험)
+# dead_letter_endpoint 누락 (에러 시 유실된 메시지 추적 불가)
 </example>
 </examples>
 
-- **[Trigger: Serverless Deployed] 자가 비판 (Self-Critique):** 서버리스 아키텍처(Azure Functions, Service Bus, Event Grid 등) 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 **비동기 이벤트 처리 실패 시 무한 재시도(Infinite Loop) 발생 가능성 및 Dead Letter Queue (DLQ) 누락으로 인한 메시지 영구 유실 가능성**을 집중 비판하십시오.
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** Azure Bicep CLI를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`func start` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
+- **[MUST] 검증 도구 매핑:** `az bicep build -f <template_file>` 및 `tflint`를 사용하여 서버리스 템플릿과 권한 설정을 점검하십시오.
 
-## 3. 배포 및 패키징
-- **[PREFER] Container Image:** 배포 패키징 시 종속성(Dependencies) 용량 한계를 극복하고 로컬 테스트 용이성을 확보하기 위해, Zip 파일 방식보다 **컨테이너 이미지(Container Image) 배포** 방식을 우선 고려하십시오.
-- **[MUST] Bicep Validation (CLI):** Bicep 기반의 인프라 코드 작성 시, 로컬에 Azure CLI 및 `bicep` 확장이 설치되어 있다면 `run_command`로 `az bicep build -f <특정_템플릿_파일>`을 실행하여 템플릿 문법을 사전 검증하십시오.
-- **[MUST] Azure SDK Safety:** Azure SDK for Python 기반의 Azure Functions 코드 작성 및 리뷰 시, 대량 조회용 페이징(Paging) 처리 및 `azure.core.exceptions` 예외 처리의 안정성 확보를 깐깐하게 검토하십시오.
-- **[Trigger: After Azure Functions Code Edit] 로컬 인보크 테스트 (Local Invoke Trigger):** 수정된 Azure Functions 코드를 클라우드에 배포하기 전, 로컬에 `Azure Functions Core Tools(func)`가 설치되어 있다면 반드시 `run_command`를 통해 `func start`를 실행하여 로컬에서 함수를 시뮬레이션(테스트)하십시오.
-- **[MUST] API Call Idempotency (ClientRequestId):** Azure SDK나 Azure CLI를 활용해 리소스를 동적으로 생성하는 스크립트를 작성할 때, 요청 재시도 시의 중복 생성을 원천 차단하기 위해 반드시 고유 식별자(`client-request-id` 헤더 등)를 포함하여 요청을 전송하십시오.
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Serverless Deployed] 도메인 자가 채점:** 서버리스 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+  - 기준 1 (오류 격리): 비동기 이벤트 처리 실패 시 Dead Letter Queue (DLQ)로 자동 격리(dead_letter_endpoint)되는 경로가 설정되었는가?
+  - 기준 2 (보안 통제): API Management의 퍼블릭 엔드포인트에 인증(Entra ID/API Key 등) 장치가 누락 없이 결합되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - Functions의 메모리 및 인스턴스 스케일아웃 제한이 비합리적으로 과도하게 높게 설정되어 리소스 낭비 위험성이 확인될 시 작업을 즉시 중단(Halt & Clarify)하고 최적화를 요청하십시오.
+  - Service Bus/Event Grid 비동기 파이프라인에서 DLQ 유실이 확인되고 수동 재처리 복구 계획이 부재할 시 작업을 멈추고 대체 설계를 구현하십시오.

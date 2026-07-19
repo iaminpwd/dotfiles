@@ -2,18 +2,30 @@
 role: Senior Cloud Architect
 priority: high
 trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.
+references:
+  - contexts/aws/references/010-aws-core.md
 ---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
-## 1. 셸 스크립트 작성 (Bash Scripting)
-- **[MUST] Bash Fail-Fast & Cleanup:** Bash 셸 스크립트 최상단에 `set -euo pipefail` 선언을 강제하고, 스크립트 종료 시 임시 파일을 정리하는 `trap` 자원 회수 로직을 필수적으로 구현하십시오.
-- **[PREFER] Cross-Platform Awareness:** Bash 스크립트 작성 시 WSL2 환경을 고려하여 윈도우 마운트 경로(`/mnt/c/`) 방어 로직을 포함하십시오.
-- **[MUST] Safe File Modification:** 중요 설정 파일 수정 전, 시스템 장애 복원을 위해 반드시 타임스탬프가 붙은 백업 파일(`.bak`)을 먼저 생성하십시오.
-- **[MUST] Descriptive Output:** 실행 시간이 긴 셸 스크립트가 실행될 때는 `echo "[1/5] 설치 진행 중..."` 과 같이 진행 단계를 직관적으로 보여주는 로깅 문구를 포함하십시오.
-- **[MUST] Bash Idempotency & Safe Appending:** 리소스 중복 생성 방지를 위한 멱등성을 보장하고, 설정 파일 수정 시 반드시 `grep` 등으로 기존 존재 여부를 검증한 후 안전하게 추가(Append)하십시오.
-- **[Trigger: After Bash Script Edit] 문법 검증:** Bash 셸 스크립트 파일을 수정한 직후에는 반드시 `bash -n <file>` 명령어를 실행하여 구문(Syntax) 오류를 스스로 검증하십시오.
+본 모듈은 시스템 셋업 쉘 스크립트 작성, 운영체제 패키지 관리 및 자동화 스크립트 아키텍처 수립 시 적용되는 엔지니어링 표준 가이드라인입니다.
 
-### 멱등성 및 방어적 셸 스크립트 예시 (Few-Shot Examples)
+## 1. 핵심 설계 원칙
+- **[MUST] Bash Fail-Fast & Cleanup:** 셸 스크립트 실행 시 에러 발생 시 즉각 실행을 정지하도록 `set -euo pipefail`을 강제하고, 종료 시 임시 리소스를 해제하는 `trap` 회수 로직을 보증하십시오.
+- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 파일이나 디렉토리 존재 여부, CLI 도구 설치 여부를 사전에 분기 검증하여 멱등성을 달성하십시오.
+- **[MUST] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용하십시오.
+
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
+
+### 2.1 Bash 스크립트 작성 규칙
+- **[MUST] Safe File Modification:** 설정 파일(`/etc/*` 등) 수정 전, 시스템 롤백을 위해 반드시 타임스탬프가 포함된 백업 파일(`.bak`)을 먼저 생성하십시오.
+- **[MUST] Descriptive Output:** 실행 시간이 길어질 수 있는 구문에는 `echo "[1/5] 설치 진행 중..."` 처럼 단계별 진행 상황 로깅 메시지를 기재하십시오.
+- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오.
+- **[PREFER] Cross-Platform Awareness:** WSL2 환경을 상정하여 윈도우 마운트 경로(`/mnt/c/` 등) 방어 코드를 설계에 기입하십시오.
+
+### 2.2 도구 관리 및 가상환경 격리
+- **[PREFER] Tool Isolation:** CLI 도구 설치 시 `pipx` 또는 `mise` 도구 버전 관리 시스템을 활용하여 도구 전용 가상 가상환경에 격리 배포하도록 설계하십시오.
+
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
@@ -22,23 +34,29 @@ set -euo pipefail
 trap 'rm -rf /tmp/mytemp' EXIT
 
 if ! command -v aws &> /dev/null; then
-    echo "AWS CLI 설치 중..."
-    # 설치 로직
+    echo "AWS CLI 설치 진행 중..."
+    # 사용자 격리 설치 로직
 fi
 ```
 </example>
 <example>
 [Bad]
 ```bash
-# 에러 방어 로직 누락
-rm -rf /tmp/mytemp # 변수 처리 없이 직접 삭제
-apt-get install awscli -y # 상태 확인 없이 즉시 설치 시도
+# 에러 방어 및 Fail-Fast 누락
+rm -rf /tmp/mytemp  # 변수 안전성 처리 없이 무조건 삭제
+apt-get install awscli -y  # root 설치 남용 및 멱등성 검증 누락
 ```
 </example>
 </examples>
 
-- **[Trigger: Script Completed] 자가 비판 (Self-Critique):** 자동화 스크립트 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **중복 실행(Re-run) 시 발생할 수 있는 사이드 이펙트 및 Fail-Fast(`set -e`) 누락 여부**를 집중 비판하십시오.
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** 작성된 스크립트가 구문 린트 오류 없이 통과되고, 2회 연속 실행(멱등성 테스트)에도 에러가 발생하지 않아야 합니다.
+- **[MUST] 검증 도구 매핑:** `bash -n <script.sh>`를 통해 기본 구문 오류를 검증하고, `shellcheck`를 실행하여 쉘 스크립트 정적 분석 및 위험 요소를 스캔하십시오.
 
-## 2. 운영 체제 (OS) 패키지 및 도구 관리
-- **[MUST] Strict User-Level Installation (Sudo 권한 통제):** 시스템 패키지 및 개발 도구 설치 시, 시스템 소유권(Ownership) 보호를 위해 항상 사용자 수준(User-level) 설치를 최우선으로 강제하십시오.
-- **[PREFER] Tool Isolation (Pipx & Mise):** 전역 CLI 도구 설치 시 시스템 의존성 오염을 방지하기 위해 `pipx` 또는 `mise` 선언적 설정을 통한 가상환경 격리 배포를 우선적으로 제안하십시오.
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Script Completed] 도메인 자가 채점:** 쉘 스크립트 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+  - ID 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행했을 때 자원 중단이나 중복 생성이 발생하는가?
+  - ID 2 (보안성): 사용자의 환경 변수나 중요 패스워드 등의 유출 리스크가 스크립트 로그 상에 포함되는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - 스크립트 코드 내에 `rm -rf ${VAR}/*`와 같이 매개변수 유효성(공백 체크 등) 없이 광대역 삭제를 수행하는 위험 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
+  - Sudo 권한이 남용되어 사용자 격리가 불가능한 `sudo` 남발 코드가 감지될 시 작업을 멈추고 보안 수정을 요구하십시오.
