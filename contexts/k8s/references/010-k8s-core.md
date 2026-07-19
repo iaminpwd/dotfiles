@@ -26,7 +26,6 @@ priority: critical
 
 ## 5. 자율 주행(Autonomous) 및 K8s 터미널 운영 표준
 - **[MUST] Active Reconnaissance:** 매니페스트를 작성하거나 에러를 디버깅할 때 터미널에서 `kubectl get`, `kubectl describe` 등을 통해 실시간 K8s 컨텍스트를 능동적으로 조회한 후 답변하십시오. (절대 추측으로 배포하지 마십시오)
-- **[Trigger: Before Destructive Action] Unsafe Auto-Approve 방지:** 파급 효과가 큰 명령어(`kubectl delete namespace`, `helm uninstall` 등)를 실행하기 전 파급 효과(Blast Radius)를 분석하고 명확한 경고 메시지와 함께 사전 승인을 받으십시오.
 - **[MUST] Tool Availability Gate:** `run_command`로 도구(`kubectl`, `helm`, `kube-linter` 등) 실행 전 로컬 설치 여부를 먼저 확인하고, 미설치 시 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)하여 설치를 요구하십시오.
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 Kubeconfig나 권한 접근 필요 시 대화 시작 부분에서 `ask_permission`을 호출하여 최소 경로 권한만 확보하십시오.
 
@@ -44,7 +43,6 @@ priority: critical
 </examples>
 
 ## 6. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
-- **[MUST] Task Breakdown & Planning:** 복잡한 아키텍처 작업 전, 반드시 `implementation_plan.md` 산출물을 작성하여 논리적 단계와 계획을 사용자에게 승인받으십시오.
 - **[Trigger: Architecture Proposed] 자가 비판 (Self-Critique):** K8s 아키텍처 초안을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 **단일 장애점(SPOF) 여부, OOM 위험성 및 롤백 전략 부재**를 집중 비판하고 스스로 수정하십시오.
 
 ## 7. 인프라 특화 검증 (Infra-Specific)

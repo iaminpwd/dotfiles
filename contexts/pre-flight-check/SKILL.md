@@ -18,9 +18,9 @@ description: |
 
 ## 2. 정성적 정책 자가 검증 (Policy Self-Check)
 
-- **[MUST] Policy Self-Check Table (근거 제시 필수):** 코드 제안 및 작업 완료 보고 시, `implementation_plan.md` 및 `walkthrough.md`에 기술적인 검증 결과(pre-flight-check.sh 패스 여부)뿐만 아니라 개별 클라우드 표준(AWS/Azure 등)에 정의된 정성적 가이드라인(예: 백엔드 상태 잠금 적용 여부, 최소 권한 보안 그룹 구성, 리소스 명명 규칙 등)의 준수 여부를 나타내는 자가 체크리스트 테이블을 명시적으로 수록하여 보고하십시오.
-  *   **[CRITICAL]** 단순히 '준수함'으로 기재하지 마십시오. 테이블의 각 점검 항목에 준수 여부(Pass/N/A)뿐만 아니라, **해당 규칙을 충족하는 구체적인 코드 위치의 절대 경로 파일 링크(라인 번호 범위 포함, 예: [main.tf:L5-12](file:///home/ubuntu/workspace/main.tf#L5-L12)) 또는 실제 CLI 실행 근거**를 상세 컬럼으로 추가하여 물리적으로 입증해야 합니다. 근거 파일 링크가 누락된 준수 표기는 환각(Hallucination)으로 간주되어 전체 승인이 거부됩니다.
-  *   **[REQUIRED TEMPLATE]** Policy Self-Check 테이블 작성 시 반드시 아래 템플릿 구조와 헤더 컬럼명을 사용하고, 예시 경로가 아닌 **실제 수정된 파일의 절대 경로**를 `file:///` 프로토콜 뒤에 정확히 매핑하십시오.
+- **[MUST] Policy Self-Check Table (자가 검증 테이블 필수):** 작업 완료 보고 시(`walkthrough.md` 등) 아래 템플릿을 사용하여 클라우드 표준 정책 준수 여부를 테이블로 작성하십시오.
+  * **[CRITICAL] 물리적 근거 기입 필수:** 준수 여부(Status) 기록 시, 반드시 해당 규칙을 충족하는 구체적인 코드 절대 경로 및 라인 범위 링크(예: [main.tf:L5-12](file:///home/ubuntu/workspace/main.tf#L5-L12)) 또는 CLI 실행 결과를 명시하십시오. 근거 링크가 누락된 항목은 검증 실패로 간주되어 승인되지 않습니다.
+  * **[REQUIRED TEMPLATE]** 테이블 작성 시 반드시 아래 템플릿 구조와 헤더 컬럼명을 사용하고, 예시 경로가 아닌 **실제 수정된 파일의 절대 경로**를 `file:///` 프로토콜 뒤에 정확히 매핑하십시오.
       ```markdown
       ### 정성적 정책 자가 검증 (Policy Self-Check)
 

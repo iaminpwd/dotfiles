@@ -19,6 +19,8 @@
 .ssh/
 id_rsa*
 id_ed25519*
+id_ecdsa*
+id_dsa*
 kubeconfig
 *.kubeconfig
 .env
@@ -30,11 +32,18 @@ kubeconfig
 *secret*
 *credential*
 *password*
+*token*
 service-account*.json
 client_secret*.json
 *.sops.yaml
 *.sops.json
 *.enc
+*.age
+*.asc
+*.jks
+.vault_pass
+vault_password*
+*.vault
 terraform.tfvars
 terraform.tfvars.json
 *.auto.tfvars
@@ -105,6 +114,7 @@ cdk.out/
 .tox/
 .mypy_cache/
 .ruff_cache/
+.trivy/
 coverage/
 htmlcov/
 checkov_report.*
@@ -118,6 +128,7 @@ tfsec_report.*
 *.jpg
 *.jpeg
 *.gif
+*.webp
 *.svg
 *.mp4
 *.mov
@@ -141,12 +152,13 @@ tfsec_report.*
 Thumbs.db
 .idea/
 .vscode/
-.cursor/
 .history/
 Session.vim
 .aider/
 .aider.chat.history.md
 *.swp
 *.swo
+*.bak
+*.orig
 *~
 

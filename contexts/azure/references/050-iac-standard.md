@@ -10,8 +10,8 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt,
 - **[MUST] Declarative Configuration Management (선언적 구성 관리 강제):** 멱등성(Idempotency)을 유지하기 위해 시스템 설정 시 반드시 전용 구성 관리 도구(예: Ansible)나 네이티브 OS 스크립트(`user_data`)를 사용하십시오.
 
 ## 2. Terraform 엔지니어링 표준
-- **[MUST] Active Investigation (Step 0. 사전 팩트 검증):** Terraform(IaC) 코드 작성 전, 반드시 `run_command`로 `az [서비스] show/list` 명령어를 실행하여 현재 Azure 계정의 실제 리소스(VNet, Subnet, RBAC Role 등) 상태를 먼저 물리적으로 조회하고, 그 팩트만을 유일한 근거로 삼아 코드를 제안하십시오.
-- **[MUST] Reference Common IaC Rules (정량 검증):** 코드 수정 후 정량 검증은 반드시 활성화된 `pre-flight-check` 스킬의 `pre-flight-check.sh` 일괄 실행 가이드라인을 참조하여 수행하십시오.
+- **[MUST] Active Investigation (Step 0. 사전 팩트 검증):** Terraform(IaC) 코드 작성 전, 반드시 `010-azure-core` 모듈의 `5D Integration Matrix (Step 0)` 절차를 참조하여 `run_command`로 실제 Azure 리소스들의 최신 상태를 물리적으로 선제 조사하고, 그 팩트만을 근거로 삼아 코드를 작성하십시오.
+
 - **[MUST] Policy Self-Check (정책 자가 검증 및 근거 제시):** 코드 제안 전/후 `implementation_plan.md` 및 `walkthrough.md`에 정량 검증 결과뿐만 아니라, 본 가이드에 기술된 정성적 정책(예: Blob Storage 백엔드 및 임대, vWAN 라우팅, `for_each` 정적 키 사용 등)의 준수 여부를 기록하는 자가 체크리스트 테이블을 작성하되, **각 항목마다 구체적인 충족 코드의 절대 경로 파일 링크(라인 범위 포함) 또는 팩트 기반 근거를 명시적으로 기입**하여 사용자에게 보고하십시오.
 - **[PREFER] vWAN:** 글로벌 확장성 확보를 위해 Azure Virtual WAN(vWAN) 기반의 중앙 집중형 라우팅을 적극 제안하십시오.
 - **[MUST] State Management:** State 저장은 반드시 Azure Blob Storage Backend와 자체 임대(Lease) 기반 State Locking을 사용하여 원격으로 안전하게 구성하십시오.
@@ -46,7 +46,7 @@ terraform {
 </example>
 </examples>
 
-- **[Trigger: Before Terraform Apply] 자가 비판 및 구조화된 채점 (Self-Critique & Structured Judge):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform plan -input=false`를 실행(입력 대기로 인한 Lock 무한 대기 방지)하고 스스로 `<self_critique>` 태그를 열어 다음 2가지 기준(Metric)으로 현재 Plan 결과를 1~5점으로 채점하십시오. (단순히 리소스 변경 목록만 빠르게 조회할 목적이라면 `terraform plan -lock=false` 사용을 적극 제안하십시오.) (채점 시 반드시 `- [기준명]: [점수]점 - 사유: ...` 포맷을 명시적으로 사용하십시오.)
+- **[Trigger: Before Terraform Apply] 자가 비판 및 구조화된 채점 (Self-Critique & Structured Judge):** 상태 변경 명령어를 실행하기 전, 반드시 `terraform plan -input=false`를 실행(입력 대기로 인한 Lock 무한 대기 방지)하고 스스로 `<self_critique>` 태그를 열어 다음 2가지 기준(Metric)으로 현재 Plan 결과를 1~5점으로 채점하십시오. (리드온리 목적의 단순 변경 목록 확인 시에만 상태 오염 리스크를 줄이기 위해 `terraform plan -lock=false` 옵션 사용을 고려하십시오.) (채점 시 반드시 `- [기준명]: [점수]점 - 사유: ...` 포맷을 명시적으로 사용하십시오.)
   - Criteria 1 (안전성): 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하는가?
   - Criteria 2 (보안성): NSG나 RBAC 권한이 과도하게 열려있지 않은가? (5점: 완벽히 안전 / 3점: 경고 수준 / 1점: 치명적 위험)
   채점 결과가 두 기준 모두 5점 만점일 경우에만 사용자에게 Plan 결과와 채점 내용을 보고하고 명시적인 `[Apply 승인]`을 요청하십시오. 5점 미만일 경우 코드를 안전하게 수정하여 재작성하십시오.
