@@ -26,4 +26,4 @@ SRE의 신뢰성 중심 원칙과 LLM 에이전트 기반의 자동화 파이프
 ## 2. 작업 프로세스 제약 (Operational Gate)
 
 - **[MUST] 사전 룰북 분석**: AIOps 및 자동화 파이프라인 코드를 작성하기 전, 반드시 라우팅 테이블에서 대상 룰북을 찾아 `view_file`로 먼저 읽어 아키텍처 표준을 파악하십시오.
-- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성을 완료한 직후, 작업을 완료 선언하기 전에 반드시 [Pre-Flight Check SKILL.md](file:///home/ubuntu/dotfiles/contexts/pre-flight-check/SKILL.md)를 읽고 `pre-flight-check.sh` 스크립트를 실행하여 정량 검증을 완료하십시오.
+- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성을 완료한 직후, 작업을 완료 선언하기 전에 반드시 홈 디렉토리($HOME) 내에 기 설정된 `~/dotfiles/contexts/pre-flight-check/SKILL.md` 파일을 절대 경로로 획득하여 읽고 `pre-flight-check.sh` 스크립트를 실행하여 정량 검증을 완료하십시오.
