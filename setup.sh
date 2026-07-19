@@ -49,15 +49,20 @@ if [ "$SHELL" != "$(which zsh)" ]; then
 fi
 
 echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
-# 백업 추가 (안전성 향상)
-cp -n ~/.zshrc ~/.zshrc.backup 2>/dev/null || true
-cp -n ~/.vimrc ~/.vimrc.backup 2>/dev/null || true
-cp -n ~/.mise.toml ~/.mise.toml.backup 2>/dev/null || true
-cp -n ~/.gitconfig ~/.gitconfig.backup 2>/dev/null || true
-cp -n ~/.gitignore_global ~/.gitignore_global.backup 2>/dev/null || true
-
-# Stow 충돌 방지를 위해 기존의 실제 파일들을 삭제 (바로가기가 생길 자리를 비워줌)
-rm -f ~/.zshrc ~/.vimrc ~/.mise.toml ~/.gitconfig ~/.gitignore_global
+# 각 stow 패키지(zsh/vim/mise/git) 하위의 모든 실제 파일을 자동 순회하며 백업 후 정리
+# (하드코딩 목록 대신 자동 탐색하여, 패키지에 새 dotfile이 추가되어도 이 로직을 수동으로 갱신할 필요가 없음)
+for PKG in zsh vim mise git; do
+  while IFS= read -r -d '' SRC_FILE; do
+    REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
+    TARGET="$HOME/$REL_PATH"
+    # 심볼릭 링크가 아닌 실제 파일이 이미 존재할 때만 백업 후 정리 (stow 충돌 방지)
+    if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+      mkdir -p "$(dirname "$TARGET")"
+      cp -n "$TARGET" "$TARGET.backup" 2>/dev/null || true
+      rm -f "$TARGET"
+    fi
+  done < <(find "$DOTFILES_DIR/$PKG" -type f -print0)
+done
 
 cd "$DOTFILES_DIR"
 stow -t "$HOME" -R zsh vim mise git
@@ -180,15 +185,16 @@ cat << 'EOF' > "$DOTFILES_DIR/.git/hooks/pre-commit"
 if command -v trufflehog &> /dev/null; then
   echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (이번에 변경된 파일만 검사합니다)..."
   
-  # 새로 추가되거나 수정된 파일 목록 추출
-  STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
-  
-  if [ -z "$STAGED_FILES" ]; then
+  # 새로 추가되거나 수정된 파일 목록 추출 (공백/특수문자 포함 파일명 안전 처리를 위해 NUL 구분 배열 사용)
+  STAGED_FILES=()
+  mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
+
+  if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
     exit 0
   fi
-  
+
   # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
-  for FILE in $STAGED_FILES; do
+  for FILE in "${STAGED_FILES[@]}"; do
     if [ ! -f "$FILE" ]; then
       echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
       echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
@@ -196,9 +202,9 @@ if command -v trufflehog &> /dev/null; then
       exit 1
     fi
   done
-  
+
   # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
-  trufflehog filesystem $STAGED_FILES --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
+  trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
 fi
 EOF
 chmod +x "$DOTFILES_DIR/.git/hooks/pre-commit"
