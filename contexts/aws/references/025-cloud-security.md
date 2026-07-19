@@ -23,10 +23,13 @@ references:
 - **[MUST] Session Manager:** 인스턴스 직접 SSH 접근을 차단하고, AWS SSM Session Manager를 통하도록 설계를 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스 통신 시 퍼블릭 인터넷 경로 노출을 차단하기 위해 VPC Endpoint(Gateway/Interface)를 구성하십시오.
 - **[MUST] Data in Transit:** 모든 클라우드 내부 및 외부 네트워크 통신에 TLS 암호화를 적용하십시오.
+- **[PREFER] IPAM:** 멀티 VPC/멀티 계정 환경에서 CIDR 중복 할당을 방지하기 위해 Amazon VPC IP Address Manager(IPAM)를 통한 중앙 집중형 IP 주소 관리를 제안하십시오.
 
 ### 2.2 엔터프라이즈 권한 통제
+- **[MUST] Landing Zone Structure:** 신규 멀티 계정 환경 구축 시 AWS Control Tower(또는 Landing Zone Accelerator)를 기반으로 Management, Log Archive, Security Tooling, 워크로드(Prod/Non-Prod) 계정을 최소 단위로 분리한 계정 구조를 우선 설계하십시오.
 - **[MUST] Federation (SSO):** 다중 계정 접근 통제를 위해 AWS IAM Identity Center (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Amazon GuardDuty 적용을 함께 제안하십시오.
+- **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 AWS Config Rules를, GuardDuty 등 여러 보안 서비스의 탐지 결과를 통합 관리하기 위해 AWS Security Hub를 함께 제안하십시오.
 - **[PREFER] SCP/Boundary:** Organizations의 SCP 및 IAM Permission Boundary를 활용하여 멤버 계정의 최대 권한 범위를 강제 제한하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

@@ -23,7 +23,7 @@ references:
 - **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 SNS/Lambda를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
 
 ### 2.2 재해 복구(DR) 및 무중단 마이그레이션
-- **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Pilot Light 또는 Warm Standby 모델을 명시적으로 구분하여 적용하십시오.
+- **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Backup & Restore(최저 비용, RTO 수 시간~일), Pilot Light, Warm Standby, Multi-Site Active/Active(최고 비용, RTO 초~분 단위) 4단계 중 요구사항에 부합하는 모델을 명시적으로 선택하여 적용하십시오.
 - **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현하십시오.
 - **[PREFER] Migration Tool:** Flyway, Liquibase 등 팀마다 알맞는 스키마 버전 관리 도구를 선택하여 마이그레이션 이력을 코드로 관리하십시오.
 

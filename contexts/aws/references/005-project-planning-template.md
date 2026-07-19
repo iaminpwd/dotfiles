@@ -5,8 +5,11 @@ trigger: Apply these rules ONLY when planning, architecting, or creating a Maste
 references:
   - contexts/aws/references/010-aws-core.md
   - contexts/aws/references/020-security-compliance.md
+  - contexts/aws/references/025-cloud-security.md
   - contexts/aws/references/030-finops-optimization.md
+  - contexts/aws/references/050-iac-standard.md
   - contexts/aws/references/060-eks-standard.md
+  - contexts/aws/references/090-day2-operations.md
 ---
 # 컨텍스트 모듈: AWS 프로젝트 마스터 플랜(계획서) 작성 표준
 

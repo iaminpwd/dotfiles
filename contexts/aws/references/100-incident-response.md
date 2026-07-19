@@ -20,6 +20,7 @@ references:
 ### 2.1 트러블슈팅 및 장애 진단
 - **[MUST] Deep Dive Analysis:** 단순 표면 오류 문구 수집을 넘어, 필요시 VPC Flow Logs, CloudTrail, AWS X-Ray 추적 데이터를 다각도로 수집하여 입출력 양방향 흐름을 교차 검증하십시오.
 - **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 반드시 `<grounding_check>` 태그를 열어 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사하십시오. 검증이 통과된 후에만 최종 보고서를 생성하십시오.
+- **[PREFER] Incident Coordination:** 다중 팀 간 대응 조율이 필요한 대형 장애는 AWS Systems Manager Incident Manager를 통해 대응 채널 자동 생성, 온콜 호출, 타임라인 기록을 표준화하십시오.
 
 ### 2.2 장애 보고서 및 포스트모템 규격
 - **[Trigger: Error Analysis Request] 트러블슈팅 보고서**: 에러 분석 완료 시 아래 양식으로 `troubleshooting-report.md`를 작성하십시오.

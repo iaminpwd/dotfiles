@@ -22,11 +22,13 @@ references:
 - **[PREFER] Event-driven:** EventBridge, SQS, Kinesis Data Streams 등을 활용한 비동기식 이벤트 기반 흐름을 최우선 제안하고, 복잡한 비즈니스 로직은 Step Functions 오케스트레이션으로 분리하십시오.
 - **[MUST] API Security:** API Gateway 제안 시 반드시 IAM 인증, Cognito User Pool, 또는 Lambda Custom Authorizer를 필수 구성하여 퍼블릭 무단 접근을 차단하십시오.
 - **[MUST] Performance Optimization:** 레이턴시 민감 API 설계 시, 콜드 스타트 극복을 위해 Provisioned Concurrency 설정 또는 Rust/Go 등 빠른 구동 런타임 사용을 대안으로 검토하십시오.
+- **[MUST] Throttling Protection:** 다운스트림(DB 등) 자원 과부하나 계정 단위 동시 실행 한도 고갈을 방지하기 위해 트래픽이 큰 Lambda 함수에는 Reserved Concurrency를 설정하십시오.
 
 ### 2.2 배포 패키징 및 Boto3 개발 표준
 - **[PREFER] Container Image:** Lambda 종속성 용량 한계 극복을 위해 Zip 파일보다 컨테이너 이미지 배포 아키텍처를 우선 제안하십시오.
 - **[MUST] Boto3 Safety:** Python AWS SDK(Boto3) 사용 시, 대량 조회용 `Paginator` 적용 및 `botocore` 예외 처리(`ClientError`)를 반드시 포함하십시오.
 - **[MUST] API Call Idempotency:** Boto3/CLI를 통한 리소스 생성 스크립트 작성 시, 중복 생성을 막기 위해 반드시 고유 식별자(`ClientRequestToken` 등)를 포함하십시오.
+- **[PREFER] Observability Tooling:** 구조화된 로깅, 분산 추적, 커스텀 메트릭 계측을 위해 AWS Lambda Powertools(Python/TypeScript/Java) 사용을 우선 제안하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

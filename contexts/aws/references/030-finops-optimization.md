@@ -17,6 +17,7 @@ references:
 
 ### 2.1 컴퓨팅 및 스토리지 최적화
 - **[PREFER] Graviton & Spot:** 비프로덕션 환경이나 배치(Batch) 노드에는 비용이 최대 90% 저렴한 Spot Instance 사용을 우선 고려하고, 일반 컴퓨팅 워크로드에는 가성비가 높은 ARM 기반의 Graviton 프로세서 도입을 제안하십시오.
+- **[MUST] Committed Use Discounts:** 트래픽이 안정적으로 예측 가능한 프로덕션 상시 가동 베이스라인 워크로드에는 Compute Savings Plans 또는 Reserved Instance를 적용하여 온디맨드 대비 비용을 절감하십시오. Spot(변동성 큰 비프로덕션/배치용)과 Savings Plans/RI(예측 가능한 프로덕션 베이스라인용)는 대체재가 아닌 상호 보완 전략으로 함께 적용하십시오.
 - **[PREFER] Storage Tiering:** S3 버킷 설계 시 intelligent-tiering 클래스를 적용하거나, 장기 보관 목적의 데이터는 Glacier 등으로 자동 전송되도록 수명 주기(Lifecycle) 정책을 정의하십시오.
 - **[PREFER] EBS Optimization:** EC2 EBS 볼륨 제안 시 일반적인 워크로드 기준 가성비가 우수한 `gp3` 볼륨 타입을 기본값으로 기재하십시오.
 
