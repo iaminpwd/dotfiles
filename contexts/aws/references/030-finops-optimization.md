@@ -38,8 +38,8 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `infracost`를 통해 리소스 생성 전/후의 예상 예상 비용 변화가 수치로 계산되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `infracost` CLI를 활용하여 수정된 코드의 월별 예상 비용 증감을 구체적 마크다운 표로 팩트 검증하십시오.
+- **[MUST] 완료 조건 (Done when):** 리소스 생성 전/후의 예상 비용 변화가 수치로 확인되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `infracost`가 로컬에 설치되어 있으면 `infracost` CLI를 활용하여 수정된 코드의 월별 예상 비용 증감을 실제로 검증하십시오. 미설치 환경에서는 [AWS Pricing Calculator](https://calculator.aws/)(혹은 유사 도구)를 사용하여 수동 코스트 추정을 `finops-cost-report.md`에 명시하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Resource Sizing] 도메인 자가 채점:** 인스턴스 타입, 개수, 디스크 용량 등 리소스 용량 설정을 기획하거나 수정할 때, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 경우에만 작업을 승인 요청하십시오)

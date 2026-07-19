@@ -24,7 +24,8 @@ references:
 
 ### 2.2 재해 복구(DR) 및 무중단 마이그레이션
 - **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Pilot Light 또는 Warm Standby 모델을 명시적으로 구분하여 적용하십시오.
-- **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴과 Flyway/Liquibase 버전 관리 도구를 적용하여 무중단 마이그레이션을 구현하십시오.
+- **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현하십시오.
+- **[PREFER] Migration Tool:** Flyway, Liquibase 등 팀마다 알맞는 스키마 버전 관리 도구를 선택하여 마이그레이션 이력을 코드로 관리하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

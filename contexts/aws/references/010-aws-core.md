@@ -24,7 +24,7 @@ references:
 - **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라 포매팅 도구 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시하십시오.
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
-모든 AWS 인프라 코드를 설계하거나 작성하기 전, 단일 리소스 변경이라 할지라도 반드시 다음 절차를 따르십시오.
+네트워크 구조, IAM 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용하십시오. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
 - **Step 0. Active Investigation (기존 인프라 실태 조사):** `run_command`를 통해 연동 대상 서비스들의 현재 실제 상태(Security Group 룰, IAM Policy, Route Table, VPC Endpoint 등)를 선제 조회하여 팩트를 확보하십시오.
 - 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
   1. **Network & Endpoint Topology:** VPC 라우팅(IGW/NAT), Security Group 양방향 포트, AWS 내부 통신을 위한 VPC Endpoint(Gateway 등)가 실제 라우트 테이블(Route Table)에 연동되었는지 검증하십시오.

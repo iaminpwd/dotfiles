@@ -14,7 +14,7 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Least Privilege (IRSA):** EKS 워크로드(Pod)에 AWS 리소스 접근 권한을 부여할 때 반드시 IAM Roles for Service Accounts (IRSA)를 적용하여 최소 권한을 달성하십시오.
-- **[MUST] Envelope Encryption:** K8s Secret은 반드시 AWS KMS와 연동한 봉투 암호화(Envelope Encryption)를 적용하여 저장되도록 설계하십시오.
+- **[MUST] Envelope Encryption (Prod):** 프로덕션 EKS 클러스터의 K8s Secret에는 반드시 AWS KMS와 연동한 봉투 암호화(Envelope Encryption)를 적용하십시오. 개발/테스트 클러스터에는 적용을 권장하되, 프로덕션 코드로 포함되지 않도록 주의하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
