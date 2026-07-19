@@ -19,12 +19,13 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 하이브리드 K8s 관리
-- **[PREFER] Single Pane of Glass:** 다중 클라우드에 분산된 클러스터(EKS, AKS 등)를 통합 통제하기 위해 Azure Arc 또는 AWS EKS Anywhere와 같은 단일 관리 평면 아키텍처를 적용하십시오.
+- **[PREFER] Single Pane of Glass:** 다중 클라우드에 분산된 클러스터(EKS, AKS 등)를 통합 통제하기 위해 Azure Arc 또는 Amazon EKS Connector와 같은 단일 관리 평면 아키텍처를 적용하십시오.
 - **[MUST] Cross-Cloud RBAC:** 멀티 클라우드 환경에서 계정 권한 관리가 파편화되지 않도록 ID 페더레이션 및 OIDC 연동을 통한 단일 인증 체계(SSO)를 강제하십시오.
 
 ### 2.2 네트워크 연동 아키텍처
 - **[MUST] Transit Routing:** 다중 리전 및 다중 클라우드 VPC/VNet 간 라우팅 복잡도를 줄이기 위해, AWS Transit Gateway와 Azure Virtual WAN을 허브-앤-스포크(Hub-and-Spoke) 구조로 상호 연동하여 라우팅 축약을 구현하십시오.
 - **[MUST] Active Reconnaissance across Clouds:** 멀티 클라우드 상태 점검 시, `run_command`로 `aws cli`와 `az cli` 양쪽 모두를 교차 실행하여 확보한 실제 물리 팩트만을 근거로 삼아 설계 및 리팩토링을 보고하십시오.
+- **[MUST] Cross-Cloud DNS Resolution:** 상대 클라우드의 프라이빗 호스트명을 해석해야 하는 경우, Route 53 Resolver의 Inbound/Outbound 엔드포인트와 Azure DNS Private Resolver를 VPN/ExpressRoute 터널 경유로 상호 연동하여 양방향 프라이빗 DNS 조회가 가능하도록 설계하십시오. 퍼블릭 DNS 조회로 우회하거나 `/etc/hosts` 하드코딩으로 임시 해결하는 방식은 배제하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
