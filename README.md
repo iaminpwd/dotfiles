@@ -65,7 +65,7 @@ ls -la ~/.zshrc ~/.gitconfig ~/.mise.toml
 
 # AI 글로벌 룰 및 스킬 레지스트리 등록 확인
 cat ~/.gemini/config/AGENTS.md | head -5
-cat ~/.gemini/config/skills.json
+ls ~/.gemini/config/skills/
 ```
 
 ---
@@ -131,7 +131,7 @@ cat ~/.gemini/config/skills.json
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
 
 - **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`base.AGENTS.md`)과 전역 무시 룰(`.base.aiexclude`)이 글로벌 Customizations Root(`~/.gemini/config/`)로 동적 주입됩니다.
-- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills.json`에 글로벌 스킬로 동적 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
+- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` (Claude/Codex는 각각 `~/.claude/rules/`, `~/.codex/skills/`) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **Git 커밋 차단:** 로컬에 생성된 보안/AI 설정들은 전역 `.gitignore_global`에 의해 원격 저장소를 오염시키지 않습니다.
 
 ### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
@@ -150,12 +150,12 @@ cat ~/.gemini/config/skills.json
 
 | 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
 |---|---|---|---|
-| **AWS** (`aws/`) | 🟢 **Production** | 13개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
-| **Azure** (`azure/`) | 🟢 **Production** | 13개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
-| **K8s** (`k8s/`) | 🟡 **Draft** | 10개 (`010`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
-| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 2개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
-| **AIOps** (`aiops/`) | 🟡 **Draft** | 9개 (`005`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
-| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 6개 (`010`~`050`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타 프롬프팅 |
+| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
+| **Azure** (`azure/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
+| **K8s** (`k8s/`) | 🟡 **Draft** | 9개 (`010`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
+| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
+| **AIOps** (`aiops/`) | 🟡 **Draft** | 8개 (`005`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
+| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 8개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 트러블슈팅 |
 
 ---
 
@@ -172,7 +172,7 @@ cat ~/.gemini/config/skills.json
 
 **글로벌 스킬 적용**
 
-모든 도메인 스킬은 `~/.gemini/config/skills.json` 글로벌 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
+모든 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/rules/`, `~/.codex/skills/` 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
 ### AI 컨텍스트 빌드 파이프라인
 
@@ -300,10 +300,10 @@ cd ~/dotfiles/contexts/gcp
 # 2. 도메인 특화 모듈 파일 작성 (010부터 시작)
 touch references/010-gcp-core.md
 
-# 3. setup.sh 재실행으로 글로벌 레지스트리(skills.json)에 자동 등록
+# 3. setup.sh 재실행으로 글로벌 레지스트리(symlink 디렉토리)에 자동 등록
 ~/dotfiles/setup.sh
 ```
 
 > [!NOTE]
-> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`skills.json`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
+> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/rules/`, `~/.codex/skills/`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
 
