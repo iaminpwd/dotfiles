@@ -21,7 +21,7 @@ references:
 - **[MUST] Policy Self-Check:** 코드 제안 전/후 `implementation_plan.md` 및 `walkthrough.md`에 정량 검증 결과와 본 가이드에 기술된 보안/IaC 규정 준수 여부를 구체적인 충족 코드의 절대 경로 파일 링크(라인 범위 포함) 또는 팩트 기반 근거와 함께 명시하십시오.
 - **[PREFER] vWAN:** 글로벌 확장성 확보를 위해 Azure Virtual WAN(vWAN) 기반의 중앙 집중형 라우팅을 적극 제안하십시오.
 - **[MUST] State Management:** State 저장은 반드시 Azure Blob Storage Backend와 자체 임대(Lease) 기반 State Locking을 사용하여 원격으로 안전하게 구성하십시오.
-- **[MUST] Multi-Env:** 다중 환경 관리 시 Terragrunt를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입 아키텍처를 적용하십시오.
+- **[PREFER] Multi-Env:** 다중 환경 관리 시 Terragrunt를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입 아키텍처를 적용하는 것을 우선 제안하십시오. Terragrunt를 사용하지 않는 팀에는 `terraform.workspace` 방식이나 디렉토리 분리 방식을 환경 감사 대안으로 허용하십시오.
 - **[MUST] Dynamic Mapping:** 가용 영역(AZ)은 `data "azurerm_availability_zones"` 블록 등을 활용하여 동적으로 매핑하십시오.
 - **[MUST] Stateful Protection:** DB나 스토리지의 `prevent_destroy = true` 설정은 오직 프로덕션(Prod) 및 스테이징(Stage) 환경에만 적용하고, 개발(Dev) 및 임시 테스트 환경에서는 신속한 자원 회수가 가능하도록 환경 변수를 통해 삭제 처리를 허용하여 설계하십시오.
 - **[MUST] Resource Iteration:** 다수 리소스 반복 생성 시 `for_each`를 활용하되, `known after apply`인 동적 값을 반복할 때는 반드시 정적 식별자(Static Key)를 갖는 `map` 구조를 강제하여 Plan 실행의 안정성을 보장하십시오.
