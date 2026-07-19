@@ -122,8 +122,10 @@ ls ~/.gemini/config/skills/
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │
 ├── git/
-│   ├── .gitconfig        # 글로벌 Git 설정 (alias, pull.rebase=true)
-│   └── .gitignore_global # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
+│   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true)
+│   ├── .gitconfig-workspace   # 워크스페이스별 Git 설정 (includeIf 조건부 로딩)
+│   ├── .githooks-workspace/   # 워크스페이스별 Git 훅 디렉토리
+│   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
 │
 ├── mise/
 │   └── .mise.toml        # 인프라 도구 버전 선언 매니페스트 (SSOT)
@@ -132,6 +134,7 @@ ls ~/.gemini/config/skills/
 │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
 │
 ├── zsh/
+│   ├── .zshenv           # Zsh 환경변수 설정 (PATH 등 비대화형 세션 포함)
 │   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
 │
 ├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
