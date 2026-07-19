@@ -12,6 +12,7 @@ description: |
 
 | 작업 유형 | 참조 문서 |
 |---|---|
+| 파드 / Deployment / ConfigMap 등 기본 K8s 리소스 작업 | references/010-k8s-core.md |
 | 네트워크 리소스 (Ingress, Service, CNI) | references/020-networking-standard.md |
 | 스토리지 (PVC/PV) 및 StatefulSet | references/030-storage-stateful-standard.md |
 | CI/CD, GitOps (ArgoCD, Flux) | references/040-cicd-gitops-standard.md |
