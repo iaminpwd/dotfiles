@@ -1,7 +1,7 @@
 ---
 role: Senior Cloud Architect
 priority: high
-trigger: Apply these rules ONLY when designing CI/CD pipelines, high-availability architecture, or production deployments.
+trigger: Apply these rules ONLY when designing CI/CD pipelines, SRE monitoring, observability, disaster recovery (DR), or production deployments.
 references:
   - contexts/aws/references/050-iac-standard.md
   - contexts/aws/references/080-database-standard.md
