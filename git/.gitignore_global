@@ -48,6 +48,12 @@ Thumbs.db
 # AI Context Files (Prevent AI rule pollution in remote repos)
 .agents/
 .aiexclude
+AGENTS.md
+CLAUDE.md
 
 # Local validation helper scripts (각 프로젝트 루트에 생성되는 심볼릭 링크만 제외 - 원본 스크립트는 슬래시 없는 패턴이면 저장소 전역에서 무시되어 버림)
 /pre-flight-check.sh
+
+# Pre-flight check cache and timestamp files
+.pre-flight-check.cache
+.trivy-db-update.timestamp

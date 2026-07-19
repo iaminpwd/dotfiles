@@ -11,6 +11,7 @@
     autocrlf = input
     # MacOS/Linux 환경에서는 input, Windows에서는 true를 사용합니다.
     excludesfile = ~/.gitignore_global
+	hooksPath = ~/.githooks
 
 [color]
     ui = auto
