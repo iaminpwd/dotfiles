@@ -10,8 +10,31 @@ echo "============================================="
 # -----------------------------------------------------------------------------
 # Common Helpers
 # -----------------------------------------------------------------------------
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+CACHE_FILE="$REPO_ROOT/.pre-flight-check.cache"
+
 has_tool() {
   command -v "$1" &> /dev/null || return 1
+}
+
+calculate_tf_hash() {
+  # Git 저장소 여부 확인
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "non-git"
+    return
+  fi
+
+  # 스테이징된(Staged) .tf 파일 목록 조회 (공백 포함 안전 처리를 위해 NUL 구분 배열 사용)
+  local staged_tf=()
+  mapfile -d '' -t staged_tf < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.tf' 2>/dev/null)
+
+  if [ "${#staged_tf[@]}" -eq 0 ] || [ -z "${staged_tf[0]}" ]; then
+    echo "empty"
+    return
+  fi
+
+  # Git Index(스테이징 영역)에 기록된 파일 오브젝트들의 SHA-1 해시 목록을 종합하여 대표 해시 생성
+  git ls-files --stage "${staged_tf[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
 # -----------------------------------------------------------------------------
@@ -21,7 +44,9 @@ has_tool() {
 # 1. Shell Script Validation
 validate_shell() {
   local shell_files=()
-  mapfile -t shell_files < <(find . -maxdepth 3 -not -path '*/.*' -not -path './contexts/*' \( -name "*.sh" -o -name "*.zsh" \) 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    shell_files+=("$file")
+  done < <(find . -maxdepth 3 \( -name ".*" -o -name "contexts" \) -prune -o \( -name "*.sh" -o -name "*.zsh" \) -print0 2>/dev/null)
 
   if [ "${#shell_files[@]}" -gt 0 ] && [ -n "${shell_files[0]}" ]; then
     echo "--- Step: Shell Script Validation ---"
@@ -57,10 +82,21 @@ validate_shell() {
 # 2. Terraform Validation
 validate_terraform() {
   local tf_files=()
-  mapfile -t tf_files < <(find . -maxdepth 3 -not -path '*/.*' -name "*.tf" 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    tf_files+=("$file")
+  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     echo "--- Step: Terraform Validation ---"
+
+    # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
+    if [ "$GLOBAL_TF_HASH" = "empty" ]; then
+      echo "[INFO] No staged Terraform changes detected. Skipping Terraform validation (Cache hit - empty)."
+      return 0
+    elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+      echo "[INFO] Staged Terraform configuration is unchanged. Skipping Terraform validation (Cache hit)."
+      return 0
+    fi
     if ! has_tool terraform; then
       echo "[ERROR] terraform CLI is required but not installed." >&2
       return 1
@@ -104,7 +140,9 @@ validate_sam() {
 # 4. Azure Bicep Validation
 validate_bicep() {
   local bicep_files=()
-  mapfile -t bicep_files < <(find . -maxdepth 3 -not -path '*/.*' -name "*.bicep" 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    bicep_files+=("$file")
+  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.bicep" -print0 2>/dev/null)
 
   if [ "${#bicep_files[@]}" -gt 0 ] && [ -n "${bicep_files[0]}" ]; then
     if has_tool az && az bicep version &>/dev/null; then
@@ -124,7 +162,9 @@ validate_bicep() {
 # 5. Ansible Validation
 validate_ansible() {
   local ansible_files=()
-  mapfile -t ansible_files < <(find . -maxdepth 2 -not -path '*/.*' \( -name "*playbook*.yml" -o -name "*playbook*.yaml" -o -name "site.yml" -o -name "site.yaml" \) 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    ansible_files+=("$file")
+  done < <(find . -maxdepth 2 -name ".*" -prune -o \( -name "*playbook*.yml" -o -name "*playbook*.yaml" -o -name "site.yml" -o -name "site.yaml" \) -print0 2>/dev/null)
 
   if [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ] || [ -d "roles" ]; then
     echo "--- Step: Ansible Validation ---"
@@ -162,7 +202,9 @@ validate_helm() {
 validate_k8s_manifests() {
   local k8s_manifests=()
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞인 파일이라 순수 YAML 파서(kubectl/kube-linter)로 검증 불가 (validate_helm에서 helm lint로 별도 검증됨)
-  mapfile -t k8s_manifests < <(find . -maxdepth 4 -not -path '*/.*' -not -path './contexts/*' -not -path '*/templates/*' \( -name "*.yaml" -o -name "*.yml" \) -exec grep -lE "^kind:" {} + 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    k8s_manifests+=("$file")
+  done < <(find . -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -exec grep -qE "^kind:" {} \; -print0 2>/dev/null)
 
   if [ "${#k8s_manifests[@]}" -gt 0 ] && [ -n "${k8s_manifests[0]}" ]; then
     echo "--- Step: K8s Manifest Validation ---"
@@ -187,7 +229,9 @@ validate_k8s_manifests() {
 # 8. Dockerfile Validation
 validate_docker() {
   local dockerfiles=()
-  mapfile -t dockerfiles < <(find . -maxdepth 3 -not -path '*/.*' \( -name "Dockerfile" -o -name "Dockerfile.*" -o -name "Dockerfile-*" \) 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    dockerfiles+=("$file")
+  done < <(find . -maxdepth 3 -name ".*" -prune -o \( -name "Dockerfile" -o -name "Dockerfile.*" -o -name "Dockerfile-*" \) -print0 2>/dev/null)
 
   if [ "${#dockerfiles[@]}" -gt 0 ] && [ -n "${dockerfiles[0]}" ]; then
     if has_tool hadolint; then
@@ -205,7 +249,9 @@ validate_docker() {
 validate_yaml() {
   local yaml_files=()
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞여 있어 순수 YAML 린터(yamllint) 검증 대상에서 제외
-  mapfile -t yaml_files < <(find . -maxdepth 4 -not -path '*/.*' -not -path './contexts/*' -not -path '*/templates/*' \( -name "*.yaml" -o -name "*.yml" \) 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    yaml_files+=("$file")
+  done < <(find . -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -print0 2>/dev/null)
 
   if [ "${#yaml_files[@]}" -gt 0 ] && [ -n "${yaml_files[0]}" ]; then
     if has_tool yamllint; then
@@ -222,7 +268,9 @@ validate_yaml() {
 # 10. OPA/Conftest Policy Validation
 validate_conftest() {
   local rego_files=()
-  mapfile -t rego_files < <(find . -maxdepth 3 -not -path '*/.*' -name "*.rego" 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    rego_files+=("$file")
+  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.rego" -print0 2>/dev/null)
 
   if [ "${#rego_files[@]}" -gt 0 ] && [ -n "${rego_files[0]}" ] || [ -d "policy" ]; then
     if has_tool conftest; then
@@ -240,8 +288,36 @@ validate_security() {
   echo "--- Step: Security and Secret Scan ---"
   if has_tool trivy; then
     echo "Running trivy fs scan..."
-    trivy fs --severity HIGH,CRITICAL --scanners vuln,misconfig,secret --exit-code 1 .
-    echo "[SUCCESS] Trivy security scan passed."
+    
+    # 24시간(86400초) 수명 주기 정책 설정
+    local db_ttl=86400
+    local timestamp_file="$REPO_ROOT/.trivy-db-update.timestamp"
+    local skip_flags=""
+    
+    local now
+    now=$(date +%s)
+    
+    if [ -f "$timestamp_file" ]; then
+      local last_update
+      last_update=$(cat "$timestamp_file" 2>/dev/null || echo 0)
+      local age=$((now - last_update))
+      
+      # 캐시 수명이 아직 유효한 경우 업데이트 스킵 플래그 동적 주입
+      if [ "$age" -lt "$db_ttl" ]; then
+        echo "[INFO] Trivy DB cache is still valid ($((age / 3600))h old). Skipping DB update."
+        skip_flags="--skip-db-update --skip-check-update"
+      fi
+    fi
+
+    if trivy fs $skip_flags --severity HIGH,CRITICAL --scanners vuln,misconfig,secret --exit-code 1 .; then
+      echo "[SUCCESS] Trivy security scan passed."
+      # 실제 업데이트를 진행한 경우에만 타임스탬프 최신화
+      if [ -z "$skip_flags" ]; then
+        echo "$now" > "$timestamp_file" 2>/dev/null
+      fi
+    else
+      return 1
+    fi
   elif has_tool trufflehog; then
     echo "Running trufflehog filesystem scan..."
     trufflehog filesystem --no-update --fail .
@@ -253,10 +329,29 @@ validate_security() {
 
 # 12. FinOps Cost Validation (Infracost)
 validate_finops_costs() {
+  # 커밋 시점이 아닐 경우 비용 검사 생략 (API 호출 제한 절약)
+  if [ "${RUN_COST_CHECK:-false}" != "true" ]; then
+    echo "--- Step: FinOps Cost Validation (Infracost) ---"
+    echo "[INFO] Not in Git commit stage. Skipping cost validation to save API limits."
+    return 0
+  fi
+
   local tf_files=()
-  mapfile -t tf_files < <(find . -maxdepth 3 -not -path '*/.*' -name "*.tf" 2>/dev/null)
+  while IFS= read -r -d '' file; do
+    tf_files+=("$file")
+  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
+    # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
+    if [ "$GLOBAL_TF_HASH" = "empty" ]; then
+      echo "--- Step: FinOps Cost Validation (Infracost) ---"
+      echo "[INFO] No staged Terraform changes detected. Skipping cost validation (Cache hit - empty)."
+      return 0
+    elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+      echo "--- Step: FinOps Cost Validation (Infracost) ---"
+      echo "[INFO] Staged Terraform configuration is unchanged. Skipping cost validation (Cache hit)."
+      return 0
+    fi
     if has_tool infracost; then
       echo "--- Step: FinOps Cost Validation (Infracost) ---"
       echo "Checking for AWS/Azure Extended Support & LTS pricing..."
@@ -285,7 +380,13 @@ validate_finops_costs() {
 # -----------------------------------------------------------------------------
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
+# 전역 캐시 변수 선언 (쉘 연산 호출 중복 제거)
+GLOBAL_TF_HASH=""
+
 main() {
+  # 스크립트 기동 직후 1회만 해시 연산을 수행하여 전역 변수화
+  GLOBAL_TF_HASH=$(calculate_tf_hash)
+
   validate_shell
   validate_terraform
   validate_sam
@@ -298,6 +399,11 @@ main() {
   validate_conftest
   validate_security
   validate_finops_costs
+
+  # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트)
+  if [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
+    echo "$GLOBAL_TF_HASH" > "$CACHE_FILE" 2>/dev/null
+  fi
 
   echo "================================================="
   echo "=== All Pre-Flight Checks Passed Successfully ==="
