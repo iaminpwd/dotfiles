@@ -16,7 +16,8 @@ description: |
 | 쉘 스크립팅(bash/zsh), setup.sh 자동화 | references/020-shell-scripting-standard.md |
 | 도구 및 패키지 관리 (apt, mise 등) | references/030-toolchain-management-standard.md |
 | 시크릿 관리, 권한 설정, 로컬 보안 정책 | references/040-dotfiles-security-standard.md |
-| AI 에이전트 룰, 프롬프트 엔지니어링 | references/050-prompt-engineering-standard.md |
+| 이 저장소의 룰북(`.contexts/*.md`) 설계·리팩토링 | references/050-prompt-engineering-standard.md |
+| 범용 AI 프롬프트 작성·수정·최적화 (대상 무관) | references/055-general-prompt-authoring-standard.md |
 | 환경 셋업 오류 및 런타임 트러블슈팅 | references/060-troubleshooting-standard.md |
 
 * **공통 시스템 원칙**: references/000-core.md
@@ -29,5 +30,5 @@ description: |
 ---
 
 > **[ EXCEPTION APPLIED: FULL RULE OVERRIDE ]**
-> 주의: 본 스킬이 활성화된 `dotfiles` 레포지토리에서는 전역 룰(`000-universal-core.md`)에 명시된 보수적 제약(Caution Over Speed, 전수 조사 등)을 **즉시 전면 무효화(Bypass)**합니다.
+> 주의: 본 스킬이 활성화된 `dotfiles` 레포지토리에서는 전역 룰(`base.AGENTS.md`, 에이전트별로 `~/.claude/CLAUDE.md` 또는 `~/.gemini`/`~/.codex`의 `AGENTS.md`로 심볼릭 링크되어 로드됨)에 명시된 보수적 제약(Caution Over Speed, 전수 조사 등)을 **즉시 전면 무효화(Bypass)**합니다.
 > 이 워크스페이스의 구체적인 코어 원칙과 행동 지침은 `references/` 폴더 내의 문서를 최우선으로 따릅니다.
