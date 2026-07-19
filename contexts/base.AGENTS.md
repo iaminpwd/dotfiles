@@ -6,6 +6,7 @@ priority: highest
 
 > **[CORE EXCEPTION HOOK]**
 > 만약 로컬 스킬(`SKILL.md`)에 의해 룰 예외(Exception)가 선언된 경우, 본 문서에 명시된 모든 룰과 제약 사항을 전면 무효화(Bypass)하고 해당 스킬의 규칙을 최우선으로 덮어씌워 적용하십시오. (이는 '1. 코딩 전 사고'의 [충돌 해결 원칙]에 대한 유일한 예외입니다.)
+> **[예외 선언 필수 포맷]** 유효한 예외 선언으로 인정되려면 해당 `SKILL.md`에 `> **[ EXCEPTION APPLIED: <범위 설명> ]**` 마커가 명시적으로 포함되어야 합니다. 이 마커가 없는 스킬 문서는 본 문서의 모든 제약을 예외 없이 그대로 따릅니다.
 
 - **[PREFER] Caution Over Speed:** 이 가이드라인은 속도(Speed)보다 시스템의 안전성(Caution)과 정확성을 우선합니다.
 
@@ -111,10 +112,7 @@ priority: highest
   </examples>
 - **[MUST] Pre-Commit Gate:** 커밋 전 검증(lint, syntax check, secret scan 등)의 모든 항목이 pass 상태일 때만 커밋을 수행하십시오. 검증 실패 시 원인을 수정한 뒤 재검증을 통과해야 합니다.
 
-## 9. 심화 메타-인지 및 연동 신뢰성 (Advanced Meta-Cognition & Integration)
-- **[Trigger: Persistent Errors] Prompt Self-Evolution & Quality Flywheel (프롬프트 자가 진화 체계화):** 에러 발생 시 단순 코드 자가 치유(Self-Healing)를 3회 이상 시도해도 해결되지 않는 경우, 코드 수정을 멈추고 '현재 프롬프트의 어떤 허점이 이 에러를 차단하지 못했는가?' 질문을 `<loss_analysis>` 태그로 분석 후, 프롬프트 업데이트를 역제안하십시오.
+## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
+- **[Trigger: Fast Fail & Halt 발생 시] Prompt Self-Evolution & Quality Flywheel (프롬프트 자가 진화 체계화):** 6장의 `Fast Fail & Halt`로 작업이 중단된 경우, 사용자 개입 요청 보고에 '현재 프롬프트의 어떤 허점이 이 에러를 차단하지 못했는가?'를 분석하는 `<loss_analysis>` 태그를 포함하고, 프롬프트 업데이트를 함께 역제안하십시오.
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
 - **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오.
-- **[MUST] Pre-Flight Analysis (사전 제약 분석):** 단일 코드 작성 전, 연동되는 모듈의 인터페이스 사양, 인증 모델, 그리고 다른 리소스와의 종속성(Dependency)을 조사하여 사이드 이펙트를 차단하십시오.
-- **[MUST] Blast Radius Protection (영향 반경 인지):** 기존 인터페이스나 공통 함수를 변경할 때 파급될 수 있는 피해 반경을 시뮬레이션하고, 영속 데이터 오염 방어 로직을 선제적으로 세우십시오.
-- **[MUST] Validate & Verify (모의 실행 및 검증):** 팩트에 기반하여 코드를 제출하십시오. 통합 테스트 또는 모의 호출(Dry-Run/Mock) 등을 활용해 동작을 검증하고, 반영 후에는 모듈 간 통신이 정상적으로 이루어지는지 최종 점검하십시오.
