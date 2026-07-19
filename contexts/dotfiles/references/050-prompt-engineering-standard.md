@@ -2,6 +2,9 @@
 role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompts and rulebooks (.contexts/*.md), AND when writing, fixing, improving, or adapting prompts for any AI tool.
+references:
+  - contexts/dotfiles/references/000-core.md
+  - contexts/dotfiles/references/010-dotfiles-core-standard.md
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 

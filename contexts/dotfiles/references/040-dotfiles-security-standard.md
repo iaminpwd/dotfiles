@@ -2,25 +2,26 @@
 role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules ONLY when handling sensitive credentials, SSH private keys, or running security/secret scans.
+references:
+  - contexts/dotfiles/references/000-core.md
+  - contexts/dotfiles/references/010-dotfiles-core-standard.md
 ---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 
 본 모듈은 `dotfiles` 퍼블릭 저장소 노출 위험을 방지하기 위한 시크릿 통제 아키텍처에 적용됩니다.
 
-## 1. 셸 환경 자격 증명 물리적 분리
-- **[MUST] Secret Isolation:** 어떠한 자격 증명(패스워드, Access Key, PAT, SSH 키)도 환경 변수 파일(`.env` 등)에 분리하여 보관하고, Git으로 추적되는 파일(`.zshrc`, `setup.sh` 등)에는 오직 환경 변수 참조 로직만 구현하십시오.
-- **[MUST] Local Separation:** 민감한 환경 변수는 반드시 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일로 물리적으로 분리하십시오.
+## 1. 핵심 설계 원칙
+- **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일에 분리하고, Git으로 추적되는 파일(`.zshrc`, `setup.sh` 등)에는 환경 변수 참조 로직만 구현하십시오.
+- **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)을 우회하기 위한 `git commit --no-verify` 등의 우회 옵션 사용을 배제하십시오.
+- **[MUST] Explicit Key Access Request:** `~/.ssh/id_rsa` 등 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 `ask_permission`으로 명시적 승인을 취득한 후 접근하십시오.
 
-## 2. 셋업 코드의 스캐닝 자동화
-- **[Trigger: Before Push] Mandatory Secret Scan:** 새로운 자격 증명 로직을 추가하거나 원격 저장소에 Push하기 전, 로컬에 `trufflehog`나 `trivy` 도구가 설치되어 있다면 `run_command`로 실행하여 시크릿 하드코딩 여부를 1회 검사하십시오. (단순 로컬 커밋마다 실행 금지)
-- **[Trigger: Security Vulnerability Found] Hard Block:** 스캔 중 시크릿 유출 발견 시 즉각 작업을 중단(Hard Block)하고 사용자에게 해당 자격 증명 파기(Revoke)를 가이드하십시오.
-- **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)을 무력화하기 위한 `git commit --no-verify` 등의 우회 옵션 사용을 엄격히 금지합니다.
-- **[MUST] Safe Git History Purge:** 실수로 유출된 시크릿이 깃 커밋 히스토리에 포함된 경우, `git-filter-repo`나 BFG Repo-Cleaner를 활용해 히스토리를 정리하도록 제안하되, 히스토리를 강제 재작성하고 원격에 반영하는 파괴적인 명령어(`git push --force`)는 반드시 사전에 사용자의 수동 승인을 받으십시오.
+## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
-## 3. 프라이빗 키(Private Key) 보호 통제
-- **[MUST] Explicit Key Access Request:** 디버깅 목적 등 `~/.ssh/id_rsa` 와 같은 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 `ask_permission`으로 명시적 승인을 취득한 후 안전하게 접근하십시오.
+### 2.1 셋업 코드의 스캐닝 자동화
+- **[MUST] Mandatory Secret Scan:** 새로운 자격 증명 로직 추가 또는 원격 저장소에 Push하기 전, 로컬에 `trufflehog`나 `trivy`가 설치되어 있다면 `run_command`로 실행하여 시크릿 하드코딩 여부를 검사하십시오.
+- **[MUST] Safe Git History Purge:** 실수로 유출된 시크릿이 깃 커밋 히스토리에 포함된 경우, `git-filter-repo`나 BFG Repo-Cleaner를 활용해 히스토리를 정리하도록 제안하되, `git push --force`는 반드시 사전에 사용자의 수동 승인을 받으십시오.
 
-### 시크릿 물리적 분리 예시 (Few-Shot Examples)
+### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
@@ -43,4 +44,14 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 </example>
 </examples>
 
-- **[Trigger: Before Commit / File Authored] 자가 비판 (Self-Critique):** 자동화 스크립트나 환경 설정 파일을 수정한 직후, 스스로 `<self_critique>` 태그를 열어 **AWS Access Key나 PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되어 퍼블릭 저장소에 노출될 위험성**을 집중 비판하십시오.
+## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 Verified Secrets 0건으로 완전 통과되고, 민감 파일들이 `.gitignore`에 적절히 등록되어 있음이 확인되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `trufflehog git file://. --since-commit HEAD --only-verified`를 실행하여 하드코딩된 시크릿 유출 여부를 검사하십시오.
+
+## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
+- **[Trigger: Before Commit / File Authored] 도메인 자가 채점:** 자동화 스크립트나 환경 설정 파일 수정 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 커밋을 진행하십시오)
+  - 기준 1 (시크릿 격리): AWS Access Key, PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되지 않았는가?
+  - 기준 2 (로컬 전용 파일 분리): 민감 환경 변수가 `.zshrc.local` 등 `.gitignore` 등록 파일로 물리적으로 분리되었는가?
+- **[MUST] 중단 조건 (Halt Conditions):**
+  - 스캔 중 시크릿 유출이 감지되면 즉각 작업을 중단(Hard Block)하고 사용자에게 해당 자격 증명의 즉각 파기(Revoke) 가이드를 제공하십시오.
+  - Git Hooks 우회를 목적으로 `git commit --no-verify` 명령 사용이 시도되면 즉시 중단하고 정상적인 커밋 검증 절차로 복귀하십시오.
