@@ -12,7 +12,7 @@ description: |
 
 - **[MUST] pre-flight-check.sh 심볼릭 링크 연결 및 실행:** 인프라 및 스크립트 코드가 수정된 후, 개별 도구(tflint, trivy 등)를 분산 실행하지 마십시오. 작업 중인 프로젝트의 루트 디렉토리에 `pre-flight-check.sh`가 존재하지 않는 경우, 본 스킬 하위의 `scripts/pre-flight-check.sh` 원본을 가리키는 **심볼릭 링크를 프로젝트 루트에 생성**(`ln -sf [원본경로] ./pre-flight-check.sh`)하여 사용하십시오.
   *   **[PREFER] Symbolic Link Over Copy:** 도트파일 원본의 검증 로직 업데이트 사항이 실시간으로 모든 작업 저장소에 자동 동기화되도록 심볼릭 링크 생성을 최우선으로 시도하고, 파일 시스템 제약 등으로 불가능한 환경에 한해서만 물리 복사(`cp`)를 차선책으로 우회 수행하십시오.
-  *   `run_command`를 통해 `./pre-flight-check.sh`를 단일 실행하여 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 등을 일괄 수행하십시오.
+  *   `run_command`를 통해 `./pre-flight-check.sh`를 단일 실행하여 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등을 일괄 수행하십시오.
 
 
 
@@ -20,6 +20,7 @@ description: |
 
 - **[MUST] Policy Self-Check Table (자가 검증 테이블 필수):** 작업 완료 보고 시(`walkthrough.md` 등) 아래 템플릿을 사용하여 클라우드 표준 정책 준수 여부를 테이블로 작성하십시오.
   * **[CRITICAL] 물리적 근거 기입 필수:** 준수 여부(Status) 기록 시, 반드시 해당 규칙을 충족하는 구체적인 코드 절대 경로 및 라인 범위 링크(예: [main.tf:L5-12](file:///$HOME/workspace/main.tf#L5-L12)) 또는 CLI 실행 결과를 명시하십시오. 근거 링크가 누락된 항목은 검증 실패로 간주되어 승인되지 않습니다.
+  * **[CRITICAL] 웹 검색 기반 값의 출처 근거 병기 필수:** 엔진/런타임 버전 등 웹 검색(`search_web`)으로 사실 확인이 요구되는 항목(예: Extended Support 회피를 위한 최신 표준 지원 버전 확정)은, 코드 링크만으로는 실제 검색 수행 여부를 감사할 수 없으므로 "물리적 근거 및 코드 링크" 컬럼에 코드 라인 링크와 함께 **검색 출처 URL 및 조회 일자**를 반드시 병기하십시오. 코드 라인 링크만 있고 검색 출처가 누락된 항목은 검증 실패로 간주되어 승인되지 않습니다.
   * **[REQUIRED TEMPLATE]** 테이블 작성 시 반드시 아래 템플릿 구조와 헤더 컬럼명을 사용하고, 예시 경로가 아닌 **실제 수정된 파일의 절대 경로**를 `file:///` 프로토콜 뒤에 정확히 매핑하십시오.
       ```markdown
       ### 정성적 정책 자가 검증 (Policy Self-Check)

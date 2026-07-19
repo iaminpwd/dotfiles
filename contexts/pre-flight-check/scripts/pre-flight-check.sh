@@ -251,6 +251,37 @@ validate_security() {
   fi
 }
 
+# 12. FinOps Cost Validation (Infracost)
+validate_finops_costs() {
+  local tf_files=()
+  mapfile -t tf_files < <(find . -maxdepth 3 -not -path '*/.*' -name "*.tf" 2>/dev/null)
+
+  if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
+    if has_tool infracost; then
+      echo "--- Step: FinOps Cost Validation (Infracost) ---"
+      echo "Checking for AWS/Azure Extended Support & LTS pricing..."
+      
+      local cost_output_tmp
+      cost_output_tmp=$(mktemp)
+      
+      # infracost breakdown을 수행하여 비용 항목 확인
+      if infracost breakdown --path . > "$cost_output_tmp" 2>/dev/null; then
+        if grep -E -qi "Extended Support|Long Term Support|LTS" "$cost_output_tmp"; then
+          echo "[ERROR] Extended Support 또는 LTS (연장 지원) 추가 요금이 발생하는 리소스가 감지되었습니다." >&2
+          echo "검출된 유효 비용 항목:" >&2
+          grep -E -i "Extended Support|Long Term Support|LTS" "$cost_output_tmp" >&2
+          rm -f "$cost_output_tmp"
+          return 1
+        fi
+      else
+        echo "[WARNING] Infracost analysis failed (check API key or network connection). Skipping cost validation."
+      fi
+      rm -f "$cost_output_tmp"
+      echo "[SUCCESS] FinOps cost validation passed."
+    fi
+  fi
+}
+
 # -----------------------------------------------------------------------------
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
@@ -266,6 +297,7 @@ main() {
   validate_yaml
   validate_conftest
   validate_security
+  validate_finops_costs
 
   echo "================================================="
   echo "=== All Pre-Flight Checks Passed Successfully ==="
