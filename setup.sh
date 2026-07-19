@@ -41,17 +41,28 @@ if [ ! -d "$HOME/.oh-my-zsh" ]; then
 fi
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions
+[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
 
 if [ "$SHELL" != "$(which zsh)" ]; then
   sudo chsh -s $(which zsh) $USER
 fi
 
 echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
-# 각 stow 패키지(zsh/vim/mise/git) 하위의 모든 실제 파일을 자동 순회하며 백업 후 정리
-# (하드코딩 목록 대신 자동 탐색하여, 패키지에 새 dotfile이 추가되어도 이 로직을 수동으로 갱신할 필요가 없음)
-for PKG in zsh vim mise git; do
+# 1. contexts, assets, temp_ 등으로 시작하거나 숨김 폴더가 아닌 디렉토리 목록을 동적으로 Stow 패키지로 자동 획득
+STOW_PKGS=()
+for d in */; do
+  [ -d "$d" ] || continue
+  d_name="${d%/}"
+  if [[ "$d_name" != "contexts" && "$d_name" != "assets" && "$d_name" != "temp_"* && "$d_name" != "."* ]]; then
+    STOW_PKGS+=("$d_name")
+  fi
+done
+
+echo "   => 감지된 Stow 패키지: ${STOW_PKGS[*]}"
+
+# 각 stow 패키지 하위의 모든 실제 파일을 자동 순회하며 백업 후 정리
+for PKG in "${STOW_PKGS[@]}"; do
   while IFS= read -r -d '' SRC_FILE; do
     REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
     TARGET="$HOME/$REL_PATH"
@@ -65,7 +76,7 @@ for PKG in zsh vim mise git; do
 done
 
 cd "$DOTFILES_DIR"
-stow -t "$HOME" -R zsh vim mise git
+stow -t "$HOME" -R "${STOW_PKGS[@]}"
 
 
 echo "[4/6] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
@@ -129,7 +140,7 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
   ENV_NAME="$(basename "${TARGET_DIR%/}")"
   
-  # dotfiles 컨텍스트는 글로벌 등록에서 제외
+  # dotfiles 컨텍스트는 글로벌 등록에서 제외 (글로벌 룰 오염 방지)
   if [ "$ENV_NAME" = "dotfiles" ]; then
     continue
   fi
@@ -156,18 +167,13 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   fi
 done
 
-echo "=> [AI Local Rules] 워크스페이스 전용 로컬 스킬(.agents/skills.json) 동적 생성 중..."
-LOCAL_AGENTS_DIR="$DOTFILES_DIR/.agents"
-mkdir -p "$LOCAL_AGENTS_DIR"
-cat << 'EOF' > "$LOCAL_AGENTS_DIR/skills.json"
-{
-  "_comment": "이 워크스페이스(dotfiles) 전용 스킬 등록 파일. 스킬 발동 시 전역 룰을 무시하고 contexts/dotfiles 내부의 전용 프롬프트를 따릅니다.",
-  "entries": [
-    { "path": "contexts/dotfiles" }
-  ]
-}
-EOF
-echo "   ✅ 로컬 스킬 레지스트리 생성 완료: $LOCAL_AGENTS_DIR/skills.json"
+echo "=> [AI Local Rules] 워크스페이스 전용 로컬 규칙 링크 구성 중..."
+# 로컬 루트 폴더 간결화 및 에이전트별 상시 자동 로드 100% 보장
+# 제미나이용 AGENTS.md와 클로드용 CLAUDE.md 링크 파일 2개만 단독 생성 (.agents 폴더 완전 배제)
+ln -sfn "$DOTFILES_DIR/contexts/dotfiles/SKILL.md" "$DOTFILES_DIR/AGENTS.md"
+echo "   ✅ 제미나이 로컬 규칙 연동 완료: $DOTFILES_DIR/AGENTS.md"
+ln -sfn "$DOTFILES_DIR/contexts/dotfiles/SKILL.md" "$DOTFILES_DIR/CLAUDE.md"
+echo "   ✅ 클로드 로컬 규칙 연동 완료: $DOTFILES_DIR/CLAUDE.md"
 
 
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
@@ -178,9 +184,14 @@ else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi
 
-# Pre-commit 훅 생성
+# Pre-commit 훅 생성 (로컬 dotfiles 저장소 및 글로벌 githooks 공통 적용)
+# 1. 글로벌 githooks 디렉토리 준비
+GLOBAL_HOOKS_DIR="$HOME/.githooks"
+mkdir -p "$GLOBAL_HOOKS_DIR"
 mkdir -p "$DOTFILES_DIR/.git/hooks"
-cat << 'EOF' > "$DOTFILES_DIR/.git/hooks/pre-commit"
+
+# 2. 공통 pre-commit 스크립트 작성
+cat << 'EOF' > "$GLOBAL_HOOKS_DIR/pre-commit"
 #!/bin/bash
 if command -v trufflehog &> /dev/null; then
   echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (이번에 변경된 파일만 검사합니다)..."
@@ -190,25 +201,40 @@ if command -v trufflehog &> /dev/null; then
   mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
 
   if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
-    exit 0
+    # 스테이징된 파일이 없더라도 혹시 모를 pre-flight-check 진행을 위해 하단으로 통과
+    true
+  else
+    # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
+    for FILE in "${STAGED_FILES[@]}"; do
+      if [ ! -f "$FILE" ]; then
+        echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
+        echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
+        echo "    반드시 'git rm --cached $FILE' 명령어로 Git 캐시에서도 완전히 지워야 합니다!)"
+        exit 1
+      fi
+    done
+
+    # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
+    trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
   fi
+fi
 
-  # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
-  for FILE in "${STAGED_FILES[@]}"; do
-    if [ ! -f "$FILE" ]; then
-      echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
-      echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
-      echo "    반드시 'git rm --cached $FILE' 명령어로 Git 캐시에서도 완전히 지워야 합니다!)"
-      exit 1
-    fi
-  done
-
-  # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
-  trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
+# [추가] 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+if [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
+  echo "🚀 커밋 전 인프라 및 코드 사전 검증(pre-flight-check)을 수행합니다..."
+  RUN_COST_CHECK=true "$REPO_ROOT/pre-flight-check.sh" || { echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."; exit 1; }
 fi
 EOF
+
+# 3. 권한 부여 및 로컬 복사 동기화
+chmod +x "$GLOBAL_HOOKS_DIR/pre-commit"
+cp -f "$GLOBAL_HOOKS_DIR/pre-commit" "$DOTFILES_DIR/.git/hooks/pre-commit"
 chmod +x "$DOTFILES_DIR/.git/hooks/pre-commit"
-echo "   ✅ Git pre-commit 훅(trufflehog) 구성 완료"
+
+# 4. Git 전역 설정에 글로벌 훅 경로 활성화 등록 (이식성을 위해 물결표로 저장되도록 '~/.githooks' 명시 지정)
+git config --global core.hooksPath "~/.githooks"
+echo "   ✅ Git 글로벌 pre-commit 훅 연동 및 경로 지정 완료: ~/.githooks"
 
 
 echo "========================================================="
@@ -257,6 +283,30 @@ EOF
     echo "✅ ~/.zshrc.local 파일이 안전하게 생성되었습니다! (시크릿 보관용)"
 else
     echo "✅ 이미 ~/.zshrc.local 파일이 존재하여 설정을 건너뜁니다."
+fi
+
+echo -e "\n[선택] Infracost 비용 분석 도구 로그인"
+if [ -t 0 ]; then
+    # mise shim 및 local path 가용성 보장
+    export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+    
+    if command -v infracost &>/dev/null; then
+        if infracost configure get api_key 2>&1 | grep -q "No API key"; then
+            echo "💡 Infracost API 키가 등록되어 있지 않습니다. 로컬 사전 비용 분석을 위해 로그인이 필요합니다."
+            read -p "=> 지금 Infracost 로그인을 진행하시겠습니까? (y/N): " INFRACOST_CONFIRM
+            if [[ "$INFRACOST_CONFIRM" =~ ^[Yy]$ ]]; then
+                infracost auth login
+            else
+                echo "⏭️ Infracost 로그인을 건너뜁니다. 나중에 'infracost auth login'을 실행해 등록할 수 있습니다."
+            fi
+        else
+            echo "✅ 이미 Infracost API 키가 등록되어 있어 로그인을 건너뜁니다."
+        fi
+    else
+        echo "⚠️ infracost CLI가 현재 세션에서 인식되지 않아 로그인을 건너뜁니다."
+    fi
+else
+    echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Infracost 설정을 건너뜁니다."
 fi
 
 echo "========================================================="
