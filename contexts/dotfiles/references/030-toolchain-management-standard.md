@@ -14,6 +14,8 @@ trigger: Apply these rules ONLY when installing packages, managing global toolch
 ## 2. 버전 통제 및 멱등성 보장
 - **[MUST] Explicit Version Pinning:** 멱등성 보장을 위해 `mise.toml` 등 설정 파일에 명확한 특정 버전을 하드코딩하십시오. (예: `latest` 금지)
 - **[MUST] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 `run_command`로 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 찾아 하드코딩하십시오.
+- **[MUST] Non-Interactive Package Installation:** 부득이하게 `apt`, `apt-get` 등을 통해 시스템 패키지를 설치해야 하는 경우, 대화형 프롬프트로 인해 세션이 멈추는 것을 막기 위해 반드시 `DEBIAN_FRONTEND=noninteractive` 환경 변수와 `-y` 플래그를 조합하여 비대화형으로 실행하십시오. (예: `sudo DEBIAN_FRONTEND=noninteractive apt-get install -y <package>`)
+- **[MUST] OS Package Manager Compatibility:** 시스템 패키지 설치 스크립트 작성 시 특정 패키지 매니저(`apt`)를 임의로 가정하지 말고, `command -v apt-get` or `command -v yum` or `command -v brew` 등으로 현재 OS의 매니저를 사전에 분기 판별하는 호환성 코드를 갖추십시오.
 
 ## 3. 셋업 전 자율 검증 트리거
 - **[Trigger: After Toolchain Edit] Mise Validation:** `mise.toml` 수정 직후, 로컬에 `mise`가 설치되어 있다면 `mise install` 및 `mise ls`를 실행하여 다운로드 및 바이너리 연결 정상 여부를 자가 검증하십시오.

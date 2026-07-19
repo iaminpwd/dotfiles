@@ -11,6 +11,7 @@
 - **[MUST] Information Foraging:** 무지성 추측을 배제하고, 반드시 `run_command`로 실제 시스템 상태(OS, 패키지 등)를 먼저 파악하십시오.
 - **[MUST] Explicit Reasoning:** 답변 최상단에 `<thinking> 분석 및 설계 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
 - **[MUST] Exhaustive Review:** 에러나 아키텍처 분석 시 반드시 `grep_search` 등으로 관련된 모든 파일을 전수 조사하십시오.
+- **[MUST] Context Budget Optimization:** 대용량 파일(500라인 이상)을 조회할 때는 `view_file`로 파일 전체를 불러오지 말고, `grep_search`로 관심 영역을 선제 탐색한 뒤 필요한 특정 라인 범위(StartLine/EndLine)만 정밀하게 부분 조회하여 에이전트의 컨텍스트 예산을 보존하십시오.
 - **[MUST] Delegated Self-Critique:** 자가 비판(Self-Critique)은 전역이 아닌, 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 `<self_critique>` 태그를 열어 집중적으로 수행하십시오.
 
 ## 3. 셋업 및 설계 전 사고 (Think Before Execution)

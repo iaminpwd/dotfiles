@@ -10,6 +10,8 @@ trigger: Apply these rules ONLY when troubleshooting, debugging shell environmen
 ## 1. 능동적 에러 추적 (Active Tracing)
 - **[MUST] Bash/Zsh Debug Mode:** 스크립트 실행 오류나 터미널 로드 오류 시, 코드나 설정 파일을 수정하기 전에 반드시 `run_command`를 통해 `bash -x <script_name>` 또는 `zsh -x -i -c exit`를 선제적으로 실행하여 병목 지점이나 에러 발생 라인을 정확히 추적하십시오.
 - **[MUST] PATH Override Tracking:** "Command not found" 에러 발생 시, `.zshrc` 하단에 PATH를 덮어쓰기 전에 먼저 `echo $PATH` 및 `which <tool>`을 통해 기존 PATH가 어디서 잘못 덮어씌워졌는지(Override) 근본 원인을 역추적하여 해결하십시오.
+- **[MUST] Non-Persistent Shell Environment Awareness:** 에이전트 터미널(`run_command`) 환경은 독립적인 서브셸 세션으로 동작하므로, 단순 `source ~/.zshrc` 단독 실행은 다음 쉘 실행 시 유지되지 않습니다. 변경된 셸 설정을 즉시 검증해야 할 때는 반드시 `zsh -c "source ~/.zshrc && <verification_command>"` 와 같이 한 라인의 명령어로 묶어서 실행하십시오.
+- **[MUST] Dangling Symlink Validation:** GNU Stow 또는 심볼릭 링크 설정 후에는 반드시 해당 링크가 깨진 상태(Dangling)가 아닌지 `[ -L <link> ] && [ -e <link> ]` 구문이나 `readlink -f`를 통해 목적지 도달 여부를 실태 검증하십시오.
 
 ## 2. 충돌 및 권한 문제 해결 (Conflict & Permission)
 - **[MUST] Stow Conflict Resolution:** GNU Stow 사용 중 심볼릭 링크 에러(File exists) 발생 시, 원본 충돌 파일의 성격(로컬 설정 등)을 먼저 파악하고, 필요한 경우 반드시 `.bak` 확장자로 백업본을 안전하게 생성한 후 링크를 재시도하십시오.

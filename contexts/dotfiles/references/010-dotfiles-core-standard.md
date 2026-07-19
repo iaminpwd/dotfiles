@@ -12,7 +12,7 @@ trigger: Apply these rules ONLY when managing the dotfiles repository, committin
 
 ## 2. 버전 관리 (Git) 및 포매터 안전망
 - **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 다중 변경 사항은 의미 단위(Atomic)로 분리하여 개별 커밋하십시오.
-- **[MUST] Rebase Workflow:** 깔끔한 선형(Linear) 히스토리를 위해 Rebase 워크플로우를 유지하십시오.
+- **[MUST] Safe Rebase Workflow:** 로컬의 깔끔한 선형(Linear) 히스토리를 유지하기 위해, 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋의 히스토리를 변경하는 파괴적 조작(예: `git push -f`)은 사용자의 개입과 동의 없이 단독으로 실행하지 마십시오.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행하십시오.
 
 ### 시맨틱 및 원자적 커밋 예시 (Few-Shot Examples)

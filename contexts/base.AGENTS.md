@@ -56,7 +56,7 @@ priority: highest
 
 ### 5.1 추론 및 자가 검토 (Reasoning & Self-Critique)
 - **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
-- **[MUST] Proactive Skill Verification (수신 확인 프로토콜):** 작업 지시를 받으면, 코드 분석, 문서 작성, 도구 실행 등 어떠한 '액션(Action)'을 취하기 전에 가장 먼저 관련된 `SKILL.md`를 반드시 읽으십시오. **`<skill_check>` 태그를 통해 핵심 지침을 요약해 출력하기 전까지는, 모든 도구 호출 및 산출물 생성이 엄격히 금지됩니다.**
+- **[MUST] Proactive Skill Verification (수신 확인 프로토콜):** 작업 지시를 받으면 가장 먼저 관련된 `SKILL.md` 및 참조 파일(들)을 `view_file`로 읽어 핵심 표준을 수집하십시오. **`<skill_check>` 태그를 통해 필수 준수 사항을 요약하여 답변에 출력하기 전까지는, 파일 수정(`replace_file_content`, `write_to_file`) 및 쉘 명령 실행(`run_command`)과 같은 변경/실행성 도구 호출이 엄격히 금지됩니다.** (단, 상황 분석 및 스킬 내용 조회를 위한 읽기 전용 도구(`view_file`, `grep_search`, `list_dir` 등)의 호출은 예외적으로 허용됩니다.)
 - **[MUST] Self-Critique (자가 비판 및 검토):** 구조 설계 후 반드시 `<self_critique>` 태그를 열어 취약점과 요구사항 누락을 비판적으로 검토하고 조용히 스스로 수정하십시오.
 - **[MUST] Strict Fact-Based Verification:** 제공하는 모든 명령어 및 파라미터는 공식 문서 기반으로 100% 팩트 체크 후 제공하십시오.
 

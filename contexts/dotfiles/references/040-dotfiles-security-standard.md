@@ -14,6 +14,8 @@ trigger: Apply these rules ONLY when handling sensitive credentials, SSH private
 ## 2. 셋업 코드의 스캐닝 자동화
 - **[Trigger: Before Push] Mandatory Secret Scan:** 새로운 자격 증명 로직을 추가하거나 원격 저장소에 Push하기 전, 로컬에 `trufflehog`나 `trivy` 도구가 설치되어 있다면 `run_command`로 실행하여 시크릿 하드코딩 여부를 1회 검사하십시오. (단순 로컬 커밋마다 실행 금지)
 - **[Trigger: Security Vulnerability Found] Hard Block:** 스캔 중 시크릿 유출 발견 시 즉각 작업을 중단(Hard Block)하고 사용자에게 해당 자격 증명 파기(Revoke)를 가이드하십시오.
+- **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)을 무력화하기 위한 `git commit --no-verify` 등의 우회 옵션 사용을 엄격히 금지합니다.
+- **[MUST] Safe Git History Purge:** 실수로 유출된 시크릿이 깃 커밋 히스토리에 포함된 경우, `git-filter-repo`나 BFG Repo-Cleaner를 활용해 히스토리를 정리하도록 제안하되, 히스토리를 강제 재작성하고 원격에 반영하는 파괴적인 명령어(`git push --force`)는 반드시 사전에 사용자의 수동 승인을 받으십시오.
 
 ## 3. 프라이빗 키(Private Key) 보호 통제
 - **[MUST] Explicit Key Access Request:** 디버깅 목적 등 `~/.ssh/id_rsa` 와 같은 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 `ask_permission`으로 명시적 승인을 취득한 후 안전하게 접근하십시오.

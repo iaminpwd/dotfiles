@@ -23,6 +23,13 @@ description: |
 
 기본 K8s 코어 아키텍처: references/010-k8s-core.md
 
+## [MUST] 작업 시작 전 필수 사전 분석
+
+K8s 매니페스트, Helm Chart, ArgoCD Application 등 인프라 코드를 신규 작성하거나 수정을 시작하기 전에, **어떠한 도구 실행이나 코드 작성을 수행하기 전** 반드시 아래 절차를 따르십시오.
+
+1. 본 스킬 문서 내 "작업 유형별 참조 문서 라우팅" 테이블에서 요청받은 태스크와 일치하는 대상 참조 문서를 찾으십시오.
+2. 해당 참조 문서(예: `references/020-networking-standard.md` 등)를 `view_file` 도구로 먼저 읽어 그 안에 명시된 설계 및 보안 표준을 파악한 후 코딩에 착수하십시오.
+
 ## [MUST] 매니페스트/Helm 코드 수정 후 필수 후속 동작
 
 K8s 매니페스트, Helm Chart, ArgoCD Application 등 인프라 코드를 신규 작성하거나 수정한 경우, **작업 완료를 선언하기 전에** 반드시 아래 절차를 따르십시오.
