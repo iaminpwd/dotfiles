@@ -8,12 +8,51 @@
 
 ## 목차
 
-1. [설치 가이드](#설치-가이드)
-2. [디렉토리 구조](#디렉토리-구조)
-3. [핵심 기능](#핵심-기능)
+1. [핵심 기능](#핵심-기능)
+2. [설치 가이드](#설치-가이드)
+3. [디렉토리 구조](#디렉토리-구조)
 4. [작동 논리 및 아키텍처](#작동-논리-및-아키텍처)
-5. [포함된 도구 및 단축어](#포함된-도구-및-단축어)
-6. [커스터마이징](#커스터마이징)
+5. [포함된 도구 및 생산성 설정](#포함된-도구-및-생산성-설정)
+6. [커스터마이징 및 확장](#커스터마이징-및-확장)
+
+---
+
+## 핵심 기능
+
+### 1. Zero-Trust 보안 및 격리
+- **글로벌 `.gitignore_global` 강제 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 원격 저장소로 유출되는 사고를 시스템 전역에서 원천 차단합니다.
+- **도구 완전 격리:** `mise`(런타임/CLI 도구)와 `pipx`(Python 기반 도구)를 통해 시스템 전역을 오염시키지 않고 선언적으로 버전을 관리합니다.
+- **시크릿 히스토리 차단:** `HIST_IGNORE_SPACE` 설정으로 공백으로 시작하는 커맨드는 터미널 히스토리에 기록되지 않습니다.
+- **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
+
+### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
+- **글로벌 pre-commit 훅 통합:** Git의 `core.hooksPath` 설정을 통해 `TruffleHog`와 `Trivy` 기반의 검증 파이프라인을 전역 연동합니다. 사용자의 모든 로컬 Git 저장소에서 시크릿 노출 및 설정 오류를 사전 방어하며, 개별 저장소마다 훅 파일을 복사해 넣는 번거로움을 완전히 제거했습니다.
+- **24시간 DB 캐싱 마커:** `Trivy` 취약점 DB 업데이트 조회를 실행할 때, 저장소 루트의 로컬 마커 파일(`.trivy-db-update.timestamp`)을 참조합니다. 마지막 갱신으로부터 24시간 이내인 경우 원격 DB 업데이트 요청을 생략하는 `--skip-db-update` 플래그를 동적으로 결합하여, 커밋 지연을 20초에서 0.5초 수준으로 대폭 단축하고 쉘 프리징을 차단합니다.
+- **디스크 I/O Pruning 스캔:** 쉘 스크립트 내부에서 `find` 명령 실행 시 캐시 및 메타데이터가 집중된 대규모 디렉토리(`.git/`, `.terraform/` 등)를 `-prune` 옵션으로 통과 경로에서 제외합니다. 이를 통해 무분별한 파일 전체 스캔으로 인한 디스크 I/O 부하를 예방하고, 파일명 공백 등으로 인한 파싱 예외는 NUL(`\0`) 구분값 기반 파서(`while read -r -d ''`)를 적용하여 안전하게 처리합니다.
+
+### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
+로컬 프롬프트 아키텍처에는 Andrew Ng의 Agentic Workflow 디자인 패턴, ReAct/ToT 등의 추론 아키텍처, 그리고 벤더별 공식 가이드를 반영한 고급 프롬프트 설계가 반영되어 있습니다.
+이에 대한 상세한 설계 철학 및 기술적 배경은 [Agentic Workflow & Prompt Architecture](contexts/README.md) 문서를 참고하십시오.
+
+### 4. AI Customization Architecture (AI 스킬 동적 주입)
+개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
+- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`base.AGENTS.md`)과 전역 무시 룰(`.base.aiexclude`)이 글로벌 Customizations Root(`~/.gemini/config/`)로 동적 주입됩니다.
+- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` (Claude/Codex는 각각 `~/.claude/rules/`, `~/.codex/skills/`) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
+- **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
+
+### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
+워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.
+
+**워크스페이스별 특화 모듈:**
+
+| 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
+|---|---|---|---|
+| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
+| **Azure** (`azure/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
+| **K8s** (`k8s/`) | 🟡 **Draft** | 9개 (`010`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
+| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
+| **AIOps** (`aiops/`) | 🟡 **Draft** | 8개 (`005`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
+| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 8개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 트러블슈팅 |
 
 ---
 
@@ -24,14 +63,12 @@
 > WSL2 사용 시, 반드시 Linux 네이티브 홈 디렉토리(`~/`) 하위에 클론하십시오. `/mnt/c/` 경로에서 실행하면 권한 오류가 발생하며 스크립트가 즉시 종료됩니다.
 
 ### Step 1. 저장소 클론
-
 ```bash
 git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ```
 
 ### Step 2. 자동 설치 스크립트 실행
-
 ```bash
 ./setup.sh
 ```
@@ -44,18 +81,16 @@ cd ~/dotfiles
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
 | **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업 및 로컬 전용 스킬(`.agents/skills.json`) 동적 생성을 통한 Git 트리 클린 아키텍처 |
-| **[6/6]** 시크릿 보안 훅 | Trufflehog 보안 스캔 훅 + **Shadow State(스테이징 메모리 잔류) 방어 로직 내장 및 스캐너 오탐 최적화** |
+| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업 및 프로젝트 최상단 루트에 `AGENTS.md`/`CLAUDE.md` 단독 링킹을 통한 AI 무인식 룰 로딩 및 Git 트리 클린 아키텍처 |
+| **[6/6]** 시크릿 보안 훅 | Trufflehog 전역 시크릿 스캔 및 `core.hooksPath` 기반 글로벌 훅 연동, 24시간 취약점 DB 스킵 캐싱 및 Pruning 최적화를 적용한 고속 사전 안전성 검증 |
 
 ### Step 3. 터미널 재시작
-
 ```bash
 exec zsh
 # 또는 기존 터미널에서: src
 ```
 
 ### 성공 검증 커맨드
-
 ```bash
 # mise 도구 설치 확인
 mise ls
@@ -106,84 +141,30 @@ ls ~/.gemini/config/skills/
 
 ---
 
-## 핵심 기능
-
-### 1. Zero-Trust 보안 및 격리
-
-- **글로벌 `.gitignore_global` 강제 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 원격 저장소로 유출되는 사고를 시스템 전역에서 원천 차단합니다.
-- **도구 완전 격리:** `mise`(런타임/CLI 도구)와 `pipx`(Python 기반 도구)를 통해 시스템 전역을 오염시키지 않고 선언적으로 버전을 관리합니다.
-- **시크릿 히스토리 차단:** `HIST_IGNORE_SPACE` 설정으로 공백으로 시작하는 커맨드는 터미널 히스토리에 기록되지 않습니다.
-- **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
-
-### 2. SOTA 에이전트 워크플로우 (Agentic 5대 원칙)
-
-최신 AI 연구(OpenAI, Anthropic)에서 증명된 자율 주행 에이전트 원칙을 로컬 프롬프트 아키텍처에 강제(Hard Constraint)로 탑재했습니다. **에이전트는 다음의 5대 원칙을 무조건 준수해야 합니다.**
-
-
-- **도구 사용 (Tool Use):** 뇌피셜(Hallucination)에 의존한 이론적 처방을 엄격히 금지합니다. 반드시 `run_command`로 터미널을 능동 제어하여 상태를 검증하십시오.
-- **반성 및 자가 치유 (Reflection):** 코드 출력 전 `<self_critique>` 태그를 열어 멱등성과 보안 결함을 스스로 비판하십시오. 에러 발생 시 최대 3회 자가 치유 루프를 실행하며, 실패 시 Fail-Fast 서킷 브레이커가 작동합니다.
-- **프롬프트 자가 진화 (Prompt Self-Evolution):** 코드가 아닌 논리적 모순이나 엣지 케이스에 부딪힐 경우, 즉각 사내 규정(프롬프트 마크다운 원본) 자체의 허점을 의심하고 프롬프트 리팩토링을 사용자에게 역제안(Reverse Proposal)하십시오.
-- **계획 수립 및 RAG (Planning & Agentic RAG):** 인프라 구축 전 스스로 사내 규정(FinOps, K8s 등)을 탐색하여 계획서(`implementation_plan.md`)에 강제로 녹여내고(Agentic RAG), 사용자의 명시적 승인을 득한 후 실행하십시오.
-- **전문성 락킹 (Persona):** 수석 DevOps/SRE 아키텍트 페르소나를 부여받아, 사용자의 무리한 요구를 맹목적으로 따르지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오.
-
-### 3. AI Customization Architecture (AI 스킬 동적 주입)
-
-개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
-
-- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`base.AGENTS.md`)과 전역 무시 룰(`.base.aiexclude`)이 글로벌 Customizations Root(`~/.gemini/config/`)로 동적 주입됩니다.
-- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` (Claude/Codex는 각각 `~/.claude/rules/`, `~/.codex/skills/`) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
-- **Git 커밋 차단:** 로컬에 생성된 보안/AI 설정들은 전역 `.gitignore_global`에 의해 원격 저장소를 오염시키지 않습니다.
-
-### 4. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
-
-> **Prompt Engineering Note:** 모든 프롬프트는 현업 최고 수준의 Principal SRE/DevOps 아키텍트 페르소나를 부여하며, `[MUST]`, `[NEVER]`, `[Trigger]` 같은 명시적 제약 태그와 `<thinking>`, `<self_critique>` XML 태그를 활용해 AI의 추론 과정을 구조화합니다.
-
-**고급 프롬프트 엔지니어링 기법 적용:**
-
-- **XML 도메인 격리 (Domain Isolation):** 모든 프롬프트 룰과 예시는 `<examples>`, `<aws_core_guidelines>` 등의 고유 XML 태그 내부에 엄격히 격리되어 할루시네이션(Bleeding)을 원천 차단합니다.
-- **계급 기반 충돌 해결 (Rule Conflict Resolution):** 수많은 도메인 룰 간에 모순이 발생할 경우, 각 파일 최상단의 `<priority>` 속성(highest > critical > high)을 기계적으로 해석하여 000번 마스터 코어가 모든 것을 강제로 덮어씌웁니다(Override).
-- **가혹한 평가자 분리 (LLM-as-a-Judge):** 인프라 설계 직후 스스로 제3의 심판관 페르소나로 전환하여 보안/멱등성 기준 10점 만점으로 가혹하게 자가 채점(8점 미만 시 자가 폐기)을 강제합니다.
-- **사고 과정 강제화 (Chain-of-Thought):** 파괴적 명령 실행 전 `<thinking>` 태그 내에서 3-Why 분석 및 파급 효과 사전 검토를 강제합니다.
-- **엔터프라이즈 마인드셋 락킹:** Zero-Trust 보안, Day-2/SRE 장애 복원력, 그리고 컨텍스트 누수 없이 동적 라우팅(Lazy Routing)되는 글로벌 FinOps 비용 최적화 철학을 강제 탑재합니다.
-
-**워크스페이스별 특화 모듈:**
-
-| 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
-|---|---|---|---|
-| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
-| **Azure** (`azure/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
-| **K8s** (`k8s/`) | 🟡 **Draft** | 9개 (`010`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
-| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
-| **AIOps** (`aiops/`) | 🟡 **Draft** | 8개 (`005`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
-| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 8개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 트러블슈팅 |
-
----
-
 ## 작동 논리 및 아키텍처
 
 ### setup.sh 설치 파이프라인
-
 ![setup.sh Installation Pipeline](assets/setup-pipeline.png)
 
 ### GNU Stow 심볼릭 링크 구조
-
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
 
-
 **글로벌 스킬 적용**
-
 모든 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/rules/`, `~/.codex/skills/` 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
 ### AI 컨텍스트 빌드 파이프라인
-
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
+
+### 전역 검증 파이프라인 및 고속 DX 튜닝 설계
+개발 흐름의 지연을 막으면서 완벽한 보안/규약 통제를 실현하기 위해 `pre-flight-check.sh`에 다음 튜닝 기법을 적용했습니다.
+- **시간 기반 DB 캐시(TTL)**: Trivy DB 원격 조회를 24시간 주기로 캐싱하여 커밋 대기 시간을 20초에서 0.5초 수준으로 대폭 단축했습니다.
+- **디스크 I/O Pruning**: `.git/`, `.terraform/` 등 무거운 시스템 폴더 탐색을 `-prune`으로 차단하여 디스크 소모를 최소화했습니다.
 
 ---
 
-## 포함된 도구 및 단축어
+## 포함된 도구 및 생산성 설정
 
 ### 1. `mise.toml` 선언 도구 목록 (버전 고정)
-
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
 **보안 & 정책 검증**
@@ -209,30 +190,10 @@ ls ~/.gemini/config/skills/
 
 > 버전 고정 정보는 [`mise/.mise.toml`](mise/.mise.toml)에서 확인하십시오.
 
-### 2. 주요 단축어 (`.zshrc` & `.gitconfig`)
-
-| 카테고리 | 단축어 | 명령어 | 단축어 | 명령어 |
-| :--- | :--- | :--- | :--- | :--- |
-| **Terraform** | `tf` | `terraform` | `tfi` | `terraform init` |
-| | `tfp` / `tfa` | `plan` / `apply` | `tfv` | `terraform validate` |
-| | `tff` | `terraform fmt -recursive` | `tfw` | `terraform workspace` |
-| **Kubernetes** | `k` | `kubectl` | `kx` / `kn` | `kubectx` / `kubens` |
-| | `kgp` / `kgd` | `get pods` / `get deployments` | `kgs` / `kgn` | `get svc` / `get nodes` |
-| | `kga` | `kubectl get all` | `kdp` | `kubectl describe pod` |
-| | `klogs` | `kubectl logs -f` | `kex` | `kubectl exec -i -t` |
-| | `krm` / `kw` | `kubectl delete` / `watch kubectl` | `knet` | `netshoot 실행 (트러블슈팅)` |
-| **Docker/Helm** | `d` | `docker` | `dc` / `h`| `docker-compose` / `helm`|
-| **Ansible** | `ap` | `ansible-playbook` | | |
-| **Git** | `git st` | `status` | `git co` | `checkout` |
-| | `git cb` | `checkout -b` | `git br` | `branch` |
-| | `git cm` | `commit -m` | `git df` | `diff` |
-| | `git amend` | `commit --amend --no-edit` | `git lg` | `컬러 그래프 히스토리` |
-| **시스템/기타** | `src` | `source ~/.zshrc (설정 재로드)` | `ll` | `ls -alF` |
-| | `fd` | `fdfind (충돌 해결)` | `c` / `e` | `code .` / `explorer.exe .` |
-| | `myip` | `curl -s ifconfig.me` | | |
+### 2. 생산성 단축어 (Alias)
+자주 사용하는 인프라 명령어 단축 별칭(`k` -> `kubectl`, `tf` -> `terraform`, `ap` -> `ansible-playbook` 등)이 `zsh/.zshrc`와 `git/.gitconfig`에 구성되어 개발자 생산성을 극대화합니다.
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
-
 API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `setup.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
 
 ```bash
@@ -243,18 +204,15 @@ export OPENAI_API_KEY="sk-..."
 ```
 
 ### 4. Vim 생산성 최적화 (`.vimrc`)
-
 - **클립보드 연동:** `set clipboard=unnamedplus` — 브라우저, Slack과 양방향 복사/붙여넣기
 - **YAML 최적화:** 탭 간격 2칸 고정 (`tabstop=2`, `shiftwidth=2`)
 
 ---
 
-## 커스터마이징
+## 커스터마이징 및 확장
 
 ### 도구 추가 / 버전 변경
-
 `mise/.mise.toml` 파일에서 버전을 수정한 후 아래 커맨드를 실행하십시오.
-
 ```bash
 # 사용 가능한 버전 목록 조회
 mise ls-remote terraform
@@ -267,43 +225,14 @@ mise ls
 ```
 
 ### 단축어 추가
-
 `zsh/.zshrc`에 alias를 추가한 후 `src`를 실행하면 즉시 적용됩니다.
-
 ```bash
 echo "alias myalias='my-command'" >> ~/dotfiles/zsh/.zshrc
 src
 ```
 
-### AI 룰 수정 및 추가 (Zero-Config)
-
-특정 워크스페이스의 AI 행동 규칙을 변경하거나 추가하려면 `references/` 폴더 내 마크다운 파일을 수정한 후 `setup.sh`를 재실행할 필요 없이 즉시 적용됩니다. 단, 새로운 도메인이나 스킬을 추가할 때는 `setup.sh`를 실행해 구조를 셋업해야 합니다.
-
-> [!TIP]
-> **신규 룰 추가 시 가이드 (태그 내재화)**
-> 특정 기술 스택에만 조건부로 적용되어야 하는 룰이라면, 파일 내용 전체를 `<domain_specific_rules instruction="Apply these rules only if the current task involves the specific technology.">` 태그로 감싸주십시오. 도메인 스킬이 발동되었을 때, 이 태그로 묶인 내용이 관련 작업에서만 집중력(Attention)을 갖게 됩니다.
-
-```bash
-# 예: AWS 보안 규칙 수정
-vim ~/dotfiles/contexts/aws/references/020-security-compliance.md
-```
-
-### 신규 도메인 스킬 추가
-
-새로운 환경(예: GCP)을 위한 AI 스킬을 추가하려면 `contexts/` 디렉토리에 폴더를 구성한 후 `setup.sh`를 재실행하십시오.
-
-```bash
-# 1. 신규 도메인 컨텍스트 디렉토리 생성 
-mkdir -p ~/dotfiles/contexts/gcp/references
-cd ~/dotfiles/contexts/gcp
-
-# 2. 도메인 특화 모듈 파일 작성 (010부터 시작)
-touch references/010-gcp-core.md
-
-# 3. setup.sh 재실행으로 글로벌 레지스트리(symlink 디렉토리)에 자동 등록
-~/dotfiles/setup.sh
-```
+### AI 룰셋 핫 리로드 (Zero-Config)
+이미 셋업된 도메인 스킬의 세부 규칙을 수정하거나 확장할 경우, `setup.sh` 재실행 없이 `contexts/` 하위의 마크다운 파일을 수정하는 즉시 실시간으로 에이전트에 반영됩니다.
 
 > [!NOTE]
 > `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/rules/`, `~/.codex/skills/`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
-
