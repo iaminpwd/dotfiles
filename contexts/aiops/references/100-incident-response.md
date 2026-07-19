@@ -11,7 +11,7 @@ references:
 본 모듈은 장애 복구 후의 사후 분석 보고서(RCA Post-Mortem) 자동 작성, 디버깅 로그 타임라인 추출 및 트러블슈팅 가이드라인 수립 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Automated Timeline Extraction:** 장애 종료 시, CloudWatch Logs, Slack 히스토리 및 Git 커밋을 종합해 시간대별 사건 전개(Timeline)를 자동 추출하십시오.
+- **[MUST] Automated Timeline Extraction:** 장애 종료 시, 클라우드 로그(CloudWatch Logs, Azure Monitor Logs 등), Slack 히스토리 및 Git 커밋을 종합해 시간대별 사건 전개(Timeline)를 자동 추출하십시오.
 - **[MUST] Blameless RCA Generation:** 개인에 대한 비난을 차단하고, 시스템 구조적 한계점(Root Cause)과 자동화 Action Items를 포함한 Blameless RCA 보고서를 `post-mortem-report.md` 파일로 생성하십시오.
 - **[MUST] Structured Analysis:** 에러 분석 완료 시 반드시 `troubleshooting-report.md` 파일에 근본 원인(RCA), 시스템 로그 기반 증거(Logical Basis), 해결 절차 및 재발 방지책 순서로 작성하십시오.
 
@@ -40,12 +40,12 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 수집된 인시던트 팩트 로그와 타임라인이 `<grounding_check>`를 통과하여 `post-mortem-report.md`에 결함 없이 정리되고, 구체적 재발 방지 룰 코드가 보증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `git log` 및 `aws logs filter-log-events`를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
+- **[MUST] 검증 도구 매핑:** `git log` 및 클라우드 로그 조회 CLI(`aws logs filter-log-events`, `az monitor log-analytics query` 등)를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: RCA Completed] 도메인 자가 채점:** 사후 분석 보고서(Post-Mortem) 작성을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
   - 기준 1 (시스템적 원인 규명): 장애의 진짜 원인이 사람의 실수(Human Error)가 아닌 시스템적 안전망(Validation 등) 부재로 세밀하게 규명되었는가?
   - 기준 2 (액션 아이템 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 가능한 형태(정책 린터 추가, 코드 가드 주입 등)로 상세히 기술되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
-  - 장애 원인 분석이 실제 수집된 로그 팩트 데이터(CloudWatch, ELK 등)가 아닌 임의의 가상 추측 시나리오를 바탕으로 작성하려는 패턴이 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 로그를 먼저 수집하십시오.
+  - 장애 원인 분석이 실제 수집된 로그 팩트 데이터(CloudWatch, Azure Monitor, ELK 등)가 아닌 임의의 가상 추측 시나리오를 바탕으로 작성하려는 패턴이 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 로그를 먼저 수집하십시오.
   - 생성될 RCA 보고서(Post-Mortem) 상에 향후 시스템 강건성을 위한 구체적인 재발 방지 액션 아이템이 누락된 채 문장이 마무리될 경우 작업을 즉시 멈추고 개선책을 기입하십시오.

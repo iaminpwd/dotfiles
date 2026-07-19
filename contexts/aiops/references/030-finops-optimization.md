@@ -12,16 +12,16 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Full Observability Pipeline:** 시스템 화이트박스 검증을 위해 분산 추적(OpenTelemetry)과 모니터링 메트릭(Prometheus)을 결합한 통합 관측성 파이프라인을 구축하십시오.
-- **[MUST] MTTR & MTTD Tracking:** 알람 발생부터 에이전트의 장애 원인 진단(MTTD) 및 자동 복구 완료(MTTR) 리드 타임을 정교히 측정해 CloudWatch 커스텀 메트릭 또는 Datadog 대시보드로 가시화하는 DORA 지표 추적망을 구성하십시오.
+- **[MUST] MTTR & MTTD Tracking:** 알람 발생부터 에이전트의 장애 원인 진단(MTTD) 및 자동 복구 완료(MTTR) 리드 타임을 정교히 측정해 클라우드 커스텀 메트릭(CloudWatch, Azure Monitor 등) 또는 Datadog 대시보드로 가시화하는 DORA 지표 추적망을 구성하십시오.
 - **[MUST] Cost Allocation Tagging:** AI 및 데이터 파이프라인 리소스에 `CostCenter`, `Project`, `Environment` 비용 할당 태그(Cost Allocation Tags)를 필수 매핑하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 GPU 및 ML 워크로드 최적화
-- **[MUST] GPU/ML Workload Spot Instances:** AI 모델 훈련 및 비동기 배치 추론 설계 시, 온디맨드 사용을 배제하고 EC2 Spot 인스턴스 또는 EKS Karpenter 혼합 노드 그룹을 적용하여 컴퓨팅 비용을 최소화하십시오.
+- **[MUST] GPU/ML Workload Spot Instances:** AI 모델 훈련 및 비동기 배치 추론 설계 시, 온디맨드 사용을 배제하고 클라우드 Spot/Preemptible 인스턴스(AWS EC2 Spot, Azure Spot VM 등) 또는 Kubernetes 노드 오토스케일러(Karpenter, AKS Node Autoprovisioning 등) 혼합 노드 그룹을 적용하여 컴퓨팅 비용을 최소화하십시오.
 
 ### 2.2 예산 경보 및 이상 비용 통제
-- **[MUST] Anomaly Billing Detection:** LLM 무한 루프, 토큰 폭주 등으로 인한 돌발적 비용 급증(Spike)을 조기 탐지하도록 AWS Budgets 및 Anomaly Detection 비용 경보 알람 코드를 인프라에 결합하십시오.
+- **[MUST] Anomaly Billing Detection:** LLM 무한 루프, 토큰 폭주 등으로 인한 돌발적 비용 급증(Spike)을 조기 탐지하도록 클라우드 비용 관리 서비스(AWS Budgets/Cost Anomaly Detection, Azure Cost Management 등)의 비용 경보 알람 코드를 인프라에 결합하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -41,8 +41,8 @@ references:
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Cost Analysis Completion] 도메인 자가 채점:** 인프라 자원 변경안을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 설계를 최종 제안하십시오)
-  - 기준 1 (자원 최적화): GPU/ML 모델 훈련 배치용 자원이 Spot 및 멱등적 Karpenter 스케일러로 저비용 설계되었는가?
+  - 기준 1 (자원 최적화): GPU/ML 모델 훈련 배치용 자원이 Spot/Preemptible 및 멱등적 노드 오토스케일러로 저비용 설계되었는가?
   - 기준 2 (이상 비용 방어): 급격한 자원 누수나 람다 폭주 시 파이프라인을 자동 정지하고 이상 알람을 전송하는 예산 방어막이 가동되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - AI 모델 훈련 인프라 설계 중, 비용 절감을 위한 Spot Instance 옵션이 제외되고 고가의 온디맨드 GPU 인스턴스 전용 24/7 상시 기동 설계가 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 개선하십시오.
-  - AWS Budgets 및 비용 이상 감지(Anomaly Detection)를 통한 자동 차단/알람 매니페스트가 누락된 채 대규모 분산 파이프라인이 기획될 시 작업을 즉시 멈추고 안전 가드를 구성하십시오.
+  - 클라우드 비용 이상 감지(Cost Anomaly Detection)를 통한 자동 차단/알람 매니페스트가 누락된 채 대규모 분산 파이프라인이 기획될 시 작업을 즉시 멈추고 안전 가드를 구성하십시오.

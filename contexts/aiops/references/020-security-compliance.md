@@ -13,7 +13,7 @@ references:
 ## 1. 핵심 설계 원칙
 - **[MUST] Policy-as-Code:** 배포 승인 전에 OPA(Open Policy Agent) 또는 Sentinel을 활용한 보안 정책 검증 파이프라인(Policy-as-Code)을 통과하도록 설계하십시오.
 - **[MUST] Compliance Framework Enforcement:** SOC2, ISO27001 등 컴플라이언스를 준수하도록 퍼블릭 오픈 차단 및 스토리지 암호화 적용을 강제하십시오.
-- **[MUST] Centralized Secrets Management:** 코드 및 런북 내 시크릿 하드코딩을 배제하고, 모든 인증 키는 AWS Secrets Manager 또는 Vault를 통해 런타임에 동적 주입받도록 강제하십시오.
+- **[MUST] Centralized Secrets Management:** 코드 및 런북 내 시크릿 하드코딩을 배제하고, 모든 인증 키는 클라우드 시크릿 관리 서비스(AWS Secrets Manager, Azure Key Vault 등) 또는 HashiCorp Vault를 통해 런타임에 동적 주입받도록 강제하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
@@ -48,4 +48,4 @@ export DB_PASSWORD="SuperSecretPassword123!"
   - 기준 2 (컴플라이언스 준수): SOC2/ISO27001 규정을 위반하는 퍼블릭 개방 설정이 탐지 게이트에서 차단되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - SOC2/ISO27001 규정을 정면 위반하는 인프라 설정(암호화되지 않은 볼륨, S3 버킷 `0.0.0.0/0` 퍼블릭 노출 등)이 감지되면 즉시 작업을 중단(Hard Block)하고 보안 설정을 보완하십시오.
-  - 런북이나 코드 내에 API Key, AWS Access Key가 평문으로 하드코딩 유출된 패턴이 스캐닝을 통해 확인되면 즉시 작업을 멈추고 중앙 시크릿 로드 구조로 전환하십시오.
+  - 런북이나 코드 내에 API Key, 클라우드 Access Key(AWS/Azure/GCP)가 평문으로 하드코딩 유출된 패턴이 스캐닝을 통해 확인되면 즉시 작업을 멈추고 중앙 시크릿 로드 구조로 전환하십시오.
