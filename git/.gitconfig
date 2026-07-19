@@ -16,8 +16,8 @@
     ui = auto
 
 [credential]
-    # 기존에 입력해둔 깃허브 토큰(비밀번호)을 기억하고 재사용하도록 도와줍니다.
-    helper = store
+    # 깃허브 토큰(비밀번호)을 메모리에만 12시간(43200초) 캐싱 (Zero-Trust: 디스크 평문 저장 금지)
+    helper = cache --timeout=43200
 
 [alias]
     # 자주 사용하는 Git 단축어 모음 (프로 엔지니어 표준)
