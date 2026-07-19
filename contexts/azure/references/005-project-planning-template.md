@@ -5,8 +5,11 @@ trigger: Apply these rules ONLY when planning, architecting, or creating a Maste
 references:
   - contexts/azure/references/010-azure-core.md
   - contexts/azure/references/020-security-compliance.md
+  - contexts/azure/references/025-cloud-security.md
   - contexts/azure/references/030-finops-optimization.md
+  - contexts/azure/references/050-iac-standard.md
   - contexts/azure/references/060-aks-standard.md
+  - contexts/azure/references/090-day2-operations.md
 ---
 # 컨텍스트 모듈: Azure 프로젝트 마스터 플랜(계획서) 작성 표준
 

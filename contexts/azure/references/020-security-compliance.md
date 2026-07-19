@@ -67,7 +67,7 @@ password = "SuperSecret123!"
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 모든 자격 증명 노출 위반 검사가 무결하게 통과되고, RBAC 역할의 범위가 승인된 리소스 그룹 단위로 격리되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `trufflehog`를 사용하여 코드 내 시크릿 노출 여부를 자동 검사하고, `checkov` 또는 `tfsec`을 이용하여 보안 규칙 위반을 사전 스캔하십시오.
+- **[MUST] 검증 도구 매핑:** `trufflehog`를 사용하여 코드 내 시크릿 노출 여부를 자동 검사하고, `checkov` 또는 `tfsec`을 이용하여 보안 규칙 위반을 사전 스캔하십시오. RBAC 역할을 신규 작성하거나 변경한 경우, Microsoft Entra Permissions Management(또는 Access Reviews)로 의도치 않은 과잉 권한 부여 여부와 실사용 기준 미사용 권한을 추가로 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Azure RBAC Role Created] 도메인 자가 채점:** RBAC 역할 설계 완료 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)

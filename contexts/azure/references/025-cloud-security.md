@@ -23,10 +23,13 @@ references:
 - **[MUST] Bastion:** 인스턴스 직접 SSH 접근을 차단하고, Azure Bastion을 통하도록 설계를 제안하십시오.
 - **[MUST] Private Endpoint:** Azure 내부 서비스 통신 시 퍼블릭 인터넷 경로 노출을 차단하기 위해 Private Endpoint(Private Link)를 구성하십시오.
 - **[MUST] Data in Transit:** 모든 클라우드 내부 및 외부 네트워크 통신에 TLS 암호화를 적용하십시오.
+- **[PREFER] IPAM:** 멀티 VNet/멀티 구독 환경에서 CIDR 중복 할당을 방지하기 위해 Azure Virtual Network Manager(AVNM)의 IPAM 풀을 통한 중앙 집중형 IP 주소 관리를 제안하십시오.
 
 ### 2.2 엔터프라이즈 권한 통제
+- **[MUST] Landing Zone Structure:** 신규 다중 구독 환경 구축 시 Azure Landing Zones(Cloud Adoption Framework)를 기반으로 Platform(Management/Connectivity/Identity)과 Landing Zone(Corp/Online) 구독을 최소 단위로 분리한 계층 구조를 우선 설계하십시오.
 - **[MUST] Federation (SSO):** 다중 구독 접근 통제를 위해 Microsoft Entra ID (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Microsoft Defender for Cloud 적용을 함께 제안하십시오.
+- **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 Azure Policy(Deny/Audit 이니셔티브)를 Management Group 단위로 함께 제안하십시오.
 - **[PREFER] Policy/RBAC:** 다중 구독 설계 시 Azure Management Groups의 Azure Policy 및 Azure RBAC를 활용하여 최대 권한 범위를 강제 제한하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
