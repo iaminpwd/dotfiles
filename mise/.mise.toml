@@ -9,6 +9,7 @@ shfmt = "3.13.1"
 "pipx:checkov" = "3.3.1"
 "pipx:pre-commit" = "4.6.0"
 "pipx:yamllint" = "1.38.0"
+"pipx:cfn-lint" = "1.51.5"
 
 
 # IaC & Configuration Management
@@ -23,6 +24,7 @@ terraform-docs = "0.24.0"
 # Cloud Services
 awscli = "2.15.30"
 azure-cli = "2.87.0"
+"pipx:aws-sam-cli" = "1.162.1"
 
 # Kubernetes & Containers
 kubectl = "1.30.1"

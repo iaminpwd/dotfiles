@@ -187,6 +187,38 @@ validate_terraform() {
   fi
 }
 
+# 3. AWS SAM Validation
+validate_sam() {
+  # [ -f "template.yaml" ]처럼 저장소 루트만 보면, SAM 템플릿이 흔히 그러듯 서브디렉토리에
+  # 있는 경우 검증이 통째로 무력화된다. 다른 검증 함수와 동일하게 스테이징된 파일 목록을
+  # git pathspec으로 조회해 위치에 무관하게 찾는다.
+  local sam_templates=()
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+    mapfile -d '' -t sam_templates < <(git diff --cached --name-only -z --diff-filter=ACM -- '*template.yaml' '*template.yml' 2>/dev/null)
+  fi
+
+  if [ "${#sam_templates[@]}" -eq 0 ] || [ -z "${sam_templates[0]}" ]; then
+    return 0
+  fi
+
+  if ! has_tool sam; then
+    echo "--- Step: AWS SAM Validation ---"
+    echo "[WARNING] SAM templates found but sam CLI is not installed."
+    return 0
+  fi
+
+  echo "--- Step: AWS SAM Validation ---"
+  for tpl in "${sam_templates[@]}"; do
+    [ -z "$tpl" ] && continue
+    echo "Validating SAM template: $tpl"
+    if ! sam validate --template-file "$tpl"; then
+      echo "❌ [ERROR] SAM 템플릿 검증에 실패하여 커밋이 차단되었습니다: $tpl" >&2
+      return 1
+    fi
+  done
+  echo "[SUCCESS] SAM template validation passed."
+}
+
 # 4. Ansible Validation
 validate_ansible() {
   # 글롭 없는 'site.yml'/'roles' pathspec은 저장소 루트에 있는 경우만 매칭된다. 실제로는
@@ -576,7 +608,7 @@ main() {
 
   validate_shell
   validate_terraform
-
+  validate_sam
   validate_ansible
   validate_helm
   validate_k8s_manifests

@@ -61,8 +61,8 @@ resource "azurerm_eventgrid_event_subscription" "example" {
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** Terraform CLI(`terraform validate`, `terraform plan`)를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`func start` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
-- **[MUST] 검증 도구 매핑:** `terraform validate` 및 `tflint`를 사용하여 서버리스 인프라 코드와 권한 설정을 점검하십시오.
+- **[MUST] 완료 조건 (Done when):** Azure Bicep CLI를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`func start` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
+- **[MUST] 검증 도구 매핑:** `az bicep build -f <template_file>` 및 `tflint`를 사용하여 서버리스 템플릿과 권한 설정을 점검하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Serverless Deployed] 도메인 자가 채점:** 서버리스 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
