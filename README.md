@@ -122,9 +122,7 @@ ls ~/.gemini/config/skills/
 │   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
 │
 ├── git/
-│   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true)
-│   ├── .gitconfig-workspace   # 워크스페이스별 Git 설정 (includeIf 조건부 로딩)
-│   ├── .githooks-workspace/   # 워크스페이스별 Git 훅 디렉토리
+│   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
 │   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
 │
 ├── mise/
