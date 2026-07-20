@@ -84,7 +84,7 @@ validate_terraform() {
   local tf_files=()
   while IFS= read -r -d '' file; do
     tf_files+=("$file")
-  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     echo "--- Step: Terraform Validation ---"
@@ -142,7 +142,7 @@ validate_bicep() {
   local bicep_files=()
   while IFS= read -r -d '' file; do
     bicep_files+=("$file")
-  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.bicep" -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 -name ".*" -prune -o -name "*.bicep" -print0 2>/dev/null)
 
   if [ "${#bicep_files[@]}" -gt 0 ] && [ -n "${bicep_files[0]}" ]; then
     if has_tool az && az bicep version &>/dev/null; then
@@ -164,7 +164,7 @@ validate_ansible() {
   local ansible_files=()
   while IFS= read -r -d '' file; do
     ansible_files+=("$file")
-  done < <(find . -maxdepth 2 -name ".*" -prune -o \( -name "*playbook*.yml" -o -name "*playbook*.yaml" -o -name "site.yml" -o -name "site.yaml" \) -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 2 -name ".*" -prune -o \( -name "*playbook*.yml" -o -name "*playbook*.yaml" -o -name "site.yml" -o -name "site.yaml" \) -print0 2>/dev/null)
 
   if [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ] || [ -d "roles" ]; then
     echo "--- Step: Ansible Validation ---"
@@ -204,7 +204,7 @@ validate_k8s_manifests() {
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞인 파일이라 순수 YAML 파서(kubectl/kube-linter)로 검증 불가 (validate_helm에서 helm lint로 별도 검증됨)
   while IFS= read -r -d '' file; do
     k8s_manifests+=("$file")
-  done < <(find . -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -exec grep -qE "^kind:" {} \; -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -exec grep -qE "^kind:" {} \; -print0 2>/dev/null)
 
   if [ "${#k8s_manifests[@]}" -gt 0 ] && [ -n "${k8s_manifests[0]}" ]; then
     echo "--- Step: K8s Manifest Validation ---"
@@ -231,7 +231,7 @@ validate_docker() {
   local dockerfiles=()
   while IFS= read -r -d '' file; do
     dockerfiles+=("$file")
-  done < <(find . -maxdepth 3 -name ".*" -prune -o \( -name "Dockerfile" -o -name "Dockerfile.*" -o -name "Dockerfile-*" \) -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 -name ".*" -prune -o \( -name "Dockerfile" -o -name "Dockerfile.*" -o -name "Dockerfile-*" \) -print0 2>/dev/null)
 
   if [ "${#dockerfiles[@]}" -gt 0 ] && [ -n "${dockerfiles[0]}" ]; then
     if has_tool hadolint; then
@@ -251,7 +251,7 @@ validate_yaml() {
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞여 있어 순수 YAML 린터(yamllint) 검증 대상에서 제외
   while IFS= read -r -d '' file; do
     yaml_files+=("$file")
-  done < <(find . -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 4 \( -name ".*" -o -name "contexts" -o -name "templates" \) -prune -o \( -name "*.yaml" -o -name "*.yml" \) -print0 2>/dev/null)
 
   if [ "${#yaml_files[@]}" -gt 0 ] && [ -n "${yaml_files[0]}" ]; then
     if has_tool yamllint; then
@@ -270,7 +270,7 @@ validate_conftest() {
   local rego_files=()
   while IFS= read -r -d '' file; do
     rego_files+=("$file")
-  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.rego" -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 -name ".*" -prune -o -name "*.rego" -print0 2>/dev/null)
 
   if [ "${#rego_files[@]}" -gt 0 ] && [ -n "${rego_files[0]}" ] || [ -d "policy" ]; then
     if has_tool conftest; then
@@ -339,7 +339,7 @@ validate_finops_costs() {
   local tf_files=()
   while IFS= read -r -d '' file; do
     tf_files+=("$file")
-  done < <(find . -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 -name ".*" -prune -o -name "*.tf" -print0 2>/dev/null)
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
