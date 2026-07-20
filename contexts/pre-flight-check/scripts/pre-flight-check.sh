@@ -13,12 +13,26 @@ echo "============================================="
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 CACHE_FILE="$REPO_ROOT/.pre-flight-check.cache"
 
+# git commit을 통해 훅으로 실행될 때는 git이 CWD를 항상 저장소 루트로 고정해주지만,
+# 사람이나 에이전트가 서브디렉토리에서 이 스크립트를 직접 실행하면 CWD가 그대로 남는다.
+# git diff --cached의 '*.sh' 같은 pathspec은 저장소 전체가 아니라 "CWD 기준"으로
+# 해석되므로, 서브디렉토리에서 실행할 경우 상위/형제 경로에 스테이징된 변경사항을
+# 조용히 못 찾아 검증을 통째로 건너뛰고도 성공으로 보고하는 사고로 이어진다.
+cd "$REPO_ROOT" || {
+  echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
+  exit 1
+}
+
 has_tool() {
-  command -v "$1" &>/dev/null || return 1
+  local resolved
+  resolved=$(command -v "$1") || return 1
   # mise shim 파일은 command -v로 항상 발견되지만, 해당 도구의 버전이 현재 디렉토리에서
   # 해석되지 않으면(예: mise 설정이 미치지 못하는 위치) 실제 호출 시점에 실패한다.
   # 각 도구마다 다른 --version 플래그를 흉내내는 대신, mise 자체에 해석 가능 여부를 물어본다.
-  if command -v mise &>/dev/null; then
+  # 단, PATH에서 찾은 경로가 mise shims 디렉토리 소속일 때만 이 재검증을 수행한다. zsh처럼
+  # mise가 애초에 관리하지 않는 시스템 도구(apt 설치)까지 무조건 "mise which"로 되물으면
+  # "not a mise bin" 오류로 오탐 처리되어, 실제로는 정상 설치된 도구를 건너뛰게 된다.
+  if [[ "$resolved" == "$HOME/.local/share/mise/shims/"* ]] && command -v mise &>/dev/null; then
     mise which "$1" &>/dev/null || return 1
   fi
 }
@@ -70,7 +84,10 @@ validate_shell() {
   # shfmt가 존재하면 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감)
   if [ "$has_shfmt" -eq 1 ]; then
     echo "Checking format for all shell scripts..."
-    shfmt -d -i 2 "${shell_files[@]}"
+    if ! shfmt -d -i 2 "${shell_files[@]}"; then
+      echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
+      return 1
+    fi
   fi
 
   # zsh 방언은 정적 분석 도구가 지원하지 않으므로 .zsh를 제외한 나머지(.sh, 확장자 없는 훅 파일 등)만 대상으로 삼음
@@ -81,7 +98,10 @@ validate_shell() {
     done
     if [ "${#sh_only_files[@]}" -gt 0 ]; then
       echo "Running shellcheck..."
-      shellcheck "${sh_only_files[@]}"
+      if ! shellcheck "${sh_only_files[@]}"; then
+        echo "❌ [ERROR] shellcheck 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
     fi
   else
     echo "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
@@ -93,12 +113,18 @@ validate_shell() {
     # .zsh 파일은 zsh로, .sh 파일은 bash로 문법 검사
     if [[ "$f" == *.zsh ]]; then
       if [ "$has_zsh" -eq 1 ]; then
-        zsh -n "$f"
+        if ! zsh -n "$f"; then
+          echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+          return 1
+        fi
       else
         echo "[WARNING] zsh not found, skipping syntax check for: $f"
       fi
     else
-      bash -n "$f"
+      if ! bash -n "$f"; then
+        echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+        return 1
+      fi
     fi
   done
   echo "[SUCCESS] Shell scripts validation passed."
@@ -128,20 +154,32 @@ validate_terraform() {
     fi
 
     echo "Running terraform fmt check..."
-    terraform fmt -check -recursive
+    if ! terraform fmt -check -recursive; then
+      echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
+      return 1
+    fi
 
     echo "Running terraform validate (offline initialization)..."
     if [ ! -d ".terraform" ]; then
-      terraform init -backend=false -input=false >/dev/null
+      if ! terraform init -backend=false -input=false >/dev/null; then
+        echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 차단되었습니다." >&2
+        return 1
+      fi
     fi
-    terraform validate
+    if ! terraform validate; then
+      echo "❌ [ERROR] terraform validate 검증에 실패하여 커밋이 차단되었습니다." >&2
+      return 1
+    fi
 
     if has_tool tflint; then
       echo "Running tflint..."
       if [ -f ".tflint.hcl" ]; then
         tflint --init || true
       fi
-      tflint
+      if ! tflint; then
+        echo "❌ [ERROR] tflint 정적 분석에서 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
     else
       echo "[WARNING] tflint is not installed. Skipping static analysis."
     fi
@@ -151,46 +189,45 @@ validate_terraform() {
 
 # 3. AWS SAM Validation
 validate_sam() {
-  if [ -f "template.yaml" ] || [ -f "template.yml" ]; then
-    if has_tool sam; then
-      echo "--- Step: AWS SAM Validation ---"
-      sam validate
-      echo "[SUCCESS] SAM template validation passed."
-    else
-      echo "[WARNING] SAM templates found but sam CLI is not installed."
-    fi
-  fi
-}
-
-# 4. Azure Bicep Validation
-validate_bicep() {
-  local bicep_files=()
+  # [ -f "template.yaml" ]처럼 저장소 루트만 보면, SAM 템플릿이 흔히 그러듯 서브디렉토리에
+  # 있는 경우 검증이 통째로 무력화된다. 다른 검증 함수와 동일하게 스테이징된 파일 목록을
+  # git pathspec으로 조회해 위치에 무관하게 찾는다.
+  local sam_templates=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t bicep_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.bicep' 2>/dev/null)
+    mapfile -d '' -t sam_templates < <(git diff --cached --name-only -z --diff-filter=ACM -- '*template.yaml' '*template.yml' 2>/dev/null)
   fi
 
-  if [ "${#bicep_files[@]}" -gt 0 ] && [ -n "${bicep_files[0]}" ]; then
-    if has_tool az && az bicep version &>/dev/null; then
-      echo "--- Step: Azure Bicep Validation ---"
-      for bf in "${bicep_files[@]}"; do
-        [ -z "$bf" ] && continue
-        echo "Validating bicep file: $bf"
-        # --stdout으로 나오는 컴파일된 ARM JSON만 버리고, 실패 시 원인 진단을 위해 stderr는 그대로 노출한다.
-        az bicep build --file "$bf" --stdout >/dev/null
-      done
-      echo "[SUCCESS] Bicep validation passed."
-    else
-      echo "[WARNING] Bicep files found but az CLI with bicep extension is not installed."
-    fi
+  if [ "${#sam_templates[@]}" -eq 0 ] || [ -z "${sam_templates[0]}" ]; then
+    return 0
   fi
+
+  if ! has_tool sam; then
+    echo "--- Step: AWS SAM Validation ---"
+    echo "[WARNING] SAM templates found but sam CLI is not installed."
+    return 0
+  fi
+
+  echo "--- Step: AWS SAM Validation ---"
+  for tpl in "${sam_templates[@]}"; do
+    [ -z "$tpl" ] && continue
+    echo "Validating SAM template: $tpl"
+    if ! sam validate --template-file "$tpl"; then
+      echo "❌ [ERROR] SAM 템플릿 검증에 실패하여 커밋이 차단되었습니다: $tpl" >&2
+      return 1
+    fi
+  done
+  echo "[SUCCESS] SAM template validation passed."
 }
 
-# 5. Ansible Validation
+# 4. Ansible Validation
 validate_ansible() {
+  # 글롭 없는 'site.yml'/'roles' pathspec은 저장소 루트에 있는 경우만 매칭된다. 실제로는
+  # ansible/site.yml, ansible/roles/... 처럼 서브디렉토리에 두는 구성이 흔하므로, 다른
+  # 검증 함수와 동일하게 글롭을 붙여 위치에 무관하게 찾는다.
   local ansible_files=() staged_roles=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t ansible_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*playbook*.yml' '*playbook*.yaml' 'site.yml' 'site.yaml' 2>/dev/null)
-    mapfile -d '' -t staged_roles < <(git diff --cached --name-only -z --diff-filter=ACM -- 'roles' 2>/dev/null)
+    mapfile -d '' -t ansible_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*playbook*.yml' '*playbook*.yaml' '*site.yml' '*site.yaml' 2>/dev/null)
+    mapfile -d '' -t staged_roles < <(git diff --cached --name-only -z --diff-filter=ACM -- '*roles/*' 2>/dev/null)
   fi
 
   if { [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ]; } || { [ "${#staged_roles[@]}" -gt 0 ] && [ -n "${staged_roles[0]}" ]; }; then
@@ -199,12 +236,18 @@ validate_ansible() {
       for pf in "${ansible_files[@]}"; do
         [ -z "$pf" ] && continue
         echo "Checking ansible syntax: $pf"
-        ansible-playbook --syntax-check "$pf"
+        if ! ansible-playbook --syntax-check "$pf"; then
+          echo "❌ [ERROR] Ansible 플레이북 문법 검사에 실패하여 커밋이 차단되었습니다: $pf" >&2
+          return 1
+        fi
       done
     fi
     if has_tool ansible-lint; then
       echo "Running ansible-lint..."
-      ansible-lint
+      if ! ansible-lint; then
+        echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
       echo "[SUCCESS] Ansible validation passed."
     else
       echo "[WARNING] ansible-lint is not installed. Skipping lint validation."
@@ -212,28 +255,61 @@ validate_ansible() {
   fi
 }
 
-# 6. K8s Helm Validation
+# 5. K8s Helm Validation
 validate_helm() {
-  if [ -f "Chart.yaml" ]; then
-    local helm_changed=()
-    if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-      mapfile -d '' -t helm_changed < <(git diff --cached --name-only -z --diff-filter=ACM -- 'Chart.yaml' 'values.yaml' 'templates' 2>/dev/null)
-    fi
-    if [ "${#helm_changed[@]}" -eq 0 ] || [ -z "${helm_changed[0]}" ]; then
-      return 0
-    fi
-
-    echo "--- Step: Helm Chart Validation ---"
-    if has_tool helm; then
-      helm lint .
-      echo "[SUCCESS] Helm lint passed."
-    else
-      echo "[WARNING] Chart.yaml found but helm CLI is not installed."
-    fi
+  # [ -f "Chart.yaml" ] + 정확히 'Chart.yaml'/'values.yaml'/'templates'라는 이름의 pathspec은
+  # 둘 다 저장소 루트만 본다. 실무에서는 차트가 거의 항상 서브디렉토리(charts/foo 등)에
+  # 있으므로, 이 게이트로는 Helm 차트가 있는 대부분의 저장소에서 검증이 통째로
+  # 무력화된다. 글롭 pathspec으로 위치에 무관하게 스테이징된 차트 관련 변경을 찾는다.
+  local helm_changed=()
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+    mapfile -d '' -t helm_changed < <(git diff --cached --name-only -z --diff-filter=ACM -- '*Chart.yaml' '*values.yaml' '*/templates/*' 2>/dev/null)
   fi
+  if [ "${#helm_changed[@]}" -eq 0 ] || [ -z "${helm_changed[0]}" ]; then
+    return 0
+  fi
+
+  if ! has_tool helm; then
+    echo "--- Step: Helm Chart Validation ---"
+    echo "[WARNING] Chart.yaml found but helm CLI is not installed."
+    return 0
+  fi
+
+  # 변경된 파일들이 속한 차트 디렉토리(Chart.yaml이 있는 저장소 내 위치)를 중복 없이 수집
+  local chart_files=() chart_dirs=() cf d found existing
+  mapfile -d '' -t chart_files < <(git ls-files -z -- '*Chart.yaml' 2>/dev/null)
+  for cf in "${chart_files[@]}"; do
+    [ -z "$cf" ] && continue
+    d=$(dirname "$cf")
+    found=0
+    for hf in "${helm_changed[@]}"; do
+      [ "$hf" = "$d/Chart.yaml" ] && found=1 && break
+      [[ "$hf" == "$d"/* ]] && found=1 && break
+    done
+    [ "$found" -eq 0 ] && continue
+    for existing in "${chart_dirs[@]:-}"; do
+      [ "$existing" = "$d" ] && found=2 && break
+    done
+    [ "$found" -eq 2 ] && continue
+    chart_dirs+=("$d")
+  done
+
+  if [ "${#chart_dirs[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  echo "--- Step: Helm Chart Validation ---"
+  for d in "${chart_dirs[@]}"; do
+    echo "Linting chart: $d"
+    if ! helm lint "$d"; then
+      echo "❌ [ERROR] Helm lint 지적 사항이 발견되어 커밋이 차단되었습니다: $d" >&2
+      return 1
+    fi
+  done
+  echo "[SUCCESS] Helm lint passed."
 }
 
-# 7. Raw K8s Manifest Validation
+# 6. Raw K8s Manifest Validation
 validate_k8s_manifests() {
   # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_yaml과 중복 git diff 호출 방지)
   local staged_yaml=("${GLOBAL_STAGED_YAML_FILES[@]}")
@@ -251,14 +327,20 @@ validate_k8s_manifests() {
     echo "--- Step: K8s Manifest Validation ---"
     if has_tool kube-linter; then
       echo "Running kube-linter for all manifests..."
-      kube-linter lint "${k8s_manifests[@]}"
+      if ! kube-linter lint "${k8s_manifests[@]}"; then
+        echo "❌ [ERROR] kube-linter 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
       echo "[SUCCESS] kube-linter passed."
     elif has_tool kubectl; then
       echo "Running kubectl --dry-run (client-side) for manifest validation..."
       for mf in "${k8s_manifests[@]}"; do
         [ -z "$mf" ] && continue
         echo "Validating: $mf"
-        kubectl apply --dry-run=client -f "$mf" 2>&1
+        if ! kubectl apply --dry-run=client -f "$mf" 2>&1; then
+          echo "❌ [ERROR] kubectl dry-run 검증에 실패하여 커밋이 차단되었습니다: $mf" >&2
+          return 1
+        fi
       done
       echo "[SUCCESS] kubectl dry-run validation passed."
     else
@@ -267,7 +349,7 @@ validate_k8s_manifests() {
   fi
 }
 
-# 8. Dockerfile Validation
+# 7. Dockerfile Validation
 validate_docker() {
   local dockerfiles=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
@@ -278,7 +360,10 @@ validate_docker() {
     if has_tool hadolint; then
       echo "--- Step: Dockerfile Validation ---"
       echo "Linting Dockerfiles..."
-      hadolint "${dockerfiles[@]}"
+      if ! hadolint "${dockerfiles[@]}"; then
+        echo "❌ [ERROR] hadolint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
       echo "[SUCCESS] Dockerfile validation passed."
     else
       echo "[WARNING] Dockerfiles found but hadolint is not installed."
@@ -286,7 +371,7 @@ validate_docker() {
   fi
 }
 
-# 9. YAML Style & Validation (Relaxed / Fail-safe)
+# 8. YAML Style & Validation (Relaxed / Fail-safe)
 validate_yaml() {
   # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_k8s_manifests와 중복 git diff 호출 방지)
   local staged_yaml=("${GLOBAL_STAGED_YAML_FILES[@]}")
@@ -303,7 +388,10 @@ validate_yaml() {
     if has_tool yamllint; then
       echo "--- Step: YAML Style Validation (Relaxed) ---"
       # find로 필터링된 모든 YAML 파일을 일괄 검사
-      yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "${yaml_files[@]}"
+      if ! yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "${yaml_files[@]}"; then
+        echo "❌ [ERROR] yamllint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
       echo "[SUCCESS] YAML format validation passed."
     else
       echo "[WARNING] YAML files found but yamllint is not installed."
@@ -311,7 +399,7 @@ validate_yaml() {
   fi
 }
 
-# 10. OPA/Conftest Policy Validation
+# 9. OPA/Conftest Policy Validation
 validate_conftest() {
   local staged_rego=() staged_config=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
@@ -323,18 +411,53 @@ validate_conftest() {
   { [ "${#staged_rego[@]}" -gt 0 ] && [ -n "${staged_rego[0]}" ]; } && has_staged_rego=1
   { [ "${#staged_config[@]}" -gt 0 ] && [ -n "${staged_config[0]}" ]; } && has_staged_config=1
 
-  if [ "$has_staged_rego" -eq 1 ] || { [ -d "policy" ] && [ "$has_staged_config" -eq 1 ]; }; then
+  # [ -d "policy" ]는 저장소 루트만 보므로 infra/policy/ 처럼 서브디렉토리에 정책을 두는
+  # 흔한 구성에서는 "이 저장소가 conftest를 쓰는지" 판정 자체가 실패한다. 위치에 무관하게
+  # 추적 중인 .rego 파일이 하나라도 있는지로 대체한다.
+  local has_any_rego=0
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ] && [ -n "$(git ls-files -- '*.rego' 2>/dev/null)" ]; then
+    has_any_rego=1
+  fi
+
+  if [ "$has_staged_rego" -eq 1 ] || { [ "$has_any_rego" -eq 1 ] && [ "$has_staged_config" -eq 1 ]; }; then
     if has_tool conftest; then
       echo "--- Step: Conftest Policy Validation ---"
+
+      # conftest는 --policy를 안 주면 기본적으로 CWD 기준 ./policy 디렉토리만 찾는다.
+      # infra/policy/ 처럼 다른 위치에 정책이 있으면 "stat policy: no such file or
+      # directory"로 실패하므로, 추적 중인 .rego 파일들이 실제로 위치한 디렉토리를
+      # 모아 --policy로 명시한다.
+      local rego_files=() policy_dirs=() rf pd found existing
+      mapfile -d '' -t rego_files < <(git ls-files -z -- '*.rego' 2>/dev/null)
+      for rf in "${rego_files[@]}"; do
+        [ -z "$rf" ] && continue
+        pd=$(dirname "$rf")
+        found=0
+        for existing in "${policy_dirs[@]:-}"; do
+          [ "$existing" = "$pd" ] && found=1 && break
+        done
+        [ "$found" -eq 0 ] && policy_dirs+=("$pd")
+      done
+      local policy_flags=()
+      for pd in "${policy_dirs[@]}"; do
+        policy_flags+=(--policy "$pd")
+      done
+
       if [ "$has_staged_rego" -eq 1 ]; then
         # 정책(.rego) 자체가 바뀐 경우: 기존에 이미 존재하던 설정 파일들이 새 정책도
         # 여전히 통과하는지 확인해야 하므로 저장소 전체를 대상으로 검사한다.
         echo "[INFO] Rego policy changed. Testing against the entire repository for regressions."
-        conftest test .
+        if ! conftest test "${policy_flags[@]}" .; then
+          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 차단되었습니다." >&2
+          return 1
+        fi
       else
         # 정책은 그대로이고 설정 파일만 바뀐 경우: 이번에 변경된 파일만 검사해도
         # (다른 설정 파일은 이미 기존 정책을 통과한 상태이므로) 무관한 재검사를 피할 수 있다.
-        conftest test "${staged_config[@]}"
+        if ! conftest test "${policy_flags[@]}" "${staged_config[@]}"; then
+          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 차단되었습니다." >&2
+          return 1
+        fi
       fi
       echo "[SUCCESS] Conftest validation passed."
     else
@@ -343,7 +466,7 @@ validate_conftest() {
   fi
 }
 
-# 11. Security & Secret Scan
+# 10. Security & Secret Scan
 validate_security() {
   echo "--- Step: Security and Secret Scan ---"
   if has_tool trivy; then
@@ -360,6 +483,12 @@ validate_security() {
     if [ -f "$timestamp_file" ]; then
       local last_update
       last_update=$(cat "$timestamp_file" 2>/dev/null || echo 0)
+      # 디스크 쓰기 중단 등으로 타임스탬프 파일이 숫자가 아닌 값으로 손상된 경우, 그 값을
+      # 그대로 산술 연산에 넣으면 bash가 변수명으로 오인 시도하다 "unbound variable" 같은
+      # 알아보기 힘든 에러로 죽는다. 숫자가 아니면 캐시가 없는 것처럼 안전하게 폴백한다.
+      if ! [[ "$last_update" =~ ^[0-9]+$ ]]; then
+        last_update=0
+      fi
       local age=$((now - last_update))
 
       # 캐시 수명이 아직 유효한 경우 업데이트 스킵 플래그 동적 주입
@@ -391,14 +520,17 @@ validate_security() {
     fi
   elif has_tool trufflehog; then
     echo "Running trufflehog filesystem scan..."
-    trufflehog filesystem --no-update --fail .
+    if ! trufflehog filesystem --no-update --fail .; then
+      echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 차단되었습니다."
+      return 1
+    fi
     echo "[SUCCESS] Trufflehog secret scan passed."
   else
     echo "[WARNING] Neither trivy nor trufflehog is installed. Skipping security scanning."
   fi
 }
 
-# 12. FinOps Cost Validation (Infracost)
+# 11. FinOps Cost Validation (Infracost)
 validate_finops_costs() {
   # 커밋 시점이 아닐 경우 비용 검사 생략 (API 호출 제한 절약)
   if [ "${RUN_COST_CHECK:-false}" != "true" ]; then
@@ -462,7 +594,7 @@ GLOBAL_STAGED_TF_FILES=()
 GLOBAL_STAGED_YAML_FILES=()
 
 main() {
-  # Git 저장소 여부 및 여러 검증 함수(shell/bicep/ansible/helm/docker/conftest,
+  # Git 저장소 여부 및 여러 검증 함수(shell/ansible/helm/docker/conftest,
   # terraform/finops, yaml/k8s-manifest)가 공유하는 스테이징 파일 목록을 여기서 1회만
   # 조회하여, 함수마다 반복되던 git rev-parse/git diff 호출을 제거한다.
   if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -477,7 +609,6 @@ main() {
   validate_shell
   validate_terraform
   validate_sam
-  validate_bicep
   validate_ansible
   validate_helm
   validate_k8s_manifests

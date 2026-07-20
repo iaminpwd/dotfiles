@@ -15,7 +15,7 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 및 fd-find 포함)..."
-PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree jq)
+PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree)
 if ! dpkg -s "${PACKAGES[@]}" >/dev/null 2>&1; then
   sudo apt update && sudo apt install -y "${PACKAGES[@]}"
 fi
@@ -37,7 +37,18 @@ fi
 
 echo "[2/6] Oh My Zsh 및 플러그인 구성 중..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  # sh -c "$(curl ...)" 형태는 curl이 네트워크 오류로 실패해도 sh -c ""(빈 명령)가 성공으로
+  # 처리되어 set -e가 실패를 감지하지 못한다. 다운로드를 별도 임시 파일로 받아 curl의
+  # 종료 코드를 직접 검사해야 네트워크 타임아웃 같은 실패를 확실히 잡아낼 수 있다.
+  OMZ_INSTALLER=$(mktemp)
+  trap 'rm -f "$OMZ_INSTALLER"' EXIT
+  if ! curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o "$OMZ_INSTALLER"; then
+    echo "❌ 에러: Oh My Zsh 설치 스크립트 다운로드에 실패했습니다 (네트워크 확인 필요)." >&2
+    exit 1
+  fi
+  sh "$OMZ_INSTALLER" "" --unattended
+  rm -f "$OMZ_INSTALLER"
+  trap - EXIT
 fi
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}

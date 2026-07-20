@@ -1,12 +1,12 @@
 ---
 name: Pre-Flight Check
 description: |
-  Terraform, Ansible, Bicep, Helm, Dockerfile 등 모든 인프라 코드 및 쉘 스크립트 작성 시
+  Terraform, Ansible, Helm, Dockerfile 등 모든 인프라 코드 및 쉘 스크립트 작성 시
   공통적으로 작동되는 정량적 검증 파이프라인(pre-flight-check.sh) 가이드 스킬입니다.
 ---
 # 사전 검증 스킬 (Pre-Flight Check)
 
-본 스킬은 Terraform, Ansible, Azure Bicep, AWS SAM, Kubernetes Helm, Dockerfile 또는 일반 자동화 쉘 스크립트(`.sh`, `.zsh`) 코드를 작성, 수정 또는 리뷰할 때 공통으로 활성화되어 적용됩니다.
+본 스킬은 Terraform, Ansible, AWS SAM, Kubernetes Helm, Dockerfile 또는 일반 자동화 쉘 스크립트(`.sh`, `.zsh`) 코드를 작성, 수정 또는 리뷰할 때 공통으로 활성화되어 적용됩니다.
 
 ## 1. 정량적 일괄 검증 파이프라인 (Automated Validation)
 
