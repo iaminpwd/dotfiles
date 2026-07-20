@@ -15,13 +15,13 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 및 fd-find 포함)..."
-PACKAGES="git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree"
-if ! dpkg -s $PACKAGES >/dev/null 2>&1; then
-  sudo apt update && sudo apt install -y $PACKAGES
+PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree)
+if ! dpkg -s "${PACKAGES[@]}" >/dev/null 2>&1; then
+  sudo apt update && sudo apt install -y "${PACKAGES[@]}"
 fi
 
 # Docker 설치 및 사용자 권한 설정 (Best Practice: 공식 Convenience Script 활용)
-if ! command -v docker &> /dev/null; then
+if ! command -v docker &>/dev/null; then
   echo "=> 최신 Docker Engine(docker-ce)을 공식 레포지토리에서 설치합니다..."
   curl -fsSL https://get.docker.com | sudo sh
 fi
@@ -41,11 +41,11 @@ if [ ! -d "$HOME/.oh-my-zsh" ]; then
 fi
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
 if [ "$SHELL" != "$(which zsh)" ]; then
-  sudo chsh -s $(which zsh) $USER
+  sudo chsh -s "$(which zsh)" "$USER"
 fi
 
 echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
@@ -78,10 +78,9 @@ done
 cd "$DOTFILES_DIR"
 stow -t "$HOME" -R "${STOW_PKGS[@]}"
 
-
 echo "[4/6] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
-if ! command -v ~/.local/bin/mise &> /dev/null; then
-    curl https://mise.run | sh
+if ! command -v ~/.local/bin/mise &>/dev/null; then
+  curl https://mise.run | sh
 fi
 
 # Ansible 등을 위한 pipx 환경 반영
@@ -99,8 +98,6 @@ if ! helm plugin list | grep -q "^diff"; then
 else
   echo "helm-diff 플러그인이 이미 설치되어 있습니다."
 fi
-
-
 
 echo "[5/6] 사용자 워크스페이스 생성 및 제미나이/클로드/Codex AI 글로벌 룰셋 등록 중..."
 
@@ -139,7 +136,7 @@ echo "=> [AI Global Rules] 각 AI 에이전트 글로벌 스킬 등록 중..."
 for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
   ENV_NAME="$(basename "${TARGET_DIR%/}")"
-  
+
   # dotfiles 컨텍스트는 글로벌 등록에서 제외 (글로벌 룰 오염 방지)
   if [ "$ENV_NAME" = "dotfiles" ]; then
     continue
@@ -159,7 +156,7 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     rm -f "$HOME/.claude/rules/${ENV_NAME}.md"
     ln -sfn "$TARGET_DIR/SKILL.md" "$HOME/.claude/rules/${ENV_NAME}.md"
     echo "   ✅ 클로드 글로벌 스킬 등록 완료: ~/.claude/rules/${ENV_NAME}.md"
-    
+
     # 3. Codex 글로벌 스킬 등록 (순수 심볼릭 링크 연동)
     rm -f "$HOME/.codex/skills/${ENV_NAME}.md"
     ln -sfn "$TARGET_DIR/SKILL.md" "$HOME/.codex/skills/${ENV_NAME}.md"
@@ -245,32 +242,32 @@ echo "========================================================="
 # 로컬 Git 설정
 echo -e "\n[선택] Git 로컬 사용자 설정"
 if [ ! -f ~/.gitconfig.local ]; then
-    if [ -t 0 ]; then
-        exec < /dev/tty
-        echo "💡 입력을 원치 않으시면 아무것도 적지 않고 엔터(Enter)를 누르세요. 안전하게 스킵됩니다."
-        read -p "=> 사용할 Git 이름 (예: Gildong Hong): " GIT_NAME
-        read -p "=> 사용할 Git 이메일 (예: user@example.com): " GIT_EMAIL
-        
-        if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
-            cat << EOF > ~/.gitconfig.local
+  if [ -t 0 ]; then
+    exec </dev/tty
+    echo "💡 입력을 원치 않으시면 아무것도 적지 않고 엔터(Enter)를 누르세요. 안전하게 스킵됩니다."
+    read -r -p "=> 사용할 Git 이름 (예: Gildong Hong): " GIT_NAME
+    read -r -p "=> 사용할 Git 이메일 (예: user@example.com): " GIT_EMAIL
+
+    if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
+      cat <<EOF >~/.gitconfig.local
 [user]
     name = $GIT_NAME
     email = $GIT_EMAIL
 EOF
-            echo "✅ ~/.gitconfig.local 파일이 안전하게 생성되었습니다!"
-        else
-            echo "⏭️ 입력값이 없어 Git 설정을 건너뜁니다. 나중에 직접 파일을 만들어도 됩니다."
-        fi
+      echo "✅ ~/.gitconfig.local 파일이 안전하게 생성되었습니다!"
     else
-        echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Git 설정을 스킵합니다."
+      echo "⏭️ 입력값이 없어 Git 설정을 건너뜁니다. 나중에 직접 파일을 만들어도 됩니다."
     fi
+  else
+    echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Git 설정을 스킵합니다."
+  fi
 else
-    echo "✅ 이미 ~/.gitconfig.local 파일이 존재하여 설정을 건너뜁니다."
+  echo "✅ 이미 ~/.gitconfig.local 파일이 존재하여 설정을 건너뜁니다."
 fi
 
 echo -e "\n[선택] 로컬 시크릿 환경 변수 파일 생성"
 if [ ! -f ~/.zshrc.local ]; then
-    cat << 'EOF' > ~/.zshrc.local
+  cat <<'EOF' >~/.zshrc.local
 # =============================================================================
 # 로컬 전용 시크릿 환경 변수 파일 (GitHub에 절대 커밋되지 않습니다)
 # =============================================================================
@@ -280,33 +277,33 @@ if [ ! -f ~/.zshrc.local ]; then
 # export OPENAI_API_KEY="your_openai_api_key"
 # export TF_VAR_db_password="your_secret_password"
 EOF
-    echo "✅ ~/.zshrc.local 파일이 안전하게 생성되었습니다! (시크릿 보관용)"
+  echo "✅ ~/.zshrc.local 파일이 안전하게 생성되었습니다! (시크릿 보관용)"
 else
-    echo "✅ 이미 ~/.zshrc.local 파일이 존재하여 설정을 건너뜁니다."
+  echo "✅ 이미 ~/.zshrc.local 파일이 존재하여 설정을 건너뜁니다."
 fi
 
 echo -e "\n[선택] Infracost 비용 분석 도구 로그인"
 if [ -t 0 ]; then
-    # mise shim 및 local path 가용성 보장
-    export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
-    
-    if command -v infracost &>/dev/null; then
-        if infracost configure get api_key 2>&1 | grep -q "No API key"; then
-            echo "💡 Infracost API 키가 등록되어 있지 않습니다. 로컬 사전 비용 분석을 위해 로그인이 필요합니다."
-            read -p "=> 지금 Infracost 로그인을 진행하시겠습니까? (y/N): " INFRACOST_CONFIRM
-            if [[ "$INFRACOST_CONFIRM" =~ ^[Yy]$ ]]; then
-                infracost auth login
-            else
-                echo "⏭️ Infracost 로그인을 건너뜁니다. 나중에 'infracost auth login'을 실행해 등록할 수 있습니다."
-            fi
-        else
-            echo "✅ 이미 Infracost API 키가 등록되어 있어 로그인을 건너뜁니다."
-        fi
+  # mise shim 및 local path 가용성 보장
+  export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+
+  if command -v infracost &>/dev/null; then
+    if infracost configure get api_key 2>&1 | grep -q "No API key"; then
+      echo "💡 Infracost API 키가 등록되어 있지 않습니다. 로컬 사전 비용 분석을 위해 로그인이 필요합니다."
+      read -r -p "=> 지금 Infracost 로그인을 진행하시겠습니까? (y/N): " INFRACOST_CONFIRM
+      if [[ "$INFRACOST_CONFIRM" =~ ^[Yy]$ ]]; then
+        infracost auth login
+      else
+        echo "⏭️ Infracost 로그인을 건너뜁니다. 나중에 'infracost auth login'을 실행해 등록할 수 있습니다."
+      fi
     else
-        echo "⚠️ infracost CLI가 현재 세션에서 인식되지 않아 로그인을 건너뜁니다."
+      echo "✅ 이미 Infracost API 키가 등록되어 있어 로그인을 건너뜁니다."
     fi
+  else
+    echo "⚠️ infracost CLI가 현재 세션에서 인식되지 않아 로그인을 건너뜁니다."
+  fi
 else
-    echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Infracost 설정을 건너뜁니다."
+  echo "⏭️ 비대화형(CI/CD) 터미널로 인식되어 Infracost 설정을 건너뜁니다."
 fi
 
 echo "========================================================="

@@ -14,7 +14,7 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 CACHE_FILE="$REPO_ROOT/.pre-flight-check.cache"
 
 has_tool() {
-  command -v "$1" &> /dev/null || return 1
+  command -v "$1" &>/dev/null || return 1
 }
 
 calculate_tf_hash() {
@@ -46,19 +46,34 @@ validate_shell() {
   local shell_files=()
   while IFS= read -r -d '' file; do
     shell_files+=("$file")
-  done < <(find . -maxdepth 3 \( -name ".*" -o -name "contexts" \) -prune -o \( -name "*.sh" -o -name "*.zsh" \) -print0 2>/dev/null)
+  done < <(find . -mindepth 1 -maxdepth 3 \( -name ".*" -o -name "contexts" \) -prune -o \( -name "*.sh" -o -name "*.zsh" \) -print0 2>/dev/null)
 
   if [ "${#shell_files[@]}" -gt 0 ] && [ -n "${shell_files[0]}" ]; then
     echo "--- Step: Shell Script Validation ---"
     # 루프 외부에서 툴 가용성 1회만 확인 (파일마다 command -v 반복 방지)
-    local has_shfmt=0 has_zsh=0
+    local has_shfmt=0 has_zsh=0 has_shellcheck=0
     if has_tool shfmt; then has_shfmt=1; fi
     if has_tool zsh; then has_zsh=1; fi
+    if has_tool shellcheck; then has_shellcheck=1; fi
 
     # shfmt가 존재하면 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감)
     if [ "$has_shfmt" -eq 1 ]; then
       echo "Checking format for all shell scripts..."
-      shfmt -d "${shell_files[@]}"
+      shfmt -d -i 2 "${shell_files[@]}"
+    fi
+
+    # zsh 방언은 정적 분석 도구가 지원하지 않으므로 .sh(bash) 파일만 대상으로 삼음
+    if [ "$has_shellcheck" -eq 1 ]; then
+      local sh_only_files=()
+      for f in "${shell_files[@]}"; do
+        [[ "$f" == *.sh ]] && sh_only_files+=("$f")
+      done
+      if [ "${#sh_only_files[@]}" -gt 0 ]; then
+        echo "Running shellcheck..."
+        shellcheck "${sh_only_files[@]}"
+      fi
+    else
+      echo "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
     fi
 
     for f in "${shell_files[@]}"; do
@@ -107,7 +122,7 @@ validate_terraform() {
 
     echo "Running terraform validate (offline initialization)..."
     if [ ! -d ".terraform" ]; then
-      terraform init -backend=false -input=false > /dev/null
+      terraform init -backend=false -input=false >/dev/null
     fi
     terraform validate
 
@@ -288,32 +303,32 @@ validate_security() {
   echo "--- Step: Security and Secret Scan ---"
   if has_tool trivy; then
     echo "Running trivy fs scan..."
-    
+
     # 24시간(86400초) 수명 주기 정책 설정
     local db_ttl=86400
     local timestamp_file="$REPO_ROOT/.trivy-db-update.timestamp"
-    local skip_flags=""
-    
+    local skip_flags=()
+
     local now
     now=$(date +%s)
-    
+
     if [ -f "$timestamp_file" ]; then
       local last_update
       last_update=$(cat "$timestamp_file" 2>/dev/null || echo 0)
       local age=$((now - last_update))
-      
+
       # 캐시 수명이 아직 유효한 경우 업데이트 스킵 플래그 동적 주입
       if [ "$age" -lt "$db_ttl" ]; then
         echo "[INFO] Trivy DB cache is still valid ($((age / 3600))h old). Skipping DB update."
-        skip_flags="--skip-db-update --skip-check-update"
+        skip_flags=(--skip-db-update --skip-check-update)
       fi
     fi
 
-    if trivy fs $skip_flags --severity HIGH,CRITICAL --scanners vuln,misconfig,secret --exit-code 1 .; then
+    if trivy fs "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig,secret --exit-code 1 .; then
       echo "[SUCCESS] Trivy security scan passed."
       # 실제 업데이트를 진행한 경우에만 타임스탬프 최신화
-      if [ -z "$skip_flags" ]; then
-        echo "$now" > "$timestamp_file" 2>/dev/null
+      if [ "${#skip_flags[@]}" -eq 0 ]; then
+        echo "$now" >"$timestamp_file" 2>/dev/null
       fi
     else
       return 1
@@ -355,12 +370,12 @@ validate_finops_costs() {
     if has_tool infracost; then
       echo "--- Step: FinOps Cost Validation (Infracost) ---"
       echo "Checking for AWS/Azure Extended Support & LTS pricing..."
-      
+
       local cost_output_tmp
       cost_output_tmp=$(mktemp)
-      
+
       # infracost breakdown을 수행하여 비용 항목 확인
-      if infracost breakdown --path . > "$cost_output_tmp" 2>/dev/null; then
+      if infracost breakdown --path . >"$cost_output_tmp" 2>/dev/null; then
         if grep -E -qi "Extended Support|Long Term Support|LTS" "$cost_output_tmp"; then
           echo "[ERROR] Extended Support 또는 LTS (연장 지원) 추가 요금이 발생하는 리소스가 감지되었습니다." >&2
           echo "검출된 유효 비용 항목:" >&2
@@ -402,7 +417,7 @@ main() {
 
   # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트)
   if [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
-    echo "$GLOBAL_TF_HASH" > "$CACHE_FILE" 2>/dev/null
+    echo "$GLOBAL_TF_HASH" >"$CACHE_FILE" 2>/dev/null
   fi
 
   echo "================================================="
@@ -412,4 +427,3 @@ main() {
 
 # Run execution
 main
-
