@@ -1,0 +1,64 @@
+#!/bin/bash
+# 새로 추가되거나 수정된 파일 목록 추출 (공백/특수문자 포함 파일명 안전 처리를 위해 NUL 구분 배열 사용)
+STAGED_FILES=()
+mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
+
+if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
+  # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
+  # trufflehog 가용 여부와 무관하게 항상 수행한다: 시크릿이 담긴 파일을 git add 후
+  # 디스크에서만 지우고(git rm --cached 안 함) trufflehog가 마침 없거나 실행 불가능한
+  # 상황이면, 이 체크가 trufflehog 블록 안에만 있을 경우 통째로 건너뛰게 된다.
+  # 디스크 기반 스캐너(trivy fs 등)는 지워진 파일의 내용을 볼 수 없으므로, 그 시크릿이
+  # git 오브젝트에는 그대로 남은 채 아무 경고 없이 커밋될 수 있다.
+  for FILE in "${STAGED_FILES[@]}"; do
+    # -f는 일반 파일만 인정하므로 서브모듈(디렉터리로 스테이징됨)을 "삭제됨"으로 오탐하고,
+    # 타겟이 아직 없는(dangling) 정상 심볼릭 링크도 오탐한다. -e(디렉터리 포함 존재 여부)와
+    # -L(심볼릭 링크 자체의 존재)을 함께 확인해야 진짜로 아무것도 없는 경우만 걸러진다.
+    if [ ! -e "$FILE" ] && [ ! -L "$FILE" ]; then
+      echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
+      echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
+      echo "    반드시 'git rm --cached $FILE' 명령어로 Git 캐시에서도 완전히 지워야 합니다!)"
+      exit 1
+    fi
+  done
+fi
+
+# command -v는 mise shim 파일의 존재만 확인할 뿐 실제 실행 가능 여부는 보장하지 않는다.
+# 이 훅은 core.hooksPath로 전역 등록되어 $HOME 트리 밖(예: /tmp, 별도 마운트)의
+# 저장소에서도 실행되는데, 그런 위치에서는 mise가 ~/.mise.toml을 해석하지 못해
+# "mise ERROR No version is set" 오류가 나면서 아래 trufflehog 호출이 실패하고,
+# 그 실패가 "시크릿 유출" 오탐으로 이어져 정상 커밋을 차단하는 문제가 있었다.
+# 따라서 실제 호출(--version)로 실행 가능 여부까지 확인한다.
+if command -v trufflehog &>/dev/null && trufflehog --version &>/dev/null; then
+  if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
+    echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (이번에 변경된 파일만 검사합니다)..."
+    # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
+    trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail || {
+      echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."
+      exit 1
+    }
+  fi
+else
+  echo "⚠️ trufflehog를 찾을 수 없거나 현재 위치에서 실행할 수 없어 시크릿 스캔을 건너뜁니다."
+fi
+
+# [추가] 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# ~/workspace 하위 실 업무 저장소는 pre-flight-check.sh 심볼릭 링크를 사람/AI가 깜빡해도
+# 자동으로 생성되도록 자가 치유 (무관한 외부 저장소까지 검증을 강제하지 않기 위해 workspace로 범위 한정)
+if [[ "$REPO_ROOT/" == "$HOME/workspace/"* ]] && [ ! -e "$REPO_ROOT/pre-flight-check.sh" ] && [ ! -L "$REPO_ROOT/pre-flight-check.sh" ]; then
+  DOTFILES_PFC="$HOME/dotfiles/pre-flight-check.sh"
+  if [ -e "$DOTFILES_PFC" ]; then
+    ln -sf "$DOTFILES_PFC" "$REPO_ROOT/pre-flight-check.sh"
+    echo "🔗 워크스페이스 저장소에 pre-flight-check.sh 링크를 자동 생성했습니다: $REPO_ROOT/pre-flight-check.sh"
+  fi
+fi
+
+if [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
+  echo "🚀 커밋 전 인프라 및 코드 사전 검증(pre-flight-check)을 수행합니다..."
+  RUN_COST_CHECK=true "$REPO_ROOT/pre-flight-check.sh" || {
+    echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
+    exit 1
+  }
+fi

@@ -180,61 +180,9 @@ else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi
 
-# Pre-commit 훅 생성 (core.hooksPath로 전역 연동되므로 모든 로컬 저장소에 공통 적용됨)
-# 1. 글로벌 githooks 디렉토리 준비
-GLOBAL_HOOKS_DIR="$HOME/.githooks"
-mkdir -p "$GLOBAL_HOOKS_DIR"
-
-# 2. 공통 pre-commit 스크립트 작성
-cat <<'EOF' >"$GLOBAL_HOOKS_DIR/pre-commit"
-#!/bin/bash
-if command -v trufflehog &> /dev/null; then
-  echo "🔒 커밋 전 시크릿 스캔을 수행합니다 (이번에 변경된 파일만 검사합니다)..."
-  
-  # 새로 추가되거나 수정된 파일 목록 추출 (공백/특수문자 포함 파일명 안전 처리를 위해 NUL 구분 배열 사용)
-  STAGED_FILES=()
-  mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
-
-  if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
-    # 스테이징된 파일이 없더라도 혹시 모를 pre-flight-check 진행을 위해 하단으로 통과
-    true
-  else
-    # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
-    for FILE in "${STAGED_FILES[@]}"; do
-      if [ ! -f "$FILE" ]; then
-        echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
-        echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
-        echo "    반드시 'git rm --cached $FILE' 명령어로 Git 캐시에서도 완전히 지워야 합니다!)"
-        exit 1
-      fi
-    done
-
-    # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
-    trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail || { echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."; exit 1; }
-  fi
-fi
-
-# [추가] 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-
-# ~/workspace 하위 실 업무 저장소는 pre-flight-check.sh 심볼릭 링크를 사람/AI가 깜빡해도
-# 자동으로 생성되도록 자가 치유 (무관한 외부 저장소까지 검증을 강제하지 않기 위해 workspace로 범위 한정)
-if [[ "$REPO_ROOT/" == "$HOME/workspace/"* ]] && [ ! -e "$REPO_ROOT/pre-flight-check.sh" ] && [ ! -L "$REPO_ROOT/pre-flight-check.sh" ]; then
-  DOTFILES_PFC="$HOME/dotfiles/pre-flight-check.sh"
-  if [ -e "$DOTFILES_PFC" ]; then
-    ln -sf "$DOTFILES_PFC" "$REPO_ROOT/pre-flight-check.sh"
-    echo "🔗 워크스페이스 저장소에 pre-flight-check.sh 링크를 자동 생성했습니다: $REPO_ROOT/pre-flight-check.sh"
-  fi
-fi
-
-if [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
-  echo "🚀 커밋 전 인프라 및 코드 사전 검증(pre-flight-check)을 수행합니다..."
-  RUN_COST_CHECK=true "$REPO_ROOT/pre-flight-check.sh" || { echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."; exit 1; }
-fi
-EOF
-
-# 3. 권한 부여 (core.hooksPath가 이 디렉토리를 직접 가리키므로 개별 저장소로의 복사는 불필요)
-chmod +x "$GLOBAL_HOOKS_DIR/pre-commit"
+# Pre-commit 훅 구성 (dotfiles/git/.githooks가 Stow에 의해 ~/.githooks로 연동됨)
+# 실행 권한 부여 (Stow로 이미 심볼릭 링크가 생성되었거나 생성될 예정이므로 원본에 권한 부여)
+chmod +x "$DOTFILES_DIR/git/.githooks/pre-commit"
 
 # 4. Git 전역 설정에 글로벌 훅 경로 활성화 등록 (이식성을 위해 물결표로 저장되도록 '~/.githooks' 명시 지정)
 # shellcheck disable=SC2088 # 쉘이 아닌 git config 값으로 저장되는 문자열이며, '~'는 git이 읽는 시점에 자체 확장함
