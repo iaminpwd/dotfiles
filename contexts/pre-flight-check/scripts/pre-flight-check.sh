@@ -219,6 +219,42 @@ validate_sam() {
   echo "[SUCCESS] SAM template validation passed."
 }
 
+# 4. Azure Bicep Validation
+validate_bicep() {
+  local bicep_files=()
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+    mapfile -d '' -t bicep_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.bicep' 2>/dev/null)
+  fi
+
+  if [ "${#bicep_files[@]}" -eq 0 ] || [ -z "${bicep_files[0]}" ]; then
+    return 0
+  fi
+
+  if ! has_tool bicep && ! { has_tool az && az bicep version &>/dev/null; }; then
+    echo "--- Step: Azure Bicep Validation ---"
+    echo "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
+    return 0
+  fi
+
+  echo "--- Step: Azure Bicep Validation ---"
+  for bf in "${bicep_files[@]}"; do
+    [ -z "$bf" ] && continue
+    echo "Validating bicep file: $bf"
+    if has_tool bicep; then
+      if ! bicep build "$bf" --stdout >/dev/null; then
+        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
+        return 1
+      fi
+    else
+      if ! az bicep build --file "$bf" --stdout >/dev/null; then
+        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
+        return 1
+      fi
+    fi
+  done
+  echo "[SUCCESS] Bicep validation passed."
+}
+
 # 4. Ansible Validation
 validate_ansible() {
   # 글롭 없는 'site.yml'/'roles' pathspec은 저장소 루트에 있는 경우만 매칭된다. 실제로는
@@ -609,6 +645,7 @@ main() {
   validate_shell
   validate_terraform
   validate_sam
+  validate_bicep
   validate_ansible
   validate_helm
   validate_k8s_manifests
