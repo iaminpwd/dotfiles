@@ -14,8 +14,8 @@ fi
 # 스크립트가 실행된 위치와 무관하게 dotfiles 경로를 안전하게 가져옴
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 및 fd-find 포함)..."
-PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree)
+echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 포함)..."
+PACKAGES=(git curl unzip wget zsh stow pipx python3-venv dnsutils tree)
 if ! dpkg -s "${PACKAGES[@]}" >/dev/null 2>&1; then
   sudo apt update && sudo apt install -y "${PACKAGES[@]}"
 fi

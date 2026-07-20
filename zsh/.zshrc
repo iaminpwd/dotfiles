@@ -20,15 +20,14 @@ setopt SHARE_HISTORY            # 여러 터미널 창 간에 히스토리 실�
 # --- [인프라 엔지니어 필수 설정] ---
 export PATH="$HOME/.local/bin:$PATH"
 
+# Bicep(.NET 기반)이 libicu 없는 Ubuntu 환경에서도 실행되도록 Invariant 모드 강제 활성화
+# (pre-flight-check.sh의 validate_bicep()과 동일한 설정 - 훅 밖 터미널 직접 실행 시에도 적용)
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
 # 1. 파일/에디터 관련
 alias e='explorer.exe .'
 alias c='code .'
 alias ll='ls -alF'
-
-# Ubuntu 패키지명 충돌 해결 (사용자 편의성)
-if command -v fdfind &> /dev/null; then
-  alias fd='fdfind'
-fi
 
 # 2. Kubernetes 관련 (mise로 설치된 도구 연동)
 alias k='kubectl'

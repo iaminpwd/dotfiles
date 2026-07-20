@@ -230,6 +230,9 @@ validate_bicep() {
     return 0
   fi
 
+  # Bicep(.NET 기반)이 libicu가 없는 Linux 환경에서도 정상 실행되도록 Invariant 모드 강제 활성화
+  export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
   if ! has_tool bicep && ! { has_tool az && az bicep version &>/dev/null; }; then
     echo "--- Step: Azure Bicep Validation ---"
     echo "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
@@ -237,19 +240,30 @@ validate_bicep() {
   fi
 
   echo "--- Step: Azure Bicep Validation ---"
+  local bicep_cmd="none"
+  if has_tool bicep && bicep --version &>/dev/null; then
+    bicep_cmd="standalone"
+  elif has_tool az && az bicep version &>/dev/null; then
+    bicep_cmd="az"
+  fi
+
   for bf in "${bicep_files[@]}"; do
     [ -z "$bf" ] && continue
     echo "Validating bicep file: $bf"
-    if has_tool bicep; then
+
+    if [ "$bicep_cmd" = "standalone" ]; then
       if ! bicep build "$bf" --stdout >/dev/null; then
         echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
         return 1
       fi
-    else
+    elif [ "$bicep_cmd" = "az" ]; then
       if ! az bicep build --file "$bf" --stdout >/dev/null; then
         echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
         return 1
       fi
+    else
+      echo "❌ [ERROR] Bicep 실행 파일을 찾을 수 없거나 실행이 불가능합니다(OS 호환성 문제 등). 커밋이 차단되었습니다." >&2
+      return 1
     fi
   done
   echo "[SUCCESS] Bicep validation passed."
