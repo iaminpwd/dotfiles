@@ -15,7 +15,7 @@ fi
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "[1/6] 필수 패키지 설치 여부 검증 및 설치 중 (pipx 및 fd-find 포함)..."
-PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree)
+PACKAGES=(git curl unzip wget zsh stow pipx python3-venv fd-find dnsutils tree jq)
 if ! dpkg -s "${PACKAGES[@]}" >/dev/null 2>&1; then
   sudo apt update && sudo apt install -y "${PACKAGES[@]}"
 fi
@@ -67,7 +67,12 @@ for PKG in "${STOW_PKGS[@]}"; do
     REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
     TARGET="$HOME/$REL_PATH"
     # 심볼릭 링크가 아닌 실제 파일이 이미 존재할 때만 백업 후 정리 (stow 충돌 방지)
-    if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+    # 단, TARGET의 상위 디렉토리 자체가 이미 stow로 심볼릭 링크되어 있으면(예: ~/.githooks ->
+    # dotfiles/git/.githooks) 그 안의 리프 파일은 -L 검사에 걸리지 않아 소스 파일 자기 자신을
+    # "충돌하는 실제 파일"로 오인하게 되고, 그 상태로 cp/rm을 실행하면 원본 소스 파일이 그대로
+    # 삭제되는 사고로 이어진다. TARGET의 실제 경로가 소스 파일과 동일하면(이미 올바르게 연결된
+    # 상태) 건드리지 않도록 realpath 비교를 추가한다.
+    if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(readlink -f "$TARGET")" != "$(readlink -f "$SRC_FILE")" ]; then
       mkdir -p "$(dirname "$TARGET")"
       cp -n "$TARGET" "$TARGET.backup" 2>/dev/null || true
       rm -f "$TARGET"
@@ -121,6 +126,19 @@ echo "=> [Claude Code Rules] 클로드 글로벌 CLAUDE.md 링크 주입 중..."
 mkdir -p "$HOME/.claude/rules"
 ln -sfn "$CONTEXTS_DIR/base.AGENTS.md" "$HOME/.claude/CLAUDE.md"
 echo "   ✅ 클로드 글로벌 룰 세팅 완료: ~/.claude/CLAUDE.md"
+
+# 클로드 커밋/PR 어트리뷰션 비활성화 (Co-Authored-By: Claude 트레일러 및 PR 푸터 제거)
+# 사용자가 이미 설정해둔 다른 값(effortLevel 등)을 보존하기 위해 덮어쓰기 대신 jq로 병합한다
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+[ -f "$CLAUDE_SETTINGS" ] || echo '{}' >"$CLAUDE_SETTINGS"
+if jq empty "$CLAUDE_SETTINGS" 2>/dev/null; then
+  CLAUDE_SETTINGS_TMP=$(mktemp)
+  jq '.attribution.commit = "" | .attribution.pr = ""' "$CLAUDE_SETTINGS" >"$CLAUDE_SETTINGS_TMP"
+  mv "$CLAUDE_SETTINGS_TMP" "$CLAUDE_SETTINGS"
+  echo "   ✅ 클로드 커밋/PR 어트리뷰션(Co-Authored-By) 비활성화 완료: $CLAUDE_SETTINGS"
+else
+  echo "   ⚠️ $CLAUDE_SETTINGS 파일이 유효한 JSON이 아니어서 어트리뷰션 설정을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
+fi
 
 # Codex 글로벌 설정 추가 (AGENTS.md 및 skills 디렉토리)
 echo "=> [Codex Rules] Codex 글로벌 AGENTS.md 링크 주입 중..."
