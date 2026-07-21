@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when configuring Prometheus Operator CRDs (Servi
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/observability/references/010-observability-core.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Kubernetes Prometheus Operator 수집 표준
 

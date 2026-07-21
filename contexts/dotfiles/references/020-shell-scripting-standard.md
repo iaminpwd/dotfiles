@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. s
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Dotfiles 환경 설정 및 셸 스크립트 작성 표준
 

@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules when writing, fixing, improving, or adapting prompts for any AI tool, regardless of target repository.
 references:
   - contexts/dotfiles/references/000-core.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 범용 AI 프롬프트 작성 표준 가이드
 

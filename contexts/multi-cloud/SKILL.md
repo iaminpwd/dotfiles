@@ -3,6 +3,7 @@ name: multi-cloud
 description: |
   AWS-Azure 멀티 클라우드 네트워크 연동 및 하이브리드 아키텍처 스킬.
   VPN, Peering, Transit Gateway, ExpressRoute, 크로스 클라우드 IAM, DNS 통합.
+reviewed: 2026-07-21
 ---
 # multi-cloud Skill
 

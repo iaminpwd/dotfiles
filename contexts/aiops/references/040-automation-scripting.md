@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when writing automation scripts, testing edge-ca
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/060-agent-logic.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 자동화 카오스 엔지니어링
 

@@ -5,6 +5,7 @@ trigger: Apply these rules when defining core AIOps principles, SRE operations, 
 references:
   - contexts/aiops/references/005-project-planning-template.md
   - contexts/aiops/references/060-agent-logic.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: AIOps (AI for IT Operations) Core Identity & SRE Philosophy
 

@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when generating Post-mortem reports, SLA summari
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/060-agent-logic.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 사후 분석(Post-Mortem) 자동화 및 트러블슈팅
 

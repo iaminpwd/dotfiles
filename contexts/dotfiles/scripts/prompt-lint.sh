@@ -112,6 +112,32 @@ check_file_size() {
 }
 
 # -----------------------------------------------------------------------------
+# 5. 최종 검토일(reviewed) 신선도 검사 (기본 90일)
+# -----------------------------------------------------------------------------
+check_staleness() {
+  echo "--- Step: Reviewed-Date Staleness (>90 days) ---"
+  local staleness_days=90
+  local today_epoch reviewed reviewed_epoch age_days f
+  today_epoch=$(date +%s)
+
+  while IFS= read -r -d '' f; do
+    reviewed=$(grep -m1 "^reviewed:" "$f" 2>/dev/null | awk '{print $2}' || true)
+    if [ -z "$reviewed" ]; then
+      echo "[WARNING] reviewed 필드 없음: $f"
+      continue
+    fi
+    reviewed_epoch=$(date -d "$reviewed" +%s 2>/dev/null || echo "")
+    if [ -z "$reviewed_epoch" ]; then
+      echo "[WARNING] reviewed 날짜 형식 파싱 실패: $f ($reviewed)"
+      continue
+    fi
+    age_days=$(((today_epoch - reviewed_epoch) / 86400))
+    [ "$age_days" -gt "$staleness_days" ] && echo "[WARNING] ${age_days}일간 미검토(기준 ${staleness_days}일): $f"
+  done < <(find "$CONTEXTS_DIR" \( -name "SKILL.md" -o -path "*/references/*.md" \) -print0)
+  echo "[INFO] 신선도 검사 완료."
+}
+
+# -----------------------------------------------------------------------------
 # 5. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
 # -----------------------------------------------------------------------------
 check_vendor_leakage() {
@@ -154,7 +180,27 @@ check_code_fences() {
 }
 
 # -----------------------------------------------------------------------------
-# 7. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
+# 7. Halt & Clarify / Hard Block 등급 휴리스틱 (경고 전용)
+# -----------------------------------------------------------------------------
+check_severity_tag_heuristic() {
+  echo "--- Step: Halt & Clarify vs Hard Block Severity Heuristic (Warning Only) ---"
+  # base.AGENTS.md 정의상 "보안 취약점 발견"은 Hard Block이 맞다. 아래 고위험
+  # 키워드가 포함된 중단 조건 줄인데 Halt & Clarify로 태깅되어 있으면, 실제로는
+  # Hard Block이어야 할 후보일 확률이 높으므로 사람/AI의 재검토를 요청한다.
+  local risk_keywords='privileged|hostNetwork|평문|자격 증명|시크릿.*유출|credential|secret.*leak|0\.0\.0\.0/0|CVE|readOnlyRootFilesystem'
+  local f hits
+  while IFS= read -r -d '' f; do
+    hits=$(grep -E "$risk_keywords" "$f" 2>/dev/null | grep "Halt & Clarify" || true)
+    [ -n "$hits" ] && {
+      echo "[WARNING] 고위험 키워드가 있는데 Halt & Clarify로 태깅됨 (Hard Block 검토 필요): $f"
+      echo "    ${hits//$'\n'/$'\n    '}"
+    }
+  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+  echo "[INFO] 등급 휴리스틱 검사 완료."
+}
+
+# -----------------------------------------------------------------------------
+# 8. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
 # -----------------------------------------------------------------------------
 check_cross_skill_duplication() {
   echo "--- Step: Cross-Skill Concept Duplication Candidates (Warning Only) ---"
@@ -185,8 +231,10 @@ main() {
   check_reference_links
   check_orphaned_files
   check_file_size
+  check_staleness
   check_vendor_leakage
   check_code_fences
+  check_severity_tag_heuristic
   check_cross_skill_duplication
 
   echo "======================================================"

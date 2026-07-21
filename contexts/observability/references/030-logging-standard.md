@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when designing structured logging, log aggregation pipelines, or log retention policies.
 references:
   - contexts/observability/references/010-observability-core.md
+reviewed: 2026-07-21
 ---
 # 구조화 로깅 및 로그 파이프라인 표준
 

@@ -4,6 +4,7 @@ priority: critical
 trigger: Apply these rules when designing monitoring, logging, or tracing architecture across any cloud or K8s environment.
 references:
   - contexts/observability/references/020-metrics-alerting-standard.md
+reviewed: 2026-07-21
 ---
 # 관측성(Observability) 코어 표준
 

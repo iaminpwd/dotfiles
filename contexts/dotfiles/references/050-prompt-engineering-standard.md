@@ -5,6 +5,7 @@ trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompt
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 

@@ -6,6 +6,7 @@ references:
   - contexts/aws/references/010-aws-core.md
   - contexts/azure/references/010-azure-core.md
   - contexts/k8s/references/010-k8s-core.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 멀티 클라우드(Multi-Cloud) 및 하이브리드 코어 아키텍처
 

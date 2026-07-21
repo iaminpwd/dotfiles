@@ -5,6 +5,7 @@ trigger: Apply these rules when planning, designing, or reviewing Kubernetes con
 references:
   - contexts/k8s/references/020-networking-standard.md
   - contexts/k8s/references/070-advanced-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 

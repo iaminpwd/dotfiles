@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules whenever writing, modifying, or auditing Azure Network Security Groups (NSGs), RBAC Roles, Secrets, or general cloud infrastructure security.
 references:
   - contexts/azure/references/010-azure-core.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 시크릿 및 핵심 보안 원칙 (Security Core)
 

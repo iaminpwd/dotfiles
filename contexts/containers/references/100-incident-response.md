@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when investigating a container runtime failure (OOMKilled, CrashLoopBackOff, ImagePullBackOff).
 references:
   - contexts/containers/references/010-containers-core.md
+reviewed: 2026-07-21
 ---
 # 컨테이너 런타임 장애 대응 (Incident Response)
 

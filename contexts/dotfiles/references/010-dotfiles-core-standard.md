@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when managing the dotfiles repository, committin
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/040-dotfiles-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
 

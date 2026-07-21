@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when handling sensitive credentials, SSH private
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 

@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when investigating an error, bug, or system inci
 references:
   - contexts/azure/references/010-azure-core.md
   - contexts/azure/references/020-security-compliance.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 장애 대응 및 사후 분석 (Incident Response)
 

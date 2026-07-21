@@ -7,6 +7,7 @@ references:
   - contexts/azure/references/020-security-compliance.md
   - contexts/azure/references/025-cloud-security.md
   - contexts/azure/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 데이터베이스 (Azure Database for PostgreSQL/MySQL, Cosmos DB, Azure Cache for Redis) 엔지니어링 표준
 

@@ -3,6 +3,7 @@ name: azure
 description: |
   Azure 인프라 작업 스킬. VNet, VM, AKS, Azure Functions, CosmosDB, Azure SQL,
   Terraform, CI/CD, FinOps, 보안, 네트워크, 데이터베이스, 인시던트 대응 등 Azure 전반.
+reviewed: 2026-07-21
 ---
 # azure Skill
 

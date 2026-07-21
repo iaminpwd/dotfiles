@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when designing image tagging conventions, regist
 references:
   - contexts/containers/references/010-containers-core.md
   - contexts/containers/references/030-supply-chain-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨테이너 레지스트리 태깅 및 라이프사이클 표준
 

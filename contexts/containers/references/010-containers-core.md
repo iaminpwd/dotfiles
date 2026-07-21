@@ -5,6 +5,7 @@ trigger: Apply these rules when writing, reviewing, or optimizing Dockerfile/OCI
 references:
   - contexts/containers/references/020-image-hardening-standard.md
   - contexts/containers/references/030-supply-chain-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨테이너 이미지 엔지니어링 코어 표준
 

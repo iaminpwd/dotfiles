@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when designing networking, service mesh, ingress
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/070-advanced-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 네트워킹 및 Service Mesh 표준
 

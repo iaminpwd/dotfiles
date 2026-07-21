@@ -5,6 +5,7 @@ trigger: Apply these rules when planning, designing, or reviewing AWS infrastruc
 references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # AWS DevOps 아키텍처 가이드 (AI Prompt Context)
 

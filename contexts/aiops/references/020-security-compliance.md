@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when dealing with DevSecOps, compliance framewor
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/050-iac-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: DevSecOps 통합 및 컴플라이언스
 

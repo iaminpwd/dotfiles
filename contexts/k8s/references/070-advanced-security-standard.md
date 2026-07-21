@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when designing K8s runtime security, admission c
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/020-networking-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 고급 보안, Supply Chain 및 런타임 보호 표준
 

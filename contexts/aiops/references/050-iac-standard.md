@@ -6,6 +6,7 @@ references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/020-security-compliance.md
   - contexts/aiops/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise AIOps IaC 및 GitOps 아키텍처 표준
 

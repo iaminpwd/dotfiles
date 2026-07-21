@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when designing autoscaling, finops, or resource 
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/050-observability-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 오토스케일링 및 FinOps 최적화 표준
 

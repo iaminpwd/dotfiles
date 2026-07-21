@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when designing platform engineering, internal de
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/070-advanced-security-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Platform Engineering 및 고급 아키텍처 패턴
 

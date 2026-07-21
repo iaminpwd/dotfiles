@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when designing Azure infrastructure, provisioning resources, or optimizing cloud costs.
 references:
   - contexts/azure/references/010-azure-core.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 

@@ -7,6 +7,7 @@ references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/025-cloud-security.md
   - contexts/aws/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 데이터베이스 (RDS, DynamoDB, ElastiCache) 엔지니어링 표준
 

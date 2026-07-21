@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when designing metrics, Alerting Rules, or PromQL/CloudWatch/Azure Monitor queries.
 references:
   - contexts/observability/references/010-observability-core.md
+reviewed: 2026-07-21
 ---
 # 메트릭 및 알람 설계 표준
 

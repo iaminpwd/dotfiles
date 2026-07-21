@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when installing packages, managing global toolch
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 시스템 환경 패키지 도구(Toolchain) 셋업 관리 표준
 

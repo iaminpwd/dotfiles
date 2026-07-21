@@ -5,6 +5,7 @@ trigger: Apply these rules when planning, designing, or reviewing Azure infrastr
 references:
   - contexts/azure/references/020-security-compliance.md
   - contexts/azure/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # Azure DevOps 아키텍처 가이드 (AI Prompt Context)
 

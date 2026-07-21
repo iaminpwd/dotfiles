@@ -5,6 +5,7 @@ trigger: Apply these rules ONLY when troubleshooting, debugging shell environmen
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/020-shell-scripting-standard.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Dotfiles 로컬 디버깅 및 트러블슈팅 표준
 

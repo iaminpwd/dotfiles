@@ -6,6 +6,7 @@ references:
   - contexts/azure/references/020-security-compliance.md
   - contexts/azure/references/010-azure-core.md
   - contexts/azure/references/030-finops-optimization.md
+reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 클라우드 인프라 및 네트워크 보안 (Cloud Security)
 

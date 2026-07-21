@@ -4,6 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when instrumenting distributed tracing or configuring OpenTelemetry Collectors.
 references:
   - contexts/observability/references/010-observability-core.md
+reviewed: 2026-07-21
 ---
 # 분산 추적 (Distributed Tracing) 표준
 
