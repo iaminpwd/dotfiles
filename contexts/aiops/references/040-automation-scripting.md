@@ -49,7 +49,7 @@ def process_webhook(event_id, payload):
 - **[MUST] 검증 도구 매핑:** `pytest` 또는 `jest`를 실행하여 Fault Injection 및 에러 핸들링 코드가 정상적으로 예외를 캐치 및 격리하는지 이진(Pass/Fail) 결과를 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Executing Critical Actions] 도메인 자가 채점:** 자동화 조치 및 스크립팅 설계를 완료한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 스크립트를 적용하십시오)
+- **[Trigger: Before Executing Critical Actions] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (멱등성 작동): 동일한 자동화 명령이 2회 연속 수행되더라도 상태 오염이나 중복 인프라 생성이 확실히 방지되는가?
   - 기준 2 (예외 처리): 연동 대상인 API 게이트웨이 및 외부 서비스 장애 시, 에러를 조기에 차단하고 시스템을 안정적으로 복구시키는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

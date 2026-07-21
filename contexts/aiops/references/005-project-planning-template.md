@@ -45,7 +45,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `markdownlint`를 사용하여 계획서의 형식 및 가독성을 자동 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Finalizing Plan] 도메인 자가 채점:** 계획서 작성을 완료하기 직전, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획서 작성을 완료하십시오)
+- **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (설계 강건성): 보안(Credential 관리)과 멱등성(중복 실행 방어)이 완벽하게 아키텍처 설계 상에 보장되었는가?
   - 기준 2 (리스크 완화): 자동화 오작동으로 인한 자원 파괴(Delete) 및 권한 남용을 차단하는 Guardrail이 포함되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

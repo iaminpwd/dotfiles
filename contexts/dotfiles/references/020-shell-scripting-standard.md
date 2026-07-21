@@ -54,7 +54,7 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 - **[MUST] 검증 도구 매핑:** `shellcheck <script>`를 실행하여 문법 오류와 린트 경고를 강제로 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Bash Script Authored] 도메인 자가 채점:** 자동화 셸 스크립트 작성 완료 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 스크립트를 사용자에게 제안하십시오)
+- **[Trigger: Bash Script Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (Fail-Fast 보장): 에러 발생 시 스크립트가 즉시 중단되며, `set -euo pipefail`이 선언되었는가?
   - 기준 2 (중복 방지): 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복으로 무한 증식되지 않도록 멱등 검증 로직이 완벽히 설계되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

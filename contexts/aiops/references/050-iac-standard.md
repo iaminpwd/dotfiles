@@ -54,7 +54,7 @@ terraform {
 - **[MUST] 검증 도구 매핑:** `tflint` 및 `tfsec`를 실행하여 IaC 설정 상의 암호화 미적용 및 권한 결함을 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before State Mutation] 도메인 자가 채점:** 인프라 상태를 변경하거나 파괴하는 명령어(terraform apply, destroy 등)를 기획한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+- **[Trigger: Before State Mutation] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (영향 반경): 상태 변경 명령이 기존 가동 중인 타 서비스 영역(DB, Network)을 차단/오염시킬 위험도가 없는가?
   - 기준 2 (환경 격리): 개발용 배포 스크립트가 운영(Production) State 영역을 물리적으로 격리하여 상태 침투를 방어하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

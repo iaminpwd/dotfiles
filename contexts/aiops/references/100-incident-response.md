@@ -43,7 +43,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `git log` 및 클라우드 로그 조회 CLI(`aws logs filter-log-events`, `az monitor log-analytics query` 등)를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 도메인 자가 채점:** 사후 분석 보고서(Post-Mortem) 작성을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: RCA Completed] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시스템적 원인 규명): 장애의 진짜 원인이 사람의 실수(Human Error)가 아닌 시스템적 안전망(Validation 등) 부재로 세밀하게 규명되었는가?
   - 기준 2 (액션 아이템 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 가능한 형태(정책 린터 추가, 코드 가드 주입 등)로 상세히 기술되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

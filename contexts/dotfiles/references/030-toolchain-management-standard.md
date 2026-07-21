@@ -46,7 +46,7 @@ terraform = "latest" # 절대 사용 금지 (미래에 멱등성 깨짐)
 - **[MUST] 검증 도구 매핑:** `mise install` 실행 후 `mise ls`를 통해 설치된 버전과 바이너리 경로를 정량적으로 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Toolchain Configured] 도메인 자가 채점:** `mise.toml` 등의 환경 설정 파일 수정 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: Toolchain Configured] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (버전 고정성): 설치 도구의 버전이 `latest`가 아닌 특정 버전으로 하드코딩되어, 1년 뒤 재실행 시에도 멱등성이 유지되는가?
   - 기준 2 (SSOT 준수): 파이썬 기반 도구가 직접 `pipx install`이 아닌 `mise.toml` 내의 `pipx:` 접두사 구문을 통해 단일 진실 공급원 방식으로 선언되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

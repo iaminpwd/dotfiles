@@ -43,7 +43,7 @@ export DB_PASSWORD="SuperSecretPassword123!"
 - **[MUST] 검증 도구 매핑:** `checkov`를 활용하여 IaC 파일의 보안 취약성과 컴플라이언스 미준수 요소를 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Finalizing Plan] 도메인 자가 채점:** 파이프라인 설계를 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 완료하십시오)
+- **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시크릿 격리): 파이프라인 설정 파일 및 런북 스크립트 내에 평문 자격 증명이 유출될 우려가 완벽히 배제되었는가?
   - 기준 2 (컴플라이언스 준수): SOC2/ISO27001 규정을 위반하는 퍼블릭 개방 설정이 탐지 게이트에서 차단되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

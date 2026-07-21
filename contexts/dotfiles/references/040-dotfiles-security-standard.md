@@ -12,7 +12,7 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일에 분리하고, Git으로 추적되는 파일(`.zshrc`, `setup.sh` 등)에는 환경 변수 참조 로직만 구현하십시오.
-- **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)을 우회하기 위한 `git commit --no-verify` 등의 우회 옵션 사용을 배제하십시오.
+- **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)이 실패하면 원인을 수정한 뒤 재커밋하여 반드시 통과시키십시오.
 - **[MUST] Explicit Key Access Request:** `~/.ssh/id_rsa` 등 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 `ask_permission`으로 명시적 승인을 취득한 후 접근하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -49,7 +49,7 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 - **[MUST] 검증 도구 매핑:** `trufflehog git file://. --since-commit HEAD --only-verified`를 실행하여 하드코딩된 시크릿 유출 여부를 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Commit / File Authored] 도메인 자가 채점:** 자동화 스크립트나 환경 설정 파일 수정 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 커밋을 진행하십시오)
+- **[Trigger: Before Commit / File Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시크릿 격리): AWS Access Key, PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되지 않았는가?
   - 기준 2 (로컬 전용 파일 분리): 민감 환경 변수가 `.zshrc.local` 등 `.gitignore` 등록 파일로 물리적으로 분리되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

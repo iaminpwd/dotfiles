@@ -43,7 +43,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `pytest` 또는 모킹 모듈을 사용해 의도적 예외 유발 시 Audit Log가 의도한 구조로 생성되는지 기계적으로 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Validation Failed 3 times] 도메인 자가 채점:** 에이전트 자가 치유 및 RAG 연동 코드를 수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 설계를 최종 제안하십시오)
+- **[Trigger: Validation Failed 3 times] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (격리성): 외부 LLM 엔드포인트 단절 상황 시, 시스템이 Graceful Degradation 백업 로직으로 정상 전환되는가?
   - 기준 2 (자율성): 자가 치유 시도 실패 시, 무한 루프에 돌지 않고 정량적 임계치(3회)에 맞게 중단 게이트를 정상 동작시키는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

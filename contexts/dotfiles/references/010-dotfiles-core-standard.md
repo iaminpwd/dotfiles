@@ -17,7 +17,7 @@ references:
 
 ### 2.1 버전 관리 (Git) 및 포매터 안전망
 - **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 다중 변경 사항은 의미 단위(Atomic)로 분리하여 개별 커밋하십시오.
-- **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 사용자의 개입과 동의 없이 단독으로 실행하지 마십시오.
+- **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 반드시 사용자의 명시적 승인을 받은 후에만 실행하십시오.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행하십시오.
 
 ### 2.2 로컬 멱등성 및 환경 검증 (3D Local Verification)
@@ -51,7 +51,7 @@ git commit -m "update files and fix bugs"
 - **[MUST] 검증 도구 매핑:** `git diff --staged`를 실행하여 스테이징된 변경 사항이 단일 책임 원칙에 부합하는지 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Commit] 도메인 자가 채점:** `git commit` 명령 실행 직전, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 커밋을 수행하십시오)
+- **[Trigger: Before Commit] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (원자성): 현재 스테이징된 변경 사항이 단일 책임 원칙에 따라 논리적으로 분리되었는가?
   - 기준 2 (시맨틱 규칙): 커밋 메시지가 `feat:`, `fix:`, `chore:` 등 시맨틱 컨벤션을 정확히 준수하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

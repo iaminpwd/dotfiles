@@ -40,7 +40,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `infracost` CLI를 실행하여 설계 변경으로 발생하는 비용 변화를 정량적으로 도출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Cost Analysis Completion] 도메인 자가 채점:** 인프라 자원 변경안을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 설계를 최종 제안하십시오)
+- **[Trigger: Cost Analysis Completion] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (자원 최적화): GPU/ML 모델 훈련 배치용 자원이 Spot/Preemptible 및 멱등적 노드 오토스케일러로 저비용 설계되었는가?
   - 기준 2 (이상 비용 방어): 급격한 자원 누수나 람다 폭주 시 파이프라인을 자동 정지하고 이상 알람을 전송하는 예산 방어막이 가동되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

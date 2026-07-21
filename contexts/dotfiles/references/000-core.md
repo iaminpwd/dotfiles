@@ -12,7 +12,7 @@
 - **[MUST] Explicit Reasoning:** 답변 최상단에 `<thinking> 분석 및 설계 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오.
 - **[MUST] Exhaustive Review:** 에러나 아키텍처 분석 시 반드시 `grep_search` 등으로 관련된 모든 파일을 전수 조사하십시오.
 - **[MUST] Context Budget Optimization:** 대용량 파일(500라인 이상) 조회 시 `grep_search`로 관심 영역을 선제 탐색한 뒤 필요한 특정 라인 범위(StartLine/EndLine)만 정밀하게 조회하십시오.
-- **[MUST] Delegated Self-Critique:** 자가 비판(Self-Critique)은 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 `<self_critique>` 태그를 열어 집중적으로 수행하십시오.
+- **[MUST] Delegated Self-Critique (공통 절차 SSOT):** 자가 비판(Self-Critique)은 각 도메인 모듈(010~060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 수행하되, 절차는 다음과 같이 공통 적용합니다: `<self_critique>` 태그를 열어 해당 모듈에 나열된 점검 기준 전체를 1~5점으로 채점하고 사유를 명시하며, 모든 기준이 5점 만점일 때만 다음 단계로 진행하고 미달 시 원인을 수정한 뒤 재채점하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 도메인 모듈에서는 재정의하지 않고 점검 기준 목록만 기재합니다.)
 
 ## 3. 셋업 및 설계 전 사고 (Think Before Execution)
 - **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하고, 확신할 수 없을 때는 반드시 사용자에게 역질문하십시오.
