@@ -634,6 +634,37 @@ validate_finops_costs() {
   fi
 }
 
+# 12. Skill-Specific Delegated Checks (auto-discovered)
+# 특정 스킬(k8s 등)에만 필요한 도구(kyverno, promtool, yq, pluto 등)를 이 범용
+# 스크립트에 직접 넣으면 그 스킬과 무관한 프로젝트까지 의존성이 늘어난다. 대신 각
+# 스킬 폴더의 전용 검증 스크립트(*-check.sh 네이밍 컨벤션)를 자동으로 찾아 호출한다.
+# 나중에 aws-check.sh, azure-check.sh 등이 추가되어도 이 파일을 다시 고칠 필요가 없다.
+run_delegated_skill_checks() {
+  # 스테이징된 yaml이 하나도 없으면 스킬별 스크립트를 띄울 필요조차 없다 (지금까지
+  # 존재하는 스킬 스크립트의 대상 파일은 전부 yaml이므로 이 필터로 놓치는 케이스는 없다).
+  # k8s 등과 무관한 프로젝트(순수 Terraform 등)에서 매번 서브프로세스가 뜨는 낭비를 막는다.
+  if [ "${#GLOBAL_STAGED_YAML_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_STAGED_YAML_FILES[0]}" ]; then
+    return 0
+  fi
+
+  # 이 스크립트 자신(심볼릭 링크로 호출된 경우 포함)을 실제 경로로 해석해두고,
+  # glob 결과에서 스스로를 걸러내 무한 재귀 호출을 방지한다.
+  local self_path
+  self_path=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)
+
+  local skill_script resolved
+  shopt -s nullglob
+  for skill_script in "$HOME"/dotfiles/contexts/*/scripts/*-check.sh; do
+    resolved=$(readlink -f "$skill_script" 2>/dev/null)
+    [ "$resolved" = "$self_path" ] && continue
+    if ! bash "$skill_script"; then
+      shopt -u nullglob
+      return 1
+    fi
+  done
+  shopt -u nullglob
+}
+
 # -----------------------------------------------------------------------------
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
@@ -668,6 +699,7 @@ main() {
   validate_conftest
   validate_security
   validate_finops_costs
+  run_delegated_skill_checks
 
   # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트)
   if [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
