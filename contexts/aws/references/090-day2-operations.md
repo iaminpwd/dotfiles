@@ -21,9 +21,11 @@ references:
 ### 2.1 가시성 및 모니터링 알람
 - **[MUST] SRE Golden Signals:** 사용자 경험 메트릭(P99 Latency, 5xx Error Rate 등) 위주로 알람을 설계하여 알람의 실질적인 유효성을 높이십시오.
 - **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 SNS/Lambda를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
+- **[PREFER] AWS-Side Outage Awareness:** 자사 애플리케이션 장애와 AWS 자체 장애(가용 영역/리전 이슈)를 구분하기 위해 AWS Health Dashboard(Personal Health Dashboard)의 이벤트 알림을 모니터링 파이프라인에 연동하십시오.
 
 ### 2.2 재해 복구(DR) 및 무중단 마이그레이션
 - **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Backup & Restore(최저 비용, RTO 수 시간~일), Pilot Light, Warm Standby, Multi-Site Active/Active(최고 비용, RTO 초~분 단위) 4단계 중 요구사항에 부합하는 모델을 명시적으로 선택하여 적용하십시오.
+- **[MUST] Centralized Backup:** 개별 서비스별 스냅샷 관리에 의존하지 말고, AWS Backup을 통해 계정/리전 간 백업 계획(Backup Plan)과 교차 계정·교차 리전 복제를 중앙 집중형으로 구성하십시오.
 - **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현하십시오.
 - **[PREFER] Migration Tool:** Flyway, Liquibase 등 팀마다 알맞는 스키마 버전 관리 도구를 선택하여 마이그레이션 이력을 코드로 관리하십시오.
 
@@ -46,7 +48,7 @@ references:
 - **[MUST] 검증 도구 매핑:** GitHub Actions의 경우 `actionlint`를 실행하여 워크플로우 구문을 자동 검증하고, 로컬 테스트 도구(`act`)를 활용하여 배포를 시뮬레이션하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Monitoring Configured] 도메인 자가 채점:** 로깅 및 모니터링 알람 규칙 설계를 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: Monitoring Configured] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (알람 피로 방지): 정상적인 스파이크 성 트래픽이나 정기 작업으로 인한 오탐(False Alarm) 피로가 배제되었는가?
   - 기준 2 (사각지대 제거): 실질적인 사용자 장애(응답 레이턴시 지연 등)를 탐지할 수 있는 종단 간 모니터링이 확보되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

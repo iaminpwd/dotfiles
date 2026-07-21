@@ -49,9 +49,9 @@ references:
 - **[MUST] 검증 도구 매핑:** `infracost`가 로컬에 설치되어 있으면 `infracost` CLI를 활용하여 수정된 코드의 월별 예상 비용 증감을 검증하십시오. 미설치 환경에서는 [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/)(혹은 유사 도구)를 사용하여 수동 코스트 추정을 `finops-cost-report.md`에 명시하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Resource Sizing] 도메인 자가 채점:** 인스턴스 타입, 개수, 디스크 용량 등 리소스 용량 설정을 기획하거나 수정할 때, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 경우에만 작업을 승인 요청하십시오)
+- **[Trigger: Resource Sizing] 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (과다 설계 배제): 현재 비즈니스 목표 대비 과도한 인프라 등급(VM size 등)이 지정되지 않았는가?
   - 기준 2 (탄력성 설계): 트래픽 오프피크(off-peak) 타임 시 리소스를 자동으로 내릴 수 있는 Scale Sets 아키텍처가 결합되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `infracost` 분석 결과, 단일 작업으로 인해 예상 월별 인프라 비용이 기존 대비 50% 이상 폭증(Drift)하는 현상이 감지될 경우 즉시 작업을 중단하고 비용 위반 보고서를 작성하십시오.
-  - 사용하지 않는 고성능 NAT Gateway가 2개 이상 방치되거나 Private Endpoint가 누락되어 요금이 낭비되는 설계가 확인될 시 작업을 멈추고 대체 경로를 수립하십시오.
+  - 사용하지 않는 NAT Gateway가 2개 이상 방치되거나 Private Endpoint가 누락되어 요금이 낭비되는 설계가 확인될 시 작업을 멈추고 대체 경로를 수립하십시오.

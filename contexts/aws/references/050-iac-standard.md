@@ -66,7 +66,7 @@ terraform {
 - **[MUST] 검증 도구 매핑:** Terraform의 경우 `terraform validate && tflint` 및 `ansible-lint`를 사용하여 구문 및 보안 설정을 점검하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Terraform Apply] 도메인 자가 채점:** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 실행하고 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 현재 Plan 결과를 1~5점으로 채점하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 경우에만 승인을 요청하십시오)
+- **[Trigger: Before Terraform Apply] 사전 조치 및 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 먼저 실행하십시오.
   - 기준 1 (안전성): 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하는가?
   - 기준 2 (보안성): Security Group이나 IAM 권한이 과도하게 열려있지 않은가?
 - **[MUST] 중단 조건 (Halt Conditions):**

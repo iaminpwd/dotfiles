@@ -51,7 +51,8 @@ references:
 - **[MUST] FinOps Delegation:** 비용 추정, Right-Sizing 등 FinOps 관련 상세 규칙은 `030-finops-optimization` 모듈을 참조하여 검증을 위임하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Architecture Proposed] 도메인 자가 채점:** 아키텍처 초안을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 제안하십시오)
+- **[MUST] 공통 자가 비판 절차 (전 aws 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(005, 020, 025, 030, 040, 050, 060, 070, 080, 090, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 `<self_critique>` 태그를 열어 나열된 기준 전체를 1~5점으로 채점하고 사유를 명시하는 절차를 공통으로 따릅니다. 모든 기준이 5점 만점일 때만 다음 단계로 진행하고, 하나라도 미달 시 원인을 수정한 뒤 재채점하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
+- **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
   - 기준 1 (가용성): 최소 2개 이상의 AZ(Availability Zone)에 Subnet을 분산 배치하여 고가용성 설계를 확보했는가?
   - 기준 2 (확장성): 트래픽 폭증 시 병목 지점이 없도록 오토스케일링 및 라우팅 구조가 최적화되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

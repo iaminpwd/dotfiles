@@ -57,7 +57,7 @@ references:
 - **[MUST] 검증 도구 매핑:** markdown linter를 사용하여 계획서의 형식 및 가독성을 자동 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Finalizing Plan] 도메인 자가 채점:** 계획서 작성을 완료하기 전, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획서 작성을 완료하십시오)
+- **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (설계 합치성): 보안(Least Privilege)과 비용(FinOps)이 타당한 ADR 근거와 함께 보완적으로 설계되었는가?
   - 기준 2 (의존성 무결성): 생성될 파일들이 완벽하게 종속성이 해결된 순서로 구현 청사진에 기재되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

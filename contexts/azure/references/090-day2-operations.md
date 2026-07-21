@@ -46,7 +46,7 @@ references:
 - **[MUST] 검증 도구 매핑:** GitHub Actions의 경우 `actionlint`를 실행하여 워크플로우 구문을 자동 검증하고, 로컬 테스트 도구(`act`)를 활용하여 배포를 시뮬레이션하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Monitoring Configured] 도메인 자가 채점:** 로깅 및 모니터링 알람 규칙 설계를 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: Monitoring Configured] 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (알람 피로 방지): 정상적인 스파이크 성 트래픽이나 정기 작업으로 인한 오탐(False Alarm) 피로가 배제되었는가?
   - 기준 2 (사각지대 제거): 실질적인 사용자 장애(응답 레이턴시 지연 등)를 탐지할 수 있는 종단 간 모니터링이 확보되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

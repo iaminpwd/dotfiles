@@ -31,6 +31,7 @@ references:
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Amazon GuardDuty 적용을 함께 제안하십시오.
 - **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 AWS Config Rules를, GuardDuty 등 여러 보안 서비스의 탐지 결과를 통합 관리하기 위해 AWS Security Hub를 함께 제안하십시오.
 - **[PREFER] SCP/Boundary:** Organizations의 SCP 및 IAM Permission Boundary를 활용하여 멤버 계정의 최대 권한 범위를 강제 제한하십시오.
+- **[PREFER] Vulnerability & Data Classification:** EC2/ECR/Lambda 워크로드의 알려진 CVE 취약점은 Amazon Inspector로 자동 스캔하고, S3에 저장된 민감 데이터(PII 등)는 Amazon Macie로 자동 분류 및 탐지하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -51,9 +52,9 @@ references:
 - **[MUST] 검증 도구 매핑:** `tfsec` 또는 `checkov`를 사용하여 IaC 파일 내의 보안 그룹 광대역 오픈 및 암호화 누락을 자동 스캔하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Network Rule Modified] 도메인 자가 채점:** 보안 그룹이나 네트워크 ACL 규칙 설계를 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 제안하십시오)
+- **[Trigger: Network Rule Modified] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 타겟 포트가 `0.0.0.0/0`에 완전 개방되었는가?
   - 기준 2 (데이터 경로): VPC Endpoint가 배제되어 AWS 내부 통신이 퍼블릭 인터넷 망을 타는 경로가 있는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
-  - 퍼블릭 IP를 갖는 EC2 인스턴스의 22(SSH) 또는 3389(RDP) 포트가 `0.0.0.0/0`으로 개방되어 배포 준비가 된 코드가 감지되면 즉시 작업을 멈추고 Halt & Clarify 브리핑을 통해 경고하십시오.
+  - 퍼블릭 IP를 갖는 EC2 인스턴스의 22(SSH) 또는 3389(RDP) 포트가 `0.0.0.0/0`으로 개방되어 배포 준비가 된 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
   - 컨테이너 이미지 파이프라인에서 취약한 기본 이미지(CVE 크리티컬 레벨) 노출이 스캔 결과 감지되었으나 대체 이미지가 제안되지 않을 경우 작업을 즉시 중단하십시오.

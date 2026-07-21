@@ -49,7 +49,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `tflint` 또는 `checkov`를 활용해 DB 관련 IaC 파일의 암호화 미설정 및 백업 정책 누락을 자동 스캔하십시오. DB 인바운드 보안 그룹 규칙 소스가 특정 Web/WAS 서브넷 및 애플리케이션 보안 그룹(ASG)으로만 제한되어 있는지 확인하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Schema Modified] 도메인 자가 채점:** 데이터베이스 스키마(DDL), 인덱스 쿼리 및 디스크 프로비저닝 코드를 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+- **[Trigger: Schema Modified] 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (락 리스크 최소화): DDL 쿼리가 프로덕션 테이블 전체에 Table Lock을 유발하여 API 장애를 일으킬 가능성이 없는가?
   - 기준 2 (보안 노출): DB의 Public Network Access 속성이 활성화되어 외부 공격에 노출될 우려가 없는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

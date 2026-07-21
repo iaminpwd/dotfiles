@@ -57,7 +57,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `az monitor log-analytics query` 및 KQL 쿼리를 활용하여 팩트 로그 상태를 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 도메인 자가 채점:** 사후 분석(Post-Mortem) 보고서 작성을 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: RCA Completed] 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시스템적 원인 규명): 장애의 원인이 사람의 부주의(Human Error)가 아닌 시스템적/구조적 결함으로 상세히 귀결되었는가?
   - 기준 2 (액션 아이템의 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 가능한 형태(설정 파일 링크, 스크립트 수정 등)로 제시되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

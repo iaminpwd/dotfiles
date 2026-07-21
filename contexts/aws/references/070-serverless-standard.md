@@ -60,7 +60,7 @@ resource "aws_lambda_function_event_invoke_config" "example" {
 - **[MUST] 검증 도구 매핑:** `sam validate -t <template_file>` 및 `tflint`를 사용하여 서버리스 템플릿과 권한 설정을 점검하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Serverless Deployed] 도메인 자가 채점:** 서버리스 구성을 제안/수정한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 점검 기준으로 1~5점 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: Serverless Deployed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (오류 격리): 비동기 이벤트 처리 실패 시 Dead Letter Queue (DLQ)로 자동 격리(On-Failure)되는 경로가 설정되었는가?
   - 기준 2 (보안 통제): API Gateway의 퍼블릭 엔드포인트에 인증(IAM/Cognito 등) 장치가 누락 없이 결합되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
