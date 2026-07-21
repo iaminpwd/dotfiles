@@ -24,8 +24,9 @@ description: |
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 
-- **[MUST] 사전 룰북 분석**: 인프라 스크립트나 설정 파일을 작성하기 전, 반드시 라우팅 테이블에서 대상 룰북을 찾아 `view_file`로 먼저 읽어 아키텍처 표준을 파악하십시오.
+- **[MUST] 사전 룰북 및 연관 참조 연쇄 분석 (Recursive Reference Check)**: 인프라 스크립트나 설정 파일을 작성하기 전, 반드시 라우팅 테이블에서 대상 룰북을 찾아 `view_file`로 먼저 읽으십시오. 또한 해당 룰북 내에 명시된 연관 참조 문서(`references:` 항목 또는 텍스트 내 참조 문서)가 존재하는 경우 연쇄적으로 `view_file`을 실행하되, 이미 읽은 파일은 중복 방문하지 않는 방문 목록(Visited Set) 규칙을 준수하여 무한 루프 없이 연결된 모든 연관 룰북을 빠짐없이 수집하십시오.
 - **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성을 완료한 직후, 작업을 완료 선언하기 전에 반드시 홈 디렉토리($HOME) 내에 기 설정된 `~/dotfiles/contexts/pre-flight-check/SKILL.md` 파일을 절대 경로로 획득하여 읽고 `pre-flight-check.sh` 스크립트를 실행하여 정량 검증을 완료하십시오.
+- **[MUST] 프롬프트 코퍼스 정합성 검증 (Prompt Lint)**: `contexts/*/SKILL.md` 또는 `contexts/*/references/*.md` 파일을 신규 작성하거나 수정한 직후, `contexts/dotfiles/scripts/prompt-lint.sh`를 실행하여 자가비판 SSOT 모듈 목록 일치, 참조 링크 무결성, 크로스 벤더 용어 오염, 코드펜스 짝, 크로스 스킬 개념 중복 후보를 정량 검증하십시오. ERROR 항목은 완료 선언 전에 반드시 해결하고, WARNING 항목은 실제 중복인지 검토한 뒤 필요 시 SSOT 위임 구조로 정리하십시오.
 
 ---
 
