@@ -64,12 +64,12 @@ lifecycle:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] LLM-as-a-Judge 자가 평가:** 설계를 완료한 직후, 스스로 평가자 페르소나로 전환하여 보안, 비용, 멱등성 3가지 측면에서 산출물을 검증하고 이진(Pass/Fail) 결과를 명시하십시오.
-- **[MUST] 검증 도구 매핑:** `helm lint` 및 `kube-linter`를 선행 실행하여 매니페스트 및 차트의 형식/보안 정적 구문을 사전 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Architecture Proposed] 도메인 자가 채점:** 아키텍처 초안을 제안한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 제안하십시오)
+- **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 `<self_critique>` 태그를 열어 나열된 기준 전체를 1~5점으로 채점하고 사유를 명시하는 절차를 공통으로 따릅니다. 모든 기준이 5점 만점일 때만 다음 단계로 진행하고, 하나라도 미달 시 원인을 수정한 뒤 재채점하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
+- **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
   - 기준 1 (가용성): 파드의 고가용성 분산 배치를 보장하도록 `topologySpreadConstraints` 및 `podAntiAffinity` 구성이 적절한가?
   - 기준 2 (보안성): Namespace 격리가 ResourceQuota 및 NetworkPolicy와 결합되어 완벽한 테넌시 격리를 보장하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `run_command`로 CLI 도구(`kubectl`, `helm`, `kube-linter` 등) 실행을 지시받았으나 로컬에 미설치되었음이 확인되면, 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구하십시오.
-  - K8s 매니페스트 내에 `securityContext`의 `privileged: true`가 확인되거나 `hostNetwork: true` 등 심각한 보안 규정 위반이 감지되면 작업을 즉시 멈추고 대안 설계를 요구하십시오.
+  - K8s 매니페스트 내에 `securityContext`의 `privileged: true`가 확인되거나 `hostNetwork: true` 등 심각한 보안 규정 위반이 감지되면 즉시 작업을 중단(Hard Block)하고 대안 설계를 요구하십시오.

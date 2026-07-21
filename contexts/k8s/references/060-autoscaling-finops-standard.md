@@ -52,10 +52,10 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `infracost` CLI를 실행하여 스케일링 설정 변경으로 발생하는 비용 영향을 정량 분석하십시오.
+- **[MUST] 검증 도구 매핑:** 노드/오토스케일러 프로비저닝이 Terraform으로 관리되는 경우, `pre-flight-check.sh`가 `infracost` 비용 분석을 자동 수행합니다. 단, 순수 K8s 매니페스트(HPA/VPA 등)만 변경되어 스테이징된 `.tf` 변경이 없는 경우에는 이 사전 게이트가 트리거되지 않으므로, §2.2의 Kubecost/OpenCost 실측치로 사후 비용 검증을 대체하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Infrastructure Design / Scaling Check] 도메인 자가 채점:** 오토스케일링 및 노드 리소스 코드를 작성한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+- **[Trigger: Infrastructure Design / Scaling Check] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (자원 격리): 개발 네임스페이스 내에 무단 프로비저닝을 차단하기 위한 ResourceQuota 하드 상한선이 정의되었는가?
   - 기준 2 (탄력성): 트래픽 스파이크 발생 시 Pod과 Node가 연쇄적으로 즉시 스케일 아웃(Scale-out) 가능한가?
 - **[MUST] 중단 조건 (Halt Conditions):**

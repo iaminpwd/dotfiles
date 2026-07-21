@@ -54,10 +54,9 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 작성된 Operator 매니페스트와 vcluster 템플릿의 문법 에러가 없고, 시스템 장애 시 대응 가이드를 포함한 `troubleshooting-report.md` 작성이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `kube-linter` 또는 `pluto`를 사용하여 API 지원 만료 여부 및 리소스 설정 위반을 사전 정적 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Architecture Debugging] 도메인 자가 채점:** 플랫폼 고급 설계를 마친 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 제안하십시오)
+- **[Trigger: Architecture Debugging] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (추상화 수준): 애플리케이션 개발자가 마크다운이나 템플릿 변수 3~4개 기입만으로 서비스 배포가 완료되는가?
   - 기준 2 (다중 테넌시 격리): Namespace 소프트 격리(Soft Isolation)로 인한 크로스 테넌트 자원 탈취 리스크가 vcluster를 통해 완전히 차단되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

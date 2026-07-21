@@ -52,10 +52,9 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** NetworkPolicy 매니페스트 린팅 스캔이 에러 없이 통과되고, Ingress 도메인 인증서 갱신 파이프라인의 정의가 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `checkov -f <file>` 또는 `kube-linter`를 사용하여 과도한 포트 개방 및 보안 격리 누락을 정적 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Network Change] 도메인 자가 채점:** 네트워크 설정 매니페스트를 작성하거나 변경한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 계획을 제안하십시오)
+- **[Trigger: Before Network Change] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (격리성): 네임스페이스 내 전체 파드가 `Default Deny All` 정책 하에 철저하게 격리되었는가?
   - 기준 2 (복원력): L7 프록시 단에 네트워크 타임아웃 및 재시도 회수 제한 등 안정성 정책이 기입되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

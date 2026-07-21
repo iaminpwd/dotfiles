@@ -65,7 +65,7 @@ references:
 - **[MUST] 검증 도구 매핑:** `kubectl get events --sort-by='.metadata.creationTimestamp'`를 사용하여 장애 시점 전후의 모든 클러스터 시스템 이벤트를 타임라인 순으로 자동 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 도메인 자가 채점:** 장애 사후 분석(Post-Mortem) 보고서 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 완료하십시오)
+- **[Trigger: RCA Completed] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시스템적 원인 규명): 장애의 근본적인 원인이 엔지니어 부주의가 아닌 시스템적 방어가드 공백으로 명확히 도출되었는가?
   - 기준 2 (액션 아이템 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 및 코드로 검증 가능한 형태(ResourceQuota 튜닝, Probe 수정 등)로 설계되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

@@ -41,7 +41,7 @@ references:
 spec:
   containers:
   - name: payment-api
-    image: myregistry.azurecr.io/payment-api:a1b2c3d4
+    image: myregistry.example.com/payment-api:a1b2c3d4
 ```
 </example>
 <example>
@@ -51,7 +51,7 @@ spec:
 spec:
   containers:
   - name: payment-api
-    image: myregistry.azurecr.io/payment-api:latest
+    image: myregistry.example.com/payment-api:latest
 ```
 </example>
 </examples>
@@ -61,7 +61,7 @@ spec:
 - **[MUST] 검증 도구 매핑:** `actionlint`를 활용하여 워크플로우 문법을 사전 검증하고, `git diff`를 실행하여 변경 분을 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Manual Apply] 도메인 자가 채점:** 수동 배포 및 파이프라인 변경 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+- **[Trigger: Before Manual Apply] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (안전성): 배포 실패 시 서비스 지연 없이 즉각 자동 롤백(Automated Rollback)되는 구조가 결합되었는가?
   - 기준 2 (추적성): 모든 매니페스트 변경 사항이 커밋 로그에 감사 마커(`[K8s-Agent-Action]`)를 명확히 달고 배포되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

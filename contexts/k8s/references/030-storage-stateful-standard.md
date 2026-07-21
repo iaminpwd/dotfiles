@@ -53,10 +53,9 @@ parameters:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `StorageClass` 설정 내에 `volumeBindingMode`가 정확히 선언되고, 임시 스토리지 한계치(`ephemeral-storage`)가 할당된 매니페스트 문법 린트가 성공해야 합니다.
-- **[MUST] 검증 도구 매핑:** `kube-linter` 또는 `kubeval`을 사용하여 볼륨 마운트 매니페스트의 구문 및 설정 오류를 점검하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Stateful Applied] 도메인 자가 채점:** StatefulSet 및 StorageClass 매니페스트 설계를 완료한 직후, 스스로 `<self_critique>` 태그를 열어 아래 2가지 기준으로 1~5점 자가 채점을 수행하고 사유를 명시하십시오. (두 기준 모두 5점 만점일 때만 작업을 승인 요청하십시오)
+- **[Trigger: Before Stateful Applied] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (가용성): 볼륨 바인딩(WaitForFirstConsumer)과 Anti-Affinity가 결합되어 영역 장애 대응이 가능한가?
   - 기준 2 (데이터 정합성): 트랜잭션이 보장되는 복구 파이프라인(애플리케이션 백업 등)이 설계에 포함되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
