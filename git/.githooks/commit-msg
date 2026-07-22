@@ -1,0 +1,47 @@
+#!/bin/bash
+# commit-msg 훅: 시맨틱 커밋 컨벤션(feat/fix/docs/... : subject) 강제
+# core.hooksPath로 전역 등록되어 모든 로컬 저장소에 적용된다 (pre-commit과 동일한 연동 방식).
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="${2:-}"
+
+# 병합/스쿼시 커밋은 Git이 메시지를 자동 생성하므로 컨벤션 강제 대상에서 제외한다.
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
+  exit 0
+fi
+
+# 주석(#으로 시작, git status 안내 등) 및 빈 줄을 건너뛰고 첫 실제 제목 줄만 검사한다.
+SUBJECT=""
+while IFS= read -r line; do
+  case "$line" in
+  '#'* | '') continue ;;
+  *)
+    SUBJECT="$line"
+    break
+    ;;
+  esac
+done <"$COMMIT_MSG_FILE"
+
+# 제목 줄이 비어있으면(빈 커밋 메시지) git 자체의 기본 검증에 맡기고 이 훅은 통과시킨다.
+if [ -z "$SUBJECT" ]; then
+  exit 0
+fi
+
+# git rebase --autosquash 대상(fixup!/squash!)과 git revert가 자동 생성하는 메시지는 그대로 통과시킨다.
+case "$SUBJECT" in
+fixup\!* | squash\!* | Revert\ \"*)
+  exit 0
+  ;;
+esac
+
+# Conventional Commits: type(scope)?!: subject
+CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/-]+\))?!?: .+'
+
+if ! [[ "$SUBJECT" =~ $CONVENTIONAL_PATTERN ]]; then
+  echo "❌ 시맨틱 커밋 컨벤션 위반: 커밋 메시지가 'type(scope): subject' 형식이 아닙니다." >&2
+  echo "   허용 타입: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert" >&2
+  echo "   예: feat(aws): EKS 노드그룹 오토스케일링 정책 추가" >&2
+  echo "   현재 메시지: $SUBJECT" >&2
+  exit 1
+fi

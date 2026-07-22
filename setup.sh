@@ -209,9 +209,9 @@ else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi
 
-# Pre-commit 훅 구성 (dotfiles/git/.githooks가 Stow에 의해 ~/.githooks로 연동됨)
+# Git 훅 구성 (dotfiles/git/.githooks가 Stow에 의해 ~/.githooks로 연동됨)
 # 실행 권한 부여 (Stow로 이미 심볼릭 링크가 생성되었거나 생성될 예정이므로 원본에 권한 부여)
-chmod +x "$DOTFILES_DIR/git/.githooks/pre-commit"
+chmod +x "$DOTFILES_DIR/git/.githooks/pre-commit" "$DOTFILES_DIR/git/.githooks/commit-msg"
 
 # 4. Git 전역 설정에 글로벌 훅 경로 활성화 등록 (이식성을 위해 물결표로 저장되도록 '~/.githooks' 명시 지정)
 # shellcheck disable=SC2088 # 쉘이 아닌 git config 값으로 저장되는 문자열이며, '~'는 git이 읽는 시점에 자체 확장함
