@@ -1,0 +1,65 @@
+---
+role: Infrastructure Diagram Generator
+priority: high
+trigger: Azure 관련 drawio XML 파일을 생성하거나 수정할 때 적용
+references:
+  - contexts/drawio-gen/references/010-drawio-xml-standard.md
+  - contexts/drawio-gen/references/040-third-party-icon-library.md
+reviewed: 2026-07-21
+---
+# Azure 아이콘 스타일 라이브러리 매핑
+
+본 모듈은 Azure 아키텍처 다이어그램 생성 시 사용되는 아이콘들의 Image 속성 및 색상 매핑 가이드입니다.
+
+> [!TIP]
+> Azure 아이콘은 draw.io 내장 SVG 라이브러리(`img/lib/azure2/`)를 참조합니다. 별도 이미지 파일(base64 등) 삽입 없이 draw.io에서 즉시 렌더링됩니다.
+
+## 1. Azure 공통 Style 템플릿
+
+- **[MUST]** Azure 리소스 아이콘에는 다음 템플릿을 기반으로 `{IMAGE_PATH}`를 치환하여 사용하십시오.
+
+```xml
+image;aspect=fixed;html=1;points=[];align=center;fontSize=10;
+image={IMAGE_PATH};verticalLabelPosition=bottom;verticalAlign=top;
+```
+
+## 2. 아이콘 매핑 테이블
+
+| Azure 리소스 | drawio image path (`{IMAGE_PATH}`) | 카테고리 |
+|---|---|---|
+| VPN Gateway | `img/lib/azure2/networking/Virtual_Network_Gateways.svg` | Networking |
+| NAT Gateway | `img/lib/azure2/networking/NAT.svg` | Networking |
+| DNS Zones / Resolver | `img/lib/azure2/networking/DNS_Zones.svg` | Networking |
+| Private Link / Endpoint | `img/lib/azure2/networking/Private_Link.svg` | Networking |
+| Virtual Network (VNet) | `img/lib/azure2/networking/Virtual_Networks.svg` | Networking |
+| Load Balancer | `img/lib/azure2/networking/Load_Balancers.svg` | Networking |
+| Application Gateway | `img/lib/azure2/networking/Application_Gateways.svg` | Networking |
+| Front Door | `img/lib/azure2/networking/Front_Doors.svg` | Networking |
+| Azure Firewall | `img/lib/azure2/networking/Firewalls.svg` | Networking |
+| Container Registry (ACR) | `img/lib/azure2/containers/Container_Registries.svg` | Containers |
+| App Services (ACA/Web App) | `img/lib/azure2/containers/App_Services.svg` | Containers |
+| Kubernetes Services (AKS) | `img/lib/azure2/containers/Kubernetes_Services.svg` | Containers |
+| Virtual Machines (VM) | `img/lib/azure2/compute/Virtual_Machines.svg` | Compute |
+| VM Scale Sets (VMSS) | `img/lib/azure2/compute/VM_Scale_Sets.svg` | Compute |
+| Azure Functions | `img/lib/azure2/compute/Function_Apps.svg` | Compute |
+| Storage Accounts | `img/lib/azure2/storage/Storage_Accounts.svg` | Storage |
+| SQL Databases | `img/lib/azure2/databases/SQL_Databases.svg` | Database |
+| Cosmos DB | `img/lib/azure2/databases/Azure_Cosmos_DB.svg` | Database |
+| Azure Cache for Redis | `img/lib/azure2/databases/Azure_Cache_for_Redis.svg` | Database |
+| Service Bus | `img/lib/azure2/integration/Service_Bus.svg` | Integration |
+| Event Grid | `img/lib/azure2/integration/Event_Grid_Domains.svg` | Integration |
+| Key Vault | `img/lib/azure2/security/Key_Vaults.svg` | Security |
+| Microsoft Entra ID (Azure AD) | `img/lib/azure2/identity/Azure_Active_Directory.svg` | Identity |
+| Log Analytics Workspace | `img/lib/azure2/management_governance/Log_Analytics_Workspaces.svg` | Monitoring |
+| Application Insights | `img/lib/azure2/management_governance/Application_Insights.svg` | Monitoring |
+| Azure Monitor | `img/lib/azure2/management_governance/Monitor.svg` | Monitoring |
+
+- **[MUST] 예외 — Traditional Server (온프레미스 서버)**: 이 리소스는 본 절 §1의 `image={IMAGE_PATH}` 템플릿 대상이 아닙니다. 위 테이블에 값을 대입하지 말고, 020(AWS) §1 템플릿과 동일한 shape 기반 스타일을 그대로 사용하십시오: `outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#5294FF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.traditional_server;`
+
+## 3. 3rd Party Custom Icon (팀 컨벤션)
+
+- **[MUST]** Azure 기본 서비스가 아닌 오픈소스/서드파티 도구(Jenkins/ArgoCD/Prometheus/Grafana/GitLab 등)의 아이콘 표현 방식은 클라우드 공통 SSOT인 `040-third-party-icon-library.md`를 그대로 적용하십시오. 본 문서에서 재나열하지 않습니다.
+
+## 4. 컨테이너 색상 (Azure)
+
+- **[MUST]** Azure Cloud/Region/VNet/Subnet/ACA Environment 컨테이너 색상은 010 §4 "색상 팔레트 (클라우드 공통)" 표를 그대로 적용하십시오. SSOT는 010이며 본 절에서 재나열하지 않습니다. (Azure Cloud도 010과 동일하게 검정 `#232F3E`이며 Azure 브랜드 파랑이 아님에 유의하십시오.)
