@@ -26,10 +26,10 @@
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
-- **글로벌 pre-commit 훅 통합:** Git의 `core.hooksPath` 설정을 통해 `TruffleHog`와 `Trivy` 기반의 검증 파이프라인을 전역 연동합니다. 사용자의 모든 로컬 Git 저장소에서 시크릿 노출 및 설정 오류를 사전 방어하며, 개별 저장소마다 훅 파일을 복사해 넣는 번거로움을 완전히 제거했습니다.
-- **워크스페이스 자가 치유 링크 주입:** `~/workspace` 하위 저장소에서 `pre-flight-check.sh` 심볼릭 링크 없이 첫 커밋을 시도해도, pre-commit 훅이 자동으로 링크를 생성한 뒤 즉시 검증(terraform/tflint/trivy/infracost 등)을 수행합니다. 사람이나 AI 에이전트가 링크 생성을 깜빡해도 검증이 누락되지 않습니다.
-- **24시간 DB 캐싱 마커:** `Trivy` 취약점 DB 업데이트 조회를 실행할 때, 저장소 루트의 로컬 마커 파일(`.trivy-db-update.timestamp`)을 참조합니다. 마지막 갱신으로부터 24시간 이내인 경우 원격 DB 업데이트 요청을 생략하는 `--skip-db-update` 플래그를 동적으로 결합하여, 커밋 지연을 20초에서 0.5초 수준으로 대폭 단축하고 쉘 프리징을 차단합니다.
-- **디스크 I/O Pruning 스캔:** 쉘 스크립트 내부에서 `find` 명령 실행 시 캐시 및 메타데이터가 집중된 대규모 디렉토리(`.git/`, `.terraform/` 등)를 `-prune` 옵션으로 통과 경로에서 제외합니다. 이를 통해 무분별한 파일 전체 스캔으로 인한 디스크 I/O 부하를 예방하고, 파일명 공백 등으로 인한 파싱 예외는 NUL(`\0`) 구분값 기반 파서(`while read -r -d ''`)를 적용하여 안전하게 처리합니다.
+- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`(IaC), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `contexts/*/scripts/*-check.sh`를 자동 탐색해 위임 호출하므로, 새 검증 스크립트를 추가하는 것만으로 파이프라인이 확장됩니다.
+- **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
+- **글로벌 pre-commit 훅 & 자가 치유:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행하며, `~/workspace` 하위 저장소에 `pre-flight-check.sh` 링크가 없으면 자동 생성합니다. 개별 저장소마다 훅을 복사하거나 링크를 챙길 필요가 없습니다.
+- **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다.
 
 ### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
 로컬 프롬프트 아키텍처에는 Andrew Ng의 Agentic Workflow 디자인 패턴, ReAct/ToT 등의 추론 아키텍처, 그리고 벤더별 공식 가이드를 반영한 고급 프롬프트 설계가 반영되어 있습니다.
@@ -44,16 +44,15 @@
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.
 
-**워크스페이스별 특화 모듈:**
+**워크스페이스별 특화 모듈 (🟢 Production만 표시):**
 
-| 워크스페이스 | 상태 | 모듈 수 | 주요 커버리지 |
-|---|---|---|---|
-| **AWS** (`aws/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
-| **Azure** (`azure/`) | 🟢 **Production** | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
-| **K8s** (`k8s/`) | 🟡 **Draft** | 9개 (`010`~`100`) | GitOps/ArgoCD, mTLS, External Secrets, eBPF 런타임 보안, KEDA, 장애 사후 분석(RCA) |
-| **Multi-Cloud** (`multi-cloud/`) | 🟡 **Draft** | 1개 (`010`) | AWS/Azure 하이브리드 통합, 네트워크 연동(VPN/DX), 이그레스 비용 자가 비판 및 동적 라우팅 |
-| **AIOps** (`aiops/`) | 🟡 **Draft** | 8개 (`005`~`100`) | 자동화 플랜(005), 멱등성 및 장애 복원력, DORA 연동, 장애 사후 분석(RCA), LLM-as-a-Judge 가혹한 자가 비판 |
-| **Dotfiles** (`dotfiles/`) | 🟢 **Production** | 8개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 트러블슈팅 |
+| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+|---|---|---|
+| **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
+| **Azure** (`azure/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
+| **Dotfiles** (`dotfiles/`) | 8개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 트러블슈팅 |
+
+> K8s, Multi-Cloud, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
 
 ---
 
@@ -78,12 +77,12 @@ cd ~/dotfiles
 
 | 단계 | 작업 내용 |
 |---|---|
-| **[1/6]** 필수 패키지 설치 | `apt`로 git, zsh, stow, pipx, fd-find, dnsutils, tree 등 설치 |
+| **[1/6]** 필수 패키지 & Docker 설치 | `apt`로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine 자동 설치 및 `docker` 그룹 권한 부여 (`fd`는 apt 대신 `mise`로 통합 관리) |
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
-| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 40+ 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업 및 프로젝트 최상단 루트에 `AGENTS.md`/`CLAUDE.md` 단독 링킹을 통한 AI 무인식 룰 로딩 및 Git 트리 클린 아키텍처 |
-| **[6/6]** 시크릿 보안 훅 | Trufflehog 전역 시크릿 스캔 및 `core.hooksPath` 기반 글로벌 훅 연동, 24시간 취약점 DB 스킵 캐싱 및 Pruning 최적화를 적용한 고속 사전 안전성 검증 |
+| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `mise.toml`에 선언된 50+ 데브옵스 도구 일괄 설치 |
+| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업, 루트 `AGENTS.md`/`CLAUDE.md` 링킹, Claude 커밋/PR Co-Authored-By 어트리뷰션 기본 비활성화 |
+| **[6/6]** 시크릿 보안 훅 | TruffleHog 전역 시크릿 스캔 + `git/.githooks/pre-commit`을 `core.hooksPath`로 등록하여 모든 로컬 저장소에 정적 분석·FinOps 게이트 자동 적용 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -114,16 +113,15 @@ ls ~/.gemini/config/skills/
 │   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
-│   ├── aws/              # AWS 인프라 워크스페이스 룰북 🟢 Production
-│   ├── azure/            # Azure 인프라 워크스페이스 룰북 🟢 Production
-│   ├── k8s/              # Kubernetes & Cloud Native 워크스페이스 🟡 Draft
-│   ├── multi-cloud/      # 멀티 클라우드(하이브리드) 워크스페이스 라우터 🟡 Draft
-│   ├── aiops/            # AIOps (운영 자동화) 워크스페이스 🟡 Draft
-│   ├── pre-flight-check/ # 사전 안전성 검증 룰북 및 스크립트 🟡 Draft
-│   ├── dotfiles/         # dotfiles 레포 자체 관리용 메타 프롬프트 🟢 Production
+│   ├── aws/, azure/, dotfiles/            # 🟢 Production 워크스페이스 룰북
+│   ├── k8s/, multi-cloud/, aiops/,
+│   │   containers/, observability/,
+│   │   drawio-gen/                        # 🟡 Draft 워크스페이스 룰북
+│   ├── pre-flight-check/                  # 사전 안전성 검증 룰북 및 스킬별 위임 스크립트
 │
 ├── git/
 │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
+│   ├── .githooks/pre-commit   # 전역 pre-commit 훅 원본 (Stow로 ~/.githooks/에 symlink)
 │   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
 │
 ├── mise/
@@ -157,10 +155,7 @@ ls ~/.gemini/config/skills/
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
 
-### 전역 검증 파이프라인 및 고속 DX 튜닝 설계
-개발 흐름의 지연을 막으면서 완벽한 보안/규약 통제를 실현하기 위해 `pre-flight-check.sh`에 다음 튜닝 기법을 적용했습니다.
-- **시간 기반 DB 캐시(TTL)**: Trivy DB 원격 조회를 24시간 주기로 캐싱하여 커밋 대기 시간을 20초에서 0.5초 수준으로 대폭 단축했습니다.
-- **디스크 I/O Pruning**: `.git/`, `.terraform/` 등 무거운 시스템 폴더 탐색을 `-prune`으로 차단하여 디스크 소모를 최소화했습니다.
+> `pre-flight-check.sh`의 검증 항목 및 DX 튜닝 상세는 [핵심 기능 §2](#핵심-기능)를 참고하십시오.
 
 ---
 
@@ -170,16 +165,22 @@ ls ~/.gemini/config/skills/
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
 **보안 & 정책 검증**
-`trivy` · `conftest` · `cosign` · `trufflehog` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint` · `hadolint`
+`trivy` · `conftest` · `cosign` · `trufflehog` · `shellcheck` · `shfmt` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint`
+
+**컨테이너 이미지 공급망 (SBOM/취약점/레이어 분석)**
+`syft` · `grype` · `dive`
+
+**관측성 (Observability)**
+`loki-logcli`
 
 **IaC & 구성 관리**
 `terraform` · `terragrunt` · `tflint` · `terraform-docs` · `infracost` · `ansible` · `ansible-lint`
 
 **클라우드 CLI**
-`awscli` · `azure-cli` · `aws-sam-cli`
+`awscli` · `azure-cli` · `aws-sam-cli` · `bicep` (Ubuntu glibc 호환을 위해 `github:` 백엔드로 고정 설치)
 
 **Kubernetes & 컨테이너**
-`kubectl` · `kubectx` · `k9s` · `docker-cli` · `helm` · `helm-docs` · `kustomize` · `kube-linter`
+`kubectl` · `kubectx` · `k9s` · `helm` · `kustomize` · `kube-linter` · `hadolint` · `helm-docs` · `kyverno` · `pluto` · `promtool` · `yq`
 
 **로컬 테스트**
 `k3d` · `act`
@@ -188,7 +189,7 @@ ls ~/.gemini/config/skills/
 `node` · `python` · `go`
 
 **CLI 유틸리티**
-`fzf` · `jq` · `bat`
+`fzf` · `jq` · `bat` · `fd`
 
 > 버전 고정 정보는 [`mise/.mise.toml`](mise/.mise.toml)에서 확인하십시오.
 
