@@ -431,6 +431,31 @@ validate_docker() {
     else
       echo "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
+
+    # syft/grype는 본래 "빌드된 이미지"를 대상으로 하는 도구다. 커밋마다 docker build를 돌려
+    # 이미지를 스캔하면 베이스 이미지 pull과 빌드 시간 때문에 수 분까지 걸릴 수 있어 이 파이프라인의
+    # 속도 목표(0.5초대)와 정면 충돌한다. 대신 `dir:.` 소스 스캔으로 전환해, Dockerfile과 함께
+    # 저장소에 있는 requirements.txt/package.json/go.mod 등 의존성 매니페스트에 이미 알려진 취약
+    # 버전이 박혀있는지를 빌드 없이 확인한다. (이미지 레이어 자체의 취약점/서명은 여기서 잡히지
+    # 않으므로, 실제 배포 전에는 containers 스킬의 030-supply-chain-security-standard.md가 요구하는
+    # 이미지 단계 스캔·서명이 별도로 필요하다.) Trivy의 vuln/misconfig 스캔과 동일하게 경고만
+    # 남기고 커밋을 막지는 않는다 — 베이스 이미지의 기존 CVE로 매 커밋이 막히는 것을 피하기 위함.
+    echo "--- Step: Container Supply Chain Scan (SBOM/Vuln, Source-level) ---"
+    if has_tool syft; then
+      echo "[INFO] Generating source SBOM (syft)..."
+      syft dir:. -o table || echo "[WARNING] syft SBOM 생성에 실패했습니다."
+    else
+      echo "[WARNING] syft is not installed. Skipping SBOM generation."
+    fi
+
+    if has_tool grype; then
+      echo "[INFO] Scanning dependency manifests for known CRITICAL vulnerabilities (grype, warning-only)..."
+      if ! grype dir:. --fail-on critical; then
+        echo "[WARNING] grype 스캔에서 CRITICAL 취약점이 발견되었습니다. 이미지 빌드 전 의존성 버전을 확인하십시오."
+      fi
+    else
+      echo "[WARNING] grype is not installed. Skipping dependency vulnerability scan."
+    fi
   fi
 }
 
