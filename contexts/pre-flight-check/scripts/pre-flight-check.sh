@@ -183,6 +183,19 @@ validate_terraform() {
     else
       echo "[WARNING] tflint is not installed. Skipping static analysis."
     fi
+
+    if has_tool checkov; then
+      # tflint는 문법/베스트프랙티스 위주라 과도한 IAM 권한, 퍼블릭 S3, 미암호화 리소스 같은
+      # "보안 오구성"은 잡지 못한다. checkov가 이 역할을 보완한다. LOW/MEDIUM은 soft-fail로
+      # 완화해 알림만 남기고, HIGH/CRITICAL만 커밋을 차단하도록 제한한다.
+      echo "Running checkov (Terraform security misconfiguration scan)..."
+      if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM; then
+        echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 차단되었습니다." >&2
+        return 1
+      fi
+    else
+      echo "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
+    fi
     echo "[SUCCESS] Terraform validation passed."
   fi
 }
