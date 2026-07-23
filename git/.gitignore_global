@@ -57,3 +57,5 @@ CLAUDE.md
 # Pre-flight check cache and timestamp files
 .pre-flight-check.cache
 .trivy-db-update.timestamp
+
+**/.claude/settings.local.json
