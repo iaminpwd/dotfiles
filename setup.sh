@@ -96,7 +96,9 @@ stow -t "$HOME" -R "${STOW_PKGS[@]}"
 
 echo "[4/6] 도구 버전 관리자(mise) 설치 및 인프라 도구 일괄 설치..."
 if ! command -v ~/.local/bin/mise &>/dev/null; then
-  curl https://mise.run | sh
+  # -fsSL: HTTP 오류(5xx 등) 시 curl이 오류 페이지를 sh로 흘리지 않고 실패하도록 강제
+  # (Docker 설치 라인과 동일한 방어 패턴 — set -o pipefail이 이 실패를 감지해 중단시킨다)
+  curl -fsSL https://mise.run | sh
 fi
 
 # Ansible 등을 위한 pipx 환경 반영
