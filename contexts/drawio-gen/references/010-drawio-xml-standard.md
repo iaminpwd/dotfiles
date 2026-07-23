@@ -4,7 +4,7 @@ priority: high
 trigger: drawio XML 파일을 생성하거나 수정할 때 적용
 references:
   - contexts/dotfiles/references/000-core.md
-reviewed: 2026-07-21
+reviewed: 2026-07-23
 ---
 # DrawIO XML 공통 포맷 규격
 
@@ -42,9 +42,7 @@ reviewed: 2026-07-21
 - **[MUST]** 제목 아래 실선을 없애기 위해 `swimlaneLine=0;` 속성을 반드시 추가하십시오.
 
 ```
-style="swimlane;whiteSpace=wrap;html=1;fillColor=none;
-  strokeColor={COLOR};startSize={HEADER_HEIGHT};
-  fontStyle=1;fontColor={COLOR};swimlaneLine=0;"
+style="swimlane;whiteSpace=wrap;html=1;fillColor=none;strokeColor={COLOR};startSize={HEADER_HEIGHT};fontStyle=1;fontSize=13;fontColor={COLOR};swimlaneLine=0;"
 ```
 
 - **[MUST] `{HEADER_HEIGHT}` 기본값**: 계층 레벨별로 아래 값을 고정 기본값으로 사용하고, 특별한 사유 없이 임의로 다른 값을 쓰지 마십시오.
@@ -66,8 +64,7 @@ style="swimlane;whiteSpace=wrap;html=1;fillColor=none;
 - **[MUST]** `edge="1"` + `source`/`target` 속성으로 연결
 - **[MUST]** 공통 스타일:
 ```
-edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;
-strokeWidth=2;strokeColor=#555555;
+edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#555555;
 ```
 - 양방향: `startArrow=classic;endArrow=classic;`
 - 단방향: `endArrow=classic;`
@@ -137,11 +134,7 @@ strokeWidth=2;strokeColor=#555555;
 
 - **[MUST] 공용 툴킷 재사용**: 아래 원칙을 매번 새로 구현하지 말고 `contexts/drawio-gen/scripts/layout_toolkit.py`를 `import`해서 쓰십시오. `grid()`/`hstack()`/`vstack()`/`offset_by_header()`/`subnet_box_size()`가 이미 구현되어 있고, `validate(path)`가 090 검증(ID 중복/끊어진 참조) + 형제 노드 겹침 검사를 한 번에 수행합니다.
 
-- **[MUST] 컨테이너 크기는 콘텐츠로부터 역산**: 컨테이너의 `width`/`height`를 임의의 숫자로 하드코딩하지 마십시오. 내부 아이콘 개수·격자 배치·노트 텍스트 줄 수로부터 필요한 크기를 계산한 뒤, 거기에 여백(padding)을 더해서 결정하십시오.
-  <examples>
-  <example>[Bad] `height=1720` 처럼 넉넉해 보이는 값을 임의로 지정 → 실제 콘텐츠가 830px에서 끝나 890px가 빈 배경으로 남음</example>
-  <example>[Good] `header + content_height(아이콘 격자에서 계산) + bottom_padding` 공식으로 산출</example>
-  </examples>
+- **[MUST] 컨테이너 크기는 콘텐츠로부터 역산**: 컨테이너의 `width`/`height`를 임의의 숫자로 하드코딩하지 마십시오. 내부 아이콘 개수·격자 배치·노트 텍스트 줄 수로부터 필요한 크기를 계산한 뒤 여백(padding)을 더해서 결정하십시오. [Bad] `height=1720` 임의 지정 → 콘텐츠가 830px에서 끝나 890px가 빈 배경으로 남음. [Good] `header + content_height(아이콘 격자에서 계산) + bottom_padding` 공식으로 산출.
 - **[MUST] 헤더 높이만큼 자식 y 오프셋 필수**: 자식 요소를 부모 컨테이너에 배치할 때, y좌표는 반드시 부모의 `startSize`(헤더 높이, §2.1 표) 이상에서 시작해야 합니다. 이를 빼먹으면 부모 제목 텍스트와 첫 번째 자식의 헤더 텍스트가 겹칩니다.
 - **[MUST] 같은 시각적 행(row)의 형제 컨테이너는 높이를 통일 (단, 콘텐츠 격차가 클 때는 예외)**: 나란히 배치되는 형제 서브넷/컨테이너들은 원칙적으로 그 행에서 가장 콘텐츠가 큰 것의 높이에 맞춰 동일한 높이로 늘리십시오(짧은 쪽은 여백이 남는 것을 허용). 단, 형제 간 콘텐츠 크기(너비 또는 높이) 격차가 1.8배를 넘으면 억지로 같은 행에 묶어 정렬하지 말고, 콘텐츠 크기가 비슷한 것끼리 재그룹하여 별도 행으로 분리하십시오(예: 아이콘 1~2개짜리 작은 서브넷들끼리 한 행, 아이콘 4~5개짜리 큰 서브넷들끼리 한 행). 이 규칙을 지키지 않으면 아이콘 2개짜리 서브넷이 아이콘 5개짜리 서브넷과 같은 크기로 강제 확장되어 내부가 텅 비어 보이는 문제가 실제로 발생했습니다.
   - **[MUST] `row_height()`로 계산만 하고 끝내지 말고 `uniform_row()`로 실제 반영**: `row_height(*heights)`는 통일할 값을 계산해줄 뿐, 그 값을 각 컨테이너의 실제 `height` 인자에 되돌려 적용하는 것은 호출자 책임입니다. his-infra 재생성 작업(2026-07-22)에서 행 간격(vstack) 계산에만 최댓값을 쓰고 정작 각 서브넷 컨테이너의 `height`에는 자기 자신의 원래(더 작은) 값을 그대로 써서, 같은 행인데 바닥선이 어긋나는 회귀가 실제로 발생했습니다. "계산은 했지만 적용을 잊는" 실수를 막기 위해, 값 계산과 반영을 한 번에 강제하는 `uniform_row(*wh_pairs)` — `(w, h)` 목록을 받아 높이가 통일된 `(w, h)` 목록을 반환 — 를 사용하고, 그 반환값을 그대로 각 컨테이너 생성 호출의 `width`/`height` 인자로 넘기십시오. `row_height()`를 직접 쓰는 경우에도 그 반환값을 반드시 모든 형제의 실제 height 인자에 대입했는지 확인하십시오.
