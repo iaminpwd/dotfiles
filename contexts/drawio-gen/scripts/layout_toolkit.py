@@ -37,6 +37,13 @@ HEADER_SUBNET = 45       # Subnet 헤더 높이
 HEADER_VPC = 40          # VPC/VNet 헤더 높이
 HEADER_REGION = 30       # Cloud/Region 헤더 높이
 
+# 타이포그래피 위계 (050-readability-standard.md) — 글자 크기 들쭉날쭉 방지용 고정값.
+# drawio 기본 폰트는 12px라 컨테이너 헤더/아이콘 라벨/서브라벨이 다 같은 크기로 뭉개진다.
+FONT_TITLE = 20          # 다이어그램 제목 블록
+FONT_HEADER = 13         # 컨테이너(swimlane) 헤더
+FONT_LABEL = 12          # 아이콘 메인 라벨
+FONT_SUBLABEL = 10       # 아이콘 서브라벨([AZ-A, C] 등)
+
 
 # ────────────────────────────────────────────────────────────────
 # 레이아웃 계산 헬퍼 — §10 규칙을 코드로 강제
@@ -155,30 +162,32 @@ class Diagram:
     def container(self, id_, parent, value, x, y, w, h, stroke, header, dashed=False, fill="none", font_color=None):
         fc = font_color or stroke
         style = (f"swimlane;whiteSpace=wrap;html=1;fillColor={fill};strokeColor={stroke};"
-                 f"startSize={header};fontStyle=1;fontColor={fc};swimlaneLine=0;")
+                 f"startSize={header};fontStyle=1;fontSize={FONT_HEADER};fontColor={fc};swimlaneLine=0;")
         if dashed:
             style += "dashed=1;"
         self.add(id_, parent, value, style, x, y, w, h)
 
     def aws_icon(self, id_, parent, value, x, y, shape, color, w=IW, h=IH):
+        # whiteSpace=wrap: 긴 라벨이 옆 아이콘을 침범하지 않고 아이콘 폭(60px) 안에서
+        # 자동 줄바꿈되도록 강제 (050-readability-standard.md). 서브라벨은 여전히 <br>로 짧게.
         style = (f"outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor={color};strokeColor=none;"
-                 f"dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;"
-                 f"aspect=fixed;shape=mxgraph.aws4.{shape};")
+                 f"dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;whiteSpace=wrap;"
+                 f"fontSize={FONT_LABEL};aspect=fixed;shape=mxgraph.aws4.{shape};")
         self.add(id_, parent, value, style, x, y, w, h)
 
     def azure_icon(self, id_, parent, value, x, y, image_path, w=IW, h=IH):
-        style = (f"image;aspect=fixed;html=1;points=[];align=center;fontSize=10;"
+        style = (f"image;aspect=fixed;html=1;points=[];align=center;whiteSpace=wrap;fontSize={FONT_LABEL};"
                  f"image={image_path};verticalLabelPosition=bottom;verticalAlign=top;")
         self.add(id_, parent, value, style, x, y, w, h)
 
     def thirdparty_icon(self, id_, parent, value, x, y, url, w=IW, h=IH):
-        style = (f"shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;"
+        style = (f"shape=image;html=1;verticalAlign=top;verticalLabelPosition=bottom;whiteSpace=wrap;fontSize={FONT_LABEL};"
                  f"labelBackgroundColor=#ffffff;imageAspect=0;aspect=fixed;image={url};")
         self.add(id_, parent, value, style, x, y, w, h)
 
     def gitlab_icon(self, id_, parent, value, x, y, w=IW, h=IH):
-        style = ("shape=mxgraph.ibm_cloud.logo--gitlab;fillColor=#E24329;strokeColor=none;html=1;"
-                 "verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=#ffffff;")
+        style = (f"shape=mxgraph.ibm_cloud.logo--gitlab;fillColor=#E24329;strokeColor=none;html=1;whiteSpace=wrap;"
+                 f"fontSize={FONT_LABEL};verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=#ffffff;")
         self.add(id_, parent, value, style, x, y, w, h)
 
     def note(self, id_, parent, value, x, y, w, h, font_size=10, color="#555555", align="left"):
@@ -187,6 +196,49 @@ class Diagram:
 
     def cloud_shape(self, id_, parent, value, x, y, w, h):
         self.add(id_, parent, value, "ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;", x, y, w, h)
+
+    def title(self, id_, text, x, y, w=520, h=48, subtitle=""):
+        """캔버스 상단 제목/범위 블록 (050-readability-standard.md).
+
+        text: 굵은 대제목(예: "his-infra Production"), subtitle: 작은 부제(예:
+        "AWS · ap-northeast-2 · 3-Tier"). 보는 사람이 "무엇을·어디를" 즉시 파악하게 한다.
+        """
+        val = text
+        if subtitle:
+            val = (f'{text}<br><span style="font-size:12px;font-weight:normal;'
+                   f'color:#555555;">{subtitle}</span>')
+        style = (f"text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;"
+                 f"fontSize={FONT_TITLE};fontStyle=1;fontColor=#232F3E;whiteSpace=wrap;")
+        self.add(id_, "1", val, style, x, y, w, h)
+
+    def legend(self, id_, x, y, entries, title="범례 (Legend)"):
+        """색상/선 종류 범례 박스 (050-readability-standard.md).
+
+        entries: [(kind, color, label), ...]
+          kind='box'  → 컨테이너 테두리색 스와치(빈 사각형 + 색 테두리): VPC/Subnet/Region/ASG 구분
+          kind='line' → 실선 엣지 스와치: 실제 트래픽/데이터 경로
+          kind='dash' → 점선 엣지 스와치: 논리적 연결(DNS/로그/동기화 등)
+        범례 박스는 swimlane이 아니므로 010 §4 팔레트 검사 대상이 아니다(회색 테두리 허용).
+        빈 공간(캔버스 우상단/우하단 등)에 배치해 다른 컨테이너와 겹치지 않게 하십시오.
+        """
+        row_h, header_h, w = 24, 34, 232
+        h = header_h + len(entries) * row_h + 10
+        box_style = ("rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;"
+                     "verticalAlign=top;align=left;fontStyle=1;fontSize=12;fontColor=#333333;"
+                     "spacingLeft=10;spacingTop=8;")
+        self.add(id_, "1", title, box_style, x, y, w, h)
+        for i, (kind, color, label) in enumerate(entries):
+            sy = header_h + i * row_h
+            if kind == "box":
+                sw = f"rounded=0;html=1;fillColor=none;strokeColor={color};strokeWidth=2;"
+                self.add(f"{id_}_sw{i}", id_, "", sw, 12, sy, 30, 16)
+            else:
+                sw = (f"shape=line;html=1;strokeColor={color};strokeWidth=2;"
+                      + ("dashed=1;" if kind == "dash" else ""))
+                self.add(f"{id_}_sw{i}", id_, "", sw, 12, sy + 6, 30, 4)
+            lb = ("text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;"
+                  "fontSize=11;fontColor=#333333;whiteSpace=wrap;")
+            self.add(f"{id_}_lb{i}", id_, label, lb, 50, sy, w - 58, 16)
 
     def to_xml(self, diagram_name="Architecture"):
         return f'''<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
@@ -344,6 +396,34 @@ def validate(path):
             lines.append(f"[FAIL] 컨테이너 팔레트 위반 (010 §4): id={cid} strokeColor={m.group(1)} "
                          f"(허용값: {sorted(APPROVED_CONTAINER_COLORS)})")
 
+    # 범례(Legend) 누락 휴리스틱 (050-readability-standard.md §1) — WARN only, ok에 영향 없음.
+    # 컨테이너 색이 2종 이상이거나 실선+점선 엣지가 함께 쓰였는데 '범례/Legend' 라벨 셀이
+    # 하나도 없으면, 보는 사람이 색·선의 의미를 추측해야 하므로 범례 누락을 경고한다.
+    # legend()의 스와치는 swimlane도 edge도 아니라 아래 카운팅에 오탐으로 잡히지 않는다.
+    container_colors = set()
+    has_solid_edge = has_dashed_edge = has_legend = False
+    for cid, c in cells.items():
+        style = c.get("style", "")
+        if re.search(r"범례|legend", c.get("value", "") or "", re.I):
+            has_legend = True
+        if "swimlane" in style:
+            m = re.search(r"strokeColor=(#[0-9A-Fa-f]{6})", style)
+            if m:
+                container_colors.add(m.group(1).upper())
+        elif c.get("edge") == "1":
+            if "dashed=1" in style:
+                has_dashed_edge = True
+            else:
+                has_solid_edge = True
+    if not has_legend and (len(container_colors) >= 2 or (has_solid_edge and has_dashed_edge)):
+        reasons = []
+        if len(container_colors) >= 2:
+            reasons.append(f"컨테이너 색 {len(container_colors)}종")
+        if has_solid_edge and has_dashed_edge:
+            reasons.append("실선+점선 엣지 혼용")
+        lines.append(f"[WARN] 범례 누락 의심 ({', '.join(reasons)}인데 '범례/Legend' 셀 없음) "
+                     f"— layout_toolkit.legend()로 색·선 의미를 표기하십시오 (050 §1)")
+
     ok = not dup and not missing and not color_violations
     if ok and not lines:
         lines.append(f"[OK] {len(ids)}개 mxCell, 중복/끊어진 참조/형제 겹침/라벨폭/팔레트 위반 없음")
@@ -353,6 +433,40 @@ def validate(path):
 # ────────────────────────────────────────────────────────────────
 # 엣지 포함 간이 렌더링 (010 §10 "생성 직후 렌더링 검증"의 실제 구현체)
 # ────────────────────────────────────────────────────────────────
+def _register_korean_font():
+    """미리보기 PNG에서 한글 라벨/범례/제목이 네모(□)로 깨지지 않도록 한글 지원 폰트를 등록한다.
+
+    render_preview 육안 검증은 이 스킬의 필수 완료 조건인데, 라벨이 전부 한글이라
+    matplotlib 기본 폰트(DejaVu Sans)로는 텍스트가 전부 □로 나와 텍스트 겹침/줄바꿈을
+    검증할 수 없었다(매 실행 글리프 경고 40줄 스팸도 발생). 리눅스 네이티브 폰트를 우선
+    찾고, 없으면 WSL의 Windows 폰트를 폴백으로 쓴다. 어느 것도 없으면 None을 반환한다.
+    """
+    import os
+    from matplotlib import font_manager as fm
+    import matplotlib.pyplot as plt
+
+    candidates = [
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",       # apt: fonts-nanum
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # apt: fonts-noto-cjk
+        os.path.expanduser("~/.local/share/fonts/NanumGothic.ttf"),
+        os.path.expanduser("~/.fonts/NanumGothic.ttf"),
+        "/mnt/c/Windows/Fonts/malgun.ttf",        # WSL 폴백: 맑은 고딕(정적, 굵기 정상)
+        "/mnt/c/Windows/Fonts/NotoSansKR-VF.ttf",  # WSL 폴백: Noto Sans KR(가변)
+    ]
+    for fpath in candidates:
+        if not os.path.exists(fpath):
+            continue
+        try:
+            fm.fontManager.addfont(fpath)
+            name = fm.FontProperties(fname=fpath).get_name()
+            plt.rcParams["font.family"] = name
+            plt.rcParams["axes.unicode_minus"] = False
+            return name
+        except Exception:
+            continue
+    return None
+
+
 def render_preview(path, out_png):
     """컨테이너/아이콘 사각형 + 엣지(연결선, waypoint 포함)까지 그린 PNG를 저장한다.
 
@@ -361,11 +475,22 @@ def render_preview(path, out_png):
     구멍이 있었다(2026-07-22 발견). Read 도구로 이 PNG를 열어 박스 정렬뿐 아니라
     연결선 경로까지 확인한 뒤에만 완료를 선언하십시오.
     """
+    import logging
+    import warnings
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import matplotlib.patches as patches
     import xml.etree.ElementTree as ET
+
+    # 한글 폰트 등록 + findfont 경고(가변폰트 weight 등) 소음 억제
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+    kfont = _register_korean_font()
+    if kfont:
+        print(f"[INFO] 미리보기 한글 폰트: {kfont}")
+    else:
+        print("[INFO] 한글 지원 폰트를 찾지 못해 미리보기의 한글 라벨이 □로 표시됩니다. "
+              "'sudo apt install fonts-nanum' 후 재실행하면 라벨까지 육안 검증됩니다.")
 
     root = ET.parse(path).getroot()
     cells = {c.get("id"): c for c in root.findall(".//mxCell") if c.get("id")}
@@ -427,8 +552,12 @@ def render_preview(path, out_png):
     ax.set_ylim(-maxy - 20, 20)
     ax.set_aspect("equal")
     ax.axis("off")
-    plt.tight_layout()
-    plt.savefig(out_png, dpi=130)
+    # 한글 폰트를 못 찾은 경우의 글리프 누락 UserWarning이 40줄씩 스팸되지 않도록 억제
+    # (누락 사실은 위 [INFO] 한 줄로 이미 안내함). 폰트가 있으면 애초에 경고가 없다.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        plt.tight_layout()
+        plt.savefig(out_png, dpi=130)
     plt.close(fig)
     return out_png
 

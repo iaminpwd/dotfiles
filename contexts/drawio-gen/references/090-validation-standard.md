@@ -4,7 +4,7 @@ priority: high
 trigger: drawio XML 생성 직후, 완료 선언 전 검증 단계에서 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-23
 ---
 # 검증 및 수락 기준 (Success Criteria)
 
@@ -43,4 +43,5 @@ python3 contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}
   3. 컨테이너의 선언된 크기가 실제 콘텐츠 바운딩박스보다 과도하게 크지 않은지(불필요한 빈 공간)
   4. `layout_toolkit.render_preview(path, out_png)`로 **엣지(연결선)까지 포함된** PNG를 생성해 Read 도구로 실제로 열어 육안 확인하십시오. 박스만 그리는 임시 렌더러를 매번 새로 짜면 엣지 라우팅이 다른 서브넷을 뚫고 지나가는 문제를 못 잡습니다(2026-07-22, his-infra 작업에서 `edge_nat_igw`가 waypoint 없이 VPC1 전체를 대각선으로 가로지른 사례). 장거리 엣지가 서브넷 내부를 지나간다면 010 §10 "장거리 엣지는 waypoint로 경로 고정" 규칙에 따라 빈 공간(형제 컨테이너 사이 gap, 행과 행 사이 gap 등)을 지나도록 waypoint를 다시 계산하십시오.
   5. 아이콘 라벨에 `validate()`가 `[WARN] 라벨 폭 초과 의심`을 보고하면, 서브라벨 문장을 줄이거나 여러 `<br>` 줄로 나눠 재검증하십시오.
-  6. 서드파티 아이콘을 썼다면 네트워크가 가능한 환경에서 `layout_toolkit.check_icon_urls(path)`로 이미지 URL이 살아있는지 확인하십시오. 네트워크 불가/타임아웃은 `[INFO]`로만 표시되며 완료 조건을 막지 않습니다.
+  6. `validate()`가 `[WARN] 범례 누락 의심`(컨테이너 색 2종 이상 또는 실선+점선 엣지 혼용인데 범례 셀 없음)을 보고하면, `layout_toolkit.legend()`로 색·선 의미 범례를 추가하십시오(050 §1). 렌더링 PNG는 `render_preview()`가 한글 폰트를 자동 등록하므로 범례·라벨의 한글 텍스트까지 육안 검증됩니다(폰트 미발견 시 `[INFO]`로 설치 안내).
+  7. 서드파티 아이콘을 썼다면 네트워크가 가능한 환경에서 `layout_toolkit.check_icon_urls(path)`로 이미지 URL이 살아있는지 확인하십시오. 네트워크 불가/타임아웃은 `[INFO]`로만 표시되며 완료 조건을 막지 않습니다.
