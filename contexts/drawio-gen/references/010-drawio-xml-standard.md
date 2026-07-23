@@ -56,7 +56,7 @@ style="swimlane;whiteSpace=wrap;html=1;fillColor=none;strokeColor={COLOR};startS
 | Auto Scaling Group 등 하위 그룹 | `30` |
 
 ### 2.2 Icon (리소스 아이콘)
-- **[MUST]** AWS: `shape=mxgraph.aws4.*` 기반, Azure: `image=img/lib/azure2/**/*.svg` 기반
+- **[MUST]** AWS: `shape=mxgraph.aws4.*` 기반, Azure: `image=img/lib/azure2/**/*.svg` 기반, OpenStack: 테넌트 리소스 17종은 draw.io 내장 `mxgraph.openstack.*` 스텐실(`openstack_native_icon()`), 컨트롤 플레인 서비스는 네이티브 아이콘이 없으므로 기본 도형(rounded/cylinder/hexagon) + 검정 기본색 + 절제된 강조색(`openstack_icon()` 헬퍼, 상세 규칙은 035 참조)
 - **[MUST]** `parent` 속성으로 소속 Subnet/VPC에 귀속
 - **[MUST] 기본 크기**: 일반 리소스 아이콘은 `width=60;height=60;`을 기본값으로 사용하십시오. ENI 등 소형 커넥터류 아이콘만 `width=40;height=40;`을 사용하십시오. 근거 없이 임의의 크기를 쓰지 마십시오.
 
@@ -90,6 +90,8 @@ edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#555555
 | Azure Cloud 테두리 | `#232F3E` | 검정 |
 | Region (AWS) | `#007CBC` dashed | 파랑 점선 |
 | Region (Azure) | `#0072C6` dashed | 파랑 점선 |
+| OpenStack Cloud/Region/Network | `#232F3E` / `#007CBC` dashed / `#147E40` | AWS 색 재사용 (매핑은 035 §4) |
+| OpenStack 서비스 아이콘 테두리 | 기본 `#000000`(검정), 강조 시 `#4A90D9`/`#DA1A32`/`#2E7D32` 중 1개 | OpenStack 공식 색상 표준(035 §0) — 카테고리별 색 구분이 아니라 기본 검정 + 절제된 강조 |
 | Auto Scaling Group (AWS) | `#D15100` dashed | 주황 점선 |
 | ACA Environment (Azure) | `#0072C6` dashed | 파랑 점선 (Region과 동일) |
 
@@ -145,4 +147,5 @@ edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#555555
 - **[MUST] 노드 5개 초과 시 격자/스택 계산 함수 사용**: 아이콘을 한 줄로만 늘어놓지 말고 `cols` 지정 격자 배치 함수로 감싸고, 서브넷/컨테이너 여러 개를 배치할 때도 가로 스택(hstack)·세로 스택(vstack) 헬퍼로 좌표를 계산하십시오. 손으로 좌표를 하나씩 대입하면 간격 불일치·겹침·오프셋 누락이 반복적으로 발생합니다.
 - **[MUST] 세로로 쌓인 여러 행의 폭 정렬**: 콘텐츠 크기 격차 때문에 형제를 여러 행(예: 대형 티어 행, 소형 티어 행)으로 나눠 배치할 때, 각 행의 아이템 개수가 다르면 hstack 결과 폭이 행마다 달라져 오른쪽 끝이 계단식으로 어긋나 보입니다. 이 경우 박스 크기를 늘리지 말고 **hstack의 gap을 균등하게 늘려서** 각 행의 전체 폭(`hstack`이 반환하는 두 번째 값)을 통일하십시오. "컨테이너 강제 확장 금지" 규칙은 개별 박스 크기에 적용되는 것이지, 행 사이 간격 조정까지 금지하는 것이 아닙니다.
 - **[MUST] 장거리 엣지는 waypoint로 경로 고정**: Region 레벨 아이콘 ↔ Subnet 내부 리소스처럼 2단계 이상의 컨테이너 경계를 가로지르는 엣지는 자동 오소고날 라우팅에 맡기지 마십시오. `layout_toolkit.py`의 `edge()` 헬퍼의 `points` 인자로 최소 1~2개의 중간 경유점(부모 컨테이너 좌표계 기준)을 지정해, 선이 다른 컨테이너를 뚫고 지나가며 지저분해 보이는 것을 방지하십시오.
+- **[MUST] 여러 엣지가 한 타겟에 모이면 각각 실제 중점을 waypoint로 명시**: `render_preview()`는 waypoint 없는 2점 엣지의 라벨을 `pts[len(pts)//2]`(경유점이 없으면 결국 타겟 중심)에 그린다. VM/허브처럼 여러 엣지가 같은 타겟으로 모이는 구조에서는 모든 라벨이 타겟 중심 한 점에 겹쳐 보인다(2026-07-23, openstack-basic Conceptual Architecture 작업에서 실측 확인). 소스·타겟의 절대 좌표로 `((sx+tx)/2, (sy+ty)/2)`를 직접 계산해 `points=[(mx, my)]`로 넘기면, 엣지마다 다른 위치에 라벨이 표시되어 겹침이 사라진다. 실제 drawio가 기본적으로 경로 중점에 라벨을 놓는지는 별개 문제이므로, 이 waypoint 지정은 미리보기 정확성과 실제 파일의 견고함을 동시에 확보하는 차원에서 항상 적용하라.
 - **[MUST] 생성 직후 렌더링 검증**: 090 문서의 ID/참조 무결성 검증만으로는 겹침·정렬·엣지 라우팅 문제를 못 잡습니다. XML 저장 직후 `layout_toolkit.py`의 `validate(path)`를 실행해 형제 겹침, **행 높이 불일치([WARN] 행 높이 불일치)**, **라벨 폭 초과([WARN] 라벨 폭 초과 의심)** 까지 확인하십시오. 그다음 임시 렌더러를 매번 새로 짜지 말고 `layout_toolkit.py`의 `render_preview(path, out_png)`를 호출해 **엣지(연결선)까지 포함된** PNG를 Read 도구로 실제로 열어 박스 정렬뿐 아니라 연결선이 다른 서브넷 내부를 뚫고 지나가지는 않는지 육안으로 확인한 뒤에만 완료를 선언하십시오. 서드파티 아이콘을 썼다면 네트워크가 가능한 경우 `check_icon_urls(path)`로 이미지 URL 생존 여부도 확인하십시오(죽은 링크는 [WARN], 네트워크 불가는 [INFO]로만 표시되며 완료 조건을 막지 않음). 말로 "정렬했습니다"라고 보고하기 전에 반드시 눈으로 확인하십시오. `validate()`가 행 높이 불일치를 경고하면 완료 선언 전에 반드시 `uniform_row()`를 적용해 재생성하고, 라벨 폭 초과를 경고하면 서브라벨 문장을 줄이거나 `<br>`로 나누십시오.

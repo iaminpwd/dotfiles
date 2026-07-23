@@ -42,7 +42,7 @@ d.legend("lg", 1560, 40, [
 
 ## 3. 아이콘 라벨 자동 줄바꿈
 
-- **[MUST] `whiteSpace=wrap` 기본 적용**: 툴킷의 `aws_icon()`/`azure_icon()`/`thirdparty_icon()`/`gitlab_icon()`은 라벨이 아이콘 폭(60px)을 넘을 때 옆 아이콘을 침범하지 않고 자동 줄바꿈되도록 이미 `whiteSpace=wrap`을 포함합니다. 손으로 style을 새로 조립하지 말고 이 헬퍼를 사용하십시오.
+- **[MUST] `whiteSpace=wrap` 기본 적용**: 툴킷의 `aws_icon()`/`azure_icon()`/`openstack_icon()`/`thirdparty_icon()`/`gitlab_icon()`은 라벨이 아이콘 폭(60px)을 넘을 때 옆 아이콘을 침범하지 않고 자동 줄바꿈되도록 이미 `whiteSpace=wrap`을 포함합니다. 손으로 style을 새로 조립하지 말고 이 헬퍼를 사용하십시오.
 - **[MUST] 서브라벨은 여전히 짧게 + `<br>`**: 자동 줄바꿈은 "옆 침범 방지" 안전망일 뿐, 3줄 이상으로 길어지면 아래 행 아이콘과 세로로 부딪힙니다. 서브라벨(`[AZ-A, C 분산 배치]` 등)은 짧게 유지하고 의도한 줄바꿈은 `<br>`로 명시하십시오. `validate()`가 `[WARN] 라벨 폭 초과 의심`을 내면 문장을 줄이십시오.
 
 ## 4. 타이포그래피 위계 (글자 크기 통일)

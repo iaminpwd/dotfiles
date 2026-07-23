@@ -140,12 +140,19 @@ class Diagram:
             f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" as="geometry"/></mxCell>'
         )
 
-    def edge(self, id_, source, target, value="", dashed=False, bidir=False, parent="1", points=None):
+    def edge(self, id_, source, target, value="", dashed=False, dotted=False, bidir=False, parent="1", points=None):
         """points: [(x, y), ...] 중간 경유점 목록(부모 컨테이너 좌표계 기준).
         2단계 이상 컨테이너를 가로지르는 장거리 엣지의 자동 라우팅이 지저분해 보이는 문제(010 §10)를
-        방지하기 위한 명시적 waypoint 지정용."""
+        방지하기 위한 명시적 waypoint 지정용.
+
+        dashed/dotted 구분은 OpenStack 공식 다이어그램 표준(035 §0, docs.openstack.org/
+        doc-contrib-guide/diagram-guidelines/general-guidelines.html)의 3종 선 의미를 따른다:
+        실선=직접적 관계, dashed=온라인 네트워크로 연결된 객체 그룹, dotted=사람이 입력한
+        데이터의 이동 경로(예: 사용자 로그인 폼 제출, 최초 API 요청). 동시에 켜지 않는다."""
         style = "edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeWidth=2;strokeColor=#555555;"
-        if dashed:
+        if dotted:
+            style += "dashed=1;dashPattern=1 2;"
+        elif dashed:
             style += "dashed=1;"
         style += ("startArrow=classic;" if bidir else "") + "endArrow=classic;"
         if value:
@@ -178,6 +185,57 @@ class Diagram:
     def azure_icon(self, id_, parent, value, x, y, image_path, w=IW, h=IH):
         style = (f"image;aspect=fixed;html=1;points=[];align=center;whiteSpace=wrap;fontSize={FONT_LABEL};"
                  f"image={image_path};verticalLabelPosition=bottom;verticalAlign=top;")
+        self.add(id_, parent, value, style, x, y, w, h)
+
+    OPENSTACK_ACCENT = {"blue": "#4A90D9", "red": "#DA1A32", "green": "#2E7D32"}
+
+    def openstack_icon(self, id_, parent, value, x, y, shape="rounded", emphasis=None, w=90, h=70):
+        # Keystone/Glance/Horizon 등 컨트롤 플레인 서비스는 draw.io에도 OpenStack
+        # 공식 자료에도 아이콘이 없으므로(035-openstack-icon-style-library.md §1-2),
+        # 기본 도형(rounded/cylinder/hexagon)으로 표현한다.
+        #
+        # 색상은 OpenStack 공식 다이어그램 표준(035 §0, docs.openstack.org/doc-contrib-guide/
+        # diagram-guidelines/general-guidelines.html, 조회 2026-07-23)을 그대로 따른다:
+        # "객체는 기본적으로 검정이어야 하며, 강조가 꼭 필요할 때만 밝은 원색(하늘색/빨강/초록)
+        # 중 하나를 쓰고 같은 기능의 객체는 같은 색을 재사용한다." emphasis=None(기본)이면
+        # 검정 테두리+흰 배경. emphasis="blue"|"red"|"green"이면 그 원색을 테두리에만 적용해
+        # 배경은 흰색으로 유지, 텍스트 라벨 가독성을 지킨다(색을 배경까지 채우면 표준의
+        # "hollow middle" 요건과 라벨 대비가 깨진다).
+        #
+        # [라벨 위치] aws_icon/azure_icon/openstack_native_icon 과 동일하게
+        # verticalLabelPosition=bottom(라벨을 도형 "아래"에 배치)을 쓴다 — 사용자가
+        # 이 관례(아이콘 계열 공통 스타일)를 선호함을 확인(2026-07-23). 대신 기본
+        # 크기를 60x60 → 90x70으로 키워, 도형 없는 빈 사각형 아래 여러 줄 라벨이
+        # 옆/아래 요소와 겹치지 않을 여유를 확보한다. 이 크기를 쓰는 grid()/hstack()/
+        # vstack() 호출의 gy(행 간격)도 라벨 줄 수에 맞게 함께 넉넉히 늘릴 것 —
+        # 크기만 키우고 간격을 그대로 두면 다음 행과 다시 겹친다.
+        base = {
+            "rounded": "rounded=1;",
+            "cylinder": "shape=cylinder3;",
+            "hexagon": "shape=hexagon;perimeter=hexagonPerimeter2;",
+        }.get(shape, "rounded=1;")
+        stroke = self.OPENSTACK_ACCENT.get(emphasis, "#000000")
+        sw = 3 if emphasis else 2
+        style = (f"{base}whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor={stroke};strokeWidth={sw};"
+                 f"fontColor=#000000;verticalLabelPosition=bottom;verticalAlign=top;align=center;"
+                 f"fontSize={FONT_LABEL};aspect=fixed;")
+        self.add(id_, parent, value, style, x, y, w, h)
+
+    def openstack_native_icon(self, id_, parent, value, x, y, shape_name, color="3F51B5", w=IW, h=IH):
+        # draw.io 내장 mxgraph.openstack.* 스텐실(035 §1). 17종 테넌트 리소스에
+        # 한해서만 유효 — 존재하지 않는 shape_name을 창작하지 말 것.
+        # 출처: jgraph/drawio Sidebar-OpenStack.js (조회 2026-07-23).
+        valid = {"cinder_volume", "cinder_volumeattachment", "designate_recordset", "designate_zone",
+                 "heat_autoscalinggroup", "heat_resourcegroup", "heat_scalingpolicy",
+                 "neutron_floatingip", "neutron_floatingipassociation", "neutron_net", "neutron_port",
+                 "neutron_router", "neutron_routerinterface", "neutron_securitygroup", "neutron_subnet",
+                 "nova_keypair", "nova_server", "swift_container"}
+        if shape_name not in valid:
+            raise ValueError(f"'{shape_name}' 은 mxgraph.openstack.* 의 17종 스텐실에 없습니다: {sorted(valid)}")
+        style = (f"aspect=fixed;sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;"
+                 f"labelPosition=center;verticalLabelPosition=bottom;outlineConnect=0;verticalAlign=top;"
+                 f"align=center;shape=mxgraph.openstack.{shape_name};fillColor=#{color};"
+                 f"whiteSpace=wrap;fontSize={FONT_LABEL};fontColor=#232F3E;")
         self.add(id_, parent, value, style, x, y, w, h)
 
     def thirdparty_icon(self, id_, parent, value, x, y, url, w=IW, h=IH):
