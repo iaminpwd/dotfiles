@@ -5,7 +5,7 @@ trigger: Apply these rules ONLY when managing the dotfiles repository, committin
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/040-dotfiles-security-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
 
@@ -17,7 +17,8 @@ reviewed: 2026-07-21
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 버전 관리 (Git) 및 포매터 안전망
-- **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 다중 변경 사항은 의미 단위(Atomic)로 분리하여 개별 커밋하십시오.
+- **[MUST] No Unsolicited Commits:** 사용자가 커밋을 명시적으로 요청하지 않는 한, 어떤 경우에도 임의로 `git commit`을 실행하지 마십시오. 코드 수정이나 검증 완료 자체가 커밋 요청을 의미하지 않습니다.
+- **[MUST] Semantic Commits:** 사용자가 커밋을 요청한 경우, `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 동일한 목적(하나의 기능 추가·버그 수정·리팩토링)을 위해 여러 파일을 함께 수정했다면 하나의 커밋으로 묶고, 서로 다른 목적이 섞인 경우에만 목적별로 분리하여 개별 커밋하십시오.
 - **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 반드시 사용자의 명시적 승인을 받은 후에만 실행하십시오.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행하십시오.
 
@@ -48,7 +49,7 @@ git commit -m "update files and fix bugs"
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 커밋 전 `TruffleHog` 시크릿 스캔이 통과되고, 의미 단위로 분리된 시맨틱 커밋이 생성되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 사용자가 커밋을 요청한 경우에 한해, 커밋 전 `TruffleHog` 시크릿 스캔이 통과되고 목적 단위로 분리된 시맨틱 커밋이 생성되어야 합니다. 커밋 요청이 없는 작업은 파일 수정과 검증 통과만으로 완료로 간주하십시오.
 - **[MUST] 검증 도구 매핑:** `git diff --staged`를 실행하여 스테이징된 변경 사항이 단일 책임 원칙에 부합하는지 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

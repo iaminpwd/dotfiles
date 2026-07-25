@@ -99,15 +99,20 @@ priority: highest
 ## 8. 버전 관리 및 커밋 (Git)
 - **[MUST] Semantic Commits:** 코드나 문서 커밋 시, 반드시 `feat:`, `fix:`, `chore:`, `docs:` 와 같은 시맨틱 커밋 컨벤션을 사용하십시오.
 - **[MUST] Non-Destructive Git Operations:** 에이전트는 원자적 커밋 생성을 위해 `git commit`을 주로 사용하며, 충돌 리스크가 높은 원격 리베이스(`git rebase`)나 강제 푸시(`git push -f`) 등의 파괴적인 깃 조작은 임의로 실행하지 말고 사용자의 개입을 유도하십시오.
-- **[MUST] Explicit Atomic Commits:** 모든 변경 사항은 단일 책임 원칙에 따라 의미 있는 시맨틱 메시지를 갖는 여러 개의 논리적인 원자적 커밋(Atomic Commits)으로 철저히 분리하여 생성하십시오.
+- **[MUST] No Unsolicited Commits:** 사용자가 커밋을 명시적으로 요청하지 않는 한, 어떤 경우에도 임의로 `git commit`을 실행하지 마십시오. 코드 수정이나 검증 완료 자체가 커밋 요청을 의미하지 않습니다.
+- **[MUST] Explicit Atomic Commits:** 사용자가 커밋을 요청한 경우, 변경 사항을 논리적 목적 단위로 분리하여 커밋하십시오. 판단 기준은 다음과 같습니다: 동일한 기능 추가·동일한 버그 수정·동일한 리팩토링처럼 하나의 목적을 위해 여러 파일을 함께 수정했다면 파일 단위로 쪼개지 말고 하나의 커밋으로 묶으십시오. 서로 다른 기능, 서로 다른 버그 수정, 또는 코드 변경과 무관한 문서 변경이 섞여 있는 경우에만 목적별로 별도 커밋으로 분리하십시오.
   <examples>
   <example>
-  [Good]
+  [Good] 서로 다른 목적은 분리
   git commit -m "feat: 로그인 플로우 추가"
   git commit -m "fix: 대시보드 메모리 누수 해결"
   </example>
   <example>
-  [Bad]
+  [Good] 하나의 목적을 위해 여러 파일을 수정했다면 하나로 묶음
+  git commit -m "feat: 로그인 플로우 추가 (LoginForm.tsx, authApi.ts, auth.test.ts)"
+  </example>
+  <example>
+  [Bad] 서로 다른 목적이 한 커밋에 뒤섞임
   git commit -m "update files and fix bugs"
   </example>
   </examples>
