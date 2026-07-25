@@ -5,7 +5,7 @@ trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompt
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 
@@ -25,7 +25,7 @@ reviewed: 2026-07-21
 - **[MUST] Context Isolation:** 룰과 데이터(로그, 코드)가 섞이지 않도록 반드시 `<example>`, `<context>` 등 XML 태그로 격리하십시오.
 - **[MUST] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입하십시오.
 - **[MUST] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
-- **[MUST] CoT 예외:** 추론 네이티브 모델(o3, o4-mini, DeepSeek-R1, Qwen3 thinking)에는 CoT 및 추론 스캐폴딩 대신, 짧고 깔끔한 최종 목표 지시만 직접 제공하십시오.
+- **[MUST] CoT 예외:** 추론 네이티브 모델(GPT-5 계열 thinking 모드, DeepSeek-R1, Qwen3 thinking 등 — 구체 모델명은 시점에 따라 은퇴되므로 웹 검색으로 현행 여부 확인)에는 CoT 및 추론 스캐폴딩 대신, 짧고 깔끔한 최종 목표 지시만 직접 제공하십시오.
 
 ### 메타 프롬프트 예시 주입 (Few-Shot Examples)
 <examples>
@@ -67,6 +67,7 @@ Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시�
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
 - **[MUST] Conciseness:** 장황한 부연 설명을 모두 걷어내고, 즉시 행동 가능한 짧은 단문 명령형으로 프롬프트를 압축하십시오.
 - **[MUST] Quantitative Size Limit (정량적 크기 제약):** 단일 프롬프트 모듈(.md) 파일은 한글 기준 최대 2,000자(또는 150라인) 이내로 작성하십시오.
+- **[MUST] Library-Type Exception (레퍼런스/스펙형 문서 예외):** 파일명이 `-library.md`로 끝나는 문서(예: `020-aws-icon-style-library.md`, `035-openstack-icon-style-library.md`)는 공식 표준 원문 인용, 아이콘·스타일 매핑 테이블처럼 원천적으로 정보 밀도가 높은 레퍼런스/스펙 문서이므로 150라인이 아닌 **최대 250라인**까지 허용합니다. 이 예외는 파일명 접미사만으로 판별하며, `contexts/dotfiles/scripts/prompt-lint.sh`의 `check_file_size()`가 이 기준을 자동 적용합니다. 그 외 순수 행동 규칙형 문서(`-standard.md`, `-core.md` 등)는 여전히 150라인 제약을 그대로 따릅니다.
 - **[MUST] Rule-to-Description Ratio (규칙 대 설명 비율):** 설명적 텍스트(배경 설명, 개념 정의 등)는 전체 파일 크기의 15% 이하로 제한하고, 나머지 85% 이상은 즉시 실행 가능한 구체적인 `[MUST]`/`[NEVER]` 규칙 조항과 예시(`<examples>`)로 구성하십시오.
 
 - **[Trigger: Prompt Authored] 자가 비판 (Self-Critique):** 새로운 프롬프트 모듈(`.md`) 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 **추상적이고 장황한 문장(`~하는 것이 좋습니다` 등)이 포함되었는지, 그리고 핵심 예시가 XML(`<examples>`)로 명확히 격리되지 않았거나 다른 파일과 중복(SSOT 파괴)되는지** 집중 비판하십시오.
@@ -88,6 +89,7 @@ trigger: [본 룰북이 트리거되어야 하는 작업 상황 및 조건 예: 
 references:
   - [참조할 다른 룰북 파일 경로 1 (예: contexts/dotfiles/references/000-core.md)]
   - [참조할 다른 룰북 파일 경로 2]
+reviewed: [최종 검토일 YYYY-MM-DD — prompt-lint.sh가 90일 초과 시 WARNING 처리하므로 필수]
 ---
 # [도메인명] 설계 및 개발 표준 가이드
 

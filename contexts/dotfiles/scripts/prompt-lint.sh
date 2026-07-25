@@ -102,11 +102,15 @@ check_orphaned_files() {
 # 4. 파일 크기 제약 (150줄) 검사
 # -----------------------------------------------------------------------------
 check_file_size() {
-  echo "--- Step: File Size Constraint (<=150 lines) ---"
-  local f lines
+  echo "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
+  local f lines limit
   while IFS= read -r -d '' f; do
     lines=$(wc -l <"$f")
-    [ "$lines" -gt 150 ] && echo "[WARNING] 150줄 제약 초과: $f (${lines}줄)"
+    case "$f" in
+      *-library.md) limit=250 ;; # 레퍼런스/스펙형 (아이콘 매핑 등 정보 밀도가 높은 문서)
+      *) limit=150 ;;            # 순수 행동 규칙형
+    esac
+    [ "$lines" -gt "$limit" ] && echo "[WARNING] ${limit}줄 제약 초과: $f (${lines}줄)"
   done < <(find "$CONTEXTS_DIR" -path "*/references/*.md" -print0)
   echo "[INFO] 파일 크기 검사 완료."
 }
