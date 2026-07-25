@@ -5,7 +5,7 @@ trigger: Azure 관련 drawio XML 파일을 생성하거나 수정할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
   - contexts/drawio-gen/references/040-third-party-icon-library.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # Azure 아이콘 스타일 라이브러리 매핑
 
@@ -13,6 +13,40 @@ reviewed: 2026-07-21
 
 > [!TIP]
 > Azure 아이콘은 draw.io 내장 SVG 라이브러리(`img/lib/azure2/`)를 참조합니다. 별도 이미지 파일(base64 등) 삽입 없이 draw.io에서 즉시 렌더링됩니다.
+
+## 0. 공식 아이콘 사용 가이드라인 (SSOT — 원문 그대로 적용)
+
+출처: Microsoft 공식 Azure Architecture Center "Azure Icons" 페이지
+https://learn.microsoft.com/en-us/azure/architecture/icons/
+(조회일: 2026-07-24, 문서 `ms.date`: 2026-07-09)
+
+> **[MUST] 이 절은 여러 사례를 보고 유추한 관행이 아니라 Microsoft가 실제로 발행한
+> 규정입니다. 임의 해석 없이 원문 그대로 적용하십시오.**
+
+**일반 가이드라인(General guidelines) — 원문 그대로 인용**
+> "Do's — Use the icon to illustrate how products can work together. In
+> diagrams, we recommend including the product name somewhere close to the
+> icon. Use the icons as they would appear within Azure. / Don'ts — Don't
+> crop, flip, or rotate icons. Don't distort or change icon shape in any way.
+> Don't use Microsoft product icons to represent your product or service."
+
+- **[MUST]** 아이콘을 크롭·반전·회전하거나 형태를 왜곡하지 마십시오. §1 템플릿의
+  `image={IMAGE_PATH}` SVG를 원본 그대로 참조하고, 별도 가공(리사이즈 시 종횡비
+  변경 등)을 하지 마십시오.
+- **[MUST]** 아이콘 근처에 제품명을 병기하는 것을 권장합니다 — §1 템플릿의
+  `verticalLabelPosition=bottom` 라벨 배치가 이 권고와 일치합니다.
+- **[MUST]** Microsoft 제품 아이콘을 사용자 자신의 제품/서비스를 나타내는 용도로
+  대체 사용하지 마십시오. Azure 네이티브 서비스가 아닌 대상에는 §3(서드파티
+  아이콘, 040 SSOT)을 적용하고 Azure 아이콘을 오용하지 마십시오.
+
+**라이선스(Icon terms) — 원문 그대로 인용**
+> "Microsoft permits the use of these icons in architectural diagrams,
+> training materials, or documentation. You can copy, distribute, and display
+> the icons only for the permitted use unless granted explicit permission by
+> Microsoft."
+
+- **[MUST]** 아키텍처 다이어그램·교육 자료·문서 목적 범위 내에서만 아이콘을
+  사용하십시오. 로고/상표 대체 등 이 범위를 벗어난 용도로 사용하지 마십시오.
 
 ## 1. Azure 공통 Style 템플릿
 

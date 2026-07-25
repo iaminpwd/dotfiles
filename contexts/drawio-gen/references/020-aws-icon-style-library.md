@@ -5,11 +5,71 @@ trigger: AWS 관련 drawio XML 파일을 생성하거나 수정할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
   - contexts/drawio-gen/references/040-third-party-icon-library.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # AWS 아이콘 스타일 라이브러리 매핑
 
 본 모듈은 AWS 아키텍처 다이어그램 생성 시 사용되는 아이콘들의 Shape 속성 및 색상 매핑 가이드입니다.
+
+## 0. 공식 아이콘 사용 가이드라인 (SSOT — 원문 그대로 적용)
+
+출처: AWS 공식 "AWS Architecture Icons" 배포 자료(PowerPoint 자산 패키지, Release 23-2026.04.28) Guidelines
+섹션(슬라이드 14~18, 25). 자산 패키지 다운로드 페이지:
+https://aws.amazon.com/architecture/icons/
+(조회일: 2026-07-24, 원본 zip: `Microsoft-PPTx-toolkits_04302026.zip` → `AWS-Architecture-Icons-Deck_For-Light-BG_04282026.pptx`)
+
+> **[MUST] 이 절은 여러 사례를 보고 유추한 관행이 아니라 AWS가 실제로 배포한 디자인
+> 시스템 규정입니다. 임의 해석 없이 원문 그대로 적용하십시오.**
+
+**아이콘(Icons) — 원문 그대로 인용 (슬라이드 15)**
+> "DO: Use icons at their predefined size, color and format in diagrams. Scale
+> icons as needed for use in presentations. [...] DON'T: Crop service icons.
+> Flip or rotate icons. Change icon shapes."
+
+- **[MUST]** 아이콘 크기·색상·형태는 사전 정의된 값 그대로 사용하십시오. 크롭/반전/
+  회전/형태 변경을 금지합니다. §2 매핑 표의 `fillColor`는 AWS가 카테고리별로
+  사전 정의한 색상이므로, 매핑 표에 없는 임의의 색을 배정하지 마십시오.
+
+**그룹(Groups) — 원문 그대로 인용 (슬라이드 14)**
+> "DO: Use a generic group type if the presets do not suit your needs. Add a
+> custom group if needed. DON'T: Create groups with nonapproved AWS icon(s).
+> Resize group icons."
+
+- **[MUST]** Cloud/Region/VPC/Subnet 등 컨테이너(swimlane)는 AWS 프리셋 그룹
+  유형을 기본으로 쓰고, 프리셋에 없을 때만 제네릭 그룹으로 대체하십시오. 그룹
+  아이콘 자체를 리사이즈하지 않습니다 — 010 §2.1의 `startSize` 계층별 고정값
+  규칙과 일치합니다.
+
+**라벨·네이밍(Icon Labels) — 원문 그대로 인용 (슬라이드 17)**
+> "AWS service names must fit on no more than two lines. AWS or Amazon should
+> always be accompanied by the service name. Lines should never break
+> mid-word." / "DO: Break a line after the second word in the service name if
+> necessary. DON'T: Use short forms without first mentioning the full service
+> name somewhere in the document. [...] Break a line in the middle of a word."
+
+- **[MUST]** 서비스명에는 "AWS" 또는 "Amazon" 접두사를 반드시 함께 표기하고,
+  줄바꿈은 단어 중간에서 하지 말며 최대 2줄로 제한하십시오. 축약형(예: Amazon
+  EC2)을 다이어그램에서 반복 사용할 경우, 같은 문서 내 최초 1회는 전체 명칭을
+  명시한 뒤에만 축약형을 쓰십시오.
+
+**화살표·연결선(Arrows) — 원문 그대로 인용 (슬라이드 16)**
+> "DO: Use the preset arrows provided in the Elements section. Use straight
+> lines and right angles to connect objects wherever possible. [...] DON'T:
+> Use anything beside preset or default arrows."
+
+- **[MUST]** 엣지는 직교(orthogonal) 직선과 직각 연결을 우선하고, 불가피한 경우
+  에만 대각선을 허용하십시오 — 010 §2.3의 `edgeStyle=orthogonalEdgeStyle` 규칙과
+  일치합니다.
+
+**AWS Cloud 로고 그룹 리전 예외 — 원문 그대로 인용 (슬라이드 25 각주)**
+> "In certain AWS Regions (e.g., China), AWS does not own the rights for the
+> logo using the letters 'AWS.' Per our guidelines, use the group with the AWS
+> logo except in Regions where the AWS logo cannot be used. You may use the
+> group with the cloud icon in those cases."
+
+- **[MUST]** 중국 등 AWS 로고 사용이 제한된 리전을 명시적으로 다루는 다이어그램
+  에서는 로고형 AWS Cloud 그룹 대신 클라우드 아이콘형 그룹을 사용하십시오. 그
+  외 일반적인 경우는 로고형 그룹을 기본값으로 유지합니다.
 
 ## 1. AWS 공통 Style 템플릿
 
