@@ -7,7 +7,7 @@ references:
   - contexts/azure/references/020-security-compliance.md
   - contexts/azure/references/025-cloud-security.md
   - contexts/azure/references/030-finops-optimization.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
@@ -56,8 +56,10 @@ resource "azurerm_eventgrid_event_subscription" "example" {
 </example>
 <example>
 [Bad]
+```hcl
 # max_delivery_attempts 설정 누락 (이벤트 유실 및 무한 루프 위험)
 # dead_letter_endpoint 누락 (에러 시 유실된 메시지 추적 불가)
+```
 </example>
 </examples>
 

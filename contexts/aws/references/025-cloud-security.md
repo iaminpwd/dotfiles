@@ -6,7 +6,7 @@ references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/010-aws-core.md
   - contexts/aws/references/030-finops-optimization.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 클라우드 인프라 및 네트워크 보안 (Cloud Security)
 
@@ -54,8 +54,8 @@ reviewed: 2026-07-21
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Network Rule Modified] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 타겟 포트가 `0.0.0.0/0`에 완전 개방되었는가?
-  - 기준 2 (데이터 경로): VPC Endpoint가 배제되어 AWS 내부 통신이 퍼블릭 인터넷 망을 타는 경로가 있는가?
+  - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 모든 타겟 포트 인바운드가 `0.0.0.0/0` 없이 VPN 대역 또는 특정 보안 그룹으로만 격리되었는가?
+  - 기준 2 (데이터 경로): AWS 내부 서비스 통신이 VPC Endpoint를 경유하는 프라이빗 경로로만 구성되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 퍼블릭 IP를 갖는 EC2 인스턴스의 22(SSH) 또는 3389(RDP) 포트가 `0.0.0.0/0`으로 개방되어 배포 준비가 된 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
   - 컨테이너 이미지 파이프라인에서 취약한 기본 이미지(CVE 크리티컬 레벨) 노출이 스캔 결과 감지되었으나 대체 이미지가 제안되지 않을 경우 작업을 즉시 중단하십시오.

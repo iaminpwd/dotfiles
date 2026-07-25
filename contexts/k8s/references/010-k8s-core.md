@@ -5,7 +5,7 @@ trigger: Apply these rules when planning, designing, or reviewing Kubernetes con
 references:
   - contexts/k8s/references/020-networking-standard.md
   - contexts/k8s/references/070-advanced-security-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 
@@ -24,7 +24,7 @@ reviewed: 2026-07-21
 - **[MUST] Least Privilege (RBAC):** `cluster-admin`이나 와일드카드(`*`)가 포함된 Role 생성을 배제하고, 워크로드 실행용 ServiceAccount에는 Kubernetes API 접근 권한(`automountServiceAccountToken: false`)을 기본적으로 비활성화한 후 필요한 파드에만 명시적 Role을 부여하십시오.
 
 ### 2.2 워크로드 안정성 및 스케줄링
-- **[MUST] Resource Management (QoS):** 모든 Deployment 제안 시 `resources.requests`와 `resources.limits`를 반드시 명시하십시오. CPU Throttling 이슈 방지를 위해 CPU Limit을 넉넉히 설정하고, Memory Limit과 Request를 동일하게 설정하여 `Guaranteed` QoS 클래스를 확보하십시오.
+- **[MUST] Resource Management (QoS):** 모든 Deployment 제안 시 `resources.requests`와 `resources.limits`를 반드시 명시하십시오. Memory는 Limit과 Request를 동일하게 설정하여 OOM 리스크를 통제하고, CPU는 Throttling 방지를 위해 Limit을 Request보다 넉넉히 설정하십시오(이 조합의 QoS 클래스는 `Burstable`). 스케줄링 보장이 최우선인 핵심 워크로드에 한해 CPU/Memory 모두 Limit=Request로 맞춰 `Guaranteed` QoS를 확보하십시오. (Guaranteed는 모든 리소스의 Limit=Request일 때만 부여됩니다.)
 - **[MUST] High Availability Scheduling:** 노드 및 영역 장애에 대비하기 위해, 파드의 고가용성 분산 배치를 보장하도록 `topologySpreadConstraints` (maxSkew: 1, topologyKey: topology.kubernetes.io/zone) 및 `podAntiAffinity` 구성을 기본으로 포함하십시오.
 - **[MUST] Graceful Shutdown & Probes:** 서비스 무중단 배포를 위해 `readinessProbe`와 `livenessProbe`를 분리하여 설정하고, 파드 종료 시 트래픽 유실을 막기 위해 `preStop` 훅(예: `sleep 5`를 통한 엔드포인트 전파 지연 보완) 및 애플리케이션 레벨의 SIGTERM 처리를 구현하십시오.
 

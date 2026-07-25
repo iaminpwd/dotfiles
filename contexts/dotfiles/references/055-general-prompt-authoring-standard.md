@@ -4,7 +4,7 @@ priority: high
 trigger: Apply these rules when writing, fixing, improving, or adapting prompts for any AI tool, regardless of target repository.
 references:
   - contexts/dotfiles/references/000-core.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 범용 AI 프롬프트 작성 표준 가이드
 
@@ -36,7 +36,7 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
 - **[MUST] 교착상태 방지 설계 (Deadlock Prevention):** 특정 단계가 수행되기 전에 에이전트의 도구 사용을 조건부로 제한할 경우, 상황 분석 및 정보 조회를 위한 읽기 전용 도구(Read-only tools: `view_file`, `grep_search`, `list_dir` 등)까지 함께 금지하지 않도록 예외 규정을 항상 명시하십시오.
 - **[MUST] 성공 기준:** 완료 상태를 이진(pass/fail) 판단이 가능한 기준으로 명시하십시오.
 - **[MUST] 출력 계약:** 결과물의 형식, 길이, 완료 조건을 명시하십시오.
-- **[MUST] 프론트 로딩:** 의도, 제약조건, 수락 기준을 프롬프트 상위 30% 이내에 배치하십시오.
+- **[MUST] 프론트 로딩:** 의도, 제약조건, 수락 기준을 프롬프트 상위 30% 이내에 배치하십시오. (예외: 방대한 참조 데이터(로그, 공식 문서 원문 등)를 주입하는 롱 컨텍스트 프롬프트에서는 `050-prompt-engineering-standard.md` §3 Long Context Strategy에 따라 데이터를 최상단에, 핵심 지시를 맨 아래에 배치하십시오. 두 규칙은 상충이 아니라 '일반 프롬프트=프론트 로딩 / 대용량 데이터 주입형=데이터 우선' 조건 분기입니다.)
 - **[MUST] 구조 격리:** 복잡한 멀티 섹션 프롬프트는 XML 태그(`<context>`, `<task>`, `<constraints>`)로 구조화하십시오.
 - **[MUST] 그라운딩 앵커:** 팩트 기반 작업에는 `"State only what you can verify. If uncertain, say [uncertain]."` 제약을 포함하십시오.
 - **[MUST] 과잉 설계 방지:** `"Only make changes directly requested. Do not add features or refactor beyond what was asked."` 제약을 포함하십시오.

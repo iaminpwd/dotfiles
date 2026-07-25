@@ -7,7 +7,7 @@ references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/025-cloud-security.md
   - contexts/aws/references/030-finops-optimization.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Serverless 및 Event-driven 아키텍처
 
@@ -51,8 +51,10 @@ resource "aws_lambda_function_event_invoke_config" "example" {
 </example>
 <example>
 [Bad]
+```hcl
 # maximum_retry_attempts 설정 누락 (이벤트 유실 및 무한 루프 위험)
 # failure destination 누락 (에러 시 유실된 메시지 추적 불가)
+```
 </example>
 </examples>
 

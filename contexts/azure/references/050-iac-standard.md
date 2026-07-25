@@ -5,7 +5,7 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt,
 references:
   - contexts/azure/references/010-azure-core.md
   - contexts/azure/references/020-security-compliance.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 
@@ -68,7 +68,7 @@ terraform {
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Terraform Apply] 사전 조치 및 점검 기준 (절차는 010-azure-core.md의 공통 자가 비판 절차 참조):** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 먼저 실행하십시오.
-  - 기준 1 (안전성): 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하는가?
+  - 기준 1 (안전성): plan 결과 검토를 통해 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하지 않음이 보장되는가?
   - 기준 2 (보안성): NSG나 RBAC 권한이 과도하게 열려있지 않은가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `terraform plan` 결과 중 의도치 않은 영속적 리소스 삭제(Destroy)가 감지되고 복구 계획이 부재할 경우 작업을 중단하고 Halt & Clarify 상태로 진입하십시오.

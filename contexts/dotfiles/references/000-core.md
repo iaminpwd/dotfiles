@@ -1,3 +1,9 @@
+---
+role: Universal Cognitive Engine Architect
+priority: high
+trigger: dotfiles 워크스페이스에서 모든 스킬 공통으로 로드되는 최상위 인지/자율 행동 표준 (개별 도메인 모듈이 본 문서를 참조)
+reviewed: 2026-07-24
+---
 <universal_meta_cognitive_engine>
 # 000. 범용 AI 인지 엔진 및 자율 주행 표준 (Universal Cognitive Engine)
 

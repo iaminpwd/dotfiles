@@ -1,11 +1,11 @@
 ---
-role: Senior Prompt Architect
+role: Senior Security Engineer
 priority: high
 trigger: Apply these rules ONLY when handling sensitive credentials, SSH private keys, or running security/secret scans.
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 

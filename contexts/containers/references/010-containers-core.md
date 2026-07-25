@@ -5,7 +5,7 @@ trigger: Apply these rules when writing, reviewing, or optimizing Dockerfile/OCI
 references:
   - contexts/containers/references/020-image-hardening-standard.md
   - contexts/containers/references/030-supply-chain-security-standard.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨테이너 이미지 엔지니어링 코어 표준
 
@@ -24,7 +24,8 @@ reviewed: 2026-07-21
 - **[MUST] Layer Consolidation:** 동일 목적의 `RUN` 명령(패키지 설치+캐시 삭제)은 `&&`로 병합하여 레이어 수를 최소화하십시오.
 
 ### 2.2 빌드 인자 및 재현성
-- **[MUST] Pinned Versions:** 베이스 이미지는 `FROM node:20.12.2-slim`처럼 패치 버전까지 명시적으로 고정하십시오.
+- **[MUST] Pinned Versions:** 베이스 이미지는 `FROM node:24.18.0-slim`처럼 패치 버전까지 명시적으로 고정하십시오.
+- **[MUST] Non-EOL Runtime Only:** 베이스 이미지의 런타임 메이저 버전은 작성 시점에 웹 검색으로 지원 상태를 확인하여 EOL이 지나지 않은 LTS 버전을 채택하십시오. 특정 버전을 "최신 LTS"로 이 문서에 못박지 말고, 아래 예시의 버전도 그대로 복사하지 말고 채택 전 EOL 여부를 재확인하십시오. (런타임은 주기적으로 EOL됩니다 — 예: Node.js 20은 2026-04-30 EOL.)
 - **[MUST] No Build Secrets in Layers:** API 키, 토큰 등은 `ARG`/`ENV`로 영구 레이어에 굽지 말고, BuildKit `--mount=type=secret`으로 빌드 시점에만 임시 마운트하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
@@ -32,14 +33,14 @@ reviewed: 2026-07-21
 <example>
 [Good]
 ```dockerfile
-FROM node:20.12.2-slim AS build
+FROM node:24.18.0-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY . .
 RUN npm run build
 
-FROM gcr.io/distroless/nodejs20-debian12
+FROM gcr.io/distroless/nodejs24-debian13
 COPY --from=build /app/dist /app
 CMD ["/app/index.js"]
 ```

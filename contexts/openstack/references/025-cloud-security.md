@@ -6,7 +6,7 @@ references:
   - contexts/openstack/references/020-security-compliance.md
   - contexts/openstack/references/010-openstack-core.md
   - contexts/openstack/references/030-finops-optimization.md
-reviewed: 2026-07-23
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 클라우드 인프라 및 네트워크 보안 (Cloud Security)
 
@@ -51,8 +51,8 @@ reviewed: 2026-07-23
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Network Rule Modified] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 타겟 포트가 `0.0.0.0/0`에 완전 개방되었는가?
-  - 기준 2 (경계 통제): FWaaS/router 정책이 배제되어 tenant 간 트래픽이 무제한 라우팅되는 경로가 있는가?
+  - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 모든 타겟 포트 인그레스가 `0.0.0.0/0` 없이 VPN 대역 또는 원격 보안 그룹으로만 격리되었는가?
+  - 기준 2 (경계 통제): FWaaS/router 정책을 통해 tenant 간 트래픽이 승인된 경로로만 라우팅되도록 통제되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - floating IP를 갖는 인스턴스의 22(SSH) 또는 3389(RDP) 포트가 `0.0.0.0/0`으로 개방되어 배포 준비가 된 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
   - 포트 시큐리티가 비활성화(`port_security_enabled = false`)되어 스푸핑 방어가 제거된 설정이 감지되면 작업을 즉시 중단하십시오.

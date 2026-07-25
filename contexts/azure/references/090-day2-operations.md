@@ -6,7 +6,7 @@ references:
   - contexts/azure/references/050-iac-standard.md
   - contexts/azure/references/080-database-standard.md
   - contexts/azure/references/030-finops-optimization.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 
@@ -22,9 +22,11 @@ reviewed: 2026-07-21
 ### 2.1 가시성 및 모니터링 알람
 - **[MUST] SRE Golden Signals:** 사용자 경험 메트릭(P99 Latency, 5xx Error Rate 등) 위주로 알람을 설계하여 알람의 실질적인 유효성을 높이십시오.
 - **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 Action Group/Azure Functions를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
+- **[PREFER] Azure-Side Outage Awareness:** 자사 애플리케이션 장애와 Azure 자체 장애(가용 영역/리전 이슈)를 구분하기 위해 Azure Service Health의 이벤트 알림을 모니터링 파이프라인에 연동하십시오.
 
 ### 2.2 재해 복구(DR) 및 무중단 마이그레이션
 - **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Backup & Restore(최저 비용, RTO 수 시간~일), Pilot Light, Warm Standby, Multi-Site Active/Active(최고 비용, RTO 초~분 단위) 4단계 중 요구사항에 부합하는 모델을 명시적으로 선택하여 적용하십시오.
+- **[MUST] Centralized Backup:** 개별 서비스별 스냅샷 관리에 의존하지 말고, Azure Backup(Backup Center)을 통해 구독/리전 간 백업 정책(Backup Policy)과 교차 리전 복원(Cross-Region Restore)을 중앙 집중형으로 구성하십시오.
 - **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현하십시오.
 - **[PREFER] Migration Tool:** Flyway, Liquibase 등 팀마다 알맞는 스키마 버전 관리 도구를 선택하여 마이그레이션 이력을 코드로 관리하십시오.
 

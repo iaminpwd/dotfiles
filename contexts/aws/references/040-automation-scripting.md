@@ -1,10 +1,10 @@
 ---
-role: Senior Cloud Architect
+role: Senior DevOps Automation Engineer
 priority: high
 trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.
 references:
   - contexts/aws/references/010-aws-core.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
@@ -24,7 +24,7 @@ reviewed: 2026-07-21
 - **[PREFER] Cross-Platform Awareness:** WSL2 환경을 상정하여 윈도우 마운트 경로(`/mnt/c/` 등) 방어 코드를 설계에 기입하십시오.
 
 ### 2.2 도구 관리 및 가상환경 격리
-- **[PREFER] Tool Isolation:** CLI 도구 설치 시 `pipx` 또는 `mise` 도구 버전 관리 시스템을 활용하여 도구 전용 가상 가상환경에 격리 배포하도록 설계하십시오.
+- **[PREFER] Tool Isolation:** CLI 도구 설치 시 `pipx` 또는 `mise` 도구 버전 관리 시스템을 활용하여 도구 전용 가상환경에 격리 배포하도록 설계하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -56,8 +56,8 @@ apt-get install awscli -y  # root 설치 남용 및 멱등성 검증 누락
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Script Completed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행했을 때 자원 중단이나 중복 생성이 발생하는가?
-  - 기준 2 (보안성): 사용자의 환경 변수나 중요 패스워드 등의 유출 리스크가 스크립트 로그 상에 포함되는가?
+  - 기준 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행해도 자원 중단이나 중복 생성 없이 동일한 결과가 보장되는가?
+  - 기준 2 (보안성): 스크립트 로그와 출력에서 환경 변수·패스워드 등 민감 정보가 마스킹되어 유출 리스크가 제거되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 스크립트 코드 내에 `rm -rf ${VAR}/*`와 같이 매개변수 유효성(공백 체크 등) 없이 광대역 삭제를 수행하는 위험 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
   - Sudo 권한이 남용되어 사용자 격리가 불가능한 `sudo` 남발 코드가 감지될 시 작업을 멈추고 보안 수정을 요구하십시오.

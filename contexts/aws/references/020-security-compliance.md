@@ -4,7 +4,7 @@ priority: high
 trigger: Apply these rules whenever writing, modifying, or auditing AWS Security Groups, IAM Policies, Secrets, or general cloud infrastructure security.
 references:
   - contexts/aws/references/010-aws-core.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시크릿 및 핵심 보안 원칙 (Security Core)
 
@@ -61,7 +61,7 @@ password = "SuperSecret123!"
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: IAM Policy Created] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (최소 권한): 정책 내에 와일드카드(`*`)가 포함되어 권한 상승(Privilege Escalation) 가능성이 존재하는가?
+  - 기준 1 (최소 권한): 정책이 와일드카드(`*`) 없이(또는 접두사 한정으로만) 작성되어 권한 상승(Privilege Escalation) 가능성이 차단되었는가?
   - 기준 2 (자원 제한): `Resource` 구문에 명확한 ARN이 지정되어 리소스 격리가 보장되는가?
 - **[Trigger: Security Vulnerability Found] 중단 조건 (Halt Conditions):**
   - 자격 증명(Access Key 등)이 평문으로 파일이나 주석에 유출되었음이 감지되면 즉시 모든 작업을 중단(Hard Block)하고 유출 상태를 사용자에게 경고하십시오.

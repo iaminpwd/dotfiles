@@ -4,7 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks with openstack CLI, or installing system CLI tools.
 references:
   - contexts/openstack/references/010-openstack-core.md
-reviewed: 2026-07-23
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
@@ -57,8 +57,8 @@ openstack network create prd-web-net  # 이미 존재 시 실패
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Script Completed] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행했을 때 자원 중복 생성이나 실패가 발생하는가?
-  - 기준 2 (보안성): 사용자의 환경 변수나 OpenStack 자격 증명 유출 리스크가 스크립트 로그 상에 포함되는가?
+  - 기준 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행해도 자원 중복 생성이나 실패 없이 동일한 결과가 보장되는가?
+  - 기준 2 (보안성): 스크립트 로그와 출력에서 환경 변수·OpenStack 자격 증명 등 민감 정보가 마스킹되어 유출 리스크가 제거되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 스크립트 코드 내에 `rm -rf ${VAR}/*`와 같이 매개변수 유효성(공백 체크 등) 없이 광대역 삭제를 수행하는 위험 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
   - `openstack server delete`, `openstack volume delete` 등 파괴적 명령이 대상 필터 검증 없이 광역으로 실행되는 코드가 감지될 시 작업을 멈추고 안전장치 추가를 요구하십시오.

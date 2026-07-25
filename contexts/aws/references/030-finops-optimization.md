@@ -4,7 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when designing AWS infrastructure, provisioning resources, or optimizing cloud costs.
 references:
   - contexts/aws/references/010-aws-core.md
-reviewed: 2026-07-21
+reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: FinOps 및 비용 최적화 (Cost Optimization)
 
@@ -36,7 +36,7 @@ reviewed: 2026-07-21
 [Good]
 - "최초 구축 시에는 T3/T4g 인스턴스를 활용하고, 트래픽 패턴에 맞추어 Auto Scaling Group(ASG)을 통해 자원을 유동적으로 확보하십시오."
 - "EBS 볼륨 타입을 gp3로 선언하고 처리량(throughput) 및 IOPS를 필요 사양에 맞춰 수동 최적화하십시오."
-- "EKS 버전을 지정하기 전 `search_web`으로 '현재 날짜 기준' AWS EKS 표준 지원 버전을 검색하여, 요금 미발생이 확인된 최신 안정 버전인 `3.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
+- "EKS 버전을 지정하기 전 `search_web`으로 '현재 날짜 기준' AWS EKS 표준 지원 버전을 검색하여, 요금 미발생이 확인된 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
 </example>
 <example>
 [Bad]
