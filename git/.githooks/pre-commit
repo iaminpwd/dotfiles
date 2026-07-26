@@ -1,4 +1,10 @@
 #!/bin/bash
+# git diff --cached 는 저장소 루트 기준 경로를 돌려주므로, 이 훅의 모든 파일 검사는
+# cwd 가 저장소 루트임을 전제한다. git 은 훅을 항상 루트에서 실행하지만 사람이
+# 하위 디렉토리에서 직접 호출하면 존재하는 파일을 "디스크에 없음"으로 오판한다
+# (2026-07-26 확인). 전제를 코드로 고정한다.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
 # 새로 추가되거나 수정된 파일 목록 추출 (공백/특수문자 포함 파일명 안전 처리를 위해 NUL 구분 배열 사용)
 STAGED_FILES=()
 mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
@@ -44,6 +50,55 @@ fi
 
 # [추가] 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+# [추가] contexts/<skill>/{scripts,tests}/ 가 변경되면 해당 스킬의 회귀 테스트를 실행한다.
+# 픽스처는 자동 실행될 때만 안전망이고, 수동 실행에 의존하면 문서일 뿐이다.
+#
+# references/ 변경은 트리거하지 않는다. 픽스처가 검증하는 대상은 룰북 문서가 아니라
+# 검증기(스크립트)이므로 문서 편집만으로는 회귀가 생기지 않는다. 룰북을 자주 고치는
+# 작업 흐름에서 매번 8초씩 기다리게 만들지 않기 위한 선택이다.
+#
+# 전체 스위트를 다 돌리면 28초라 매 커밋에 쓸 수 없다(2026-07-26 실측:
+# aws/azure/openstack 각 8초대, containers 1.9초, k8s 1.0초, drawio-gen 0.08초).
+# 다만 pre-flight-check/scripts/ 는 모든 스킬의 회귀 테스트가 검증하는 공통 대상이므로
+# 이때만 전부 실행한다. 의존 스킬 목록을 여기에 하드코딩하면 스킬이 늘 때마다 드리프트한다.
+CHANGED_SKILLS=()
+add_skill() {
+  local s existing
+  s=$1
+  [ -x "$REPO_ROOT/contexts/$s/tests/run.sh" ] || return 0
+  for existing in "${CHANGED_SKILLS[@]:-}"; do
+    [ "$existing" = "$s" ] && return 0
+  done
+  CHANGED_SKILLS+=("$s")
+}
+
+for FILE in "${STAGED_FILES[@]:-}"; do
+  case "$FILE" in
+    contexts/pre-flight-check/scripts/*)
+      for DIR in "$REPO_ROOT"/contexts/*/tests/run.sh; do
+        [ -e "$DIR" ] || continue
+        SKILL=${DIR#"$REPO_ROOT"/contexts/}
+        add_skill "${SKILL%%/*}"
+      done
+      ;;
+    contexts/*/scripts/* | contexts/*/tests/*)
+      SKILL=${FILE#contexts/}
+      add_skill "${SKILL%%/*}"
+      ;;
+  esac
+done
+
+if [ "${#CHANGED_SKILLS[@]}" -gt 0 ]; then
+  echo "🧪 변경된 스킬의 회귀 테스트를 실행합니다: ${CHANGED_SKILLS[*]}"
+  for SKILL in "${CHANGED_SKILLS[@]}"; do
+    if ! bash "$REPO_ROOT/contexts/$SKILL/tests/run.sh"; then
+      echo "❌ $SKILL 회귀 테스트 실패로 커밋이 차단되었습니다."
+      echo "   재현: bash $REPO_ROOT/contexts/$SKILL/tests/run.sh"
+      exit 1
+    fi
+  done
+fi
 
 # ~/workspace 하위 실 업무 저장소는 pre-flight-check.sh 심볼릭 링크를 사람/AI가 깜빡해도
 # 자동으로 생성되도록 자가 치유 (무관한 외부 저장소까지 검증을 강제하지 않기 위해 workspace로 범위 한정)
