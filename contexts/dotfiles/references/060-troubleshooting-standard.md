@@ -12,8 +12,8 @@ reviewed: 2026-07-21
 본 모듈은 `dotfiles` 환경에서 에러(PATH 충돌, 패키지 설치 실패, 셸 문법 에러 등)를 마주했을 때 AI 에이전트의 실용적이고 방어적인 디버깅 절차를 규정합니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Bash/Zsh Debug Mode:** 스크립트 실행 오류나 터미널 로드 오류 시, 코드 수정 전에 반드시 `run_command`를 통해 `bash -x <script_name>` 또는 `zsh -x -i -c exit`를 선제적으로 실행하여 병목 지점을 정확히 추적하십시오.
-- **[MUST] Non-Persistent Shell Environment Awareness:** 에이전트 터미널(`run_command`) 환경은 독립적인 서브셸 세션으로 동작합니다. 변경된 셸 설정을 즉시 검증할 때는 반드시 `zsh -c "source ~/.zshrc && <verification_command>"` 와 같이 한 라인으로 묶어서 실행하십시오.
+- **[MUST] Bash/Zsh Debug Mode:** 스크립트 실행 오류나 터미널 로드 오류 시, 코드 수정 전에 반드시 터미널에서 `bash -x <script_name>` 또는 `zsh -x -i -c exit`를 선제적으로 실행하여 병목 지점을 정확히 추적하십시오.
+- **[MUST] Non-Persistent Shell Environment Awareness:** 에이전트 터미널 환경은 독립적인 서브셸 세션으로 동작합니다. 변경된 셸 설정을 즉시 검증할 때는 반드시 `zsh -c "source ~/.zshrc && <verification_command>"` 와 같이 한 라인으로 묶어서 실행하십시오.
 - **[MUST] Dangling Symlink Validation:** GNU Stow 또는 심볼릭 링크 설정 후에는 반드시 해당 링크가 깨진 상태(Dangling)가 아닌지 `[ -L <link> ] && [ -e <link> ]` 구문으로 목적지 도달 여부를 검증하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

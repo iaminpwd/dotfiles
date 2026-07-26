@@ -26,7 +26,7 @@ reviewed: 2026-07-21
 - **[MUST] NAT Gateway Avoidance:** Blob Storage, Cosmos DB 등 데이터 전송이 대량으로 발생하는 Azure 서비스와의 통신은 NAT Gateway 요금 폭증을 피하기 위해 Private Endpoint(Private Link) 또는 Service Endpoint를 구성하여 내부 인터넷 경로로 데이터를 격리하십시오.
 
 ### 2.3 구버전 연장 지원(Extended Support/LTS) 요금 회피
-- **[MUST] Explicit Fact-Check (버전 관리형 서비스 전수조사):** AKS, Azure Database for MySQL/PostgreSQL 등 **'엔진 버전(Version) 지정이 필요한 모든 Azure 관리형 서비스'**를 설계할 때, 해당 서비스에 Extended Support 또는 LTS(Long Term Support) 과금 정책이 존재하는지 웹 검색(`search_web`)으로 먼저 조사하십시오.
+- **[MUST] Explicit Fact-Check (버전 관리형 서비스 전수조사):** AKS, Azure Database for MySQL/PostgreSQL 등 **'엔진 버전(Version) 지정이 필요한 모든 Azure 관리형 서비스'**를 설계할 때, 해당 서비스에 Extended Support 또는 LTS(Long Term Support) 과금 정책이 존재하는지 웹 검색으로 먼저 조사하십시오.
 - **[MUST] Use Verified Latest Version:** 연장 지원 또는 LTS 과금 정책이 존재하는 서비스임이 확인되면, 학습 데이터의 기억에 의존하지 말고 **직전 단계에서 수행한 웹 검색 결과(또는 버전 확정을 위한 추가 웹 검색 결과)를 근거로** '현재 시간 기준' Azure 표준 지원(Standard Support)이 유효한 최신 안정화 버전을 코드에 반영함으로써 구버전으로 인한 숨은 비용을 차단하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
@@ -35,7 +35,7 @@ reviewed: 2026-07-21
 [Good]
 - "최초 구축 시에는 B-series(Burstable) 인스턴스를 활용하고, 트래픽 패턴에 맞추어 Virtual Machine Scale Sets(VMSS)를 통해 자원을 유동적으로 확보하십시오."
 - "관리형 디스크 타입을 Standard SSD로 선언하여 디스크 입출력 비용을 최적화하십시오."
-- "AKS 버전을 지정하기 전 `search_web`으로 '현재 날짜 기준' Azure AKS 표준 지원 버전을 검색하여, LTS 추가 요금이 발생하지 않는 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
+- "AKS 버전을 지정하기 전 웹 검색으로 '현재 날짜 기준' Azure AKS 표준 지원 버전을 검색하여, LTS 추가 요금이 발생하지 않는 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
 </example>
 <example>
 [Bad]

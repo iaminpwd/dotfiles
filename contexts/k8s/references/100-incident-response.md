@@ -13,7 +13,7 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Mitigation First:** 장애 접수 즉시 서비스 복구(롤백, 파드 증설, 트래픽 우회 등) 조치를 최우선 제안하십시오. 상세 원인 분석은 긴급 조치가 완료된 이후에 수행하십시오.
-- **[MUST] Active Data Gathering:** 반드시 `run_command`로 `kubectl get events`, `kubectl describe pod` 등의 실제 로그와 이벤트를 기계적으로 추출하여 팩트에 기반해서만 원인을 진단하십시오.
+- **[MUST] Active Data Gathering:** 반드시 터미널에서 `kubectl get events`, `kubectl describe pod` 등의 실제 로그와 이벤트를 기계적으로 추출하여 팩트에 기반해서만 원인을 진단하십시오.
 - **[MUST] Blameless RCA:** 장애 원인을 사람의 조작 실수로 규정하는 것을 배제하고, 이를 방어하지 못한 시스템적 가드레일(예: 이미지 태그 자동 검증 부재, Resource Limits 누락 등)의 공백을 규명하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

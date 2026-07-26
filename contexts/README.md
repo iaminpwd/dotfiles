@@ -32,8 +32,8 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 `run_command`로 `pre-flight-check.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 차단하십시오. (출처: 020-security-compliance.md)
+- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
+- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `pre-flight-check.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 차단하십시오. (출처: 020-security-compliance.md)
 ```
 
 ### 1.3. Planning (계획 수립)
@@ -199,7 +199,7 @@ priority: high
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[Trigger: Validation Failed 3 Times] Fast Fail & Halt (빠른 실패 및 중단):** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오. (출처: base.AGENTS.md)
-- **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 `ask_permission`을 호출하여 최소 경로 권한만 확보하십시오. (출처: base.AGENTS.md)
+- **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 사용자에게 최소 경로 권한만 요청하여 확보하십시오. (출처: base.AGENTS.md)
 ```
 
 ### 4.3. Eval-Driven Verification (평가 주도 검증 패턴)
@@ -260,7 +260,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류 등)만 방어하십시오. 발생 가능성이 희박한 이론적 엣지 케이스 방어 코드는 생략하십시오. (출처: base.AGENTS.md)
-- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 `run_command`로 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
+- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
 ```
 
 ---

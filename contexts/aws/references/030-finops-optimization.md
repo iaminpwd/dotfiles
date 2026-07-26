@@ -27,7 +27,7 @@ reviewed: 2026-07-24
 - **[MUST] NAT Gateway Avoidance:** S3, DynamoDB 등 트래픽 처리가 대량으로 발생하는 AWS 서비스와의 통신은 NAT Gateway 요금 폭증을 피하기 위해 VPC Endpoint(Gateway/Interface)를 구성하여 내부 인터넷 경로로 데이터를 격리하십시오.
 
 ### 2.3 구버전 연장 지원(Extended Support) 요금 회피
-- **[MUST] Explicit Fact-Check (버전 관리형 서비스 전수조사):** EKS, RDS, ElastiCache, MSK, OpenSearch를 비롯하여 **'엔진 버전(Version) 지정이 필요한 모든 AWS 관리형 서비스'**를 설계할 때, 해당 서비스에 Extended Support(연장 지원) 과금 정책이 존재하는지 웹 검색(`search_web`)으로 먼저 조사하십시오.
+- **[MUST] Explicit Fact-Check (버전 관리형 서비스 전수조사):** EKS, RDS, ElastiCache, MSK, OpenSearch를 비롯하여 **'엔진 버전(Version) 지정이 필요한 모든 AWS 관리형 서비스'**를 설계할 때, 해당 서비스에 Extended Support(연장 지원) 과금 정책이 존재하는지 웹 검색으로 먼저 조사하십시오.
 - **[MUST] Use Verified Latest Version:** 연장 지원 과금 정책이 존재하는 서비스임이 확인되면, 학습 데이터의 기억에 의존하지 말고 **직전 단계에서 수행한 웹 검색 결과(또는 버전 확정을 위한 추가 웹 검색 결과)를 근거로** '현재 시간 기준' AWS 표준 지원(Standard Support)이 유효한 최신 안정화 버전을 코드에 반영함으로써 구버전으로 인한 숨은 비용을 차단하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
@@ -36,7 +36,7 @@ reviewed: 2026-07-24
 [Good]
 - "최초 구축 시에는 T3/T4g 인스턴스를 활용하고, 트래픽 패턴에 맞추어 Auto Scaling Group(ASG)을 통해 자원을 유동적으로 확보하십시오."
 - "EBS 볼륨 타입을 gp3로 선언하고 처리량(throughput) 및 IOPS를 필요 사양에 맞춰 수동 최적화하십시오."
-- "EKS 버전을 지정하기 전 `search_web`으로 '현재 날짜 기준' AWS EKS 표준 지원 버전을 검색하여, 요금 미발생이 확인된 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
+- "EKS 버전을 지정하기 전 웹 검색으로 '현재 날짜 기준' AWS EKS 표준 지원 버전을 검색하여, 요금 미발생이 확인된 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정합니다." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
 </example>
 <example>
 [Bad]

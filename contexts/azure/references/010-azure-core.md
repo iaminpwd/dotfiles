@@ -20,14 +20,14 @@ reviewed: 2026-07-24
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 아키텍처 설계 및 데이터 조사 표준
-- **[MUST] Information Foraging:** 리소스 ID(VNet, Subnet 등)는 반드시 `run_command`를 통해 `az network` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보하십시오. 실제 Azure API 조회 결과(팩트)를 동적으로 참조하여 기재하십시오.
+- **[MUST] Information Foraging:** 리소스 ID(VNet, Subnet 등)는 반드시 터미널에서 `az network` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보하십시오. 실제 Azure API 조회 결과(팩트)를 동적으로 참조하여 기재하십시오.
 - **[MUST] Explicit Naming:** 아키텍처나 리소스 구조를 예시로 들 때는 `deployment-app`, `vnet-peering-hub-spoke` 처럼 직관적이고 구체적인 네이밍만 엄수하십시오.
 - **[MUST] Respect Constraints:** 사용자가 특정 기술(예: VM)을 명시적으로 요구한 경우 이를 최우선으로 반영하되, 관리형 대안은 참고 제안으로만 덧붙이십시오.
 - **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라 포매팅 도구 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시하십시오.
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 모든 Azure 인프라 코드를 설계하거나 작성하기 전, 네트워크 구조, RBAC 역할, NSG, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용하십시오. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
-- **Step 0. Active Investigation (기존 인프라 실태 조사):** `run_command`를 통해 연동 대상 서비스들의 현재 실제 상태(NSG 룰, RBAC Role Assignment, UDR, Private Endpoint 등)를 선제 조회하여 팩트를 확보하십시오.
+- **Step 0. Active Investigation (기존 인프라 실태 조사):** 터미널에서 연동 대상 서비스들의 현재 실제 상태(NSG 룰, RBAC Role Assignment, UDR, Private Endpoint 등)를 선제 조회하여 팩트를 확보하십시오.
 - 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
   1. **Network & Endpoint Topology:** VNet/Subnet 라우팅(UDR), Network Security Group(NSG) 양방향 포트, 그리고 Azure 내부 통신을 위한 **Private Endpoint (Private Link)** 매핑 상태. 특히 Private Endpoint 설계 시, 대상 서비스가 서브넷 및 프라이빗 DNS 존에 유효하게 연동되었는지 검증하십시오.
   2. **IAM/RBAC Dependency:** Azure AD(Entra ID) 기반 Role Assignment, Managed Identity 매핑 상태 및 최소 권한 원칙(PoLP) 검증. Role Assignment 작성 시 대상 Principal ID(사용자/Managed Identity)는 반드시 동적 변수로 바인딩하고 Scope의 정확성을 검증하십시오.
@@ -39,7 +39,7 @@ reviewed: 2026-07-24
 <examples>
 <example>
 [Good]
-- 능동적 데이터 수집: "VNet ID를 확인하기 위해 `run_command`로 `az network vnet list`를 실행하겠습니다."
+- 능동적 데이터 수집: "VNet ID를 확인하기 위해 터미널에서 `az network vnet list`를 실행하겠습니다."
 - AKS Virtual Nodes 우선 제안: "AKS Cluster 구축 시 Node Pool은 AKS Virtual Nodes를 우선 고려하십시오."
 </example>
 <example>

@@ -19,7 +19,7 @@ reviewed: 2026-07-24
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 버전 통제 및 멱등성 보장
-- **[MUST] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 `run_command`로 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 하드코딩하십시오.
+- **[MUST] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 터미널에서 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 하드코딩하십시오.
 - **[MUST] Non-Interactive Package Installation:** `apt`, `apt-get` 등을 통해 시스템 패키지를 설치해야 하는 경우, 반드시 `DEBIAN_FRONTEND=noninteractive` 환경 변수와 `-y` 플래그를 조합하여 비대화형으로 실행하십시오. (예: `sudo DEBIAN_FRONTEND=noninteractive apt-get install -y <package>`)
 - **[MUST] OS Package Manager Compatibility:** 특정 패키지 매니저(`apt`)를 임의로 가정하지 말고, `command -v apt-get || command -v yum || command -v brew` 등으로 현재 OS의 매니저를 사전에 분기 판별하십시오.
 

@@ -1,7 +1,7 @@
 ---
 role: Senior Prompt Architect
 priority: high
-trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompts and rulebooks (.contexts/*.md) for this repository.
+trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompts and rulebooks (contexts/*.md) for this repository.
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
@@ -9,7 +9,7 @@ reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 
-본 모듈은 룰북(`.contexts/` 내부 마크다운)을 설계/리팩토링할 때 적용되는 메타 프롬프팅 지침입니다. 범용 AI 프롬프트 작성 원칙은 `055-general-prompt-authoring-standard.md`를 참조하십시오.
+본 모듈은 룰북(`contexts/` 내부 마크다운)을 설계/리팩토링할 때 적용되는 메타 프롬프팅 지침입니다. 범용 AI 프롬프트 작성 원칙은 `055-general-prompt-authoring-standard.md`를 참조하십시오.
 
 ## 1. 프롬프트 모듈 분할 (Architecture & Modularity)
 - **[MUST] Modular Prompting:** AI 인지 부하 감소를 위해 프롬프트를 작은 모듈(마크다운)로 분할하십시오.
@@ -51,7 +51,7 @@ limits:
 </examples>
 
 ## 4. 자율 실행 통제 및 제약 (Autonomous Ops)
-- **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력(`write_to_file`)으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
+- **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한번에', '전체 출력' 등 일괄 완성을 요청할 경우, 축적된 모든 수정 사항을 종합하여 전체 파일의 완성본을 단일 출력으로 즉시 제공하십시오. 맥락이 부족한 부분은 실무 Best Practice를 기준으로 자율적으로 판단하여 빈칸까지 채운 완전한 최종본을 산출하십시오.
 - **[MUST] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
 - **[MUST] Split Complex Tasks:** 복잡한 셋업은 반드시 넘버링(Step-by-Step)된 단계별 지시로 분할하여 순차적으로 실행하도록 강제하십시오.
 - **[Trigger] Autonomous Action:** 에이전트의 자율 개입을 위해 `[Trigger: 이벤트명]` 형태의 조건문을 적극 설계하십시오.
@@ -66,7 +66,7 @@ Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시�
 ## 6. 프롬프트 최적화 (Readability)
 - **[MUST] SSOT 원칙:** 단일 규칙은 오직 하나의 파일에서만 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
 - **[MUST] Conciseness:** 장황한 부연 설명을 모두 걷어내고, 즉시 행동 가능한 짧은 단문 명령형으로 프롬프트를 압축하십시오.
-- **[MUST] Quantitative Size Limit (정량적 크기 제약):** 단일 프롬프트 모듈(.md) 파일은 한글 기준 최대 2,000자(또는 150라인) 이내로 작성하십시오.
+- **[MUST] Quantitative Size Limit (정량적 크기 제약):** 단일 프롬프트 모듈(.md) 파일은 150라인 이내로 작성하십시오. 기준은 라인 수 하나로 통일하며, `contexts/dotfiles/scripts/prompt-lint.sh`의 `check_file_size()`가 이 값을 자동 검증합니다. 라인 수를 초과하면 문서를 압축하지 말고 주제 단위로 분할하여 새 모듈로 떼어내십시오.
 - **[MUST] Library-Type Exception (레퍼런스/스펙형 문서 예외):** 파일명이 `-library.md`로 끝나는 문서(예: `020-aws-icon-style-library.md`, `035-openstack-icon-style-library.md`)는 공식 표준 원문 인용, 아이콘·스타일 매핑 테이블처럼 원천적으로 정보 밀도가 높은 레퍼런스/스펙 문서이므로 150라인이 아닌 **최대 250라인**까지 허용합니다. 이 예외는 파일명 접미사만으로 판별하며, `contexts/dotfiles/scripts/prompt-lint.sh`의 `check_file_size()`가 이 기준을 자동 적용합니다. 그 외 순수 행동 규칙형 문서(`-standard.md`, `-core.md` 등)는 여전히 150라인 제약을 그대로 따릅니다.
 - **[MUST] Rule-to-Description Ratio (규칙 대 설명 비율):** 설명적 텍스트(배경 설명, 개념 정의 등)는 전체 파일 크기의 15% 이하로 제한하고, 나머지 85% 이상은 즉시 실행 가능한 구체적인 `[MUST]`/`[NEVER]` 규칙 조항과 예시(`<examples>`)로 구성하십시오.
 
@@ -76,7 +76,7 @@ Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시�
 
 ## 7. 표준 룰북 템플릿 (Standard Rulebook Boilerplate)
 
-새로운 컨텍스트 룰북(`.contexts/*.md` 또는 `references/*.md`)을 작성할 때 일관된 프롬프트 품질 유지를 위해 아래 템플릿을 복사하여 사용하십시오.
+새로운 컨텍스트 룰북(`contexts/*.md` 또는 `references/*.md`)을 작성할 때 일관된 프롬프트 품질 유지를 위해 아래 템플릿을 복사하여 사용하십시오.
 
 > [!IMPORTANT]
 > 플랫폼 연동 및 자동 인덱싱을 담당하는 최상위 스킬 정의서(`SKILL.md`)는 본 보일러플레이트 템플릿의 대상이 아닙니다. 로더 호환성을 위해 `SKILL.md` 최상단에는 반드시 표준 `name` 및 `description` 키워드 스키마만 기재하고, 전체 룰북에 대한 일괄 `references` 사전 로드는 토큰 낭비 방지를 위해 금지하십시오.
@@ -120,7 +120,7 @@ reviewed: [최종 검토일 YYYY-MM-DD — prompt-lint.sh가 90일 초과 시 WA
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 본 작업을 완료했다고 판단하기 위한 이진(Pass/Fail) 기준을 명시하십시오. (예: `run_command`로 수행한 로컬 유닛 테스트 통과 등)
+- **[MUST] 완료 조건 (Done when):** 본 작업을 완료했다고 판단하기 위한 이진(Pass/Fail) 기준을 명시하십시오. (예: 로컬 유닛 테스트 통과 등)
 - **[MUST] 검증 도구 매핑:** [검증 시 사용할 구체적 CLI 도구명 예: eslint, pytest 등]
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

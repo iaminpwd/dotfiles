@@ -33,8 +33,8 @@ reviewed: 2026-07-21
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 아키텍처 설계 기획 표준
-- **[MUST] Agentic RAG:** 설계 전 에이전트 스스로 `grep_search`나 `view_file`을 사용하여 `030`(FinOps), `060`(K8s) 등 사내 표준 프롬프트 룰을 능동 조사하여 반영하십시오.
-- **[MUST] AWS Account Foraging:** 설계 착수 전 반드시 `run_command`로 `aws sts get-caller-identity`, `aws ec2 describe-vpcs` 등을 실행하여 계정 실제 상태를 팩트 기반으로 확보하십시오.
+- **[MUST] Agentic RAG:** 설계 전 에이전트 스스로 파일 검색·조회로 `030`(FinOps), `060`(K8s) 등 사내 표준 프롬프트 룰을 능동 조사하여 반영하십시오.
+- **[MUST] AWS Account Foraging:** 설계 착수 전 반드시 터미널에서 `aws sts get-caller-identity`, `aws ec2 describe-vpcs` 등을 실행하여 계정 실제 상태를 팩트 기반으로 확보하십시오.
 - **[MUST] Cloud Alternatives Table:** 컴퓨팅/스토리지 선택 시 2~3개의 AWS 서비스 대안과 비용/운영 복잡도를 Markdown Table로 제시하여 의사결정을 유도하십시오.
 - **[MUST] Architecture Blueprint & ADR:** 도입된 기술에 대해 ADR 형식을 차용하여 명시적인 채택/기각 사유와 트레이드오프를 기록하십시오.
 - **[MUST] Step-by-Step Execution:** 구현 청사진 설계 시 복잡도를 낮추기 위해 `vpc.tf` -> `iam.tf` -> `eks.tf` 등 의존성을 분리하여 순차적 생성 흐름을 작성하십시오.

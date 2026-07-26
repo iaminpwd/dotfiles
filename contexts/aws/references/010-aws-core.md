@@ -20,14 +20,14 @@ reviewed: 2026-07-24
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 아키텍처 설계 및 데이터 조사 표준
-- **[MUST] Information Foraging:** 리소스 ID(VPC, Subnet 등)는 반드시 `run_command`를 통해 `aws ec2` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보하십시오. 실제 AWS API 조회 결과(팩트)를 동적으로 참조하여 기재하십시오.
+- **[MUST] Information Foraging:** 리소스 ID(VPC, Subnet 등)는 반드시 터미널에서 `aws ec2` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보하십시오. 실제 AWS API 조회 결과(팩트)를 동적으로 참조하여 기재하십시오.
 - **[MUST] Explicit Naming:** 아키텍처나 리소스 구조를 예시로 들 때는 `deployment-app`, `tgw-attachment-vpc-a` 처럼 직관적이고 구체적인 네이밍만 엄수하십시오.
 - **[MUST] Respect Constraints:** 사용자가 특정 기술(예: EC2 직접 구성)을 명시적으로 요구한 경우 이를 최우선으로 반영하되, 관리형 대안은 참고 제안으로만 덧붙이십시오.
 - **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라 포매팅 도구 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시하십시오.
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 네트워크 구조, IAM 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용하십시오. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
-- **Step 0. Active Investigation (기존 인프라 실태 조사):** `run_command`를 통해 연동 대상 서비스들의 현재 실제 상태(Security Group 룰, IAM Policy, Route Table, VPC Endpoint 등)를 선제 조회하여 팩트를 확보하십시오.
+- **Step 0. Active Investigation (기존 인프라 실태 조사):** 터미널에서 연동 대상 서비스들의 현재 실제 상태(Security Group 룰, IAM Policy, Route Table, VPC Endpoint 등)를 선제 조회하여 팩트를 확보하십시오.
 - 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증하십시오.
   1. **Network & Endpoint Topology:** VPC 라우팅(IGW/NAT), Security Group 양방향 포트, AWS 내부 통신을 위한 VPC Endpoint(Gateway 등)가 실제 라우트 테이블(Route Table)에 연동되었는지 검증하십시오.
   2. **IAM Dependency:** Trust Relationship 작성 시 계정 ID는 동적 변수(`aws_caller_identity` 등)로 바인딩하고 Service Principal의 도메인 정확성을 검증하십시오. Trust Relationship과 Resource Policy의 양방향 일치를 검증하십시오.
@@ -39,7 +39,7 @@ reviewed: 2026-07-24
 <examples>
 <example>
 [Good]
-- 능동적 데이터 수집: "VPC ID를 확인하기 위해 `run_command`로 `aws ec2 describe-vpcs`를 실행하겠습니다."
+- 능동적 데이터 수집: "VPC ID를 확인하기 위해 터미널에서 `aws ec2 describe-vpcs`를 실행하겠습니다."
 - Fargate 우선 제안: "EKS Cluster 구축 시 Worker Node는 Fargate를 우선 고려하십시오."
 </example>
 <example>
