@@ -30,6 +30,7 @@ reviewed: 2026-07-24
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Microsoft Defender for Cloud 적용을 함께 제안하십시오.
 - **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 Azure Policy(Deny/Audit 이니셔티브)를 Management Group 단위로 함께 제안하십시오.
 - **[PREFER] Policy/RBAC:** 다중 구독 설계 시 Azure Management Groups의 Azure Policy 및 Azure RBAC를 활용하여 최대 권한 범위를 강제 제한하십시오.
+- **[PREFER] Vulnerability & Data Classification:** VM/컨테이너/SQL 워크로드의 알려진 CVE 취약점은 Microsoft Defender for Cloud의 Defender Vulnerability Management 스캐너로 자동 스캔하고, 데이터 저장소의 민감 데이터(PII 등)는 Microsoft Purview Data Map의 자동 분류(200종 이상 시스템 분류자)로 탐지하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

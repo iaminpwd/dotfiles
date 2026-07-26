@@ -21,6 +21,7 @@ reviewed: 2026-07-21
 - **[MUST] Committed Use Discounts:** 트래픽이 안정적으로 예측 가능한 프로덕션 상시 가동 베이스라인 워크로드에는 Azure Reserved VM Instances 또는 Azure Savings Plan for Compute를 적용하여 온디맨드 대비 비용을 절감하십시오. Spot(변동성 큰 비프로덕션/배치용)과 Reserved/Savings Plan(예측 가능한 프로덕션 베이스라인용)은 대체재가 아닌 상호 보완 전략으로 함께 적용하십시오.
 - **[PREFER] Storage Tiering:** Azure Blob Storage 설계 시, 장기 보관 목적의 데이터는 수명 주기(Lifecycle) 정책을 정의하여 Hot에서 Cool/Archive 계층으로 자동 전송되도록 하십시오.
 - **[PREFER] Managed Disk Optimization:** VM 관리형 디스크 제안 시 일반적인 워크로드 기준 가성비가 우수한 `Standard SSD` 또는 `Premium SSD v2` 디스크 타입을 기본값으로 기재하십시오.
+- **[PREFER] Continuous Right-Sizing:** 배포 직후의 사양 산정에 그치지 말고, 운영 중인 워크로드는 Azure Advisor의 VM/VMSS 비용 권고(최근 90일 CPU·메모리 지표 기반 리사이즈 또는 종료 제안)를 주기적으로 조회하여 인스턴스 SKU와 디스크 사양을 지속적으로 재조정하십시오.
 
 ### 2.2 네트워크 요금 회피
 - **[MUST] NAT Gateway Avoidance:** Blob Storage, Cosmos DB 등 데이터 전송이 대량으로 발생하는 Azure 서비스와의 통신은 NAT Gateway 요금 폭증을 피하기 위해 Private Endpoint(Private Link) 또는 Service Endpoint를 구성하여 내부 인터넷 경로로 데이터를 격리하십시오.
