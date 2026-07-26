@@ -23,9 +23,25 @@ cd "$REPO_ROOT" || {
   exit 1
 }
 
+# 실제로 검증을 수행하지 못한 도구 목록. 마지막 요약에서 함께 출력해, 아무것도 검사하지
+# 않고 "All Checks Passed"만 보이는 상황(가짜 초록불)을 사용자가 알아챌 수 있게 한다.
+UNAVAILABLE_TOOLS=()
+
+record_unavailable() {
+  local t existing
+  t=$1
+  for existing in "${UNAVAILABLE_TOOLS[@]:-}"; do
+    [ "$existing" = "$t" ] && return 0
+  done
+  UNAVAILABLE_TOOLS+=("$t")
+}
+
 has_tool() {
   local resolved
-  resolved=$(command -v "$1") || return 1
+  resolved=$(command -v "$1") || {
+    record_unavailable "$1"
+    return 1
+  }
   # mise shim 파일은 command -v로 항상 발견되지만, 해당 도구의 버전이 현재 디렉토리에서
   # 해석되지 않으면(예: mise 설정이 미치지 못하는 위치) 실제 호출 시점에 실패한다.
   # 각 도구마다 다른 --version 플래그를 흉내내는 대신, mise 자체에 해석 가능 여부를 물어본다.
@@ -33,7 +49,21 @@ has_tool() {
   # mise가 애초에 관리하지 않는 시스템 도구(apt 설치)까지 무조건 "mise which"로 되물으면
   # "not a mise bin" 오류로 오탐 처리되어, 실제로는 정상 설치된 도구를 건너뛰게 된다.
   if [[ "$resolved" == "$HOME/.local/share/mise/shims/"* ]] && command -v mise &>/dev/null; then
-    mise which "$1" &>/dev/null || return 1
+    if ! mise which "$1" &>/dev/null; then
+      # 해석 실패는 "미설치"가 아니라 "이 위치에서 shim이 동작하지 않음"이다. 설치 원본이
+      # 존재하면 그 경로를 PATH 앞에 붙여 실제로 호출 가능하게 만든다. 이 폴백이 없으면
+      # $HOME 밖 저장소에서 모든 검증이 "미설치"로 스킵된 채 "All Checks Passed"가 출력되어
+      # 무검증 통과로 이어진다(2026-07-26 실측: /tmp 클론에서 shellcheck/shfmt 전부 스킵).
+      local real
+      real=$(find "$HOME/.local/share/mise/installs/$1" -maxdepth 3 -name "$1" -type f -perm -u+x 2>/dev/null | sort -V | tail -1)
+      if [ -n "$real" ] && "$real" --version &>/dev/null; then
+        PATH="$(dirname "$real"):$PATH"
+        export PATH
+        return 0
+      fi
+      record_unavailable "$1"
+      return 1
+    fi
   fi
 }
 
@@ -750,6 +780,12 @@ main() {
 
   echo "================================================="
   echo "=== All Pre-Flight Checks Passed Successfully ==="
+  if [ "${#UNAVAILABLE_TOOLS[@]}" -gt 0 ]; then
+    echo "=== ⚠️  단, 아래 도구를 사용할 수 없어 해당 검증은 수행되지 않았습니다:"
+    echo "===    ${UNAVAILABLE_TOOLS[*]}"
+    echo "===    (미설치라면 'mise install -y', 설치했는데도 뜨면 mise 전역 설정"
+    echo "===     ~/.config/mise/config.toml 존재 여부를 확인하십시오)"
+  fi
   echo "================================================="
 }
 

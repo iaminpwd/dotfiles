@@ -60,6 +60,21 @@ if [ "$SHELL" != "$(which zsh)" ]; then
 fi
 
 echo "[3/6] Stow 연결을 위한 기존 파일 정리 및 연결..."
+# 아래 패키지 스캔(for d in */)은 CWD 기준으로 동작하므로, 다른 디렉토리에서
+# `bash ~/dotfiles/setup.sh`로 호출하면 엉뚱한 폴더가 stow 패키지로 잡혀 실패한다.
+# 15행에서 선언한 "실행 위치 무관" 계약을 지키기 위해 스캔 전에 저장소 루트로 이동한다.
+cd "$DOTFILES_DIR"
+
+# stow 대상 부모 디렉토리 선생성 (mise 설정이 ~/.config/mise/ 하위로 이동함)
+mkdir -p "$HOME/.config"
+
+# 구버전 배치에서 만들어진 ~/.mise.toml 링크는 더 이상 패키지에 없어 stow -R이 걷어내지
+# 못하므로, dotfiles를 가리키는 경우에 한해 직접 정리한다(사용자 실파일은 건드리지 않음).
+if [ -L "$HOME/.mise.toml" ] && [[ "$(readlink -f "$HOME/.mise.toml")" == "$DOTFILES_DIR"/* || ! -e "$HOME/.mise.toml" ]]; then
+  rm -f "$HOME/.mise.toml"
+  echo "   🧹 구 mise 설정 링크(~/.mise.toml)를 제거했습니다. 전역 설정은 ~/.config/mise/config.toml 입니다."
+fi
+
 # 1. contexts, assets, temp_ 등으로 시작하거나 숨김 폴더가 아닌 디렉토리 목록을 동적으로 Stow 패키지로 자동 획득
 STOW_PKGS=()
 for d in */; do
@@ -105,7 +120,11 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Mise 환경 신뢰 설정 및 도구 일괄 설치 (절대 경로 호출로 안정성 확보)
-~/.local/bin/mise trust ~/.mise.toml || true
+# 설정은 ~/.config/mise/config.toml(전역)에 둔다. ~/.mise.toml은 전역 설정이 아니라
+# "$HOME 디렉토리에만 적용되는 로컬 설정"이라, $HOME 밖 저장소(/tmp, /srv, /mnt/c 등)에서는
+# 도구가 해석되지 않아 pre-flight-check.sh의 has_tool()이 전 항목을 건너뛰고도
+# "All Checks Passed"를 출력하는 무검증 통과 사고로 이어졌다(2026-07-26 실측).
+~/.local/bin/mise trust "$HOME/.config/mise/config.toml" || true
 ~/.local/bin/mise install -y
 ~/.local/bin/mise ls
 
@@ -237,10 +256,16 @@ fi
 # 실행 권한 부여 (Stow로 이미 심볼릭 링크가 생성되었거나 생성될 예정이므로 원본에 권한 부여)
 chmod +x "$DOTFILES_DIR/git/.githooks/pre-commit" "$DOTFILES_DIR/git/.githooks/commit-msg"
 
-# 4. Git 전역 설정에 글로벌 훅 경로 활성화 등록 (이식성을 위해 물결표로 저장되도록 '~/.githooks' 명시 지정)
-# shellcheck disable=SC2088 # 쉘이 아닌 git config 값으로 저장되는 문자열이며, '~'는 git이 읽는 시점에 자체 확장함
-git config --global core.hooksPath "~/.githooks"
-echo "   ✅ Git 글로벌 pre-commit 훅 연동 및 경로 지정 완료: ~/.githooks"
+# 4. 훅 경로는 추적 파일 git/.gitconfig의 [core] hooksPath에 이미 선언되어 있으므로
+# `git config --global`로 다시 쓰지 않는다. ~/.gitconfig가 그 추적 파일의 심볼릭 링크라
+# --global 쓰기는 저장소 파일을 직접 수정하는 셈이어서, 습관화되면 개인정보까지 추적
+# 대상에 섞여 들어갈 수 있다. 여기서는 연동 결과만 확인해 보고한다.
+HOOKS_PATH=$(git config --global --get core.hooksPath || true)
+if [ -n "$HOOKS_PATH" ]; then
+  echo "   ✅ Git 글로벌 훅 경로 확인 완료: $HOOKS_PATH"
+else
+  echo "   ⚠️ core.hooksPath가 비어 있습니다. git/.gitconfig가 ~/.gitconfig로 링크되었는지 확인하세요."
+fi
 
 echo "========================================================="
 echo "🎉 모든 기본 설치 및 환경 세팅이 백그라운드로 완료되었습니다!"

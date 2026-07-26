@@ -31,7 +31,7 @@ fi
 
 # command -v는 mise shim 파일의 존재만 확인할 뿐 실제 실행 가능 여부는 보장하지 않는다.
 # 이 훅은 core.hooksPath로 전역 등록되어 $HOME 트리 밖(예: /tmp, 별도 마운트)의
-# 저장소에서도 실행되는데, 그런 위치에서는 mise가 ~/.mise.toml을 해석하지 못해
+# 저장소에서도 실행되는데, mise 설정이 해석되지 않는 위치에서는
 # "mise ERROR No version is set" 오류가 나면서 아래 trufflehog 호출이 실패하고,
 # 그 실패가 "시크릿 유출" 오탐으로 이어져 정상 커밋을 차단하는 문제가 있었다.
 # 따라서 실제 호출(--version)로 실행 가능 여부까지 확인한다.
@@ -75,17 +75,17 @@ add_skill() {
 
 for FILE in "${STAGED_FILES[@]:-}"; do
   case "$FILE" in
-    contexts/pre-flight-check/scripts/*)
-      for DIR in "$REPO_ROOT"/contexts/*/tests/run.sh; do
-        [ -e "$DIR" ] || continue
-        SKILL=${DIR#"$REPO_ROOT"/contexts/}
-        add_skill "${SKILL%%/*}"
-      done
-      ;;
-    contexts/*/scripts/* | contexts/*/tests/*)
-      SKILL=${FILE#contexts/}
+  contexts/pre-flight-check/scripts/*)
+    for DIR in "$REPO_ROOT"/contexts/*/tests/run.sh; do
+      [ -e "$DIR" ] || continue
+      SKILL=${DIR#"$REPO_ROOT"/contexts/}
       add_skill "${SKILL%%/*}"
-      ;;
+    done
+    ;;
+  contexts/*/scripts/* | contexts/*/tests/*)
+    SKILL=${FILE#contexts/}
+    add_skill "${SKILL%%/*}"
+    ;;
   esac
 done
 
@@ -103,7 +103,10 @@ fi
 # ~/workspace 하위 실 업무 저장소는 pre-flight-check.sh 심볼릭 링크를 사람/AI가 깜빡해도
 # 자동으로 생성되도록 자가 치유 (무관한 외부 저장소까지 검증을 강제하지 않기 위해 workspace로 범위 한정)
 if [[ "$REPO_ROOT/" == "$HOME/workspace/"* ]] && [ ! -e "$REPO_ROOT/pre-flight-check.sh" ] && [ ! -L "$REPO_ROOT/pre-flight-check.sh" ]; then
-  DOTFILES_PFC="$HOME/dotfiles/pre-flight-check.sh"
+  # 정본은 스킬 폴더 안에 있다. 예전에는 $HOME/dotfiles/pre-flight-check.sh를 참조했는데
+  # 그 경로에 파일이 없어 아래 [ -e ] 검사가 항상 실패, 자가치유가 한 번도 동작하지 않았고
+  # 링크 없는 워크스페이스 저장소는 검증 없이 커밋됐다(2026-07-26 실측).
+  DOTFILES_PFC="$HOME/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh"
   if [ -e "$DOTFILES_PFC" ]; then
     ln -sf "$DOTFILES_PFC" "$REPO_ROOT/pre-flight-check.sh"
     echo "🔗 워크스페이스 저장소에 pre-flight-check.sh 링크를 자동 생성했습니다: $REPO_ROOT/pre-flight-check.sh"

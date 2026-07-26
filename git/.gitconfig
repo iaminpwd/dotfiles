@@ -1,3 +1,7 @@
+# ⚠️ 이 파일은 ~/.gitconfig 로 심볼릭 링크되어 있으며 Git 추적 대상입니다.
+# 따라서 `git config --global <key> <value>` 를 실행하면 그 값이 이 파일에 기록되어
+# 저장소에 커밋될 수 있습니다. 개인정보나 토큰류를 넣을 때는 반드시 아래 로컬 파일을
+# 대상으로 지정하십시오: `git config --file ~/.gitconfig.local user.email you@example.com`
 [include]
     # 개인정보(이름, 이메일)는 Github에 올라가지 않도록
     # 로컬에만 존재하는 별도 파일을 불러와서 적용합니다.

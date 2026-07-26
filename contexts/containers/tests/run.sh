@@ -114,8 +114,8 @@ echo "=== containers 검증 파이프라인 회귀 테스트 ==="
 echo "--- hadolint (pre-flight-check.sh / 커밋 차단) ---"
 if require_tool hadolint; then
   run_hadolint ok-baseline.Dockerfile ""
-  run_hadolint fail-unpinned-base.Dockerfile         DL3007
-  run_hadolint fail-unpinned-apt.Dockerfile          DL3018
+  run_hadolint fail-unpinned-base.Dockerfile DL3007
+  run_hadolint fail-unpinned-apt.Dockerfile DL3018
   run_hadolint fail-shell-form-entrypoint.Dockerfile DL3025
 fi
 

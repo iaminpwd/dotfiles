@@ -107,9 +107,9 @@ echo "=== k8s 검증 파이프라인 회귀 테스트 ==="
 echo "--- kube-linter (pre-flight-check.sh) ---"
 if require_tool kube-linter; then
   run_kube_linter ok-baseline.yaml ""
-  run_kube_linter fail-privileged.yaml      privileged-container
-  run_kube_linter fail-host-network.yaml    host-network
-  run_kube_linter fail-run-as-root.yaml     run-as-non-root
+  run_kube_linter fail-privileged.yaml privileged-container
+  run_kube_linter fail-host-network.yaml host-network
+  run_kube_linter fail-run-as-root.yaml run-as-non-root
   run_kube_linter fail-unset-resources.yaml unset-memory-requirements
 fi
 

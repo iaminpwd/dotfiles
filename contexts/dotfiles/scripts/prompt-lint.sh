@@ -107,8 +107,8 @@ check_file_size() {
   while IFS= read -r -d '' f; do
     lines=$(wc -l <"$f")
     case "$f" in
-      *-library.md) limit=250 ;; # 레퍼런스/스펙형 (아이콘 매핑 등 정보 밀도가 높은 문서)
-      *) limit=150 ;;            # 순수 행동 규칙형
+    *-library.md) limit=250 ;; # 레퍼런스/스펙형 (아이콘 매핑 등 정보 밀도가 높은 문서)
+    *) limit=150 ;;            # 순수 행동 규칙형
     esac
     [ "$lines" -gt "$limit" ] && echo "[WARNING] ${limit}줄 제약 초과: $f (${lines}줄)"
   done < <(find "$CONTEXTS_DIR" -path "*/references/*.md" -print0)
