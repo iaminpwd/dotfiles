@@ -1,0 +1,19 @@
+# k8s-check.sh check_prometheus_rules 기준 통과 픽스처.
+# 검증기는 CRD 래퍼를 yq 로 벗겨 .spec 만 promtool 에 넘기므로, 이 파일도
+# 같은 경로로 검사된다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ok-prometheus-rule
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: HighPodRestartRate
+          expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 파드 재시작이 반복되고 있습니다

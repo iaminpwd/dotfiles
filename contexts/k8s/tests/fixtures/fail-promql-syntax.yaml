@@ -1,0 +1,20 @@
+# k8s-check.sh check_prometheus_rules 재현: PromQL 문법 오류가 커밋 전에
+# 차단되는지 고정한다. rate() 의 괄호가 닫히지 않아 promtool check rules 가
+# 파싱에 실패해야 한다. 이 검증이 죽으면 문법이 깨진 알림 규칙이 클러스터에
+# 반영된 뒤에야 발견된다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fail-promql-syntax
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: BrokenExpression
+          expr: rate(kube_pod_container_status_restarts_total[15m] > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 괄호가 닫히지 않은 잘못된 PromQL

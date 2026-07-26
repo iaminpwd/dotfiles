@@ -1,0 +1,68 @@
+# 010-k8s-core.md 2.2 절이 요구하는 형태를 모두 갖춘 기준 매니페스트.
+# kube-linter 기본 체크를 지적 0건으로 통과해야 한다. 이 픽스처가 깨지면
+# 룰북이 권장하는 매니페스트 모양 자체가 검증기를 통과하지 못한다는 뜻이다.
+# 나머지 fail-* 픽스처는 전부 이 파일에서 위반 1건만 주입한 변형이다.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ok-baseline
+  namespace: sample
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ok-baseline
+  namespace: sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ok-baseline
+  template:
+    metadata:
+      labels:
+        app: ok-baseline
+    spec:
+      # 010 2.1 Least Privilege: 워크로드 SA 는 API 토큰 자동 마운트 비활성
+      automountServiceAccountToken: false
+      serviceAccountName: ok-baseline
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      # 010 2.2 High Availability Scheduling
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ok-baseline
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: ok-baseline
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          # 010 2.2 QoS: Memory 는 Limit=Request 로 OOM 리스크 통제,
+          # CPU 는 Throttling 방지를 위해 Limit 을 Request 보다 넉넉히
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL

@@ -1,0 +1,18 @@
+# k8s-check.sh check_deprecated_apis 재현: 이미 제거된 API 버전이 커밋 전에
+# 차단되는지 고정한다. extensions/v1beta1 Ingress 는 k8s 1.22 에서 제거됐으므로
+# pluto 가 removed 로 판정해야 한다. 이 검증이 죽으면 클러스터 업그레이드
+# 시점에야 배포가 깨진 것을 알게 된다.
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: fail-deprecated-api
+  namespace: sample
+spec:
+  rules:
+    - host: sample.example.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: sample
+              servicePort: 80

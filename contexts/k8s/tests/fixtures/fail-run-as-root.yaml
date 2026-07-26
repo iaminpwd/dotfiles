@@ -1,0 +1,67 @@
+# 010-k8s-core.md 2.1 Pod Security Standards("루트 실행 금지") 재현.
+# 파드/컨테이너 securityContext 의 runAsNonRoot 를 false 로 뒤집은 변형이며,
+# kube-linter run-as-non-root 체크가 잡아야 한다.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ok-baseline
+  namespace: sample
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ok-baseline
+  namespace: sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ok-baseline
+  template:
+    metadata:
+      labels:
+        app: ok-baseline
+    spec:
+      # 010 2.1 Least Privilege: 워크로드 SA 는 API 토큰 자동 마운트 비활성
+      automountServiceAccountToken: false
+      serviceAccountName: ok-baseline
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      # 010 2.2 High Availability Scheduling
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ok-baseline
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: ok-baseline
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          # 010 2.2 QoS: Memory 는 Limit=Request 로 OOM 리스크 통제,
+          # CPU 는 Throttling 방지를 위해 Limit 을 Request 보다 넉넉히
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL

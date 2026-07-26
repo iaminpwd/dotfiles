@@ -186,8 +186,12 @@ validate_terraform() {
 
     if has_tool checkov; then
       # tflint는 문법/베스트프랙티스 위주라 과도한 IAM 권한, 퍼블릭 S3, 미암호화 리소스 같은
-      # "보안 오구성"은 잡지 못한다. checkov가 이 역할을 보완한다. LOW/MEDIUM은 soft-fail로
-      # 완화해 알림만 남기고, HIGH/CRITICAL만 커밋을 차단하도록 제한한다.
+      # "보안 오구성"은 잡지 못한다. checkov가 이 역할을 보완한다.
+      # 주의: --soft-fail-on LOW,MEDIUM 은 현재 실질적으로 아무것도 완화하지 못한다. OSS
+      # checkov는 심각도 데이터를 제공하지 않아 모든 failed_check의 severity가 None이므로
+      # 등급 필터가 걸리지 않는다(2026-07-26 실측, contexts/aws/tests 로 확인). 즉 지적이
+      # 하나라도 나오면 커밋이 차단된다. 등급별 완화가 실제로 필요해지면 Prisma Cloud API
+      # 키를 연동하거나 --skip-check로 개별 체크를 명시 제외해야 한다.
       echo "Running checkov (Terraform security misconfiguration scan)..."
       if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM; then
         echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 차단되었습니다." >&2
