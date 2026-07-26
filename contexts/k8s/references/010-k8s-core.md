@@ -64,6 +64,8 @@ lifecycle:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
+- **[MUST] Observability Delegation:** SLI/SLO, 알람 설계, 로깅, 분산 추적의 검증 기준은 `050-observability-standard` 모듈을 참조하여 위임하십시오.
+- **[MUST] 검증 도구 매핑:** 매니페스트와 Helm Chart는 `pre-flight-check` 스킬이 내부적으로 호출하는 `k8s-check.sh`(`kube-linter`, `promtool check rules` 등)로 정량 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족되기 전에는 완료를 선언하지 마십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
