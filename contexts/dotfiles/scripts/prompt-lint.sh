@@ -204,6 +204,27 @@ check_severity_tag_heuristic() {
 }
 
 # -----------------------------------------------------------------------------
+# 7b. MUST 로 태깅됐지만 본문이 선호를 서술하는 조항 탐지 (경고 전용)
+# -----------------------------------------------------------------------------
+check_prefer_language_tagged_must() {
+  echo "--- Step: Preference Wording Tagged as MUST (Warning Only) ---"
+  # 050 §1.1 조항 등급 기준: 본문에 "최우선 제안"/"우선 탐색"/"가급적" 같은
+  # 선호 표현이 있으면 그 조항은 MUST 가 아니라 PREFER 다. 등급 기준이 코퍼스에
+  # 없던 시절 MUST 가 기본값처럼 부착돼 84%까지 올라갔으므로(2026-07-26 실측),
+  # 재발을 막기 위해 문서 규칙을 여기서 기계 판정으로 승격시킨다(056 §2 3단계).
+  local prefer_words='최우선으로 (제안|탐색|시도|고려)|최우선 (제안|탐색)|가급적|우선 탐색|권장합니다|권장하십시오'
+  local f hits
+  while IFS= read -r -d '' f; do
+    hits=$(grep -nE '^\s*[-*]\s+\*\*\[MUST\]' "$f" 2>/dev/null | grep -E "$prefer_words" || true)
+    [ -n "$hits" ] && {
+      echo "[WARNING] MUST 인데 본문이 선호를 서술함 (PREFER 재등급 검토): $f"
+      echo "    ${hits//$'\n'/$'\n    '}"
+    }
+  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+  echo "[INFO] 선호 표현 등급 검사 완료."
+}
+
+# -----------------------------------------------------------------------------
 # 8. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
 # -----------------------------------------------------------------------------
 check_cross_skill_duplication() {
@@ -271,6 +292,7 @@ main() {
   check_vendor_leakage
   check_code_fences
   check_severity_tag_heuristic
+  check_prefer_language_tagged_must
   check_cross_skill_duplication
   check_vendor_mirror_symmetry
 
