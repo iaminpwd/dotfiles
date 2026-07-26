@@ -134,6 +134,24 @@ echo "   ✅ 제미나이 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.m
 ln -sfn "$CONTEXTS_DIR/.base.aiexclude" "$HOME/.gemini/config/.aiexclude"
 echo "   ✅ 제미나이 글로벌 AI 제외 목록(aiexclude) 세팅 완료: ~/.gemini/config/.aiexclude"
 
+# 제미나이/Antigravity 훅 등록 (편집 이력 자동 기록)
+# hooks.json의 command는 절대 경로만 허용되어 사용자 홈 경로에 종속되므로, 심볼릭 링크 대신
+# 템플릿의 __HOOK_SCRIPT__를 실제 경로로 치환해 생성한다. 사용자가 /hooks로 추가한 다른 훅을
+# 보존하기 위해 덮어쓰기 대신 훅 이름 기준으로 병합한다.
+HOOK_SCRIPT="$CONTEXTS_DIR/dotfiles/scripts/ai-history-hook.sh"
+GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
+[ -f "$GEMINI_HOOKS" ] || echo '{}' >"$GEMINI_HOOKS"
+if jq empty "$GEMINI_HOOKS" 2>/dev/null; then
+  GEMINI_HOOKS_TMP=$(mktemp)
+  jq -s --arg cmd "$HOOK_SCRIPT" \
+    '.[0] * (.[1] | .["ai-history-log"].PostToolUse[0].hooks[0].command = $cmd)' \
+    "$GEMINI_HOOKS" "$CONTEXTS_DIR/base.hooks.json" >"$GEMINI_HOOKS_TMP"
+  mv "$GEMINI_HOOKS_TMP" "$GEMINI_HOOKS"
+  echo "   ✅ 제미나이 편집 이력 훅 등록 완료: $GEMINI_HOOKS"
+else
+  echo "   ⚠️ $GEMINI_HOOKS 파일이 유효한 JSON이 아니어서 훅 등록을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
+fi
+
 # Claude Code 글로벌 설정 추가 (CLAUDE.md 및 skills 디렉토리)
 echo "=> [Claude Code Rules] 클로드 글로벌 CLAUDE.md 링크 주입 중..."
 mkdir -p "$HOME/.claude/skills"
@@ -146,9 +164,17 @@ CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 [ -f "$CLAUDE_SETTINGS" ] || echo '{}' >"$CLAUDE_SETTINGS"
 if jq empty "$CLAUDE_SETTINGS" 2>/dev/null; then
   CLAUDE_SETTINGS_TMP=$(mktemp)
-  jq '.attribution.commit = "" | .attribution.pr = ""' "$CLAUDE_SETTINGS" >"$CLAUDE_SETTINGS_TMP"
+  # 어트리뷰션 비활성화와 편집 이력 훅 등록을 함께 반영한다. 훅은 같은 command를 가진 기존
+  # 항목을 먼저 제거한 뒤 추가하므로, setup.sh를 여러 번 실행해도 중복 등록되지 않는다.
+  jq --arg cmd "$HOOK_SCRIPT" '
+    .attribution.commit = "" | .attribution.pr = ""
+    | .hooks.PostToolUse = (
+        ((.hooks.PostToolUse // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+        + [{matcher: "Edit|Write|MultiEdit|NotebookEdit", hooks: [{type: "command", command: $cmd}]}]
+      )
+  ' "$CLAUDE_SETTINGS" >"$CLAUDE_SETTINGS_TMP"
   mv "$CLAUDE_SETTINGS_TMP" "$CLAUDE_SETTINGS"
-  echo "   ✅ 클로드 커밋/PR 어트리뷰션(Co-Authored-By) 비활성화 완료: $CLAUDE_SETTINGS"
+  echo "   ✅ 클로드 어트리뷰션 비활성화 및 편집 이력 훅 등록 완료: $CLAUDE_SETTINGS"
 else
   echo "   ⚠️ $CLAUDE_SETTINGS 파일이 유효한 JSON이 아니어서 어트리뷰션 설정을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
 fi
