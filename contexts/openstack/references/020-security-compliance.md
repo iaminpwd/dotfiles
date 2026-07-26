@@ -18,7 +18,7 @@ reviewed: 2026-07-24
 ### 2.1 자격 증명 (Secrets) 관리
 - **[MUST] 시크릿 외부 저장소 연동 강제:** DB 패스워드 등 민감한 자격 증명은 반드시 Barbican 시크릿 저장소에 저장하고, 코드에서는 secret href(`data` 조회)로 동적 로드하십시오. 애플리케이션 런타임 자격은 `clouds.yaml`이 아닌 Barbican/Castellan을 경유하도록 설계하십시오.
 - **[MUST] Sensitive Output:** Terraform Output 중 민감 정보(패스워드, 시크릿 href)는 `sensitive = true`를 선언하십시오.
-- **[MUST] Application Credentials:** CI/CD 파이프라인 및 자동화 주체는 사용자 패스워드가 아닌 Keystone Application Credential(만료 시각·역할 범위 제한)을 사용하고, 가능하면 `unrestricted=false`로 트러스트 위임을 차단하십시오.
+- **[MUST] Application Credentials:** CI/CD 파이프라인 및 자동화 주체는 사용자 패스워드가 아닌 Keystone Application Credential(만료 시각·역할 범위 제한)을 사용하고, `unrestricted=false`로 트러스트 위임을 차단하십시오. 위임이 불가피한 경우에만 대상과 사유를 명시해 예외 처리하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

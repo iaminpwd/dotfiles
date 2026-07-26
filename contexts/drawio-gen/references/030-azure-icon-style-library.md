@@ -33,7 +33,7 @@ https://learn.microsoft.com/en-us/azure/architecture/icons/
 - **[MUST]** 아이콘을 크롭·반전·회전하거나 형태를 왜곡하지 마십시오. §1 템플릿의
   `image={IMAGE_PATH}` SVG를 원본 그대로 참조하고, 별도 가공(리사이즈 시 종횡비
   변경 등)을 하지 마십시오.
-- **[MUST]** 아이콘 근처에 제품명을 병기하는 것을 권장합니다 — §1 템플릿의
+- **[MUST]** 아이콘 근처에 제품명을 병기하십시오 — §1 템플릿의
   `verticalLabelPosition=bottom` 라벨 배치가 이 권고와 일치합니다.
 - **[MUST]** Microsoft 제품 아이콘을 사용자 자신의 제품/서비스를 나타내는 용도로
   대체 사용하지 마십시오. Azure 네이티브 서비스가 아닌 대상에는 §3(서드파티

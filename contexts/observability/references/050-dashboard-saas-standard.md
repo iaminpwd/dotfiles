@@ -13,7 +13,7 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Dashboard as Code:** 대시보드는 UI에서 수동으로 클릭하여 만들지 말고, JSON/Jsonnet(grafonnet) 또는 Terraform Provider로 코드화하여 버전 관리하십시오.
-- **[MUST] Ingestion Cost Awareness:** SaaS 관측성 플랫폼은 수집 볼륨/카디널리티 기준으로 과금되므로, 대시보드·알람 설계 시 비용 영향을 함께 고려하십시오.
+- **[MUST] Ingestion Cost Awareness:** SaaS 관측성 플랫폼은 수집 볼륨/카디널리티 기준으로 과금되므로, 대시보드·알람 설계 시 수집 볼륨과 카디널리티 증가분을 산정하여 예상 과금 영향을 함께 제시하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

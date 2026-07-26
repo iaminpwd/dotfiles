@@ -22,7 +22,7 @@ reviewed: 2026-07-21
 ### 2.1 EKS 클러스터 및 노드 구성
 - **[PREFER] Node Security:** EKS 워커 노드 구성 시 컨테이너 실행에 최적화되고 최소화된 Bottlerocket OS 사용을 우선 제안하십시오.
 - **[PREFER] Karpenter Autoscaling:** 노드 오토스케일링 구성 시 Cluster Autoscaler보다 워크로드 요구사항(CPU/메모리/아키텍처)에 맞춰 노드를 직접 프로비저닝하는 Karpenter 사용을 우선 제안하십시오.
-- **[PREFER] Managed Observability:** 클러스터 메트릭 및 로그 관측 시 자체 Prometheus/Grafana 운영 부담을 줄이기 위해 Amazon Managed Service for Prometheus(AMP) 및 Amazon Managed Grafana(AMG) 사용을 우선 고려하십시오.
+- **[PREFER] Managed Observability:** 클러스터 메트릭 및 로그 관측 시 자체 Prometheus/Grafana 운영 부담을 줄이기 위해 Amazon Managed Service for Prometheus(AMP) 및 Amazon Managed Grafana(AMG) 사용을 우선 제안하십시오.
 
 ### 2.2 공통 K8s 코어 룰 참조
 - **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 홈 디렉토리($HOME) 내에 기 설정된 `~/dotfiles/contexts/k8s/SKILL.md` 파일을 절대 경로로 조립하여 먼저 읽고(View), 그 안에 명시된 라우팅 가이드에 따라 `references/` 하위의 적절한 코어 룰을 참조하십시오.

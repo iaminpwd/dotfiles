@@ -33,7 +33,7 @@ reviewed: 2026-07-23
 | 2 | 클라우드 식별 | **코드 기반**: provider prefix 기반 자동 판별. **설명 기반**: 서비스 명칭 키워드(EKS/NAT Gateway 등=AWS, AKS/VNet 등=Azure, Nova/Neutron/Keystone/Octavia 등=OpenStack)로 판별하고 모호하면 질문 |
 | 3 | 리소스 그래프 추출 | 계층 매핑: Cloud > Region > VPC/VNet(OpenStack은 Neutron Network) > Subnet > Resource |
 | 4 | drawio XML 생성 | 클라우드별 아이콘 스타일(020/030/035/040) + 공통 XML 규격(010) 적용. 좌표는 손으로 하드코딩하지 말고 `~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py`의 `grid`/`hstack`/`vstack`으로 계산(010 §10). 읽는 사람 가독성을 위해 `title()`(제목/범위)·`legend()`(색·선 범례)를 포함하고 아이콘 라벨 줄바꿈·타이포그래피 위계를 적용(050) |
-| 5 | 규칙 준수 검증 | 010 문서 2~10절(크기/헤더높이/라벨링/엣지/AZ 서브라벨/아이콘/레이아웃 계산 규칙), 050 문서(범례/제목/라벨/타이포그래피), 005 문서(근거 충실성) 체크리스트 대조 검증. `layout_toolkit.validate()`로 겹침까지 기계적 확인 후 가능하면 렌더링 결과를 육안으로도 확인 |
+| 5 | 규칙 준수 검증 | 010 문서 2~10절(크기/헤더높이/라벨링/엣지/AZ 서브라벨/아이콘/레이아웃 계산 규칙), 050 문서(범례/제목/라벨/타이포그래피), 005 문서(근거 충실성) 체크리스트 대조 검증. `layout_toolkit.validate()`로 겹침까지 기계적 확인 후 렌더링 결과를 육안으로도 확인 |
 
 ## 3. 작업 프로세스 제약 (Operational Gate)
 

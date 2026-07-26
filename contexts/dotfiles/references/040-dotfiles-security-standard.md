@@ -46,7 +46,7 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 Verified Secrets 0건으로 완전 통과되고, 민감 파일들이 `.gitignore`에 적절히 등록되어 있음이 확인되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 Verified Secrets 0건으로 완전 통과되고, `.zshrc.local` 등 자격 증명을 담은 로컬 전용 파일이 `.gitignore`에 등록되어 `git status`에 노출되지 않음이 확인되어야 합니다.
 - **[MUST] 검증 도구 매핑:** `trufflehog git file://. --since-commit HEAD --only-verified`를 실행하여 하드코딩된 시크릿 유출 여부를 검사하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

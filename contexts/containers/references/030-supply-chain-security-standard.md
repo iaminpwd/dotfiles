@@ -24,7 +24,7 @@ reviewed: 2026-07-21
 ### 2.2 서명 및 출처 증명
 - **[MUST] Cosign Signing:** 이미지 푸시 직후 `cosign sign --key <key_ref> <image_digest>`로 서명하십시오. 태그가 아닌 다이제스트(digest) 기준으로 서명하여 태그 재사용 공격을 방지하십시오.
 - **[MUST] Verify Before Deploy:** 배포 파이프라인 진입 전 `cosign verify --key <key_ref> <image_digest>`로 서명을 검증하고, 검증 실패 시 배포를 즉시 차단하십시오.
-- **[PREFER] SLSA Provenance:** CI 파이프라인에서 빌드 출처(누가, 어떤 커밋으로, 어떤 빌더로 만들었는지) 증명을 위해 SLSA Provenance 첨부를 고려하십시오.
+- **[PREFER] SLSA Provenance:** CI 파이프라인에서 빌드 출처(누가, 어떤 커밋으로, 어떤 빌더로 만들었는지) 증명을 위해 SLSA Provenance를 첨부하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
