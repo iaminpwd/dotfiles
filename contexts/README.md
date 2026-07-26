@@ -49,8 +49,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **이론:** 여러 개의 각기 다른 페르소나를 가진 에이전트들이 서로 핑퐁(토론 및 비판)하며 최적해를 도출하는 기법.
 
 **통합 워크스페이스 적용 사례:**
-```markdown
-```
+현재 이 패턴은 단일 에이전트 내 역할 분리 수준까지만 적용되어 있습니다. 도메인별 `SKILL.md`가 서로 다른 `role`(예: `Senior Cloud Architect`, `Senior Prompt Architect`)을 선언해 작업 맥락마다 페르소나를 교체하지만, 복수 에이전트가 서로를 비판하는 핑퐁 루프는 구현하지 않았습니다. 검증은 에이전트 토론 대신 기계적 게이트(`pre-flight-check.sh`, 스킬별 회귀 픽스처)에 위임하는 설계 선택입니다.
 
 ---
 
@@ -124,14 +123,14 @@ priority: highest
 role: Senior Cloud Architect
 priority: high
 ```
-(출처: 010-aws-core.md의 Frontmatter 구조 적용)
+(출처: `contexts/aws/references/010-aws-core.md`의 Frontmatter 구조)
 
 #### 3.2.2. 복잡한 작업 분할 (Split Complex Tasks)
 **이론:** 복잡한 요청을 한 번에 던지지 않고, 모델이 이해하기 쉽도록 Step-by-Step으로 쪼개서 지시하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Split Complex Tasks: 복잡한 작업은 반드시 단계별 넘버링(Step-by-Step) 분할.
+- [PREFER] Split Complex Tasks: 복잡한 셋업은 단계별 넘버링(Step-by-Step)으로 분할하여 순차 실행하도록 강제. (출처: 050-prompt-engineering-standard.md)
 ```
 
 #### 3.2.3. 출력 포맷 엄격화 (Output Constraints)
@@ -173,7 +172,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Positive Action Override: 부정형 금지어보다 명확한 긍정형 대안 행동(`[MUST]`) 위주로 프롬프트를 작성할 것.
+- [PREFER] Positive Action Override: 부정형 금지어보다 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
 ```
 
 ---
@@ -206,7 +205,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 코드를 제안할 때 단순한 텍스트 성공 기준을 넘어서, 실행 결과나 JSON 파싱 여부를 프로그램적으로 자동 검증하는 '테스트 스크립트(Eval)' 코드를 반드시 포함하십시오. (출처: base.AGENTS.md)
+- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오. (출처: base.AGENTS.md)
 - **[MUST] Success Criteria over Manual Instructions:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오. (출처: base.AGENTS.md)
 ```
 
@@ -250,7 +249,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화:** 에러 분석 완료 시 반드시 지정된 템플릿을 사용하여 `troubleshooting-report.md`를 생성하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Task Completion] Generate Artifacts (산출물 생성):** 작업 완료 시 도메인에 특화된 명시적인 산출물(Artifact)을 생성하십시오. (출처: base.AGENTS.md)
+- **[Trigger: Major Task Completion] Generate Artifacts (산출물 생성):** 신규 기능 구현, 대규모 리팩토링, 인프라 코드 변경 등 중대한 작업이 완료되었을 때만 도메인 특화 산출물(Artifact)을 생성하고, 사소한 수정에는 생략하십시오. (출처: base.AGENTS.md)
 ```
 
 ### 5.4. Pragmatic Verification (실용적 검증 및 팩트 수집 패턴)
@@ -258,7 +257,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류 등)만 방어하십시오. 발생 가능성이 희박한 이론적 엣지 케이스 방어 코드는 생략하십시오. (출처: base.AGENTS.md)
+- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류)는 개별 로직에서 명시적으로 방어하고, 극단적인 엣지 케이스는 중복 방어하지 말고 공통 에러 핸들러나 미들웨어에 위임하십시오. (출처: base.AGENTS.md)
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
 ```
 
@@ -278,10 +277,23 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 - `AGENTS.md`를 통해 전역으로 주입되는 000번 마스터 코어(`highest`)의 룰은 그 어떤 예외도 허용하지 않는 **절대 타협 불가능한 헌법(Hard Constraint)**으로 작동하여 모든 스킬 모듈 간의 충돌을 종식시킵니다.
 
 ### 6.2. Prompt Self-Evolution (프롬프트 자가 진화 메타인지)
-**이론:** 에러가 났을 때 무한히 '코드'만 고치는 한계를 극복하기 위한 궁극의 자가 진화 트리거. 에러 해결에 3회 이상 실패 시 코드 탓을 멈추고 **"현재 사내 프롬프트 규정 원본 자체에 사각지대가 있다"**고 스스로 의심하게 만드는 기법.
+**이론:** 에러가 났을 때 무한히 '코드'만 고치는 한계를 극복하기 위한 자가 진화 트리거. 실패가 반복되면 코드 탓을 멈추고 **"현재 프롬프트 규정 원본 자체에 사각지대가 있다"**고 스스로 의심하게 만드는 기법.
 
-**통합 워크스페이스 적용 사례:**
-- 논리적 엣지 케이스 발견 시, 스스로 `references/*.md` 파일의 허점을 진단하고 사용자에게 "프롬프트 마크다운 원본의 리팩토링"을 역제안(Reverse Proposal)합니다.
+**통합 워크스페이스 적용 사례 (증거 기반으로 진화):**
+초기 판본은 "3회 실패 시 의심하라"는 지시뿐이라 근거로 삼을 데이터가 없었습니다. 현재는 관찰 기록을 남기고 그것을 입력으로 삼는 구조입니다.
+
+```markdown
+- **[Trigger: After Code Change] Workspace-Scoped Prompt Provenance Logging:** 파일을 변경한 턴은
+  프로젝트 루트 `.ai-history.log`에 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 남긴다.
+  일시·경로·도구명은 PostToolUse 훅이 자동 기록하고, 참조 룰 문서(`agent:<파일>#<조항명>`)와
+  목적은 에이전트가 덧붙인다. (출처: base.AGENTS.md 9장)
+- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 논리 오류·설계 미흡 지적]
+  Prompt Self-Evolution & Quality Flywheel:** 로그의 non-OK 라인을 조회하고, 각 라인의 출처 조항을
+  그 시점 버전(`git show <커밋>:<룰북>`)과 현재 본문으로 대조해 이미 개정된 항목을 제외한 뒤,
+  남은 항목만 `<loss_analysis>`로 분석해 프롬프트 개정안을 역제안한다. (출처: base.AGENTS.md 9장)
+```
+
+핵심은 **기록과 판정을 사람의 기억이 아니라 기계적 산출물에 위임**했다는 점입니다. 훅이 남긴 이력은 토큰을 소비하지 않고, 조항 개정 여부는 로그 일시와 룰북 git 이력을 대조해 판정하므로 별도의 상태 관리가 필요 없습니다.
 
 ### 6.3. Lazy Routing & Agentic RAG (능동적 지식 검색 및 라우팅)
 **이론:** 200만 토큰을 감당할 수 있더라도 불필요한 정보는 Mute 처리하고, 최상위 코어 룰에 특수 트리거를 심어두어 필요할 때만 스스로 030(FinOps) 등의 특정 도메인을 찾아 읽게 만드는 컨텍스트 통제 기법.
