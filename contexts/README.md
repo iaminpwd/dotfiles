@@ -156,7 +156,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- `setup.sh` 실행 시 글로벌 레지스트리 `~/.gemini/config/skills.json`에 모든 도메인 스킬을 동적 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
+- `setup.sh` 실행 시 글로벌 스킬 디렉토리(`~/.gemini/config/skills/<도메인>/`, `~/.claude/skills/<도메인>/`)에 `SKILL.md`와 `references/`를 심볼릭 링크로 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
 ```
 
 #### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)
@@ -165,7 +165,7 @@ priority: high
 **통합 워크스페이스 적용 사례 (물리적 SNR 최적화로 진화):**
 ```markdown
 - 우리 환경은 이 "SNR 최적화 철학"을 수용하되, 통짜 프롬프트 내에서 태그로 가리는(Mute) 방식을 넘어 아예 **물리적으로 컨텍스트를 차단(Dynamic RAG)**하도록 진화시켰습니다.
-- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 원천 차단하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
+- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting-standard.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 원천 차단하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
 ```
 
 #### 3.3.4. 부정어보다 긍정어 우선 (Positive Directives)

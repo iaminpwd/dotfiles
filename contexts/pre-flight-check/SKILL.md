@@ -16,8 +16,6 @@ reviewed: 2026-07-21
   *   터미널에서 `./pre-flight-check.sh`를 단일 실행하여 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등을 일괄 수행하십시오.
   *   **[MUST] 자율 자가 치유 시 연쇄 종속성 동시 수정:** `pre-flight-check.sh` 검증 실패로 인해 에이전트가 자가 치유(Self-Healing)를 시도할 때, 특정 리소스(예: AWS RDS)의 엔진 버전을 올리는 경우 연관된 종속성 속성(예: `parameter_group_name`, `option_group_name` 등)을 해당 엔진 버전에 호환되는 규격으로 함께 변경하여 2차 유효성 검사 실패(tflint, terraform validate 등)를 방지하십시오.
 
-
-
 ## 2. 정성적 정책 자가 검증 (Policy Self-Check)
 
 - **[MUST] Policy Self-Check Table (자가 검증 테이블 필수):** 작업 완료 보고 시(`walkthrough.md` 등) 아래 템플릿을 사용하여 클라우드 표준 정책 준수 여부를 테이블로 작성하십시오.
@@ -33,5 +31,3 @@ reviewed: 2026-07-21
       | (예시) 최소 권한 Security Group | Pass | [security.tf:L12-30](file:///$HOME/dotfiles/terraform/security.tf#L12-L30) | 인바운드는 사내 VPN CIDR 대역으로만 제한됨 |
       | [실제 점검 항목 기재] | Pass/N/A | [실제 물리 절대 경로 링크](file:///실제절대경로#L시작-L종료) | 실제 준수 여부 근거 요약 |
       ```
-
-
