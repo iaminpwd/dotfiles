@@ -19,6 +19,7 @@ reviewed: 2026-07-21
 | 시크릿 관리, 권한 설정, 로컬 보안 정책 | references/040-dotfiles-security-standard.md |
 | 이 저장소의 룰북(`contexts/*.md`) 설계·리팩토링 | references/050-prompt-engineering-standard.md |
 | 범용 AI 프롬프트 작성·수정·최적화 (대상 무관) | references/055-general-prompt-authoring-standard.md |
+| 룰북 조항 추가·검토·삭제 (근거 병기 및 검증 승격) | references/056-rule-provenance-standard.md |
 | 환경 셋업 오류 및 런타임 트러블슈팅 | references/060-troubleshooting-standard.md |
 
 * **공통 시스템 원칙**: references/000-core.md
