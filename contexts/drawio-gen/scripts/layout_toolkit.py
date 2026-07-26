@@ -209,10 +209,15 @@ class Diagram:
         # 옆/아래 요소와 겹치지 않을 여유를 확보한다. 이 크기를 쓰는 grid()/hstack()/
         # vstack() 호출의 gy(행 간격)도 라벨 줄 수에 맞게 함께 넉넉히 늘릴 것 —
         # 크기만 키우고 간격을 그대로 두면 다음 행과 다시 겹친다.
+        # 도형은 rounded(기본형) / cylinder(데이터 저장소) 2종만 쓴다(035 §2).
+        # hexagon 은 2026-07-25 폐기 — 공식 표준은 도형에 의미를 부여하지 않고 라벨에
+        # 맡기며, 육각형=큐는 보편 관례가 아니라 범례 없이는 오독을 만든다.
+        if shape == "hexagon":
+            raise ValueError("hexagon 은 035 §2 에서 폐기되었습니다. "
+                             "브로커·큐도 rounded 를 쓰고 구분은 라벨로 하십시오.")
         base = {
             "rounded": "rounded=1;",
             "cylinder": "shape=cylinder3;",
-            "hexagon": "shape=hexagon;perimeter=hexagonPerimeter2;",
         }.get(shape, "rounded=1;")
         stroke = self.OPENSTACK_ACCENT.get(emphasis, "#000000")
         sw = 3 if emphasis else 2
@@ -358,6 +363,26 @@ def validate(path):
                for a in ("source", "target") if c.get(a) and c.get(a) not in idset]
     if missing:
         lines.append(f"[FAIL] 끊어진 참조: {missing}")
+
+    # 엣지 끝점 미연결 검사 — drawio 에서 선을 드래그하다 도형에서 떨어지면 source/target
+    # 속성 자체가 사라지고 mxGeometry 안에 sourcePoint/targetPoint 고정 좌표만 남는다.
+    # 위 "끊어진 참조" 검사는 속성에 적힌 ID의 존재 여부만 보므로 속성이 아예 없는 이 경우를
+    # 통과시킨다 — openstack-basic 개념 아키텍처에서 "UI 제공" 화살표가 구분선에서 2.33px
+    # 떨어진 채 [OK] 로 보고된 실사례가 있다(2026-07-25). 눈으로는 붙어 보이지만 도형을
+    # 옮기면 화살표가 따라가지 않으므로 완료 조건에 포함한다.
+    detached = []
+    for cid, c in cells.items():
+        if c.get("edge") != "1":
+            continue
+        geom = c.find("mxGeometry")
+        pts = {p.get("as") for p in (geom.findall("mxPoint") if geom is not None else [])}
+        for attr, pt in (("source", "sourcePoint"), ("target", "targetPoint")):
+            if not c.get(attr):
+                where = f"고정좌표 {pt}" if pt in pts else "끝점 정의 없음"
+                detached.append(f"{cid}.{attr}({where})")
+    if detached:
+        lines.append(f"[FAIL] 엣지 끝점 미연결(도형에 부착되지 않음): {detached}")
+
     color_violations = []
 
     # 형제 노드 간 사각형 겹침 검사 (§10 신규 규칙)
@@ -443,6 +468,13 @@ def validate(path):
         "#232F3E",  # AWS/Azure Cloud 테두리
         "#D15100",  # Auto Scaling Group
         "#888888",  # 참고용 회색 그룹핑(예: 비활성/수동관리 표시) — 팀 컨벤션 예외 허용
+        # OpenStack 공식 강조색 3종 (035 §0). OpenStack 다이어그램에서 컨테이너를 구분해야
+        # 할 때는 AWS 유래 색이 아니라 이쪽을 쓴다 — 공식 표준이 "bright primary colors,
+        # such as light blue, red, or green"만 허용하므로 회색 계열은 원칙적으로 부적합하다
+        # (2026-07-25, openstack-basic 논리 아키텍처에서 #888888 을 쓰다 적발된 사례).
+        "#4A90D9",  # light blue
+        "#DA1A32",  # red
+        "#2E7D32",  # green
     }
     for cid, c in cells.items():
         style = c.get("style", "")
@@ -482,9 +514,9 @@ def validate(path):
         lines.append(f"[WARN] 범례 누락 의심 ({', '.join(reasons)}인데 '범례/Legend' 셀 없음) "
                      f"— layout_toolkit.legend()로 색·선 의미를 표기하십시오 (050 §1)")
 
-    ok = not dup and not missing and not color_violations
+    ok = not dup and not missing and not detached and not color_violations
     if ok and not lines:
-        lines.append(f"[OK] {len(ids)}개 mxCell, 중복/끊어진 참조/형제 겹침/라벨폭/팔레트 위반 없음")
+        lines.append(f"[OK] {len(ids)}개 mxCell, 중복/끊어진 참조/끝점 미연결/형제 겹침/라벨폭/팔레트 위반 없음")
     return ok, "\n".join(lines)
 
 
