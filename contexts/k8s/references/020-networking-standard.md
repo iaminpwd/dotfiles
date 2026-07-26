@@ -13,13 +13,13 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Zero-Trust 기반 인바운드 통제 (Default Deny All):** 네임스페이스 프로비저닝 시, 파드 간 통신(Ingress/Egress)을 기본적으로 차단하는 `Default Deny All` NetworkPolicy를 최우선 선언하십시오.
-- **[MUST] Service Mesh L7 mTLS:** 마이크로서비스 간 인증 및 L7 인가가 필요할 시, Istio/Linkerd 프록시 단에서 상호 인증(mTLS)을 `STRICT` 모드로 강제하는 아키텍처를 적용하십시오.
+- **[PREFER] Service Mesh L7 mTLS:** 마이크로서비스 간 인증 및 L7 인가가 필요할 시, Istio/Linkerd 프록시 단에서 상호 인증(mTLS)을 `STRICT` 모드로 강제하는 아키텍처를 적용하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 클러스터 네트워크 트래픽 제어 및 라우팅
 - **[MUST] Explicit Allow & Least Privilege:** `Default Deny All` 적용 후, 인가된 트래픽(예: frontend -> backend, Prometheus Scraping)만 명시적으로 허용하는 화이트리스트 정책을 구성하십시오. 범용 IP 대역(0.0.0.0/0) 완전 개방은 배제하고 명시적 대상 서브넷을 지정하십시오.
-- **[MUST] Ingress Standardization:** 외부 진입 트래픽 제어를 위해 Nginx Ingress, AWS ALB Ingress, 또는 Gateway API 단일 진입점을 두고 경로 기반 라우팅(Path-based Routing)을 설계하십시오.
+- **[PREFER] Ingress Standardization:** 외부 진입 트래픽 제어를 위해 Nginx Ingress, AWS ALB Ingress, 또는 Gateway API 단일 진입점을 두고 경로 기반 라우팅(Path-based Routing)을 설계하십시오.
 - **[MUST] Egress Control & FQDN Filtering:** 데이터 유출 방지를 위해 Cilium의 FQDN 기반 NetworkPolicy나 Istio Egress Gateway를 활용하여 인가된 외부 도메인(`*.example.com` 등)만 허용하도록 Egress를 제어하십시오.
 
 ### 2.2 네트워크 암호화 및 복원력

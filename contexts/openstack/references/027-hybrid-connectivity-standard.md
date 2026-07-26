@@ -17,7 +17,7 @@ reviewed: 2026-07-23
 - **[MUST] Non-overlapping CIDR:** 연결 대상 간 CIDR 충돌을 사전 조사하여 겹치지 않게 설계하고, 불가피한 경우 NAT로 주소 공간을 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
-- **[MUST] Dynamic Routing:** 다중 경로/대규모 연동은 정적 라우트 남발 대신 `neutron-dynamic-routing`(BGP speaker)으로 tenant/provider 대역을 광고하여 라우팅 확장성을 확보하십시오.
+- **[PREFER] Dynamic Routing:** 다중 경로/대규모 연동은 정적 라우트 남발 대신 `neutron-dynamic-routing`(BGP speaker)으로 tenant/provider 대역을 광고하여 라우팅 확장성을 확보하십시오.
 - **[MUST] Identity Federation:** 조직 간 워크로드 연동 시 자격 증명을 복제하지 말고, Keystone-to-Keystone(K2K) 또는 OIDC/SAML 페더레이션으로 신뢰를 위임하여 단기 페더레이션 토큰을 사용하십시오.
 - **[PREFER] Edge/DCN:** 지연에 민감한 엣지 워크로드는 분산 컴퓨트 노드(DCN) 아키텍처로 로컬에서 처리하고, 컨트롤플레인과의 WAN 의존을 최소화하십시오.
 - **[MUST] Multi-cloud Delegation:** 특정 퍼블릭 클라우드 리소스와의 상세 연동 설계는 `~/dotfiles/contexts/multi-cloud/SKILL.md`를 참조하여 크로스 벤더 규칙을 확보하십시오.

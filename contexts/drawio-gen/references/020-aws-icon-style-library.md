@@ -57,7 +57,7 @@ https://aws.amazon.com/architecture/icons/
 > lines and right angles to connect objects wherever possible. [...] DON'T:
 > Use anything beside preset or default arrows."
 
-- **[MUST]** 엣지는 직교(orthogonal) 직선과 직각 연결을 우선하고, 불가피한 경우
+- **[PREFER]** 엣지는 직교(orthogonal) 직선과 직각 연결을 우선하고, 불가피한 경우
   에만 대각선을 허용하십시오 — 010 §2.3의 `edgeStyle=orthogonalEdgeStyle` 규칙과
   일치합니다.
 

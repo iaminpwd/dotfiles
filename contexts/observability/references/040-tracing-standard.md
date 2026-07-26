@@ -16,7 +16,7 @@ reviewed: 2026-07-21
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 계측 및 샘플링
-- **[MUST] Auto-Instrumentation First:** 언어별 OpenTelemetry Auto-Instrumentation Agent를 우선 적용하고, 커스텀 Span은 비즈니스적으로 의미 있는 경계(결제 처리, 외부 API 호출 등)에만 수동 추가하십시오.
+- **[PREFER] Auto-Instrumentation First:** 언어별 OpenTelemetry Auto-Instrumentation Agent를 우선 적용하고, 커스텀 Span은 비즈니스적으로 의미 있는 경계(결제 처리, 외부 API 호출 등)에만 수동 추가하십시오.
 - **[MUST] Tail-Based Sampling for Errors:** Head-based 샘플링만 적용할 경우 에러 트레이스가 누락될 수 있으므로, Collector 단에서 에러/고지연 트레이스를 100% 보존하는 Tail-Based Sampling 정책을 구성하십시오.
 - **[PREFER] Sampling Rate by Traffic Tier:** 트래픽이 큰 서비스는 기본 샘플링율(예: 10%)을 적용하고, 저트래픽 핵심 경로는 100% 샘플링을 유지하십시오.
 

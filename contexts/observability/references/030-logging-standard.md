@@ -20,7 +20,7 @@ reviewed: 2026-07-21
 - **[MUST] Context Enrichment:** 로그 라인에 `trace_id`, `service.name`, `namespace`, `severity` 필드를 표준 스키마로 자동 주입하십시오.
 
 ### 2.2 비용 및 보존 정책
-- **[MUST] Retention Tiering:** 실시간 조회가 필요한 최근 로그(예: 7~14일)는 고속 조회 계층(Loki, CloudWatch Logs)에, 규정 준수용 장기 보관 로그는 저비용 오브젝트 스토리지(S3/Blob)로 계층 분리하십시오.
+- **[PREFER] Retention Tiering:** 실시간 조회가 필요한 최근 로그(예: 7~14일)는 고속 조회 계층(Loki, CloudWatch Logs)에, 규정 준수용 장기 보관 로그는 저비용 오브젝트 스토리지(S3/Blob)로 계층 분리하십시오.
 - **[PREFER] Sampling for High-Volume Debug Logs:** `DEBUG` 레벨 로그가 대량 발생하는 경로는 100% 수집 대신 샘플링(예: 10%) 비율을 적용해 수집 비용을 통제하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

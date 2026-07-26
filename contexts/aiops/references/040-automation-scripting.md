@@ -23,7 +23,7 @@ reviewed: 2026-07-21
 - **[MUST] Strict Grounding:** 장애 RCA 분석 시 AI 모델 자체의 파라미터 지식 의존을 배제하고, 수집된 팩트 데이터와 공식 런북에만 기반(Grounding)하여 답변하며, 입증할 수 없는 사실은 "알 수 없음"으로 처리하여 환각을 차단하십시오.
 
 ### 2.2 복원력 및 카오스 엔지니어링
-- **[MUST] Fault Injection Testing:** 단위 테스트 작성 시 정상 경로 외에 네트워크 타임아웃, 권한 오류, 비정상 대형 페이로드를 의도적으로 주입하는 방어 로직 검증 코드(Fault Injection)를 필수 포함하십시오.
+- **[PREFER] Fault Injection Testing:** 단위 테스트 작성 시 정상 경로 외에 네트워크 타임아웃, 권한 오류, 비정상 대형 페이로드를 의도적으로 주입하는 방어 로직 검증 코드(Fault Injection)를 필수 포함하십시오.
 - **[PREFER] Chaos Engineering:** 프로덕션 인프라 복원력 검증을 위해 클라우드 네이티브 카오스 도구(AWS FIS, Azure Chaos Studio) 또는 오픈소스 도구(Chaos Mesh, LitmusChaos)를 연동하여 데이터베이스 Failover 및 가용 영역(AZ) 장애 상황을 주기적으로 자동 시뮬레이션하는 파이프라인을 구축하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

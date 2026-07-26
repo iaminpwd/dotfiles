@@ -18,7 +18,7 @@ reviewed: 2026-07-23
 
 ### 2.1 컴퓨팅 및 스토리지 최적화
 - **[PREFER] Overcommit & Host Aggregate:** CPU/RAM overcommit 비율을 워크로드 특성별로 분리하고, 성능 민감 워크로드는 전용 Host Aggregate/AZ로 격리하여 노이지 네이버(noisy neighbor)를 방지하십시오.
-- **[MUST] Reclaim Orphaned Resources:** 미연결(unattached) Cinder 볼륨, 미할당(unassociated) floating IP, 방치된 스냅샷은 프라이빗 클라우드의 대표적 낭비 요인이므로 주기적으로 조회하여 회수하십시오.
+- **[PREFER] Reclaim Orphaned Resources:** 미연결(unattached) Cinder 볼륨, 미할당(unassociated) floating IP, 방치된 스냅샷은 프라이빗 클라우드의 대표적 낭비 요인이므로 주기적으로 조회하여 회수하십시오.
 - **[PREFER] Storage Tiering:** Cinder 볼륨 타입을 성능 등급(SSD/HDD 백엔드)별로 분리하고, 콜드 데이터는 저비용 백엔드 또는 Swift 객체 스토리지로 이관하는 수명 주기 정책을 정의하십시오.
 - **[PREFER] Ceph Efficiency:** Ceph 백엔드 사용 시 replica 3 대비 용량 효율이 높은 Erasure Coding을 콜드/객체 풀에 적용하고, thin provisioning 대비 실제 사용량을 상시 모니터링하십시오.
 - **[PREFER] Continuous Right-Sizing:** 배포 직후 사양 산정에 그치지 말고, Ceilometer/Gnocchi의 실사용 CPU/메모리 지표 기반으로 Flavor와 볼륨 사양을 주기적으로 재조정하십시오.

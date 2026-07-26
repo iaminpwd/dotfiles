@@ -14,12 +14,12 @@ reviewed: 2026-07-21
 ## 1. 핵심 설계 원칙
 - **[MUST] Metric-based Scaling:** 파드 레플리카 수동 지정을 배제하고, CPU/Memory 기반 HPA 또는 Kafka/SQS 이벤트 기반 KEDA 스케일러를 적용하십시오.
 - **[MUST] VPA/HPA Conflict Avoidance:** HPA와 VPA가 동일 메트릭(CPU/Memory)을 기반으로 동시 작동하여 리소스 Thrashing(충돌)을 일으키는 아키텍처를 배제하고, VPA는 `Off` 또는 `Initial` 모드로 작동시켜 권장 권고치만 수집하도록 하십시오.
-- **[MUST] Dynamic Provisioning:** Karpenter 또는 클라우드 관리형 오토스케일러를 제안하여 동적 노드 프로비저닝을 가속화하십시오.
+- **[PREFER] Dynamic Provisioning:** Karpenter 또는 클라우드 관리형 오토스케일러를 제안하여 동적 노드 프로비저닝을 가속화하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 클러스터 및 노드 스케일링
-- **[MUST] Multi-Architecture & Spot Instances:** 비용 절감을 위해 Spot Virtual Machines/Instances 사용을 우선 제안하고, Karpenter NodePool 설계 시 Spot 인스턴스와 다중 인스턴스 패밀리(amd64, arm64) 구성을 혼합하도록 기재하십시오.
+- **[PREFER] Multi-Architecture & Spot Instances:** 비용 절감을 위해 Spot Virtual Machines/Instances 사용을 우선 제안하고, Karpenter NodePool 설계 시 Spot 인스턴스와 다중 인스턴스 패밀리(amd64, arm64) 구성을 혼합하도록 기재하십시오.
 - **[MUST] Spot Interruption Handling:** Spot 회수에 대비하기 위해 Node Termination Handler(NTH) 또는 Karpenter native 이벤트를 연동하고, 파드에 Graceful Shutdown(preStop 훅) 설정을 보증하십시오.
 
 ### 2.2 FinOps 및 리소스 최적화

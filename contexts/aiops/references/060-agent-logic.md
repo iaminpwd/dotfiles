@@ -13,7 +13,7 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Runbook Integration:** 웹 검색이나 임의 추정에 의존하는 행위를 배제하고, 사내 장애 런북(Runbook) 및 사후 분석 리포트(Post-mortem) 데이터를 Vector DB에서 RAG를 통해 참조하여 근거 기반으로 답변하도록 설계하십시오.
-- **[MUST] Semantic Caching:** 다량의 동일 알람 유입에 따른 중복 LLM API 호출(Throttling)을 방지하도록 파이프라인 앞단에 의미론적 캐싱(Semantic Caching) 레이어를 의무 배치하십시오.
+- **[PREFER] Semantic Caching:** 다량의 동일 알람 유입에 따른 중복 LLM API 호출(Throttling)을 방지하도록 파이프라인 앞단에 의미론적 캐싱(Semantic Caching) 레이어를 의무 배치하십시오.
 - **[MUST] Graceful Degradation:** Vector DB나 LLM API 장애 시에도 파이프라인의 최소 가동성을 보장하도록 규칙 기반 백업 로직(Rule-based Fallback)으로 자동 전환되는 방어를 설계하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

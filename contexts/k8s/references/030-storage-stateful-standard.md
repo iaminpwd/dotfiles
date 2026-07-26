@@ -18,7 +18,7 @@ reviewed: 2026-07-24
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Storage 및 볼륨 프로비저닝
-- **[MUST] Explicit Performance Parameters:** `StorageClass` 선언 시 맹목적인 기본값 사용을 배제하고, 워크로드 요구사양에 맞게 `type`(예: `gp3`), `iopsPerGB`, `throughput` 파라미터를 명시적으로 기재하십시오.
+- **[PREFER] Explicit Performance Parameters:** `StorageClass` 선언 시 맹목적인 기본값 사용을 배제하고, 워크로드 요구사양에 맞게 `type`(예: `gp3`), `iopsPerGB`, `throughput` 파라미터를 명시적으로 기재하십시오.
 - **[MUST] Topology-Aware Volume Provisioning:** 멀티 AZ 환경의 영역 간 통신 요금 폭증 및 마운트 에러 방지를 위해, `StorageClass` 내에 `volumeBindingMode: WaitForFirstConsumer` 설정을 반영해 파드가 스케줄링된 AZ와 동일한 위치에 볼륨을 생성하도록 하십시오.
 
 ### 2.2 상태 저장 워크로드 관리
@@ -27,7 +27,7 @@ reviewed: 2026-07-24
 - **[MUST] Ephemeral Storage Hard Limits:** 파드 내 `emptyDir` 사용 시 노드의 디스크 고갈(Disk Pressure)을 방지하도록 `limits.ephemeral-storage` 값을 명시적으로 지정하십시오.
 
 ### 2.3 재해 복구(DR) 및 백업
-- **[MUST] Velero for Cluster DR:** K8s 리소스 YAML 메타데이터와 PV 스냅샷을 주기적으로 오브젝트 스토리지에 백업하고 복원하는 Velero 백업 아키텍처를 도입하십시오.
+- **[PREFER] Velero for Cluster DR:** K8s 리소스 YAML 메타데이터와 PV 스냅샷을 주기적으로 오브젝트 스토리지에 백업하고 복원하는 Velero 백업 아키텍처를 도입하십시오.
 - **[MUST] Application-Level Consistency:** PV 스냅샷 복구 시 DB 트랜잭션 깨짐을 방지하도록 애플리케이션 레벨의 백업(예: `pg_dump`) 및 WAL(Write-Ahead Logging) 백업을 병행하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

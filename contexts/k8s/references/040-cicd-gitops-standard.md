@@ -19,8 +19,8 @@ reviewed: 2026-07-21
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 아키텍처 및 패러다임
-- **[MUST] Multi-Repo Strategy:** 소스 코드 저장소(App Repo)와 K8s 매니페스트 저장소(Config Repo)를 물리적으로 분리하여 운영하십시오.
-- **[MUST] App of Apps Pattern:** 다수의 마이크로서비스 배포 관리 시, `App of Apps` 패턴이나 `ApplicationSet`을 통해 배포를 코드 기반으로 자동 스케일링하도록 강제하십시오.
+- **[PREFER] Multi-Repo Strategy:** 소스 코드 저장소(App Repo)와 K8s 매니페스트 저장소(Config Repo)를 물리적으로 분리하여 운영하십시오.
+- **[PREFER] App of Apps Pattern:** 다수의 마이크로서비스 배포 관리 시, `App of Apps` 패턴이나 `ApplicationSet`을 통해 배포를 코드 기반으로 자동 스케일링하도록 강제하십시오.
 - **[PREFER] Ephemeral Preview Environments:** 개발자가 PR을 생성하면 ArgoCD ApplicationSet(또는 vCluster)과 연동하여 일회성 테스트 환경을 동적 생성하고, PR이 merge/close되면 즉시 인프라를 파괴하는 자동화 파이프라인을 제안하십시오.
 
 ### 2.2 코드 품질 및 DevSecOps

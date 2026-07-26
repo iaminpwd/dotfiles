@@ -16,7 +16,7 @@ reviewed: 2026-07-23
 - **[MUST] Failure Domain Ring:** 존(zone)/노드/랙 등 장애 도메인을 분리하여 ring을 구성하고, 파티션 균형을 유지하여 단일 도메인 장애가 데이터 가용성을 깨지 않게 설계하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
-- **[MUST] Container Sharding:** 단일 컨테이너에 수백만 객체를 몰아넣지 말고 접두사 분산 또는 container sharding을 적용하여 리스팅 성능 저하를 방지하십시오.
+- **[PREFER] Container Sharding:** 단일 컨테이너에 수백만 객체를 몰아넣지 말고 접두사 분산 또는 container sharding을 적용하여 리스팅 성능 저하를 방지하십시오.
 - **[MUST] Large Object:** 5GiB를 초과하는 객체는 SLO(Static Large Object) 또는 DLO로 분할 업로드하십시오.
 - **[MUST] Lifecycle & Expiry:** 임시/로그성 데이터는 `X-Delete-At`/`X-Delete-After` 헤더로 자동 만료를 설정하여 용량 누수를 차단하십시오.
 - **[MUST] Encryption & Scoped Access:** 저장 암호화(Swift encryption 미들웨어 또는 백엔드 암호화)를 적용하고, 외부 공유가 필요하면 컨테이너 전체 public-read 대신 tempURL/formpost로 시간 제한 접근을 부여하십시오.

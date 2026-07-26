@@ -23,7 +23,7 @@ reviewed: 2026-07-21
 ### 2.1 관계형 데이터베이스 (RDS & Aurora)
 - **[MUST] Automated Backups:** 자동 백업을 활성화하고 보존 기간(Retention Period)을 최소 7일 이상으로 구성하십시오.
 - **[PREFER] Serverless v2:** 개발/테스트 환경 또는 트래픽 변동폭이 극심한 쿼리 워크로드는 Aurora Serverless v2 아키텍처 사용을 우선 검토하십시오.
-- **[MUST] Connection Management:** 접속자가 몰리는 고성능 웹 서비스 RDS 전면에는 커넥션 풀링 관리를 위해 RDS Proxy 배포를 설계하십시오.
+- **[PREFER] Connection Management:** 접속자가 몰리는 고성능 웹 서비스 RDS 전면에는 커넥션 풀링 관리를 위해 RDS Proxy 배포를 설계하십시오.
 - **[PREFER] Read Scaling:** 읽기 트래픽 비중이 높은 워크로드는 Read Replica를 구성하여 쓰기 인스턴스의 부하를 분산하십시오.
 - **[MUST] Safe Major Version Upgrade:** 프로덕션 RDS/Aurora의 메이저 버전 업그레이드 시, 다운타임 없이 문제 발생 시 즉시 롤백 가능한 Blue/Green Deployments를 우선 적용하십시오.
 

@@ -19,7 +19,7 @@ reviewed: 2026-07-23
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 트러블슈팅 및 장애 진단
-- **[MUST] Deep Dive Analysis:** 단순 표면 오류 문구 수집을 넘어, 필요시 Neutron 포트/라우터 상태, Nova 스케줄러 로그, RabbitMQ 큐 적체, Galera 동기화 상태를 다각도로 수집하여 입출력 양방향 흐름을 교차 검증하십시오.
+- **[PREFER] Deep Dive Analysis:** 단순 표면 오류 문구 수집을 넘어, 필요시 Neutron 포트/라우터 상태, Nova 스케줄러 로그, RabbitMQ 큐 적체, Galera 동기화 상태를 다각도로 수집하여 입출력 양방향 흐름을 교차 검증하십시오.
 - **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 반드시 `<grounding_check>` 태그를 열어 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사하십시오. 검증 통과 후에만 최종 보고서를 생성하십시오.
 - **[PREFER] Timeline Standardization:** 다중 팀 대응이 필요한 대형 장애는 CADF 감사 로그와 서비스 타임스탬프를 기준으로 타임라인을 표준화하여 대응 채널에 공유하십시오.
 

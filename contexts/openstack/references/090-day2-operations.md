@@ -26,7 +26,7 @@ reviewed: 2026-07-23
 - **[MUST] Service HA:** API 서비스는 다중 컨트롤러 + HAProxy/keepalived로 이중화하고, RabbitMQ/Galera 클러스터의 쿼럼 상태를 상시 모니터링하십시오.
 
 ### 2.2 관측성·재해 복구(DR)
-- **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 자동화된 조치(Automated Remediation)를 연동하십시오.
+- **[PREFER] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 자동화된 조치(Automated Remediation)를 연동하십시오.
 - **[MUST] DR Model:** 멀티 리전/멀티 사이트 설계 시 RTO/RPO 사양에 따라 Backup & Restore, Warm Standby, Multi-Site Active/Active 중 요구사항에 부합하는 모델을 명시적으로 선택하여 적용하십시오.
 - **[MUST] Centralized Backup:** 개별 서비스 스냅샷에 의존하지 말고, 볼륨/이미지/DB 백업을 Swift·Ceph에 중앙 집중형 백업 계획으로 구성하고 교차 사이트 복제를 적용하십시오.
 - **[MUST] Expand and Contract:** DB 스키마 수정 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현하십시오.

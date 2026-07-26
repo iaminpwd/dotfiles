@@ -13,7 +13,7 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Dashboard as Code:** 대시보드는 UI에서 수동으로 클릭하여 만들지 말고, JSON/Jsonnet(grafonnet) 또는 Terraform Provider로 코드화하여 버전 관리하십시오.
-- **[MUST] Ingestion Cost Awareness:** SaaS 관측성 플랫폼은 수집 볼륨/카디널리티 기준으로 과금되므로, 대시보드·알람 설계 시 수집 볼륨과 카디널리티 증가분을 산정하여 예상 과금 영향을 함께 제시하십시오.
+- **[PREFER] Ingestion Cost Awareness:** SaaS 관측성 플랫폼은 수집 볼륨/카디널리티 기준으로 과금되므로, 대시보드·알람 설계 시 수집 볼륨과 카디널리티 증가분을 산정하여 예상 과금 영향을 함께 제시하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
@@ -24,7 +24,7 @@ reviewed: 2026-07-21
 
 ### 2.2 SaaS 비용 및 카디널리티 통제
 - **[MUST] Metric Allowlist:** Datadog/New Relic 등 종량제 SaaS로 전송하는 커스텀 메트릭은 명시적 허용목록(Allowlist)에 등록된 것만 전송하십시오.
-- **[MUST] Log-Based Metric Preference for High Cardinality:** 카디널리티가 높은 차원(사용자별, 요청별)은 시계열 메트릭 대신 로그 기반 집계(Log-based Metrics)나 샘플링된 이벤트로 대체하여 과금 폭증을 방지하십시오.
+- **[PREFER] Log-Based Metric Preference for High Cardinality:** 카디널리티가 높은 차원(사용자별, 요청별)은 시계열 메트릭 대신 로그 기반 집계(Log-based Metrics)나 샘플링된 이벤트로 대체하여 과금 폭증을 방지하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

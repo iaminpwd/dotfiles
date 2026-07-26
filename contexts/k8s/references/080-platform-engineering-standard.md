@@ -12,8 +12,8 @@ reviewed: 2026-07-21
 본 모듈은 내부 개발자 플랫폼(IDP) 추상화, 다중 클러스터(Fleet) 제어 평면 아키텍처 및 복잡한 Stateful 미들웨어의 오퍼레이터 패턴 설계 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Developer Experience (DevEx) & Abstraction:** 개발자에게 로우 레벨 K8s YAML을 직접 기재하게 하는 방식을 배제하고, Helm/Kustomize 기반의 템플릿 형태로 인프라 속성을 추상화하여 제공하십시오.
-- **[MUST] Hard Isolation via vCluster:** 다중 테넌트(Multi-tenant) 환경 구축 시, API 서버와 Control Plane을 테넌트별로 완벽히 격리하도록 vcluster (Virtual Cluster) 아키텍처를 도입하십시오.
+- **[PREFER] Developer Experience (DevEx) & Abstraction:** 개발자에게 로우 레벨 K8s YAML을 직접 기재하게 하는 방식을 배제하고, Helm/Kustomize 기반의 템플릿 형태로 인프라 속성을 추상화하여 제공하십시오.
+- **[PREFER] Hard Isolation via vCluster:** 다중 테넌트(Multi-tenant) 환경 구축 시, API 서버와 Control Plane을 테넌트별로 완벽히 격리하도록 vcluster (Virtual Cluster) 아키텍처를 도입하십시오.
 - **[MUST] Operator First for Stateful Apps:** 클러스터 내부에 Kafka, PostgreSQL, Redis 등 복잡한 Stateful 미들웨어를 구축할 때 원시 StatefulSet 작성을 거부하고, 장애 조치(Failover) 지식이 코드로 내장된 벤더의 공식 Operator CRD를 강제 규정으로 제시하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -21,7 +21,7 @@ reviewed: 2026-07-21
 ### 2.1 플랫폼 추상화 및 멀티 클러스터 제어
 - **[PREFER] Internal Developer Platform:** 개발자가 CLI 명령이나 템플릿 학습 없이 Backstage 등의 포털에서 셀프 서비스로 마이크로서비스 골격과 인프라를 프로비저닝하도록 권장하십시오.
 - **[PREFER] Crossplane over External IaC:** 클라우드 인프라(RDS, S3, IAM 등)의 동적 프로비저닝을 위해 K8s를 만능 제어 평면으로 사용하는 Crossplane을 도입해 ArgoCD 제어 루프 내에 포섭하십시오.
-- **[MUST] Declarative Fleet Management:** 다중 클러스터(Multi-Cluster) 관리 아키텍처 구성 시 클러스터 프로비저닝을 K8s 선언형으로 자동화하는 Cluster API (CAPI) 패러다임을 제안하십시오.
+- **[PREFER] Declarative Fleet Management:** 다중 클러스터(Multi-Cluster) 관리 아키텍처 구성 시 클러스터 프로비저닝을 K8s 선언형으로 자동화하는 Cluster API (CAPI) 패러다임을 제안하십시오.
 
 ### 2.2 시스템 복원력 실증
 - **[PREFER] Chaos Engineering Testing:** 아키텍처 복원력을 검증하도록 프로덕션 배포 전 단계에서 LitmusChaos 또는 Chaos Mesh를 활용해 네트워크 지연(Fault Injection) 등을 정기 실험하는 파이프라인 설계를 기획하십시오.

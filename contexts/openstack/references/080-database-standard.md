@@ -23,7 +23,7 @@ reviewed: 2026-07-23
 ### 2.1 Trove 및 관계형 데이터베이스
 - **[MUST] Automated Backups:** Trove 자동 백업(Swift 저장)을 활성화하고 보존 기간을 최소 7일 이상으로 구성하십시오. 자체 관리 DB는 `cron` 기반 논리 백업을 Swift로 업로드하도록 설계하십시오.
 - **[MUST] Datastore Version Pinning:** Trove datastore 버전(`--datastore-version`)을 명시적으로 고정하고, 벤더 지원이 유효한 안정 버전을 선택하십시오.
-- **[MUST] Connection Management:** 접속자가 몰리는 고성능 웹 서비스 DB 전면에는 커넥션 풀링(ProxySQL/PgBouncer)을 배치하여 커넥션 폭주를 흡수하십시오.
+- **[PREFER] Connection Management:** 접속자가 몰리는 고성능 웹 서비스 DB 전면에는 커넥션 풀링(ProxySQL/PgBouncer)을 배치하여 커넥션 폭주를 흡수하십시오.
 - **[PREFER] Read Scaling:** 읽기 트래픽 비중이 높은 워크로드는 read replica를 구성하여 쓰기 인스턴스의 부하를 분산하십시오.
 
 ### 2.2 캐시 및 데이터 수명 주기

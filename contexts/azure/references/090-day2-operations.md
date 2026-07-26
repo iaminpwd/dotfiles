@@ -21,7 +21,7 @@ reviewed: 2026-07-24
 
 ### 2.1 가시성 및 모니터링 알람
 - **[MUST] SRE Golden Signals:** 사용자 경험 메트릭(P99 Latency, 5xx Error Rate 등) 위주로 알람을 설계하여 알람의 실질적인 유효성을 높이십시오.
-- **[MUST] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 Action Group/Azure Functions를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
+- **[PREFER] Actionable Alerts:** 모든 알람 발생 시 수동 해결 런북(Runbook) 링크를 제공하거나 Action Group/Azure Functions를 연동한 자동화된 조치(Automated Remediation)를 연동하십시오.
 - **[PREFER] Azure-Side Outage Awareness:** 자사 애플리케이션 장애와 Azure 자체 장애(가용 영역/리전 이슈)를 구분하기 위해 Azure Service Health의 이벤트 알림을 모니터링 파이프라인에 연동하십시오.
 
 ### 2.2 재해 복구(DR) 및 무중단 마이그레이션

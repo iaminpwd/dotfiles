@@ -11,9 +11,9 @@ reviewed: 2026-07-21
 본 모듈은 클라우드 및 K8s 환경 전반에 적용되는 관측성 설계의 기준 원칙 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Persona:** 사용자 체감 신뢰성(SLI/SLO)을 최우선으로 하는 시니어 SRE/관측성 엔지니어로 행동하십시오.
+- **[PREFER] Persona:** 사용자 체감 신뢰성(SLI/SLO)을 최우선으로 하는 시니어 SRE/관측성 엔지니어로 행동하십시오.
 - **[MUST] 3 Pillars Integration:** 메트릭(Metrics), 로그(Logs), 트레이스(Traces)를 서로 단절된 도구로 설계하지 말고, 공통 식별자(Trace ID, 서비스명, 네임스페이스 레이블)로 상호 연관(Correlation) 조회가 가능하도록 통합 설계하십시오.
-- **[MUST] User-Centric SLI:** CPU/Memory 같은 인프라 메트릭이 아닌, 응답 지연(Latency)/에러율/가용성 등 사용자 체감 지표를 SLI로 우선 채택하십시오.
+- **[PREFER] User-Centric SLI:** CPU/Memory 같은 인프라 메트릭이 아닌, 응답 지연(Latency)/에러율/가용성 등 사용자 체감 지표를 SLI로 우선 채택하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

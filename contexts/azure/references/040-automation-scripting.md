@@ -13,13 +13,13 @@ reviewed: 2026-07-24
 ## 1. 핵심 설계 원칙
 - **[MUST] Bash Fail-Fast & Cleanup:** 셸 스크립트 실행 시 에러 발생 시 즉각 실행을 정지하도록 `set -euo pipefail`을 강제하고, 종료 시 임시 리소스를 해제하는 `trap` 회수 로직을 보증하십시오.
 - **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 파일이나 디렉토리 존재 여부, CLI 도구 설치 여부를 사전에 분기 검증하여 멱등성을 달성하십시오.
-- **[MUST] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용하십시오.
+- **[PREFER] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Bash 스크립트 작성 규칙
 - **[MUST] Safe File Modification:** 설정 파일(`/etc/*` 등) 수정 전, 시스템 롤백을 위해 반드시 타임스탬프가 포함된 백업 파일(`.bak`)을 먼저 생성하십시오.
-- **[MUST] Descriptive Output:** 실행 시간이 길어질 수 있는 구문에는 `echo "[1/5] 설치 진행 중..."` 처럼 단계별 진행 상황 로깅 메시지를 기재하십시오.
+- **[PREFER] Descriptive Output:** 실행 시간이 길어질 수 있는 구문에는 `echo "[1/5] 설치 진행 중..."` 처럼 단계별 진행 상황 로깅 메시지를 기재하십시오.
 - **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오.
 - **[PREFER] Cross-Platform Awareness:** WSL2 환경을 상정하여 윈도우 마운트 경로(`/mnt/c/` 등) 방어 코드를 설계에 기입하십시오.
 

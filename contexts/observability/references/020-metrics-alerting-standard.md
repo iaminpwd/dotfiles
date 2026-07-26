@@ -23,7 +23,7 @@ reviewed: 2026-07-21
 ### 2.2 알람 라우팅 및 피로도 방지
 - **[MUST] Tiered Routing:** Critical(즉시 대응)과 Warning(다음 근무일 검토) 알람의 라우팅 채널(PagerDuty vs Slack 등)을 엄격히 분리하십시오.
 - **[MUST] Runbook Link Mandatory:** 모든 Critical 알람에는 대응 런북(Runbook) URL을 `annotations`에 필수 포함하십시오.
-- **[MUST] Suppress Known Noise:** 정기 배치 작업이나 배포 시점의 예측 가능한 스파이크는 `for:` 지속 시간 조정 또는 억제(Silence) 규칙으로 오탐을 방지하십시오.
+- **[PREFER] Suppress Known Noise:** 정기 배치 작업이나 배포 시점의 예측 가능한 스파이크는 `for:` 지속 시간 조정 또는 억제(Silence) 규칙으로 오탐을 방지하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

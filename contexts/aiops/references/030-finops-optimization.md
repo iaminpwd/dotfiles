@@ -13,7 +13,7 @@ reviewed: 2026-07-21
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Full Observability Pipeline:** 시스템 화이트박스 검증을 위해 분산 추적(OpenTelemetry)과 모니터링 메트릭(Prometheus)을 결합한 통합 관측성 파이프라인을 구축하십시오.
-- **[MUST] MTTR & MTTD Tracking:** 알람 발생부터 에이전트의 장애 원인 진단(MTTD) 및 자동 복구 완료(MTTR) 리드 타임을 정교히 측정해 클라우드 커스텀 메트릭(CloudWatch, Azure Monitor 등) 또는 Datadog 대시보드로 가시화하는 DORA 지표 추적망을 구성하십시오.
+- **[PREFER] MTTR & MTTD Tracking:** 알람 발생부터 에이전트의 장애 원인 진단(MTTD) 및 자동 복구 완료(MTTR) 리드 타임을 정교히 측정해 클라우드 커스텀 메트릭(CloudWatch, Azure Monitor 등) 또는 Datadog 대시보드로 가시화하는 DORA 지표 추적망을 구성하십시오.
 - **[MUST] Cost Allocation Tagging:** AI 및 데이터 파이프라인 리소스에 `CostCenter`, `Project`, `Environment` 비용 할당 태그(Cost Allocation Tags)를 필수 매핑하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

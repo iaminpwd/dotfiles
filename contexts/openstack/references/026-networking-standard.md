@@ -12,12 +12,12 @@ reviewed: 2026-07-23
 본 모듈은 OpenStack Neutron의 SDN 백엔드 선택, tenant/provider 네트워크 토폴로지 및 라우팅 아키텍처 설계 시 적용되는 기술 표준 가이드라인입니다. 네트워크 보안(보안 그룹/FWaaS)은 `025-cloud-security.md`를 참조하십시오.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] SDN Backend Selection:** 신규 배포는 OVN(`ovn` ML2 드라이버)을 기본으로 채택하고, 레거시 OVS/ML2 + L3 agent 조합은 기존 환경 유지보수 목적에만 사용하십시오. 선택 근거(에이전트 수, 분산 라우팅 지원, 커뮤니티 방향성)를 명시하십시오.
+- **[PREFER] SDN Backend Selection:** 신규 배포는 OVN(`ovn` ML2 드라이버)을 기본으로 채택하고, 레거시 OVS/ML2 + L3 agent 조합은 기존 환경 유지보수 목적에만 사용하십시오. 선택 근거(에이전트 수, 분산 라우팅 지원, 커뮤니티 방향성)를 명시하십시오.
 - **[MUST] Tenant/Provider 분리:** tenant 오버레이(VXLAN/GENEVE)와 provider(VLAN/flat) 네트워크의 역할을 분리하고, 외부 연결은 provider network + 라우터 external gateway로만 노출하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 - **[MUST] Encapsulation & MTU:** 오버레이 캡슐화 오버헤드(VXLAN 50B, GENEVE 38B 이상)를 고려해 물리 MTU(jumbo frame 9000 권장)와 tenant network MTU를 정합적으로 설정하여 파편화·성능 저하를 방지하십시오.
-- **[MUST] Distributed Routing:** 남북/동서 트래픽 병목을 줄이기 위해 OVN 분산 라우팅(또는 OVS DVR)을 활성화하되, floating IP 트래픽이 중앙 게이트웨이 노드에 집중되지 않는지 검토하십시오.
+- **[PREFER] Distributed Routing:** 남북/동서 트래픽 병목을 줄이기 위해 OVN 분산 라우팅(또는 OVS DVR)을 활성화하되, floating IP 트래픽이 중앙 게이트웨이 노드에 집중되지 않는지 검토하십시오.
 - **[MUST] Address Management:** tenant CIDR 중복과 고갈을 막기 위해 subnet pool + address scope로 IP 할당을 중앙 관리하고, 외부 라우팅 대상 대역은 별도 scope로 격리하십시오.
 - **[PREFER] QoS Isolation:** 특정 테넌트의 대역 독점을 막기 위해 Neutron QoS policy(대역폭 제한/DSCP)를 적용하십시오.
 - **[MUST] Agent/Chassis HA:** L3/DHCP agent(OVS) 또는 gateway chassis(OVN)를 다중화하고, `openstack network agent list`로 에이전트 alive 상태를 상시 검증하십시오.

@@ -12,7 +12,7 @@ reviewed: 2026-07-21
 본 모듈은 장애 복구 후의 사후 분석 보고서(RCA Post-Mortem) 자동 작성, 디버깅 로그 타임라인 추출 및 트러블슈팅 가이드라인 수립 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Automated Timeline Extraction:** 장애 종료 시, 클라우드 로그(CloudWatch Logs, Azure Monitor Logs 등), Slack 히스토리 및 Git 커밋을 종합해 시간대별 사건 전개(Timeline)를 자동 추출하십시오.
+- **[PREFER] Automated Timeline Extraction:** 장애 종료 시, 클라우드 로그(CloudWatch Logs, Azure Monitor Logs 등), Slack 히스토리 및 Git 커밋을 종합해 시간대별 사건 전개(Timeline)를 자동 추출하십시오.
 - **[MUST] Blameless RCA Generation:** 개인에 대한 비난을 차단하고, 시스템 구조적 한계점(Root Cause)과 자동화 Action Items를 포함한 Blameless RCA 보고서를 `post-mortem-report.md` 파일로 생성하십시오.
 - **[MUST] Structured Analysis:** 에러 분석 완료 시 반드시 `troubleshooting-report.md` 파일에 근본 원인(RCA), 시스템 로그 기반 증거(Logical Basis), 해결 절차 및 재발 방지책 순서로 작성하십시오.
 
