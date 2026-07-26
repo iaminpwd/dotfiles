@@ -230,6 +230,38 @@ check_cross_skill_duplication() {
   echo "[INFO] 크로스 스킬 중복 후보 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 10. aws/azure 미러링 대칭성 검사 (Warning Only)
+# -----------------------------------------------------------------------------
+check_vendor_mirror_symmetry() {
+  echo "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
+  # aws/azure 미러링은 9번 검사 주석대로 의도된 구조다. 다만 한쪽 벤더에만 조항을
+  # 추가하면 드리프트가 쌓이므로(2026-07-26 실측: azure 에 Vulnerability & Data
+  # Classification / Continuous Right-Sizing / Managed Observability 대응 조항 누락),
+  # 동일 번호 모듈의 조항 수를 대조해 경고한다.
+  # 조항명은 벤더 용어로 갈리므로(TGW <-> vWAN, IRSA <-> Workload Identity) 이름이
+  # 아니라 개수만 비교해야 대응어 28건을 오탐하지 않는다.
+  local f prefix azure_file a_count z_count
+  for f in "$CONTEXTS_DIR"/aws/references/*.md; do
+    [ -f "$f" ] || continue
+    prefix=$(basename "$f" | grep -oE '^[0-9]{3}')
+    [ -z "$prefix" ] && continue
+    azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
+    if [ -z "$azure_file" ]; then
+      echo "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
+      continue
+    fi
+    a_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$f" || true)
+    z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$azure_file" || true)
+    if [ "$a_count" -ne "$z_count" ]; then
+      echo "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
+      echo "    $f"
+      echo "    $azure_file"
+    fi
+  done
+  echo "[INFO] aws/azure 미러링 대칭성 검사 완료."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -240,6 +272,7 @@ main() {
   check_code_fences
   check_severity_tag_heuristic
   check_cross_skill_duplication
+  check_vendor_mirror_symmetry
 
   echo "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then
