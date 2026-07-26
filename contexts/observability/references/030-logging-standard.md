@@ -18,7 +18,6 @@ reviewed: 2026-07-21
 
 ### 2.1 로그 구조 및 컨텍스트
 - **[MUST] Context Enrichment:** 로그 라인에 `trace_id`, `service.name`, `namespace`, `severity` 필드를 표준 스키마로 자동 주입하십시오.
-- **[MUST] Log Level Discipline:** `ERROR`는 즉시 조치가 필요한 실패로, `WARN`은 잠재적 문제로, `INFO`는 상태 변화 기록으로만 엄격히 구분하여 사용하십시오.
 
 ### 2.2 비용 및 보존 정책
 - **[MUST] Retention Tiering:** 실시간 조회가 필요한 최근 로그(예: 7~14일)는 고속 조회 계층(Loki, CloudWatch Logs)에, 규정 준수용 장기 보관 로그는 저비용 오브젝트 스토리지(S3/Blob)로 계층 분리하십시오.

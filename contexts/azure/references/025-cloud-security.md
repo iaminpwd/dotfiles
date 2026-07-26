@@ -13,7 +13,6 @@ reviewed: 2026-07-24
 본 모듈은 Azure 클라우드 네트워크 아키텍처 설계, 공급망 보안 및 엔터프라이즈 다중 구독 접근 통제 시 적용되는 보안 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 이미 침해되었다고 가정하고 설계하십시오. VNet 및 인스턴스 간 통신 시 네트워크 보안 그룹(NSG)의 인바운드/아웃바운드를 최소 권한으로 구성하십시오.
 - **[MUST] Zero-Trust 기반 인바운드 통제 (Default Deny):** Public Application Gateway나 Azure Front Door의 웹 포트(80, 443) 외 기타 모든 포트(SSH, DB, Redis, 내부 API 등)의 인바운드는 사내 VPN IP 대역(예: `10.32.0.0/16`) 또는 특정 애플리케이션 보안 그룹(ASG)으로만 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -23,7 +22,6 @@ reviewed: 2026-07-24
 - **[PREFER] WAF/DDoS:** 퍼블릭 엔드포인트(Application Gateway, Azure Front Door) 제안 시 Azure WAF와 Azure DDoS Protection 적용을 포함하십시오.
 - **[MUST] Bastion:** 인스턴스 직접 SSH 접근을 차단하고, Azure Bastion을 통하도록 설계를 제안하십시오.
 - **[MUST] Private Endpoint:** Azure 내부 서비스 통신 시 퍼블릭 인터넷 경로 노출을 차단하기 위해 Private Endpoint(Private Link)를 구성하십시오.
-- **[MUST] Data in Transit:** 모든 클라우드 내부 및 외부 네트워크 통신에 TLS 암호화를 적용하십시오.
 - **[PREFER] IPAM:** 멀티 VNet/멀티 구독 환경에서 CIDR 중복 할당을 방지하기 위해 Azure Virtual Network Manager(AVNM)의 IPAM 풀을 통한 중앙 집중형 IP 주소 관리를 제안하십시오.
 
 ### 2.2 엔터프라이즈 권한 통제

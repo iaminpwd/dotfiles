@@ -17,7 +17,6 @@ reviewed: 2026-07-21
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 종료 코드 및 실패 유형 진단
-- **[MUST] Exit Code Mapping:** Exit Code 137(SIGKILL, 대부분 OOMKilled)과 Exit Code 1(애플리케이션 자체 오류)을 구분하여 진단하십시오. `docker inspect --format='{{.State.OOMKilled}}'` 또는 K8s의 `lastState.terminated.reason`으로 OOM 여부를 팩트로 확인하십시오.
 - **[MUST] Image Pull Failure Triage:** `ImagePullBackOff`/`ErrImagePull` 발생 시 태그 오탈자, 레지스트리 인증 만료(`imagePullSecrets`), 또는 존재하지 않는 다이제스트 여부를 순서대로 확인하십시오.
 - **[MUST] Layer-Level Root Cause:** 이미지 자체의 문제(엔트리포인트 오류, 누락된 런타임 의존성)가 의심될 경우 `dive <image>`로 레이어 구성과 파일 존재 여부를 검증하십시오.
 

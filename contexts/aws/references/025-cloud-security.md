@@ -13,7 +13,6 @@ reviewed: 2026-07-24
 본 모듈은 AWS 클라우드 네트워크 아키텍처 설계, 공급망 보안 및 엔터프라이즈 다중 계정 접근 통제 시 적용되는 보안 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 이미 침해되었다고 가정하고 설계하십시오. VPC 및 인스턴스 간 통신 시 보안 그룹(SG)의 인바운드/아웃바운드를 최소 권한으로 구성하십시오.
 - **[MUST] Zero-Trust 기반 인바운드 통제 (Default Deny):** Public ALB나 CloudFront의 웹 포트(80, 443) 외 기타 모든 포트(SSH, DB, Redis, 내부 API 등)의 인바운드는 사내 VPN IP 대역(예: `10.10.0.0/16`) 또는 특정 보안 그룹으로만 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -23,7 +22,6 @@ reviewed: 2026-07-24
 - **[PREFER] WAF/Shield:** 퍼블릭 엔드포인트(ALB, CloudFront) 제안 시 AWS WAF와 Shield Advanced 적용을 포함하십시오.
 - **[MUST] Session Manager:** 인스턴스 직접 SSH 접근을 차단하고, AWS SSM Session Manager를 통하도록 설계를 제안하십시오.
 - **[MUST] VPC Endpoint:** AWS 내부 서비스 통신 시 퍼블릭 인터넷 경로 노출을 차단하기 위해 VPC Endpoint(Gateway/Interface)를 구성하십시오.
-- **[MUST] Data in Transit:** 모든 클라우드 내부 및 외부 네트워크 통신에 TLS 암호화를 적용하십시오.
 - **[PREFER] IPAM:** 멀티 VPC/멀티 계정 환경에서 CIDR 중복 할당을 방지하기 위해 Amazon VPC IP Address Manager(IPAM)를 통한 중앙 집중형 IP 주소 관리를 제안하십시오.
 
 ### 2.2 엔터프라이즈 권한 통제

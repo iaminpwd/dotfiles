@@ -18,12 +18,7 @@ reviewed: 2026-07-24
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
-### 2.1 레이어 및 캐시 최적화
-- **[MUST] Layer Ordering:** 변경 빈도가 낮은 명령(의존성 설치)을 상단에, 변경 빈도가 높은 명령(소스 코드 `COPY`)을 하단에 배치하여 빌드 캐시 적중률을 극대화하십시오.
-- **[MUST] Dependency Lock Copy:** `package.json`/`requirements.txt` 등 의존성 정의 파일만 먼저 `COPY`하여 설치 레이어를 캐싱한 뒤, 전체 소스를 `COPY`하십시오.
-- **[MUST] Layer Consolidation:** 동일 목적의 `RUN` 명령(패키지 설치+캐시 삭제)은 `&&`로 병합하여 레이어 수를 최소화하십시오.
-
-### 2.2 빌드 인자 및 재현성
+### 2.1 빌드 인자 및 재현성
 - **[MUST] Pinned Versions:** 베이스 이미지는 `FROM node:24.18.0-slim`처럼 패치 버전까지 명시적으로 고정하십시오.
 - **[MUST] Non-EOL Runtime Only:** 베이스 이미지의 런타임 메이저 버전은 작성 시점에 웹 검색으로 지원 상태를 확인하여 EOL이 지나지 않은 LTS 버전을 채택하십시오. 특정 버전을 "최신 LTS"로 이 문서에 못박지 말고, 아래 예시의 버전도 그대로 복사하지 말고 채택 전 EOL 여부를 재확인하십시오. (런타임은 주기적으로 EOL됩니다 — 예: Node.js 20은 2026-04-30 EOL.)
 - **[MUST] No Build Secrets in Layers:** API 키, 토큰 등은 `ARG`/`ENV`로 영구 레이어에 굽지 말고, BuildKit `--mount=type=secret`으로 빌드 시점에만 임시 마운트하십시오.

@@ -13,7 +13,6 @@ reviewed: 2026-07-21
 본 모듈은 AIOps 인프라 프로비저닝, 모델 서빙 자동화 파이프라인 및 IaC/GitOps 배포 아키텍처 수립 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] GitOps First:** 단순 쉘 배포를 배제하고 모든 모델 서빙 인프라와 람다 자원은 GitHub Actions, ArgoCD 등을 활용한 선언적 GitOps 배포 파이프라인으로 일원화하십시오.
 - **[MUST] State Locking & Isolation:** IaC 작성 시 원격 백엔드와 Lock 테이블(DynamoDB 등)을 구성하고 개발/운영 상태(State)를 물리적으로 격리하여 관리하십시오.
 - **[PREFER] Stateless Over Stateful:** 가동 복원력 극대화를 위해 연산 컨테이너는 무상태(Stateless) 아키텍처로 설계하고, 데이터 상태는 클라우드 관리형 서비스(RDS, ElastiCache 등)에 완전히 위임하십시오.
 
@@ -26,7 +25,6 @@ reviewed: 2026-07-21
 ### 2.2 엔터프라이즈 명명 규칙 및 보안
 - **[MUST] Resource Naming Standard:** 인프라 자원 설계 시 `<Project>-<Env>-<Service>-<Resource>` (예: `payment-prod-fraud-sqs`) 형태의 직관적인 표준 명명 규칙을 적용하십시오.
 - **[MUST] Zero-Trust 기반 모델 엔드포인트 통제:** LLM 및 추론 모델 엔드포인트는 반드시 내부망(VPC Private Subnet)에 배치하고 API Gateway 리버스 프록시 또는 VPN을 통해서만 접근하도록 설정하십시오.
-- **[MUST] Data in Transit / Rest:** 모델이 처리하는 모든 데이터는 네트워크 전송 구간(TLS 1.2 이상)과 스토리지(KMS 고객 관리형 키 암호화)에서 암호화되도록 강제하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

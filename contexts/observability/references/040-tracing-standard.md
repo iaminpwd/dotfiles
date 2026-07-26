@@ -11,7 +11,6 @@ reviewed: 2026-07-21
 본 모듈은 OpenTelemetry 기반 분산 추적 계측 및 컨텍스트 전파 설계 시 적용되는 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] OpenTelemetry Standard:** 벤더 종속적 APM 에이전트(자체 프로토콜)보다 OpenTelemetry SDK/Collector 기반의 계측을 우선 채택하십시오.
 - **[MUST] End-to-End Context Propagation:** 서비스 간 호출(HTTP, gRPC, 메시지 큐) 전 구간에서 W3C `traceparent` 헤더 전파가 끊기지 않도록 설계하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

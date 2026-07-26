@@ -13,7 +13,6 @@ reviewed: 2026-07-24
 본 모듈은 OpenStack Neutron 네트워크 아키텍처 설계 및 엔터프라이즈 다중 프로젝트/도메인 접근 통제 시 적용되는 보안 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Assume Breach:** 모든 네트워크 트래픽은 이미 침해되었다고 가정하고 설계하십시오. 인스턴스 간 통신 시 보안 그룹(Security Group)의 인그레스/이그레스를 최소 권한으로 구성하고, 포트 시큐리티를 활성 상태로 유지하십시오.
 - **[MUST] Zero-Trust 기반 인그레스 통제 (Default Deny):** Octavia LB의 웹 포트(80, 443) 외 기타 모든 포트(SSH, DB, Redis, 내부 API 등)의 인그레스는 사내 VPN CIDR 대역(예: `10.10.0.0/16`) 또는 특정 원격 보안 그룹(remote group)으로만 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -22,7 +21,6 @@ reviewed: 2026-07-24
 - **[MUST] IaC 레벨의 CIDR 유효성 검증:** 웹 서비스 목적 외의 모든 포트 CIDR 변수 입력 시, 값이 `0.0.0.0/0`이면 보안 규정 위반 에러를 출력하고 배포를 중단시키는 `validation` 블록을 Terraform에 필수 기재하십시오. 웹 포트 외 포트에 전역 개방이 필요하면 VPN 대역으로 대상을 한정하거나 사내 보안 규정 검증 절차를 거치십시오.
 - **[MUST] FWaaS / Router 통제:** tenant 간 경계에는 Neutron FWaaS v2 정책을 적용하고, 외부 게이트웨이(external gateway)를 갖는 라우터에는 불필요한 인바운드 라우트가 없는지 검증하십시오.
 - **[MUST] SSH via Bastion:** 인스턴스 직접 SSH 노출을 차단하고, floating IP를 붙인 전용 Bastion 또는 VPN을 경유하도록 설계를 제안하십시오.
-- **[MUST] Data in Transit:** 모든 내부/외부 네트워크 통신에 TLS 암호화를 적용하고, API 엔드포인트는 TLS 종단을 강제하십시오.
 - **[PREFER] Provider Network 격리:** 관리(management)·스토리지(Ceph)·tenant 트래픽을 별도 provider network/VLAN으로 분리하여 컨트롤플레인과 데이터플레인 노출을 차단하십시오.
 
 ### 2.2 엔터프라이즈 권한 통제

@@ -22,7 +22,6 @@ reviewed: 2026-07-21
 
 ### 2.2 공격 표면 축소
 - **[PREFER] Distroless/Scratch:** 셸이나 패키지 매니저가 필요 없는 런타임(정적 바이너리, JVM 등)은 `distroless` 또는 `scratch` 베이스를 우선 채택하여 침투 후 도구 사용을 원천 차단하십시오.
-- **[MUST] Package Cache Cleanup:** `apt-get`/`apk` 설치 직후 캐시(`/var/lib/apt/lists/*`, `apk cache`)를 동일 `RUN` 레이어 내에서 즉시 삭제하십시오.
 - **[MUST] No Unnecessary Capabilities:** 이미지 자체에 `setcap`으로 커널 능력(capability)을 부여할 때는 `NET_BIND_SERVICE` 등 반드시 필요한 최소 능력만 명시적으로 부여하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

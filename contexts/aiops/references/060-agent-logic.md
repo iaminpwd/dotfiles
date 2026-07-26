@@ -21,7 +21,6 @@ reviewed: 2026-07-21
 ### 2.1 통제력 확보 및 Human-in-the-loop
 - **[MUST] 파괴적 조치 시 Human-in-the-loop 필수화:** 에이전트가 리소스를 삭제/재시작하거나 설정을 변경하는 등의 파괴적 조치(Destructive Actions)를 실행할 때는 반드시 Slack/Teams의 대화형 버튼(Interactive Buttons) 또는 CLI 인터랙티브 프롬프트를 통해 SRE 엔지니어의 최종 승인을 획득하도록 워크플로우를 구성하십시오.
 - **[MUST] Context-Aware Cross-Validation:** 단일 모니터링 알람에만 의존해 조치하는 행위를 배제하고, 해당 시점 전후 10분간의 로그와 인프라 메트릭(CPU, Memory 등)을 교차 검증(Cross-validation)하여 RCA(근본 원인 분석) 정확도를 입증하십시오.
-- **[MUST] Alert Correlation:** 동일 장애(예: DB 다운)로 발생하는 연쇄적 알람 폭주를 단일 인시던트로 그룹화(Correlation)하여 SRE 팀의 피로도를 최소화하십시오.
 - **[MUST] Agent Action Audit Logging:** 자가 치유(Self-healing) 조치 실행 직후, 이벤트 로그에 반드시 `[AIOps-Agent-Action]` 감사 마커를 주입하여 변경 주체를 추적 가능하게 하십시오.
 
 ### 2.2 에이전트의 자율적 복구
