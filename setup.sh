@@ -117,7 +117,7 @@ else
   echo "helm-diff 플러그인이 이미 설치되어 있습니다."
 fi
 
-echo "[5/6] 사용자 워크스페이스 생성 및 제미나이/클로드/Codex AI 글로벌 룰셋 등록 중..."
+echo "[5/6] 사용자 워크스페이스 생성 및 제미나이/클로드 AI 글로벌 룰셋 등록 중..."
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
@@ -134,9 +134,9 @@ echo "   ✅ 제미나이 글로벌 룰 세팅 완료: ~/.gemini/config/AGENTS.m
 ln -sfn "$CONTEXTS_DIR/.base.aiexclude" "$HOME/.gemini/config/.aiexclude"
 echo "   ✅ 제미나이 글로벌 AI 제외 목록(aiexclude) 세팅 완료: ~/.gemini/config/.aiexclude"
 
-# Claude Code 글로벌 설정 추가 (CLAUDE.md 및 rules 디렉토리)
+# Claude Code 글로벌 설정 추가 (CLAUDE.md 및 skills 디렉토리)
 echo "=> [Claude Code Rules] 클로드 글로벌 CLAUDE.md 링크 주입 중..."
-mkdir -p "$HOME/.claude/rules"
+mkdir -p "$HOME/.claude/skills"
 ln -sfn "$CONTEXTS_DIR/base.AGENTS.md" "$HOME/.claude/CLAUDE.md"
 echo "   ✅ 클로드 글로벌 룰 세팅 완료: ~/.claude/CLAUDE.md"
 
@@ -152,15 +152,6 @@ if jq empty "$CLAUDE_SETTINGS" 2>/dev/null; then
 else
   echo "   ⚠️ $CLAUDE_SETTINGS 파일이 유효한 JSON이 아니어서 어트리뷰션 설정을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
 fi
-
-# Codex 글로벌 설정 추가 (AGENTS.md 및 skills 디렉토리)
-echo "=> [Codex Rules] Codex 글로벌 AGENTS.md 링크 주입 중..."
-mkdir -p "$HOME/.codex/skills"
-ln -sfn "$CONTEXTS_DIR/base.AGENTS.md" "$HOME/.codex/AGENTS.md"
-echo "   ✅ Codex 글로벌 룰 세팅 완료: ~/.codex/AGENTS.md"
-
-ln -sfn "$CONTEXTS_DIR/.base.aiexclude" "$HOME/.codex/.aiexclude"
-echo "   ✅ Codex 글로벌 AI 제외 목록(aiexclude) 세팅 완료: ~/.codex/.aiexclude"
 
 # 모든 컨텍스트 디렉토리 스캔 및 각 AI 에이전트 글로벌 스킬 등록
 echo "=> [AI Global Rules] 각 AI 에이전트 글로벌 스킬 등록 중..."
@@ -181,17 +172,22 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     if [ -d "$TARGET_DIR/references" ]; then
       ln -sfn "$TARGET_DIR/references" "$HOME/.gemini/config/skills/${ENV_NAME}/references"
     fi
+    if [ -d "$TARGET_DIR/scripts" ]; then
+      ln -sfn "$TARGET_DIR/scripts" "$HOME/.gemini/config/skills/${ENV_NAME}/scripts"
+    fi
     echo "   ✅ 제미나이 글로벌 스킬 등록 완료 (자동 감지): ~/.gemini/config/skills/${ENV_NAME}/"
 
-    # 2. 클로드 (Claude Code) 글로벌 스킬 등록 (순수 심볼릭 링크 연동)
-    rm -f "$HOME/.claude/rules/${ENV_NAME}.md"
-    ln -sfn "$TARGET_DIR/SKILL.md" "$HOME/.claude/rules/${ENV_NAME}.md"
-    echo "   ✅ 클로드 글로벌 스킬 등록 완료: ~/.claude/rules/${ENV_NAME}.md"
-
-    # 3. Codex 글로벌 스킬 등록 (순수 심볼릭 링크 연동)
-    rm -f "$HOME/.codex/skills/${ENV_NAME}.md"
-    ln -sfn "$TARGET_DIR/SKILL.md" "$HOME/.codex/skills/${ENV_NAME}.md"
-    echo "   ✅ Codex 글로벌 스킬 등록 완료: ~/.codex/skills/${ENV_NAME}.md"
+    # 2. 클로드 (Claude Code) 글로벌 스킬 등록 (skills 자동 감지 디렉토리 연동 - 온디맨드 로드)
+    mkdir -p "$HOME/.claude/skills/${ENV_NAME}"
+    rm -f "$HOME/.claude/skills/${ENV_NAME}/SKILL.md"
+    ln -sfn "$TARGET_DIR/SKILL.md" "$HOME/.claude/skills/${ENV_NAME}/SKILL.md"
+    if [ -d "$TARGET_DIR/references" ]; then
+      ln -sfn "$TARGET_DIR/references" "$HOME/.claude/skills/${ENV_NAME}/references"
+    fi
+    if [ -d "$TARGET_DIR/scripts" ]; then
+      ln -sfn "$TARGET_DIR/scripts" "$HOME/.claude/skills/${ENV_NAME}/scripts"
+    fi
+    echo "   ✅ 클로드 글로벌 스킬 등록 완료 (온디맨드): ~/.claude/skills/${ENV_NAME}/"
   fi
 done
 
