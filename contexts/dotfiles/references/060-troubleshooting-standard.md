@@ -21,7 +21,7 @@ reviewed: 2026-07-21
 ### 2.1 능동적 에러 추적
 - **[MUST] PATH Override Tracking:** "Command not found" 에러 발생 시, 반드시 `echo $PATH` 및 `which <tool>`을 통해 기존 PATH가 어디서 잘못 덮어씌워졌는지(Override) 근본 원인을 역추적하여 해결하십시오.
 - **[MUST] Stow Conflict Resolution:** GNU Stow 사용 중 심볼릭 링크 에러(File exists) 발생 시, 원본 충돌 파일의 성격을 먼저 파악하고, 필요한 경우 반드시 `.bak` 확장자로 백업본을 안전하게 생성한 후 링크를 재시도하십시오.
-- **[MUST] Cross-Platform Awareness:** WSL2나 특정 Linux 배포판에서 퍼미션(chmod) 또는 파일 소유권 이슈가 발생할 경우, 시스템 레벨(`sudo`) 접근보다 로컬 사용자 환경(`~/.local/bin`)에서의 격리된 해결책을 최우선으로 탐색하십시오.
+- **[PREFER] Cross-Platform Awareness:** WSL2나 특정 Linux 배포판에서 퍼미션(chmod) 또는 파일 소유권 이슈가 발생할 경우, 시스템 레벨(`sudo`) 접근보다 로컬 사용자 환경(`~/.local/bin`)에서의 격리된 해결책을 최우선으로 탐색하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

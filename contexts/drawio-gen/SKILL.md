@@ -37,8 +37,8 @@ reviewed: 2026-07-23
 
 ## 3. 작업 프로세스 제약 (Operational Gate)
 
-- **[MUST] 폴더/모듈 구조 다이어그램 금지 (Anti-Pattern)**: 사용자 요청에 "폴더", "구조", "리포지토리" 등의 표현이 포함되어 있어도, 이 스킬의 산출물은 항상 2절 프로세스 표의 계층(Cloud > Region > VPC/VNet > Subnet > Resource)을 따르는 실제 네트워크/인프라 토폴로지여야 합니다. Terraform 디렉토리·모듈·파일 트리 자체를 노드로 그리는 "코드 구조 다이어그램"(예: `modules/`, `main.tf` 등을 박스로 나열)은 이 스킬의 산출물이 아니므로 생성하지 마십시오.
-- **[MUST] 기존 참고 산출물 우선 확인**: 작업 대상과 동일한 인프라를 다루는 `.drawio` 파일이 워크스페이스에 이미 존재하면, XML 생성 전에 반드시 열어 확인하십시오. 존재할 경우 그 다이어그램의 유형(계층 구조, 아이콘 매핑, 라벨링 컨벤션)을 최우선 템플릿으로 삼아 일관성을 유지하고, 이유 없이 다른 유형으로 임의 전환하지 마십시오.
+- **[NEVER] 폴더/모듈 구조 다이어그램 금지 (Anti-Pattern)**: 사용자 요청에 "폴더", "구조", "리포지토리" 등의 표현이 포함되어 있어도, 이 스킬의 산출물은 항상 2절 프로세스 표의 계층(Cloud > Region > VPC/VNet > Subnet > Resource)을 따르는 실제 네트워크/인프라 토폴로지여야 합니다. Terraform 디렉토리·모듈·파일 트리 자체를 노드로 그리는 "코드 구조 다이어그램"(예: `modules/`, `main.tf` 등을 박스로 나열)은 이 스킬의 산출물이 아니므로 생성하지 마십시오.
+- **[PREFER] 기존 참고 산출물 우선 확인**: 작업 대상과 동일한 인프라를 다루는 `.drawio` 파일이 워크스페이스에 이미 존재하면, XML 생성 전에 반드시 열어 확인하십시오. 존재할 경우 그 다이어그램의 유형(계층 구조, 아이콘 매핑, 라벨링 컨벤션)을 최우선 템플릿으로 삼아 일관성을 유지하고, 이유 없이 다른 유형으로 임의 전환하지 마십시오.
 - **[MUST] 사전 룰북 및 연관 참조 연쇄 분석 (Recursive Reference Check)**: XML을 생성하기 전, 반드시 1절 라우팅 테이블에서 대상 룰북을 찾아 먼저 읽으십시오. 또한 해당 룰북 내에 명시된 연관 참조 문서(`references:` 항목 또는 텍스트 내 참조 문서, 예: 010이 가리키는 `000-core.md`)가 존재하는 경우 연쇄적으로 읽되, 이미 읽은 파일은 중복 방문하지 않는 방문 목록(Visited Set) 규칙을 준수하여 무한 루프 없이 연결된 모든 연관 룰북을 빠짐없이 수집하십시오.
 - **[MUST] 클라우드 식별**: 코드 기반 모드에서는 IaC 코드의 provider prefix로 대상 클라우드를 판별하십시오. (`aws_` = AWS, `azurerm_` = Azure, `openstack_` = OpenStack, CloudFormation = AWS, Bicep/ARM = Azure, Heat HOT `type: OS::*` = OpenStack) 설명 기반 모드에서는 사용자 발화에 등장하는 서비스 명칭으로 판별하십시오. (EKS/NAT Gateway/ALB/S3 등 = AWS, AKS/VNet/App Service 등 = Azure, Nova/Neutron/Cinder/Swift/Keystone/Octavia/Magnum/Ironic/Trove/Heat 등 = OpenStack) 두 클라우드 서비스가 함께 언급되면 하이브리드 구성으로 판단하고 `multi-cloud` 스킬 룰북을 함께 참조하십시오.
 - **[MUST] 설명 기반 모드의 근거 충실성**: 코드 없이 자연어 설명만으로 다이어그램을 생성할 때는 005-fidelity-anti-hallucination-standard.md §6의 규칙(명시된 요소만 반영, 미명시 세부사항은 표준 기본값 + 명시적 라벨링, 중대한 모호성은 질문)을 반드시 적용하십시오.

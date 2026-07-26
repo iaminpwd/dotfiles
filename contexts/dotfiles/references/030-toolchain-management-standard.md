@@ -12,14 +12,14 @@ reviewed: 2026-07-24
 본 모듈은 터미널 CLI 도구, 로컬 인프라 패키지, 데브옵스 유틸리티 설치 및 버전 관리 시 적용됩니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Mise First:** CLI 도구(`kubectl`, `terraform` 등) 관리 시 시스템 전역 설치 대신, 자유로운 버전 스왑이 가능한 `mise`를 최우선으로 제안하십시오.
+- **[PREFER] Mise First:** CLI 도구(`kubectl`, `terraform` 등) 관리 시 시스템 전역 설치 대신, 자유로운 버전 스왑이 가능한 `mise`를 최우선으로 제안하십시오.
 - **[MUST] Pipx via Mise (SSOT):** 파이썬 기반 글로벌 도구(`checkov`, `trufflehog` 등)는 터미널에서 `pipx install`로 직접 설치하는 대신, `mise.toml` 파일 내부에 `"pipx:<tool_name>" = "<version>"` 구문으로 선언하여 단일 진실 공급원(SSOT)을 유지하십시오.
 - **[MUST] Explicit Version Pinning:** 멱등성 보장을 위해 `mise.toml` 설정 파일에 명확한 특정 버전을 명시하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 버전 통제 및 멱등성 보장
-- **[MUST] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 터미널에서 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 하드코딩하십시오.
+- **[PREFER] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 터미널에서 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 하드코딩하십시오.
 - **[MUST] Non-Interactive Package Installation:** `apt`, `apt-get` 등을 통해 시스템 패키지를 설치해야 하는 경우, 반드시 `DEBIAN_FRONTEND=noninteractive` 환경 변수와 `-y` 플래그를 조합하여 비대화형으로 실행하십시오. (예: `sudo DEBIAN_FRONTEND=noninteractive apt-get install -y <package>`)
 - **[MUST] OS Package Manager Compatibility:** 특정 패키지 매니저(`apt`)를 임의로 가정하지 말고, `command -v apt-get || command -v yum || command -v brew` 등으로 현재 OS의 매니저를 사전에 분기 판별하십시오.
 

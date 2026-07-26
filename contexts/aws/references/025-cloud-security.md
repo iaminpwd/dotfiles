@@ -26,7 +26,7 @@ reviewed: 2026-07-24
 
 ### 2.2 엔터프라이즈 권한 통제
 - **[MUST] Landing Zone Structure:** 신규 멀티 계정 환경 구축 시 AWS Control Tower(또는 Landing Zone Accelerator)를 기반으로 Management, Log Archive, Security Tooling, 워크로드(Prod/Non-Prod) 계정을 최소 단위로 분리한 계정 구조를 우선 설계하십시오.
-- **[MUST] Federation (SSO):** 다중 계정 접근 통제를 위해 AWS IAM Identity Center (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
+- **[PREFER] Federation (SSO):** 다중 계정 접근 통제를 위해 AWS IAM Identity Center (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Amazon GuardDuty 적용을 함께 제안하십시오.
 - **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 AWS Config Rules를, GuardDuty 등 여러 보안 서비스의 탐지 결과를 통합 관리하기 위해 AWS Security Hub를 함께 제안하십시오.
 - **[PREFER] SCP/Boundary:** Organizations의 SCP 및 IAM Permission Boundary를 활용하여 멤버 계정의 최대 권한 범위를 강제 제한하십시오.

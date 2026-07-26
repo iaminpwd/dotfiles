@@ -26,7 +26,7 @@ reviewed: 2026-07-24
 
 ### 2.2 엔터프라이즈 권한 통제
 - **[MUST] Landing Zone Structure:** 신규 다중 구독 환경 구축 시 Azure Landing Zones(Cloud Adoption Framework)를 기반으로 Platform(Management/Connectivity/Identity)과 Landing Zone(Corp/Online) 구독을 최소 단위로 분리한 계층 구조를 우선 설계하십시오.
-- **[MUST] Federation (SSO):** 다중 구독 접근 통제를 위해 Microsoft Entra ID (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
+- **[PREFER] Federation (SSO):** 다중 구독 접근 통제를 위해 Microsoft Entra ID (SSO) 기반의 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
 - **[PREFER] Threat Detection:** 엔터프라이즈 내부 네트워크 위협 탐지를 위해 Microsoft Defender for Cloud 적용을 함께 제안하십시오.
 - **[PREFER] Continuous Compliance:** 리소스 설정 드리프트 상시 탐지를 위해 Azure Policy(Deny/Audit 이니셔티브)를 Management Group 단위로 함께 제안하십시오.
 - **[PREFER] Policy/RBAC:** 다중 구독 설계 시 Azure Management Groups의 Azure Policy 및 Azure RBAC를 활용하여 최대 권한 범위를 강제 제한하십시오.

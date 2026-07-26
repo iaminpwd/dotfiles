@@ -25,7 +25,7 @@ reviewed: 2026-07-24
 
 ### 2.2 엔터프라이즈 권한 통제
 - **[MUST] Domain/Project 격리:** 신규 멀티테넌트 환경 구축 시 조직 단위로 Keystone Domain을 분리하고, 워크로드는 Project 단위로 최소 분할하여 쿼터와 역할을 격리 설계하십시오.
-- **[MUST] Federation (SSO):** 다중 조직 접근 통제를 위해 Keystone Federation(OIDC/SAML) 기반 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
+- **[PREFER] Federation (SSO):** 다중 조직 접근 통제를 위해 Keystone Federation(OIDC/SAML) 기반 중앙 집중형 연동 아키텍처를 최우선 제안하십시오.
 - **[PREFER] Policy-as-Code:** Keystone `policy.yaml`(oslo.policy) 커스터마이징 시 기본 정책보다 완화되지 않도록 검토하고, 변경은 코드로 버전 관리하십시오.
 - **[PREFER] Audit Trail:** 컨트롤플레인 API 감사를 위해 CADF 기반 감사 로그(Keystone/Nova audit middleware)를 활성화하여 접근 이력을 상시 기록하십시오.
 
