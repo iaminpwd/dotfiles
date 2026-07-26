@@ -36,6 +36,12 @@ assert not missing, f"끊어진 참조: {missing}"
 python3 ~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}
 ```
 
+- **[MUST] 검증기를 수정하면 회귀 테스트를 먼저 통과시키십시오**: `layout_toolkit.py`의 `validate()`를 고칠 때는 아래를 실행해 기존 검사가 조용히 죽지 않았는지 확인하십시오. 각 픽스처는 이 문서와 010의 규칙이 만들어진 실제 실패 사례를 재현합니다. 새 검사를 추가하면 그 검사를 유발하는 픽스처와 `run.sh`의 기대 결과도 함께 추가하십시오.
+
+```bash
+bash ~/dotfiles/contexts/drawio-gen/tests/run.sh
+```
+
 ## 3. 레이아웃 품질 검증 (겹침/정렬/여백)
 
 - **[MUST]** ID/참조 무결성만으로는 "보기 좋은 다이어그램"이 보장되지 않습니다. 010 §10(레이아웃 계산 원칙)에 따라 생성했는지 아래도 함께 확인하십시오.

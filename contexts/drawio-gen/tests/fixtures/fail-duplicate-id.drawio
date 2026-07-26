@@ -1,0 +1,15 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="fail-duplicate-id" name="fail-duplicate-id">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vpc" value="VPC" style="swimlane;startSize=30;strokeColor=#147E40;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="600" height="300" as="geometry"/></mxCell>
+        <mxCell id="a" value="EC2" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="vpc"><mxGeometry x="40" y="60" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="a" value="RDS" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="vpc"><mxGeometry x="200" y="60" width="60" height="60" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

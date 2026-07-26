@@ -351,10 +351,14 @@ def validate(path):
     from collections import defaultdict
 
     root = ET.parse(path).getroot()
-    cells = {c.get("id"): c for c in root.findall(".//mxCell") if c.get("id")}
+    # 중복 ID 검사는 반드시 원본 순서 목록에서 세야 한다. dict 로 먼저 접으면 중복 키가
+    # 합쳐져 090 §1 항목 2("모든 mxCell id 중복 없음")가 영구히 통과한다
+    # (2026-07-26, tests/fixtures/fail-duplicate-id.drawio 로 발견).
+    raw_cells = [c for c in root.findall(".//mxCell") if c.get("id")]
+    cells = {c.get("id"): c for c in raw_cells}
     lines = []
 
-    ids = list(cells.keys())
+    ids = [c.get("id") for c in raw_cells]
     dup = [i for i in ids if ids.count(i) > 1]
     if dup:
         lines.append(f"[FAIL] 중복 ID: {sorted(set(dup))}")

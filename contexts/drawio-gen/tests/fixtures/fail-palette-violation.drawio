@@ -1,0 +1,13 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="fail-palette-violation" name="fail-palette-violation">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="bad" value="VPC2" style="swimlane;startSize=30;strokeColor=#8C4FFF;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="400" height="200" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

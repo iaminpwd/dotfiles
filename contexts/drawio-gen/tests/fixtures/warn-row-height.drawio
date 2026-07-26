@@ -1,0 +1,15 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="warn-row-height" name="warn-row-height">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vpc" value="VPC" style="swimlane;startSize=30;strokeColor=#147E40;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="600" height="300" as="geometry"/></mxCell>
+        <mxCell id="s1" value="Subnet A" style="swimlane;startSize=30;strokeColor=#007CBC;" vertex="1" parent="vpc"><mxGeometry x="20" y="50" width="200" height="120" as="geometry"/></mxCell>
+        <mxCell id="s2" value="Subnet B" style="swimlane;startSize=30;strokeColor=#007CBC;" vertex="1" parent="vpc"><mxGeometry x="260" y="50" width="200" height="200" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
