@@ -1,0 +1,56 @@
+# 스킬 라우팅 eval 케이스
+#
+# on-demand 스킬은 SKILL.md 의 description 만 보고 로드된다. 이 파일은 "어떤
+# 입력에 어떤 스킬이 로드되어야 하는가"의 정답지다. 실제 로드 결과와 대조해
+# 미탐(필요한데 안 뜸)과 오탐(불필요한데 뜸 = 토큰 낭비)을 정량화한다.
+#
+# 형식: id <TAB> 기대스킬(쉼표구분, none=아무것도 로드되면 안 됨) <TAB> 입력
+#
+# dotfiles 스킬은 대상이 아니다. setup.sh:163 이 글로벌 스킬 등록에서 제외하고
+# (글로벌 룰 오염 방지) 프로젝트 CLAUDE.md 심볼릭 링크로 무조건 로드하므로,
+# description 기반 라우팅을 거치지 않는다.
+# 주석(#)과 빈 줄은 무시된다.
+
+# --- 단일 스킬: 명확한 경우 ---
+S01	aws	VPC에 NAT Gateway 2개 두고 프라이빗 서브넷 라우팅 잡아줘
+S02	azure	VNet 피어링 걸고 NSG로 443만 열어줘
+S03	openstack	Neutron 라우터에 external gateway 붙이고 floating IP 할당해줘
+S04	k8s	Deployment에 topologySpreadConstraints 넣어서 존 분산시켜줘
+S05	containers	이 Dockerfile 멀티스테이지로 바꾸고 non-root 유저 지정해줘
+S07	drawio-gen	이 Terraform 코드 읽고 아키텍처 다이어그램 그려줘
+S08	observability	결제 서비스 SLO를 P99 300ms로 잡고 에러 버짓 정책 세워줘
+S09	multi-cloud	AWS와 Azure 사이 IPsec VPN 터널 구성해줘
+S10	aiops	알람 오면 자동으로 롤백하는 self-healing 파이프라인 설계해줘
+S11	pre-flight-check	이 Terraform 커밋 전에 무슨 검사를 돌려야 해?
+S13	containers	이미지에 SBOM 붙이고 cosign으로 서명하는 파이프라인 만들어줘
+S14	openstack	Magnum으로 K8s 클러스터 템플릿 만들 때 Cinder CSI 어떻게 붙여?
+S15	k8s	CrashLoopBackOff 나는데 원인 좀 찾아줘
+
+# --- 복수 스킬: 두 도메인이 실제로 걸치는 경우 ---
+M01	aws,k8s	EKS 노드그룹에 Karpenter 붙이고 IRSA로 S3 접근 권한 주고 싶어
+M02	azure,k8s	AKS에서 Workload Identity로 Key Vault 접근하게 설정해줘
+M03	openstack,k8s	Magnum 클러스터에 Octavia LoadBalancer 서비스 띄워줘
+M04	k8s,observability	PrometheusRule로 파드 재시작률 알람 만들어줘
+M05	aws,drawio-gen	이 CloudFormation 스택 구조를 다이어그램으로 정리해줘
+M06	containers,k8s	이미지가 root로 떠서 PSA restricted에 막히는데 어떻게 고쳐?
+M07	aws,pre-flight-check	S3 버킷 Terraform 작성하고 커밋 전 검증까지 해줘
+
+# --- 모호성 함정: 여러 스킬 description 이 같은 용어를 공유하는 구간 ---
+A01	aws	AWS 비용이 너무 많이 나오는데 FinOps 관점에서 줄여줘
+A02	azure	Azure Advisor 권고대로 VM 사이즈 줄여줘
+A03	observability	Grafana 대시보드에 골든 시그널 패널 배치해줘
+A04	k8s	HPA랑 VPA 같이 쓰면 충돌한다던데 어떻게 해?
+A05	drawio-gen	EKS 2개랑 NAT Gateway 쓰는 구성 그림으로 보여줘
+A06	containers	컨테이너 이미지 취약점 스캔 붙여줘
+A07	openstack	Ceph 백엔드 쓰는데 Cinder 볼륨 타입 나눠줘
+A08	aiops	장애 끝났으니 포스트모템 리포트 작성해줘
+A10	multi-cloud	온프렘이랑 AWS를 Direct Connect로 붙이고 DNS도 통합해줘
+A11	aiops	LLM 추론 파이프라인 토큰 폭주로 비용이 튀는데 탐지 붙여줘
+
+# --- 음성 케이스: 어떤 스킬도 로드되면 안 됨 (오탐 = 토큰 낭비) ---
+N01	none	파이썬 리스트 컴프리헨션 문법 알려줘
+N02	none	React useEffect 의존성 배열 왜 필요해?
+N03	none	정규식으로 이메일 형식 검증하는 패턴 알려줘
+N04	none	SQL에서 INNER JOIN이랑 LEFT JOIN 차이가 뭐야
+N05	none	이 문장 영어로 번역해줘
+N06	none	피보나치 수열 재귀로 짜줘

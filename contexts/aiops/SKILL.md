@@ -1,8 +1,9 @@
 ---
 name: aiops
 description: |
-  AIOps 자동화 파이프라인 스킬. SecOps, Policy-as-Code, FinOps, DORA 메트릭,
-  카오스 엔지니어링, IaC, GitOps, AI 에이전트 RAG, Self-healing, RCA, 인시던트 대응.
+  AIOps 자동화 파이프라인 스킬. SecOps, Policy-as-Code, DORA 메트릭, 카오스 엔지니어링,
+  GitOps, 장애 대응 에이전트 RAG, Self-healing, RCA, 인시던트 대응,
+  AI/ML 파이프라인 비용 최적화(GPU Spot, LLM 토큰 폭주 탐지).
 reviewed: 2026-07-21
 ---
 # aiops Skill

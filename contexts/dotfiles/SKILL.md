@@ -2,7 +2,7 @@
 name: dotfiles
 description: |
   개인 로컬 환경 및 dotfiles 시스템 셋업 스킬. setup.sh, zsh, bash, stow, mise,
-  AI 에이전트 프롬프트 엔지니어링, AGENTS.md, SKILL.md 구성, 시크릿 관리, 트러블슈팅.
+  AI 프롬프트·룰북 저작(AGENTS.md, SKILL.md), 시크릿 관리, 로컬 환경 트러블슈팅.
 reviewed: 2026-07-21
 ---
 # dotfiles Skill
