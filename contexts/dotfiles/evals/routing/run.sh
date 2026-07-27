@@ -12,9 +12,11 @@
 #   2. 라우팅 정확도 채점 — observed.tsv 가 있을 때만 실행
 #      cases.tsv 의 정답과 실제 로드된 스킬을 대조한다.
 #
-# observed.tsv 만드는 법 (헤드리스 CLI 필요):
-#   각 케이스의 입력을 에이전트에 넣고, 실제 로드된 스킬을 아래 형식으로 기록.
-#     <id> <TAB> <로드된 스킬 쉼표구분 또는 none>
+# observed.tsv 만드는 법:
+#   같은 폴더의 measure.sh 가 자동 생성한다. 별도 CLI 설치는 필요 없고, Claude Code
+#   IDE 확장이 번들한 네이티브 바이너리를 자동 탐색해 쓴다.
+#     bash ~/dotfiles/contexts/dotfiles/evals/routing/measure.sh
+#   기록 형식은 '<id> <TAB> <로드된 스킬 쉼표구분 또는 none>' 이다.
 #   예:  S01	aws
 #        A03	observability,k8s
 #
@@ -54,6 +56,11 @@ STOP = {
     # 의도된 겹침까지 경고가 된다(2026-07-26 실측: 이 셋을 빼면 경고 9건 -> 6건,
     # 남는 건 전부 실제 검토가 필요한 항목).
     "엔지니어링", "인프라", "클라우드",
+    # description 에 "언제 이 스킬을 쓰라"는 안내 문장을 넣으면 서술어와 조사 결합형이
+    # 토큰으로 잡힌다. 도메인 신호가 0이라 위 분류 명사와 같은 이유로 제외한다
+    # (토크나이저가 한국어 조사를 분리하지 않아 '스킬'과 '스킬도'가 별개 토큰이 된다).
+    "스킬입니다", "스킬도", "사용하십시오", "로드하십시오", "필요합니다", "가능하며",
+    "포함하며", "다룹니다", "산출합니다", "같이", "함께", "이때는", "여기서", "요청",
 }
 
 
@@ -164,13 +171,18 @@ if [ ! -f "$OBSERVED" ]; then
   # 한 건도 채점하지 않은 미측정 상태이므로 별도 코드(2)로 구분해 반환한다
   # (1=오라우팅 발견, 2=미측정, 0=전부 일치).
   echo "[UNMEASURED] $OBSERVED 가 없어 채점하지 못했습니다. 정확도는 '미측정'입니다."
-  echo "             실제 라우팅을 관측하려면 헤드리스 CLI 로 각 케이스를 실행한 뒤"
-  echo "             '<id><TAB><로드된 스킬>' 형식으로 observed.tsv 를 만드십시오."
+  echo "             측정하려면 아래를 실행하십시오 (별도 CLI 설치 불필요 —"
+  echo "             Claude Code IDE 확장의 번들 바이너리를 자동 탐색합니다):"
+  echo "               bash $EVAL_DIR/measure.sh"
   echo "======================================================"
   exit 2
 fi
 
-python3 - "$CASES" "$OBSERVED" <<'PY'
+# 채점기는 오라우팅이 있으면 exit 1 을 반환한다. set -e 하에서 그대로 두면 이 지점에서
+# 스크립트가 죽어 아래 안정성 리포트가 영영 출력되지 않으므로, 종료 코드를 붙잡아 두고
+# 마지막에 그대로 반환한다(2026-07-27 실측: 안정성 섹션이 조용히 누락됨).
+SCORE_RC=0
+python3 - "$CASES" "$OBSERVED" <<'PY' || SCORE_RC=$?
 import sys
 from collections import defaultdict
 
@@ -246,4 +258,62 @@ if misroutes:
 
 sys.exit(1 if misroutes else 0)
 PY
+
+# -----------------------------------------------------------------------------
+# 3. 측정 안정성 (measure.sh 가 남긴 회차별 원본이 있을 때만)
+# -----------------------------------------------------------------------------
+# 라우팅은 비결정적이라 1회 draw 로는 description 수정이 개선인지 노이즈인지 구분할 수
+# 없다. 필요한 스킬은 매번 떠야 하므로 pass@k(1회라도 성공)가 아니라 pass^k(k회 전부
+# 성공) 기준으로 본다. 회차마다 결과가 갈린 케이스는 점수와 별개로 드러내야, 흔들리는
+# 조항을 고정된 실패와 구분해 손볼 수 있다.
+RUNS_FILE="$EVAL_DIR/observed-runs.tsv"
+if [ -f "$RUNS_FILE" ]; then
+  echo "--- Step: 측정 안정성 (pass^k) ---"
+  python3 - "$CASES" "$RUNS_FILE" <<'PY'
+import sys
+from collections import defaultdict
+
+
+def norm(v):
+    return frozenset() if v == 'none' else frozenset(s.strip() for s in v.split(',') if s.strip())
+
+
+expected = {}
+for line in open(sys.argv[1], encoding='utf-8'):
+    line = line.rstrip('\n')
+    if not line.strip() or line.lstrip().startswith('#'):
+        continue
+    p = line.split('\t')
+    if len(p) >= 2:
+        expected[p[0].strip()] = norm(p[1].strip())
+
+runs = defaultdict(list)
+for line in open(sys.argv[2], encoding='utf-8'):
+    p = line.rstrip('\n').split('\t')
+    if len(p) >= 3:
+        runs[p[0].strip()].append(norm(p[2].strip()))
+
+if not runs:
+    print("[INFO] 회차 기록이 비어 있습니다.")
+    sys.exit(0)
+
+k = max(len(v) for v in runs.values())
+stable_pass = [c for c, v in runs.items() if c in expected and all(r == expected[c] for r in v)]
+flaky = [(c, v) for c, v in sorted(runs.items()) if len(set(v)) > 1]
+scored = [c for c in runs if c in expected]
+
+print(f"pass^{k} (k회 전부 기대와 일치): {len(stable_pass)}/{len(scored)}"
+      f" ({len(stable_pass) * 100 // len(scored)}%)" if scored else "채점 대상 없음")
+if flaky:
+    print()
+    print(f"회차마다 결과가 갈린 케이스 {len(flaky)}건 (라우팅 비결정성):")
+    for c, v in flaky:
+        seen = ['none' if not r else ','.join(sorted(r)) for r in v]
+        print(f"  {c}  " + " | ".join(seen))
+else:
+    print(f"[INFO] {k}회 반복에서 결과가 갈린 케이스 없음.")
+PY
+fi
+
 echo "======================================================"
+exit "$SCORE_RC"
