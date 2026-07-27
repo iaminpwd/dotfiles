@@ -1,9 +1,12 @@
 ---
 name: multi-cloud
 description: |
-  AWS-Azure 멀티 클라우드 네트워크 연동 및 하이브리드 아키텍처 스킬.
-  VPN, Peering, Transit Gateway, ExpressRoute, 크로스 클라우드 IAM, DNS 통합.
-reviewed: 2026-07-21
+  서로 다른 환경을 잇는 네트워크 연동 스킬. 클라우드 간(AWS-Azure) 연동뿐 아니라
+  온프레미스·데이터센터와 클라우드를 잇는 하이브리드 연결도 이 스킬입니다.
+  전용선(Direct Connect, ExpressRoute), VPN, Peering, Transit Gateway,
+  크로스 환경 IAM 및 DNS 통합. 단일 클라우드 내부 작업이 아니라 두 환경의
+  경계를 잇는 요청이면 이 스킬을 사용하십시오.
+reviewed: 2026-07-27
 ---
 # multi-cloud Skill
 

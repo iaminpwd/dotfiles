@@ -3,7 +3,11 @@ name: k8s
 description: |
   Kubernetes 클러스터 및 오케스트레이션 스킬. Pod, Deployment, Service, Ingress, CNI,
   PVC, StatefulSet, ArgoCD, Flux, Prometheus, Grafana, HPA, VPA, RBAC, OPA, 멀티테넌시.
-reviewed: 2026-07-21
+  관리형 클러스터(EKS, AKS, GKE, Magnum) 위에서 워크로드·권한·정책·네트워킹을 다루는
+  작업까지 포함하며, 이때는 클러스터를 제공하는 클라우드 쪽 스킬도 같이 필요합니다.
+  Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션
+  정책 관련 질문도 여기서 다룹니다.
+reviewed: 2026-07-27
 ---
 # k8s Skill
 
