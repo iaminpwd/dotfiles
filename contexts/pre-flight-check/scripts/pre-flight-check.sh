@@ -636,9 +636,13 @@ validate_security() {
       echo "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
     fi
 
-    # 실제 업데이트를 진행한 경우에만 타임스탬프 최신화
+    # 실제 업데이트를 진행한 경우에만 타임스탬프 최신화.
+    # 2>/dev/null은 리다이렉션보다 앞에 두어야 한다. 뒤에 두면 쓰기 실패(읽기 전용 저장소 등)
+    # 시점에 stderr가 아직 살아 있어 "Permission denied"가 그대로 출력에 섞이고, set -e가
+    # 그 실패를 잡아 스크립트를 죽인다. 타임스탬프는 캐시 최적화일 뿐이므로 실패해도 무시한다.
+    # (ai-history-hook.sh에 같은 함정이 기록되어 있다.)
     if [ "${#skip_flags[@]}" -eq 0 ]; then
-      echo "$now" >"$timestamp_file" 2>/dev/null
+      echo "$now" 2>/dev/null >"$timestamp_file" || true
     fi
   elif has_tool trufflehog; then
     echo "Running trufflehog filesystem scan..."
@@ -724,9 +728,20 @@ run_delegated_skill_checks() {
   local self_path
   self_path=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)
 
+  # 스킬 스크립트는 이 저장소(dotfiles) 안에 있고, 검증 대상인 REPO_ROOT는 보통 다른
+  # 프로젝트다. 따라서 REPO_ROOT가 아니라 "이 스크립트 자신의 위치"에서 contexts/ 를
+  # 역산한다(정본 경로: <dotfiles>/contexts/pre-flight-check/scripts/이 파일).
+  # $HOME/dotfiles 하드코딩은 저장소를 다른 경로에 클론하면 glob이 전부 빗나가
+  # 위임 검증이 경고 없이 통째로 건너뛰어진다.
+  local contexts_dir
+  contexts_dir=$(dirname "$(dirname "$(dirname "$self_path")")")
+  if [ ! -d "$contexts_dir" ]; then
+    contexts_dir="$HOME/dotfiles/contexts"
+  fi
+
   local skill_script resolved
   shopt -s nullglob
-  for skill_script in "$HOME"/dotfiles/contexts/*/scripts/*-check.sh; do
+  for skill_script in "$contexts_dir"/*/scripts/*-check.sh; do
     resolved=$(readlink -f "$skill_script" 2>/dev/null)
     [ "$resolved" = "$self_path" ] && continue
     if ! bash "$skill_script"; then
@@ -773,9 +788,12 @@ main() {
   validate_finops_costs
   run_delegated_skill_checks
 
-  # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트)
+  # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트).
+  # 여기는 모든 검증을 통과한 직후이자 "All Checks Passed" 출력 직전이라, 쓰기 실패가
+  # set -e로 이어지면 전 항목 통과 상태에서 pre-commit이 "사전 검증 실패로 커밋이
+  # 차단되었습니다"를 띄운다. 캐시는 재실행 속도 최적화일 뿐이므로 실패해도 무시한다.
   if [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
-    echo "$GLOBAL_TF_HASH" >"$CACHE_FILE" 2>/dev/null
+    echo "$GLOBAL_TF_HASH" 2>/dev/null >"$CACHE_FILE" || true
   fi
 
   echo "================================================="

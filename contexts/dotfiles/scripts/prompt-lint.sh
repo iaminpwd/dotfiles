@@ -43,13 +43,16 @@ check_ssot_module_lists() {
   for corefile in "${core_files[@]}"; do
     [ -z "$corefile" ] && continue
     skill_dir=$(dirname "$(dirname "$corefile")")
-    own_prefix=$(basename "$corefile" | grep -oE '^[0-9]{3}')
+    # 아래 대입들은 무매치 시 grep 이 1을 반환하고, set -euo pipefail 이 그 실패를 잡아
+    # 린터를 조용히 죽인다. 무매치는 "불일치로 보고할 정상 입력"이므로 빈 문자열로 흡수해
+    # 아래 비교 로직까지 도달시킨다 (245/275행의 || true 와 동일한 처리).
+    own_prefix=$(basename "$corefile" | grep -oE '^[0-9]{3}' || true)
 
-    declared_line=$(grep "공통 자가 비판 절차" "$corefile")
-    declared=$(echo "$declared_line" | grep -oE '\([0-9]{3}(, [0-9]{3})*\)' | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u)
+    declared_line=$(grep "공통 자가 비판 절차" "$corefile" || true)
+    declared=$(echo "$declared_line" | grep -oE '\([0-9]{3}(, [0-9]{3})*\)' | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u || true)
 
     actual=$(find "$skill_dir/references" -maxdepth 1 -name "*.md" -printf '%f\n' 2>/dev/null |
-      grep -oE '^[0-9]{3}' | grep -v "^${own_prefix}$" | sort -u)
+      grep -oE '^[0-9]{3}' | grep -v "^${own_prefix}$" | sort -u || true)
 
     if [ "$declared" != "$actual" ]; then
       echo "❌ [ERROR] SSOT 모듈 목록 불일치: $corefile" >&2
@@ -74,7 +77,7 @@ check_reference_links() {
         echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
         EXIT_CODE=1
       }
-    done < <(grep -ohE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9-]+\.md|SKILL\.md|scripts/[a-z0-9-]+\.sh)' "$f" 2>/dev/null | sort -u)
+    done < <(grep -ohE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|(scripts|tests)/[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$f" 2>/dev/null | sort -u)
   done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
   echo "[INFO] 참조 링크 검사 완료."
 }
@@ -235,14 +238,22 @@ check_cross_skill_duplication() {
   # 다른 스킬로 위임하는 문장("위임"/"참조하십시오")에서 개념 이름만 언급하는 것은
   # 실제 내용 중복이 아니므로, 그런 위임 라인은 제외하고 "실제 내용으로" 등장하는
   # 파일만 집계한다.
-  local concepts=("SLI/SLO" "RED (Rate" "Error Budget" "OpenTelemetry" "카디널리티")
+  # 감시 대상은 "개념"이어야 한다. 제품/도구 이름은 그 도구를 쓰는 모든 도메인에서
+  # 정당하게 등장하므로 중복 신호가 되지 못한다. OpenTelemetry 를 이 목록에 두었을 때
+  # 걸린 6개 파일(aiops FinOps 파이프라인, aws X-Ray 병기, azure App Insights 병기,
+  # observability 벤더중립 계측/Collector 게이트웨이)은 전부 서로 다른 도메인 조항이
+  # 도구명만 공유한 것이라 실제 중복이 아니었다(2026-07-27 검토). 개념만 남긴다.
+  local concepts=("SLI/SLO" "RED (Rate" "Error Budget" "카디널리티")
   local concept files skill_count
   for concept in "${concepts[@]}"; do
     files=$(grep -E "$concept" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null |
       grep -v "위임\|참조하십시오\|참조하고" |
       cut -d: -f1 | sort -u || true)
     [ -z "$files" ] && continue
-    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$")
+    # grep -vc는 카운트가 0일 때(해당 개념이 aws/azure에만 있을 때) 종료 코드 1을 반환하고,
+    # set -euo pipefail 하에서 이 대입이 린터 전체를 아무 메시지 없이 exit 1로 중단시킨다
+    # (2026-07-27 실측). 카운트 0은 정상 결과이므로 아래 미러링 검사(275행)와 동일하게 흡수한다.
+    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
     if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && echo "$files" | grep -qE "$CONTEXTS_DIR/(aws|azure)/"; }; then
       echo "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
       echo "    ${files//$'\n'/$'\n    '}"
@@ -265,7 +276,9 @@ check_vendor_mirror_symmetry() {
   local f prefix azure_file a_count z_count
   for f in "$CONTEXTS_DIR"/aws/references/*.md; do
     [ -f "$f" ] || continue
-    prefix=$(basename "$f" | grep -oE '^[0-9]{3}')
+    # || true 가 없으면 숫자 접두사 없는 .md 하나만 있어도 grep 이 1을 반환해 린터가
+    # 메시지 없이 죽고, 바로 아래 작성자 의도의 가드가 영영 도달하지 못한다(2026-07-27 실측).
+    prefix=$(basename "$f" | grep -oE '^[0-9]{3}' || true)
     [ -z "$prefix" ] && continue
     azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
     if [ -z "$azure_file" ]; then
