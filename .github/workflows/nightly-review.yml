@@ -1,0 +1,45 @@
+name: Nightly Code & Prompt Review
+
+on:
+  schedule:
+    - cron: '0 18 * * *' # KST 03:00 (UTC 18:00)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-genai
+
+      - name: Run Gemini Nightly Review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: "gemini-3.6-flash"
+        run: |
+          python3 -u scripts/gemini_review.py
+
+      - name: Commit and Push Review Report
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: update nightly gemini review report [skip ci]"
+          file_pattern: "review.md"
+          skip_dirty_check: false
