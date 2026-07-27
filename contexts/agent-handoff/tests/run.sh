@@ -5,7 +5,7 @@
 # 확인하는 것이 목적이다.
 #
 # 픽스처 파일은 저장소에 고정하되, 실행 레이아웃은 임시 디렉토리에 조립한다.
-# 통신 파일명(Claude-to-Gemini.md 등)과 .ai-handoff-archive/ 는 전역 ignore 대상이라
+# 통신 파일명(Claude-to-Gemini.md 등)과 .agent-state/ 는 전역 ignore 대상이라
 # 그 이름 그대로 저장소에 커밋할 수 없기 때문이다.
 #
 # 사용: bash ~/dotfiles/contexts/agent-handoff/tests/run.sh
@@ -17,7 +17,7 @@ SCRIPT="$TESTS_DIR/../scripts/handoff-check.sh"
 FIXTURES="$TESTS_DIR/fixtures"
 BLUEPRINT="Claude-to-Gemini.md"
 REPORT="Gemini-to-Claude.md"
-ARCHIVE=".ai-handoff-archive"
+ARCHIVE=".agent-state/handoff-archive"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

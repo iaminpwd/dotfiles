@@ -8,9 +8,9 @@
   기재하십시오. 이 값이 없으면 아키텍트가 아카이브 경로를 알 수 없어
   Consume & Clear 가 동작하지 않습니다.
 - **[MUST] 아카이브 폴더 선생성**: 첫 `mv` 를 실행하기 전에
-  `mkdir -p .ai-handoff-archive/<task-id>/` 를 먼저 수행하십시오. 폴더가 없으면
+  `mkdir -p .agent-state/handoff-archive/<task-id>/` 를 먼저 수행하십시오. 폴더가 없으면
   이동이 실패해 통신 파일이 루트에 남고 트리거가 해제되지 않습니다.
-- **[MUST] Archive First (선점)**: 작업 시작 직후, 방금 지시받은 `Claude-to-Gemini.md` 파일을 덮어쓰기 방지를 위해 파일명에 날짜/시간 타임스탬프를 붙여 즉시 `.ai-handoff-archive/<task-id>/` 폴더로 이동(`mv`) 시키십시오. 이 복사본(아카이브)을 근거로 작업을 수행하십시오.
+- **[MUST] Archive First (선점)**: 작업 시작 직후, 방금 지시받은 `Claude-to-Gemini.md` 파일을 덮어쓰기 방지를 위해 파일명에 날짜/시간 타임스탬프를 붙여 즉시 `.agent-state/handoff-archive/<task-id>/` 폴더로 이동(`mv`) 시키십시오. 이 복사본(아카이브)을 근거로 작업을 수행하십시오.
 - **[MUST] 구두 위임 처리**: 사용자가 `Claude-to-Gemini.md` 대신 임의 문서(계획서 등)를 가리키며 실행을 지시하면, 그 문서를 설계도로 간주해 동일한 절차를 수행하고 `Gemini-to-Claude.md` 리포트를 반드시 작성하십시오.
 - **[NEVER] 저장소 문서 이동 금지**: 단, 그 문서가 Git 으로 추적되는 저장소 파일이면 아카이브로 옮기지 마십시오. 선점 아카이브는 핸드오프 통신 파일(`Claude-to-Gemini.md`, `Gemini-to-Claude.md`)에만 적용됩니다. 저장소 문서를 옮기면 사용자의 작업 산출물이 사라집니다. 이동 대신 리포트의 Actions Taken 에 참조 경로만 기재하십시오.
 - **[MUST] Sanity Check First**: 코드를 파일에 반영하거나 터미널 명령을 실행하기 전에, 지시 내용에 명백한 문법 오류, 존재하지 않는 파일 참조(환각), 논리 결함이 없는지 비판적으로 사전 검증하십시오. 통과한 안전한 지시에 한하여 코드를 실행하십시오.
@@ -32,9 +32,9 @@
   SUCCESS 로 보고하면 아키텍트가 다음 단계로 넘어가 결함이 그대로 남습니다.
 - **[MUST] Report & Archive (통신 제어)**: 터미널 제어 권한을 활용하여 통신 파일의 라이프사이클을 스스로 관리하십시오. 작업 종료 시 (성공/실패 무관) 프로젝트 루트에 다음 4가지 섹션을 포함한 `Gemini-to-Claude.md` 결과 보고서를 작성하십시오.
   0. 리포트 최상단 첫 줄에 `task-id: <이번 작업의 task-id>` 를 기재하십시오.
-     아키텍트는 이 값으로 `.ai-handoff-archive/<task-id>/` 경로를 확정합니다.
+     아키텍트는 이 값으로 `.agent-state/handoff-archive/<task-id>/` 경로를 확정합니다.
   1. `## 1. Status`: [ SUCCESS / FAILED ] 명시
   2. `## 2. Actions Taken`: 실제로 수정한 파일 목록 및 실행한 명령어
   3. `## 3. Logs`: 빌드나 테스트 중 발생한 Raw 에러 로그 또는 성공 메시지
   4. `## 4. Blockers & Questions`: 실행 중 발견된 논리적 결함이나 아키텍트에게 묻는 질문
-  - 워크스페이스 루트에 지난 턴의 `Gemini-to-Claude.md` 파일이 존재할 경우, 새 리포트를 쓰기 전에 기존 파일을 타임스탬프를 붙여 `.ai-handoff-archive/<task-id>/` 폴더로 덮어쓰기 없이 백업하십시오.
+  - 워크스페이스 루트에 지난 턴의 `Gemini-to-Claude.md` 파일이 존재할 경우, 새 리포트를 쓰기 전에 기존 파일을 타임스탬프를 붙여 `.agent-state/handoff-archive/<task-id>/` 폴더로 덮어쓰기 없이 백업하십시오.

@@ -284,7 +284,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 ```markdown
 - **[Trigger: After Code Change] Workspace-Scoped Prompt Provenance Logging:** 파일을 변경한 턴은
-  프로젝트 루트 `.ai-history.log`에 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 남긴다.
+  프로젝트 루트 `.agent-state/edits.log`에 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 남긴다.
   일시·경로·도구명은 PostToolUse 훅이 자동 기록하고, 참조 룰 문서(`agent:<파일>#<조항명>`)와
   목적은 에이전트가 덧붙인다. (출처: base.AGENTS.md 9장)
 - **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 논리 오류·설계 미흡 지적]

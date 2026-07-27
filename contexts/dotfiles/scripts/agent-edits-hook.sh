@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ai-history-hook.sh - AI 편집 이력을 프로젝트 루트 .ai-history.log에 1줄 append하는 PostToolUse 훅.
+# agent-edits-hook.sh - AI 편집 이력을 프로젝트 루트 .agent-state/edits.log에 1줄 append하는 PostToolUse 훅.
 #
 # Claude Code와 Antigravity IDE는 같은 이벤트명(PostToolUse)을 쓰지만 페이로드 스키마가 다르다.
 # (2026-07-26 실측: Antigravity는 toolCall.name / toolCall.args.TargetFile / workspacePaths[0],
@@ -47,7 +47,8 @@ IFS=$'\t' read -r tool target root err <<<"$fields"
 
 # 에이전트가 로그 파일 자체를 편집 도구로 갱신하면 그 편집을 훅이 재기록하는 자기 오염이
 # 발생한다(2026-07-26 실측: Antigravity가 agent 라인을 replace_file_content로 추가). 제외한다.
-[ "${target##*/}" = ".ai-history.log" ] && exit 0
+# 파일명(edits.log)만 비교하면 무관한 프로젝트 파일까지 침묵시키므로 .agent-state/ 경로까지 본다.
+case "$target" in */.agent-state/edits.log) exit 0 ;; esac
 
 # 로그를 둘 프로젝트 루트 결정: git 최상위 > 페이로드의 워크스페이스 > 대상 파일의 디렉토리.
 # git 최상위를 우선하는 이유: 사용자가 모노레포의 하위 디렉토리를 워크스페이스로 열면
@@ -71,8 +72,11 @@ rel="${target#"$root"/}"
 
 # 2>/dev/null을 리다이렉션보다 앞에 두어야 한다. 뒤에 두면 append 실패(읽기 전용 프로젝트 등)
 # 시점에 이미 stderr가 살아 있어 "Permission denied"가 에이전트 출력에 섞인다(2026-07-26 실측).
+# 로그는 프로젝트 루트가 아니라 .agent-state/ 하위에 모은다. 디렉토리가 없으면 append가 통째로
+# 실패하므로 먼저 확보하되, 실패해도 훅이 에이전트 작업을 막지 않도록 무시한다.
+mkdir -p "$root/.agent-state" 2>/dev/null || true
 printf '%s | %s | hook:%s | - | %s\n' \
   "$(date -Iseconds 2>/dev/null || date)" "$rel" "${tool:-unknown}" "$result" \
-  2>/dev/null >>"$root/.ai-history.log"
+  2>/dev/null >>"$root/.agent-state/edits.log"
 
 exit 0

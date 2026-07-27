@@ -51,19 +51,18 @@ Thumbs.db
 AGENTS.md
 CLAUDE.md
 
-# AI 편집 이력 로그 (모든 프로젝트 루트에 생성되므로 전역에서 제외)
-.ai-history.log
+# 에이전트 런타임 산출물 디렉토리 (편집 이력 로그, Trivy DB 타임스탬프, 핸드오프 아카이브)
+# 모든 프로젝트 루트에 생성되므로 전역에서 제외한다.
+.agent-state/
 
 # Local validation helper scripts (각 프로젝트 루트에 생성되는 심볼릭 링크만 제외 - 원본 스크립트는 슬래시 없는 패턴이면 저장소 전역에서 무시되어 버림)
 /pre-flight-check.sh
 
-# Pre-flight check cache and timestamp files
+# Pre-flight check cache
 .pre-flight-check.cache
-.trivy-db-update.timestamp
 
 **/.claude/settings.local.json
 
-# Agent Handoff Protocol Files
+# Agent Handoff Protocol Files (아카이브는 위 .agent-state/ 에 포함)
 Claude-to-Gemini.md
 Gemini-to-Claude.md
-.ai-handoff-archive/

@@ -596,7 +596,7 @@ validate_security() {
 
     # 24시간(86400초) 수명 주기 정책 설정
     local db_ttl=86400
-    local timestamp_file="$REPO_ROOT/.trivy-db-update.timestamp"
+    local timestamp_file="$REPO_ROOT/.agent-state/trivy-db-update.timestamp"
     local skip_flags=()
 
     local now
@@ -640,8 +640,9 @@ validate_security() {
     # 2>/dev/null은 리다이렉션보다 앞에 두어야 한다. 뒤에 두면 쓰기 실패(읽기 전용 저장소 등)
     # 시점에 stderr가 아직 살아 있어 "Permission denied"가 그대로 출력에 섞이고, set -e가
     # 그 실패를 잡아 스크립트를 죽인다. 타임스탬프는 캐시 최적화일 뿐이므로 실패해도 무시한다.
-    # (ai-history-hook.sh에 같은 함정이 기록되어 있다.)
+    # (agent-edits-hook.sh에 같은 함정이 기록되어 있다.)
     if [ "${#skip_flags[@]}" -eq 0 ]; then
+      mkdir -p "$(dirname "$timestamp_file")" 2>/dev/null || true
       echo "$now" 2>/dev/null >"$timestamp_file" || true
     fi
   elif has_tool trufflehog; then

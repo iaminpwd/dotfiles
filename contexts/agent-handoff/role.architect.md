@@ -47,7 +47,7 @@
   - **재확인까지 통과했다면**: 사용자에게 최종 성공을 보고하고 더 이상 설계도를 발행하지 마십시오.
   - **미반영 항목이 있거나 추가 작업이 남았다면**: 승계한 `task-id` 로 새로운 `Claude-to-Gemini.md` 를 발행하여 다음 단계를 지시하십시오.
 - **[MUST] Consume & Clear**: `Gemini-to-Claude.md` 를 분석한 직후, 리포트 최상단의
-  `task-id` 를 읽고 `mkdir -p .ai-handoff-archive/<task-id>/` 로 폴더를 확보한 뒤,
+  `task-id` 를 읽고 `mkdir -p .agent-state/handoff-archive/<task-id>/` 로 폴더를 확보한 뒤,
   그 파일을 타임스탬프를 붙여 해당 폴더로 이동시키십시오. 리포트에 `task-id` 가 없으면
   실행자에게 재보고를 요구하고 임의 경로로 옮기지 마십시오. 이 단계를 빠뜨리면 다음 턴에
   자신이 다시 발동되어 설계도만 반복 발행하게 됩니다.

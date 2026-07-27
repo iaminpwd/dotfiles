@@ -23,7 +23,7 @@ set -euo pipefail
 
 BLUEPRINT="Claude-to-Gemini.md"
 REPORT="Gemini-to-Claude.md"
-ARCHIVE=".ai-handoff-archive"
+ARCHIVE=".agent-state/handoff-archive"
 TASK_ID_RE='^task-id: [0-9]{8}_[0-9]{6}$'
 DIR_RE='^[0-9]{8}_[0-9]{6}$'
 EXIT_CODE=0

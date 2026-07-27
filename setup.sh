@@ -157,13 +157,13 @@ echo "   ✅ 제미나이 글로벌 AI 제외 목록(aiexclude) 세팅 완료: ~
 # hooks.json의 command는 절대 경로만 허용되어 사용자 홈 경로에 종속되므로, 심볼릭 링크 대신
 # 템플릿의 __HOOK_SCRIPT__를 실제 경로로 치환해 생성한다. 사용자가 /hooks로 추가한 다른 훅을
 # 보존하기 위해 덮어쓰기 대신 훅 이름 기준으로 병합한다.
-HOOK_SCRIPT="$CONTEXTS_DIR/dotfiles/scripts/ai-history-hook.sh"
+HOOK_SCRIPT="$CONTEXTS_DIR/dotfiles/scripts/agent-edits-hook.sh"
 GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 [ -f "$GEMINI_HOOKS" ] || echo '{}' >"$GEMINI_HOOKS"
 if jq empty "$GEMINI_HOOKS" 2>/dev/null; then
   GEMINI_HOOKS_TMP=$(mktemp)
   jq -s --arg cmd "$HOOK_SCRIPT" \
-    '.[0] * (.[1] | .["ai-history-log"].PostToolUse[0].hooks[0].command = $cmd)' \
+    '.[0] * (.[1] | .["agent-edits-log"].PostToolUse[0].hooks[0].command = $cmd)' \
     "$GEMINI_HOOKS" "$CONTEXTS_DIR/base.hooks.json" >"$GEMINI_HOOKS_TMP"
   mv "$GEMINI_HOOKS_TMP" "$GEMINI_HOOKS"
   echo "   ✅ 제미나이 편집 이력 훅 등록 완료: $GEMINI_HOOKS"

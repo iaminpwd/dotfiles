@@ -20,11 +20,11 @@ reviewed: 2026-07-28
 
 ## 공통 규약 (Shared Contract)
 - **[MUST] 통신 파일 경로 고정**: 설계도는 프로젝트 루트의 `Claude-to-Gemini.md`, 결과
-  리포트는 `Gemini-to-Claude.md` 입니다. 아카이브는 `.ai-handoff-archive/<task-id>/`
+  리포트는 `Gemini-to-Claude.md` 입니다. 아카이브는 `.agent-state/handoff-archive/<task-id>/`
   하위에만 두고, 다른 경로를 임의로 만들지 마십시오.
 - **[MUST] task-id 는 왕복이 아니라 작업 단위**: `<task-id>` 는 하나의 작업 전체를
   식별합니다. 같은 작업에서 파생된 모든 설계도와 리포트는 재발행 횟수와 무관하게 동일한
-  `.ai-handoff-archive/<task-id>/` 폴더에 누적되어야 합니다. 왕복마다 새 `task-id` 를
+  `.agent-state/handoff-archive/<task-id>/` 폴더에 누적되어야 합니다. 왕복마다 새 `task-id` 를
   발급하면 아래 3왕복 상한이 계수 대상을 잃어 영원히 발동하지 않습니다(2026-07-28 실측:
   연속된 3·4·5차 개정이 각각 새 폴더를 받아 폴더당 2파일에 머물렀고, 6파일 상한에
   도달할 수 없었습니다).
@@ -50,7 +50,7 @@ reviewed: 2026-07-28
   커밋 시점에는 `git/.githooks/pre-commit` 이 같은 스크립트로 드리프트를 자가 치유하지만,
   그것은 다음 세션을 위한 안전망입니다. 현재 세션에서 개정 조항이 즉시 적용되려면 원본을
   고친 직후 직접 재배포해야 합니다.
-- **[MUST] 중단 조건 (3왕복 상한)**: `.ai-handoff-archive/<task-id>/` 내 파일이 6개
+- **[MUST] 중단 조건 (3왕복 상한)**: `.agent-state/handoff-archive/<task-id>/` 내 파일이 6개
   (3왕복)를 초과하면 양 에이전트는 즉시 모든 작업을 중단하고, 지금까지의 경과와 Blockers
   를 사용자에게 브리핑해 개입을 요청하십시오.
 - **[MUST] 기계 검증 실행**: 위 상한과 트리거 해제 여부는 조항 문장이 아니라
