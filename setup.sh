@@ -247,7 +247,10 @@ echo "   ✅ 클로드 로컬 규칙 연동 완료: $DOTFILES_DIR/CLAUDE.md"
 echo "[6/6] 시크릿 유출 스캔 및 보안 훅(Hook) 구성..."
 if command -v trufflehog &>/dev/null; then
   echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."
-  trufflehog filesystem "$DOTFILES_DIR" --exclude-paths="$DOTFILES_DIR/.git" --no-update || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
+  # --fail이 없으면 trufflehog는 시크릿을 찾아도 종료 코드 0으로 끝나 아래 || 분기가
+  # 도달 불가능한 데드 코드가 되고, 스캔이 결과와 무관하게 항상 통과한다(2026-07-27 실측).
+  # git/.githooks/pre-commit 및 pre-flight-check.sh의 trufflehog 호출과 동일하게 --fail을 붙인다.
+  trufflehog filesystem "$DOTFILES_DIR" --exclude-paths="$DOTFILES_DIR/.git" --no-update --fail || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
 else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi

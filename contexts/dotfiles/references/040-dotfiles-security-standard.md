@@ -5,14 +5,14 @@ trigger: Apply these rules ONLY when handling sensitive credentials, SSH private
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-24
+reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 
 본 모듈은 `dotfiles` 퍼블릭 저장소 노출 위험을 방지하기 위한 시크릿 통제 아키텍처에 적용됩니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 `.gitignore`에 등록된 `.zshrc.local` 같은 로컬 전용 파일에 분리하고, Git으로 추적되는 파일(`.zshrc`, `setup.sh` 등)에는 환경 변수 참조 로직만 구현하십시오.
+- **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 저장소 트리 밖의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에 분리하고, Git으로 추적되는 파일(`zsh/.zshrc`, `setup.sh` 등)에는 환경 변수 참조 로직만 구현하십시오.
 - **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)이 실패하면 원인을 수정한 뒤 재커밋하여 반드시 통과시키십시오.
 - **[MUST] Explicit Key Access Request:** `~/.ssh/id_rsa` 등 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 사용자에게 명시적 승인을 요청하여 취득한 후 접근하십시오.
 
@@ -46,8 +46,8 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 Verified Secrets 0건으로 완전 통과되고, `.zshrc.local` 등 자격 증명을 담은 로컬 전용 파일이 `.gitignore`에 등록되어 `git status`에 노출되지 않음이 확인되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `trufflehog git file://. --since-commit HEAD --only-verified`를 실행하여 하드코딩된 시크릿 유출 여부를 검사하십시오.
+- **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 verified/unverified 합계 0건으로 통과되고, 자격 증명은 저장소 바깥의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에만 존재하여 `git status`에 나타나지 않음이 확인되어야 합니다.
+- **[MUST] 검증 도구 매핑:** `trufflehog git file://. --no-update --fail`로 커밋 히스토리 전체를 스캔하십시오. 스캔 범위는 히스토리 전체, 결과 필터는 verified/unverified 모두 포함으로 유지해야 탐지가 성립합니다. 범위를 좁히는 `--since-commit`은 비교 기준을 과거 리비전으로 지정할 때만 사용하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Commit / File Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
