@@ -66,3 +66,7 @@ CLAUDE.md
 # Agent Handoff Protocol Files (아카이브는 위 .agent-state/ 에 포함)
 Claude-to-Gemini.md
 Gemini-to-Claude.md
+
+# Python 바이트코드 (저장소 .gitignore 제거에 따라 전역으로 이관)
+__pycache__/
+*.pyc
