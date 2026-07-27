@@ -75,6 +75,10 @@ priority: highest
 - **[MUST] Tool Availability Gate:** CLI 도구 실행을 지시받았을 때, 해당 도구의 로컬 설치 여부를 사전에 확인하십시오. 미설치 시 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구하십시오.
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 사용자에게 최소 경로 권한만 요청하여 확보하십시오.
 - **[MUST] Pre-Flight Gate (정량 검증 게이트):** 인프라 코드(Terraform, Ansible, Helm, Dockerfile) 또는 쉘 스크립트(`.sh`, `.zsh`)를 수정한 경우, 도메인 스킬 발동 여부와 무관하게 `pre-flight-check` 스킬을 호출하여 정량 검증을 통과시킨 뒤 작업을 종결하십시오. 스킬 호출이 불가능한 환경에서는 `~/dotfiles/contexts/pre-flight-check/SKILL.md`를 절대 경로로 읽어 동일 절차를 수행하십시오.
+- **[Trigger: Handoff Protocol] Multi-Agent Collaboration Gate:** 아래 조건 중 자신의 역할에 해당하는 것이 충족될 때만 `agent-handoff` 스킬을 발동하십시오.
+  - **아키텍트**: 작업 디렉토리에 `Gemini-to-Claude.md`(실행 결과 리포트)가 존재하거나, 사용자가 설계·위임을 요청한 경우.
+  - **실행자**: 작업 디렉토리에 `Claude-to-Gemini.md`(설계도)가 존재하거나, 사용자가 특정 문서를 가리키며 실행을 지시한 경우.
+  자신이 직접 생성한 파일은 트리거로 삼지 마십시오(자기 재발동 방지). **(아키텍트는 답변을 `Claude-to-Gemini.md` 생성으로 대체하되, 소비한 `Gemini-to-Claude.md`를 아카이브로 옮기는 `mv` 1회는 예외로 허용합니다.)**
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 사용자가 '최종본', '한 번에', '전체 출력' 등 일괄 완성을 요구할 경우, 불필요한 중간 질문이나 확인 절차를 완전히 차단하고, 실무 Best Practice를 기준으로 빈칸을 스스로 채워 단 한 번에 완벽한 최종 산출물(코드/프롬프트)을 출력하십시오.
 - **[Trigger: User Message Contains '빠름'] Fast-Path Mode (경량 실행 모드):** 사용자 메시지에 '빠름'이 포함된 경우, 해당 턴은 즉시 작업 수행과 `pre-flight-check.sh`/`prompt-lint.sh` 등 자동화된 정량 검증만으로 완료 조건을 구성하십시오.
 - **[Trigger: After Code Change] Autonomous Self-Healing (자율적 자가 치유):** 수정 완료 후 백그라운드에서 자가 검증을 수행하고, 실패 시 최대 3회 스스로 재시도하십시오. **(단, 해당 자가 검증 과정에서 외부 리소스나 시스템 상태를 물리적으로 변경하는 파괴적 명령어(예: 배포 적용, 리소스 삭제, 상태 변경 등)가 요구될 경우, 자율 치유 프로세스를 즉시 중단하고 사용자에게 [테스트 실행 승인]을 먼저 득하십시오.)**

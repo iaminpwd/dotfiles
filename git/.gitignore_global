@@ -62,3 +62,8 @@ CLAUDE.md
 .trivy-db-update.timestamp
 
 **/.claude/settings.local.json
+
+# Agent Handoff Protocol Files
+Claude-to-Gemini.md
+Gemini-to-Claude.md
+.ai-handoff-archive/

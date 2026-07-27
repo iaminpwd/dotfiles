@@ -209,6 +209,25 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     continue
   fi
 
+  # agent-handoff 는 역할을 배포 시점에 주입해야 하므로 심볼릭 링크 대신 치환 생성한다.
+  # 링크로 배포하면 두 에이전트가 같은 파일을 보게 되어 역할 분기가 성립하지 않는다.
+  if [ "$ENV_NAME" = "agent-handoff" ]; then
+    # 일반 분기의 mkdir 을 continue 로 건너뛰므로 여기서 직접 만든다. 이 두 줄이 없으면
+    # 신규 설치에서 아래 리다이렉션이 "No such file or directory" 로 실패하고 set -e 가
+    # setup.sh 를 중단시킨다. agent-handoff 는 스킬 루프의 첫 항목이라 그 경우 어떤 스킬도
+    # 등록되지 않는다(2026-07-27 실측).
+    mkdir -p "$HOME/.claude/skills/agent-handoff" \
+      "$HOME/.gemini/config/skills/agent-handoff"
+    rm -f "$HOME/.claude/skills/agent-handoff/SKILL.md" \
+      "$HOME/.gemini/config/skills/agent-handoff/SKILL.md"
+    sed 's/__AGENT_ROLE__/architect/g' "$TARGET_DIR/SKILL.md" \
+      >"$HOME/.claude/skills/agent-handoff/SKILL.md"
+    sed 's/__AGENT_ROLE__/executor/g' "$TARGET_DIR/SKILL.md" \
+      >"$HOME/.gemini/config/skills/agent-handoff/SKILL.md"
+    echo "   ✅ agent-handoff 역할 주입 배포 완료 (architect / executor)"
+    continue
+  fi
+
   if [ -f "$TARGET_DIR/SKILL.md" ]; then
     # 1. 제미나이 (Gemini) 글로벌 스킬 등록 (자동 감지 디렉토리 연동 - 실시간 심볼릭 링크 구조)
     mkdir -p "$HOME/.gemini/config/skills/${ENV_NAME}"
