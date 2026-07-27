@@ -11,9 +11,8 @@ reviewed: 2026-07-21
 
 ## 1. 정량적 일괄 검증 파이프라인 (Automated Validation)
 
-- **[MUST] pre-flight-check.sh 심볼릭 링크 연결 및 실행:** 인프라 및 스크립트 코드가 수정된 후, `pre-flight-check.sh` 단일 스크립트로 검증(tflint, trivy 등)을 통합 실행하십시오. 작업 중인 프로젝트의 루트 디렉토리에 `pre-flight-check.sh`가 존재하지 않는 경우, 본 스킬 하위의 `scripts/pre-flight-check.sh` 원본을 가리키는 **심볼릭 링크를 프로젝트 루트에 생성**(`ln -sf [원본경로] ./pre-flight-check.sh`)하여 사용하십시오.
-  *   **[PREFER] Symbolic Link Over Copy:** 도트파일 원본의 검증 로직 업데이트 사항이 실시간으로 모든 작업 저장소에 자동 동기화되도록 심볼릭 링크 생성을 최우선으로 시도하고, 파일 시스템 제약 등으로 불가능한 환경에 한해서만 물리 복사(`cp`)를 차선책으로 우회 수행하십시오.
-  *   터미널에서 `./pre-flight-check.sh`를 단일 실행하여 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등을 일괄 수행하십시오.
+- **[MUST] 정본 절대 경로 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `bash ~/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh`를 실행하여 검증(tflint, trivy 등)을 통합 수행하십시오.
+  *   위 단일 실행으로 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등이 일괄 수행됩니다.
   *   **[MUST] 자율 자가 치유 시 연쇄 종속성 동시 수정:** `pre-flight-check.sh` 검증 실패로 인해 에이전트가 자가 치유(Self-Healing)를 시도할 때, 특정 리소스(예: AWS RDS)의 엔진 버전을 올리는 경우 연관된 종속성 속성(예: `parameter_group_name`, `option_group_name` 등)을 해당 엔진 버전에 호환되는 규격으로 함께 변경하여 2차 유효성 검사 실패(tflint, terraform validate 등)를 방지하십시오.
 
 ## 2. 정성적 정책 자가 검증 (Policy Self-Check)

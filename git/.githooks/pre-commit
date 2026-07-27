@@ -172,22 +172,28 @@ if [ -f "$HANDOFF_CHECK" ]; then
   fi
 fi
 
-# ~/workspace 하위 실 업무 저장소는 pre-flight-check.sh 심볼릭 링크를 사람/AI가 깜빡해도
-# 자동으로 생성되도록 자가 치유 (무관한 외부 저장소까지 검증을 강제하지 않기 위해 workspace로 범위 한정)
-if [[ "$REPO_ROOT/" == "$HOME/workspace/"* ]] && [ ! -e "$REPO_ROOT/pre-flight-check.sh" ] && [ ! -L "$REPO_ROOT/pre-flight-check.sh" ]; then
-  # 정본은 스킬 폴더 안에 있다. 예전에는 $HOME/dotfiles/pre-flight-check.sh를 참조했는데
-  # 그 경로에 파일이 없어 아래 [ -e ] 검사가 항상 실패, 자가치유가 한 번도 동작하지 않았고
-  # 링크 없는 워크스페이스 저장소는 검증 없이 커밋됐다(2026-07-26 실측).
-  DOTFILES_PFC="$HOME/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh"
-  if [ -e "$DOTFILES_PFC" ]; then
-    ln -sf "$DOTFILES_PFC" "$REPO_ROOT/pre-flight-check.sh"
-    echo "🔗 워크스페이스 저장소에 pre-flight-check.sh 링크를 자동 생성했습니다: $REPO_ROOT/pre-flight-check.sh"
+# 검증 대상 판정. 예전에는 "저장소 루트에 pre-flight-check.sh 링크가 있는가"를 옵트인
+# 마커로 삼고 ~/workspace 하위에만 링크를 자동 생성했다. 그 방식은 링크 자체가 게이트라서,
+# workspace 밖의 상시 검증 대상(dotfiles 자신)이 수동으로 만든 링크에 의존했고 링크가
+# 없으면 아무 경고 없이 검증이 통째로 빠졌다. 정본을 절대 경로로 직접 호출하고, 어떤
+# 저장소를 검증할지는 아래 조건으로만 선언한다(무관한 외부 저장소는 여전히 제외).
+DOTFILES_PFC="$HOME/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh"
+PFC_TARGET=""
+if [[ "$REPO_ROOT/" == "$HOME/workspace/"* || "$REPO_ROOT" == "$HOME/dotfiles" ]]; then
+  if [ -x "$DOTFILES_PFC" ]; then
+    PFC_TARGET="$DOTFILES_PFC"
+  else
+    # 상시 대상인데 정본이 없으면 조용히 넘기지 않는다. 과거 실패의 재발 지점이다.
+    echo "⚠️ 상시 검증 대상 저장소이지만 정본을 실행할 수 없어 사전 검증을 건너뜁니다: $DOTFILES_PFC"
   fi
+elif [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
+  # 상시 대상 밖의 저장소는 루트에 링크를 둔 경우에만 검증한다(기존 옵트인 방식 하위 호환).
+  PFC_TARGET="$REPO_ROOT/pre-flight-check.sh"
 fi
 
-if [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
+if [ -n "$PFC_TARGET" ]; then
   echo "🚀 커밋 전 인프라 및 코드 사전 검증(pre-flight-check)을 수행합니다..."
-  RUN_COST_CHECK=true "$REPO_ROOT/pre-flight-check.sh" || {
+  RUN_COST_CHECK=true "$PFC_TARGET" || {
     echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
     exit 1
   }
