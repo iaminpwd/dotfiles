@@ -13,6 +13,7 @@ reviewed: 2026-07-21
 
 | 작업 유형 | 참조 문서 |
 |---|---|
+| 이 저장소 작업의 계획서·핸드오프 설계도 작성 | references/005-project-planning-template.md |
 | dotfiles 아키텍처 및 핵심 구조 | references/010-dotfiles-core-standard.md |
 | 쉘 스크립팅(bash/zsh), setup.sh 자동화 | references/020-shell-scripting-standard.md |
 | 도구 및 패키지 관리 (apt, mise 등) | references/030-toolchain-management-standard.md |

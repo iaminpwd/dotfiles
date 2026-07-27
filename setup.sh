@@ -209,22 +209,18 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     continue
   fi
 
-  # agent-handoff 는 역할을 배포 시점에 주입해야 하므로 심볼릭 링크 대신 치환 생성한다.
+  # agent-handoff 는 역할별 지침을 배포 시점에 결합해야 하므로 심볼릭 링크 대신 생성한다.
   # 링크로 배포하면 두 에이전트가 같은 파일을 보게 되어 역할 분기가 성립하지 않는다.
+  # 공통부(SKILL.md)에 역할 파일 한 벌만 이어 붙여 상대 역할 지침이 배포본에 아예
+  # 존재하지 않게 만든다. 한 파일에 두 역할을 담고 "읽지 마십시오" 지시문으로만 차단하면
+  # 상대 지침이 그대로 컨텍스트에 적재된다.
   if [ "$ENV_NAME" = "agent-handoff" ]; then
-    # 일반 분기의 mkdir 을 continue 로 건너뛰므로 여기서 직접 만든다. 이 두 줄이 없으면
-    # 신규 설치에서 아래 리다이렉션이 "No such file or directory" 로 실패하고 set -e 가
-    # setup.sh 를 중단시킨다. agent-handoff 는 스킬 루프의 첫 항목이라 그 경우 어떤 스킬도
-    # 등록되지 않는다(2026-07-27 실측).
-    mkdir -p "$HOME/.claude/skills/agent-handoff" \
-      "$HOME/.gemini/config/skills/agent-handoff"
-    rm -f "$HOME/.claude/skills/agent-handoff/SKILL.md" \
-      "$HOME/.gemini/config/skills/agent-handoff/SKILL.md"
-    sed 's/__AGENT_ROLE__/architect/g' "$TARGET_DIR/SKILL.md" \
-      >"$HOME/.claude/skills/agent-handoff/SKILL.md"
-    sed 's/__AGENT_ROLE__/executor/g' "$TARGET_DIR/SKILL.md" \
-      >"$HOME/.gemini/config/skills/agent-handoff/SKILL.md"
-    echo "   ✅ agent-handoff 역할 주입 배포 완료 (architect / executor)"
+    # 배포 명령의 정본은 scripts/deploy.sh 다. pre-commit 훅의 드리프트 자가 치유도 같은
+    # 스크립트를 호출하므로, 여기에 명령을 복제하면 두 경로가 갈린다.
+    # 실패해도 exit 하지 않는다. agent-handoff 는 스킬 루프의 첫 항목이라 여기서 죽으면
+    # 나머지 스킬이 전부 미등록으로 남는다(2026-07-27 실측).
+    bash "$TARGET_DIR/scripts/deploy.sh" ||
+      echo "   ❌ agent-handoff 배포 건너뜀 (위 오류 참조)" >&2
     continue
   fi
 
