@@ -61,7 +61,7 @@ limits:
 - **[PREFER] CLI Tool Mapping:** 추상적 지시 대신 로컬 터미널 도구명(`kubectl`, `aws` 등)과 매핑하여 지시하십시오.
 - **[PREFER] Split Complex Tasks:** 복잡한 셋업은 반드시 넘버링(Step-by-Step)된 단계별 지시로 분할하여 순차적으로 실행하도록 강제하십시오.
 - **[Trigger] Autonomous Action:** 에이전트의 자율 개입을 위해 `[Trigger: 이벤트명]` 형태의 조건문을 적극 설계하십시오.
-- **[PREFER] Artifact Generation Rules:** 산출물 작성 시 대상 에이전트(Claude Code, Gemini CLI, Codex 등)에 맞춰 `walkthrough.md`, `task.md` 등 마크다운 산출물 파일로 작성하도록 강제하십시오.
+- **[PREFER] Artifact Generation Rules:** 산출물 작성 시 대상 에이전트(Claude Code, Antigravity 등)에 맞춰 `walkthrough.md`, `task.md` 등 마크다운 산출물 파일로 작성하도록 강제하십시오.
 
 ## 5. 방어적 로컬 환경 철학 (Defensive Environment Architecture)
 Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시오.

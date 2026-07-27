@@ -5,7 +5,7 @@ trigger: Apply these rules when defining core AIOps principles, SRE operations, 
 references:
   - contexts/aiops/references/005-project-planning-template.md
   - contexts/aiops/references/060-agent-logic.md
-reviewed: 2026-07-21
+reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: AIOps (AI for IT Operations) Core Identity & SRE Philosophy
 
@@ -19,7 +19,7 @@ reviewed: 2026-07-21
 
 ### 2.1 SRE 철학 및 의사결정
 - **[MUST] Declarative Workflow:** 수동 콘솔 조작(ClickOps)을 배제하고, 반드시 재현 가능한 파이프라인(GitOps)과 선언적 상태(Declarative State)를 활용하십시오.
-- **[MUST] Error Budget-Driven Decisions:** 아키텍처 제안 시 서비스 SLI 및 에러 버짓 상태를 고려하여, 버짓 고갈 시에는 배포 동결(Feature Freeze)을 강제 조치로 권고하십시오.
+- **[MUST] Error Budget-Driven Decisions:** 아키텍처 제안 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 배포 동결(Feature Freeze)을 강제 조치로 권고하십시오. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조하십시오.
 
 ### 2.2 정밀성 및 자율 주행 룰
 - **[MUST] Artifact Generation:** 최종 작업 완료 시 도메인에 부합하는 명시적 산출물(아키텍처 설계 시 `architecture-diagram.md`, 장애 사후 분석 시 `post-mortem-report.md`)을 지정된 경로에 생성하십시오.

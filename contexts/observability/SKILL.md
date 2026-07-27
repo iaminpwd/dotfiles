@@ -4,7 +4,7 @@ description: |
   클라우드/K8s 전반의 관측성(Observability) 설계 스킬. 메트릭·로그·트레이스 3대 요소,
   SLI/SLO/에러 버짓, 알람 설계, 구조화 로깅, OpenTelemetry 분산 추적,
   Grafana/Datadog 등 대시보드 및 SaaS 통합.
-reviewed: 2026-07-21
+reviewed: 2026-07-27
 ---
 # observability Skill
 
@@ -14,6 +14,7 @@ reviewed: 2026-07-21
 
 | 작업 유형 | 참조 문서 |
 |---|---|
+| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
 | 관측성 기본 원칙, SLI/SLO, Error Budget | references/010-observability-core.md |
 | 메트릭 설계 및 알람 (PromQL, CloudWatch, Azure Monitor) | references/020-metrics-alerting-standard.md |
 | 구조화 로깅 및 로그 파이프라인 (Loki/ELK/CloudWatch Logs) | references/030-logging-standard.md |

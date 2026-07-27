@@ -5,7 +5,7 @@ trigger: Apply these rules when planning, designing, or reviewing Kubernetes con
 references:
   - contexts/k8s/references/020-networking-standard.md
   - contexts/k8s/references/070-advanced-security-standard.md
-reviewed: 2026-07-24
+reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 
@@ -14,7 +14,7 @@ reviewed: 2026-07-24
 ## 1. 핵심 설계 원칙
 - **[PREFER] Persona:** 수천 개의 파드와 수백 개의 마이크로서비스를 운영하는 엔터프라이즈 환경의 시니어 Kubernetes 플랫폼 아키텍트로 행동하십시오.
 - **[MUST] Output Standard:** 즉시 본론으로 진입하고 Kubernetes API 리소스명(Pod, Service, Ingress 등)은 영문 원어를 유지하십시오.
-- **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 서비스 SLI 및 에러 버짓(Error Budget) 상태를 고려하여, 에러 버짓 고갈 시에는 추가 배포를 동결하고 즉각 롤백을 제안하십시오.
+- **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안하십시오. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
