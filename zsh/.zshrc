@@ -2,16 +2,19 @@
 # ZSH Configuration (Optimized for Infrastructure Engineers)
 # =============================================================================
 
-autoload -Uz add-zsh-hook
-
 # --- [Oh My Zsh Core] ---
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 plugins=(git kubectl terraform zsh-autosuggestions zsh-syntax-highlighting)
+
+# HIST_STAMPS는 반드시 oh-my-zsh.sh 로드 전에 선언해야 한다. lib/history.zsh가 로드 시점에
+# case ${HIST_STAMPS-} 로 한 번 읽어 history 별칭을 확정하므로, 로드 후에 선언하면 값이
+# 무시된다(2026-07-27 실측: 로드 후 선언 시 history=omz_history, 로드 전 선언 시 -i 적용).
+HIST_STAMPS="yyyy-mm-dd"        # 히스토리에 날짜/시간 기록
+
 source $ZSH/oh-my-zsh.sh
 
 # --- [ZSH History Settings (Pro)] ---
-HIST_STAMPS="yyyy-mm-dd"        # 히스토리에 날짜/시간 기록
 setopt HIST_IGNORE_ALL_DUPS     # 중복된 명령어는 히스토리에 한 번만 기록
 setopt HIST_IGNORE_SPACE        # 띄어쓰기로 시작하는 명령어는 기록 무시 (시크릿 보호용)
 setopt HIST_REDUCE_BLANKS       # 명령어 내의 불필요한 공백 제거 후 기록
@@ -60,7 +63,11 @@ alias tfa='terraform apply'
 alias tfw='terraform workspace'
 
 # 4. 도구 환경 활성화 (Mise)
-eval "$(~/.local/bin/mise activate zsh)"
+# 아래 fzf 블록과 동일하게 존재 여부를 먼저 확인한다. 무방비로 eval하면 mise 설치 전이나
+# 설치 실패 상태에서 셸을 열 때마다 "command not found"가 출력된다.
+if [ -x "$HOME/.local/bin/mise" ]; then
+  eval "$(~/.local/bin/mise activate zsh)"
+fi
 
 # 5. fzf (Fuzzy Finder) 단축키 및 자동완성 연동 (Mise 설치 기준)
 if command -v fzf &> /dev/null; then
