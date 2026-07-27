@@ -45,7 +45,7 @@ jobs:
       # 검증한다. 룰북 증설로 예산을 넘기는 변경이 들어와도 토큰을 태우기 전에 실패한다.
       - name: Review Plan Eval
         run: |
-          python3 scripts/eval_review_plan.py
+          python3 contexts/dotfiles/scripts/eval_review_plan.py
 
       - name: Run Gemini Nightly Review
         env:
@@ -53,7 +53,7 @@ jobs:
           GEMINI_MODEL: "gemini-3.6-flash"
           GEMINI_CALL_INTERVAL: "90"
         run: |
-          python3 -u scripts/gemini_review.py
+          python3 -u contexts/dotfiles/scripts/gemini_review.py
 
       - name: Commit and Push Review Report
         uses: stefanzweifel/git-auto-commit-action@v5

@@ -93,9 +93,9 @@ DAILY_QUOTA_HINTS = ("PerDay", "per day", "PerDayPerProject")
 def dedupe_symlinks(paths: List[str]) -> List[str]:
     """심볼릭 링크와 그 원본이 함께 잡히면 원본만 남긴다.
 
-    루트의 AGENTS.md / CLAUDE.md 는 contexts/dotfiles/SKILL.md 를, pre-flight-check.sh 는
-    contexts/pre-flight-check/scripts/ 하위를 가리키므로, 그대로 두면 같은 실체를 여러 벌
-    전송하고 서로 다른 요일 버킷에 배정되어 같은 문서를 두 번 리뷰하게 된다.
+    루트의 AGENTS.md / CLAUDE.md 는 contexts/dotfiles/SKILL.md 를 가리키므로, 그대로 두면
+    같은 실체를 여러 벌 전송하고 서로 다른 요일 버킷에 배정되어 같은 문서를 두 번
+    리뷰하게 된다.
     """
     real_targets = {os.path.realpath(p) for p in paths if not os.path.islink(p)}
     return [p for p in paths
@@ -129,7 +129,7 @@ def scan_doc_groups() -> Dict[str, Dict[str, str]]:
 
 def scan_script_files() -> Dict[str, str]:
     """쉘 및 파이썬 스크립트를 수집한다. 코퍼스가 작아 그룹 분할 없이 통째로 사용한다."""
-    targets = set(glob.glob("**/*.sh", recursive=True)) | set(glob.glob("scripts/*.py"))
+    targets = set(glob.glob("**/*.sh", recursive=True)) | set(glob.glob("contexts/dotfiles/scripts/*.py"))
     files: Dict[str, str] = {}
 
     for path in dedupe_symlinks(sorted(targets)):

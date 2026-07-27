@@ -6,7 +6,7 @@
 RPD/TPM 예산 적합성이 대상이다.
 
 사용법:
-    python3 scripts/eval_review_plan.py     # 실패 시 종료 코드 1
+    python3 contexts/dotfiles/scripts/eval_review_plan.py     # 실패 시 종료 코드 1
 """
 import os
 import sys
@@ -24,7 +24,8 @@ TPM_SAFETY_RATIO = 0.8
 # 요일 주기(7)와 스크립트 패스 수의 최소공배수만큼 돌려 장기 분포를 본다.
 ROTATION_DAYS = 28
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 이 파일은 contexts/dotfiles/scripts/ 에 있으므로 3단계 위가 레포 루트다.
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 failures: List[str] = []
 warnings: List[str] = []
@@ -32,7 +33,7 @@ warnings: List[str] = []
 
 def load_review_module():
     """검사 대상 모듈을 경로로 직접 적재한다. (scripts/ 는 패키지가 아니다)"""
-    path = os.path.join(REPO_ROOT, "scripts", "gemini_review.py")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gemini_review.py")
     spec = importlib.util.spec_from_file_location("gemini_review", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
