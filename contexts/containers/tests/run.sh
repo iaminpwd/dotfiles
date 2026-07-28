@@ -14,6 +14,12 @@
 #   trivy misconfig  validate_security 가 --exit-code 0 으로 호출하므로 커밋을
 #                    막지 않는다. 탐지 여부만 검증한다 (경고 전용)
 #
+# validate_security 는 저장소 전체를 훑을 때 --skip-dirs 로 tests/fixtures 를 제외하므로
+# 이 픽스처들은 파이프라인의 저장소 스캔에는 잡히지 않는다. 일부러 위반하도록 만든 파일이
+# 매 커밋 재보고되는 노이즈를 막기 위한 것이고, 스캐너와 심각도 필터가 실제로 DS-0002 를
+# 탐지하는지는 여기서 픽스처를 직접 넘겨 검증한다(다운스트림 프로젝트에서는 픽스처 밖
+# 경로이므로 그대로 스캔 대상이다).
+#
 # trivy secret 스캐너용 픽스처는 두지 않는다. 실제로 탐지되는 자격 증명을
 # 저장소에 두는 셈이라 시크릿 하드코딩 금지 규칙에 정면으로 어긋나고,
 # pre-commit 훅의 trufflehog 가 커밋 자체를 차단한다.
@@ -51,7 +57,7 @@ report() {
   fi
 }
 
-# pre-flight-check.sh:419 와 동일하게 'hadolint <file>' 를 호출한다.
+# pre-flight-check.sh 의 validate_docker 와 동일하게 'hadolint <file>' 를 호출한다.
 # want_rule 이 빈 문자열이면 지적 0건을 기대한다.
 run_hadolint() {
   local name=$1 want_rule=${2:-}

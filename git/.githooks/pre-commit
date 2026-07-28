@@ -81,6 +81,14 @@ add_skill() {
 
 for FILE in "${STAGED_FILES[@]:-}"; do
   case "$FILE" in
+  contexts/pre-flight-check/tests/lib/*)
+    # tf 픽스처 공용 라이브러리. 이 파일이 속한 pre-flight-check 스킬에는 자체
+    # 스위트가 없고, 실제로 이 라이브러리를 source 하는 것은 아래 세 스킬뿐이다.
+    # 일반 규칙에 맡기면 add_skill pre-flight-check 가 되어 아무것도 실행되지 않는다.
+    for LIB_SKILL in aws azure openstack; do
+      add_skill "$LIB_SKILL"
+    done
+    ;;
   contexts/pre-flight-check/scripts/*)
     for DIR in "$REPO_ROOT"/contexts/*/tests/run.sh; do
       [ -e "$DIR" ] || continue
@@ -91,6 +99,12 @@ for FILE in "${STAGED_FILES[@]:-}"; do
   contexts/*/scripts/* | contexts/*/tests/*)
     SKILL=${FILE#contexts/}
     add_skill "${SKILL%%/*}"
+    ;;
+  setup.sh | contexts/base.hooks.json)
+    # setup.sh 는 contexts/ 밖에 있어 위 경로 규칙에 걸리지 않는다. 그 멱등성 회귀
+    # 테스트는 dotfiles 스킬이 갖고 있으므로 명시적으로 연결한다. base.hooks.json 은
+    # setup.sh 의 jq 훅 병합이 그대로 읽어 들이는 입력이라 같은 스위트로 검증한다.
+    add_skill dotfiles
     ;;
   esac
 done

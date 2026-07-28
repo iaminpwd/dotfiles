@@ -42,7 +42,7 @@ report() {
   fi
 }
 
-# pre-flight-check.sh:391 과 동일하게 'kube-linter lint <file>' 를 호출한다.
+# pre-flight-check.sh 의 validate_k8s_manifests 와 동일하게 'kube-linter lint <file>' 를 호출한다.
 # want_check 가 빈 문자열이면 지적 0건을 기대한다.
 run_kube_linter() {
   local name=$1 want_check=${2:-}
@@ -65,7 +65,7 @@ run_kube_linter() {
   fi
 }
 
-# k8s-check.sh:111-120 과 동일하게 yq 로 .spec 을 벗겨 promtool 에 넘긴다.
+# k8s-check.sh 의 check_prometheus_rules 와 동일하게 yq 로 .spec 을 벗겨 promtool 에 넘긴다.
 run_promtool() {
   local name=$1 want_fail=$2
   local tmp out status
@@ -83,7 +83,7 @@ run_promtool() {
   fi
 }
 
-# k8s-check.sh:147 과 동일하게 'pluto detect-files -d <dir>' 를 호출한다.
+# k8s-check.sh 의 check_deprecated_apis 와 동일하게 'pluto detect-files -d <dir>' 를 호출한다.
 # pluto 는 디렉토리 단위로 스캔하므로 픽스처마다 격리된 임시 디렉토리를 쓴다.
 run_pluto() {
   local name=$1 want_fail=$2

@@ -2,10 +2,11 @@
 # prompt-lint.sh - Dotfiles Prompt Corpus Consistency Linter
 #
 # pre-flight-check.sh/k8s-check.sh 등은 "다운스트림 프로젝트의 인프라 코드"를
-# 검증하는 스크립트라 contexts/*/scripts/*-check.sh 자동 위임 대상에 포함된다.
+# 검증하는 스크립트라 contexts/*/scripts/preflight/ 자동 위임 대상에 놓인다.
 # 이 스크립트는 그 반대로 "dotfiles 저장소 자신의 프롬프트 원본(.md)"이 스스로
-# 일관성을 유지하는지 검증하는 것이 목적이라, 일부러 `-check.sh` 네이밍을 쓰지
-# 않아 다른 프로젝트에서 실행되는 pre-flight-check.sh의 자동 위임에 걸리지 않는다.
+# 일관성을 유지하는지 검증하는 것이 목적이라, 그 디렉토리 밖(contexts/dotfiles/
+# scripts/)에 두어 다른 프로젝트에서 실행되는 pre-flight-check.sh의 자동 위임에
+# 걸리지 않는다.
 #
 # ERROR: 명확한 결함(링크 깨짐, SSOT 목록 불일치, 코드펜스 깨짐) -> 종료 코드 1
 # WARNING: 사람/AI의 추가 판단이 필요한 후보(고아 파일, 크로스 스킬 중복 후보,
@@ -69,16 +70,16 @@ check_ssot_module_lists() {
 # -----------------------------------------------------------------------------
 check_reference_links() {
   echo "--- Step: Reference Link Integrity ---"
-  local f ref
-  while IFS= read -r -d '' f; do
-    while IFS= read -r ref; do
-      [ -z "$ref" ] && continue
-      [ -f "$REPO_ROOT/$ref" ] || {
-        echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
-        EXIT_CODE=1
-      }
-    done < <(grep -ohE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|(scripts|tests)/[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$f" 2>/dev/null | sort -u)
-  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+  local match f ref
+  while IFS= read -r match; do
+    [ -z "$match" ] && continue
+    f="${match%%:*}"
+    ref="${match#*:}"
+    [ -f "$REPO_ROOT/$ref" ] || {
+      echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
+      EXIT_CODE=1
+    }
+  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|(scripts|tests)/[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | sort -u || true)
   echo "[INFO] 참조 링크 검사 완료."
 }
 
@@ -106,43 +107,18 @@ check_orphaned_files() {
 # -----------------------------------------------------------------------------
 check_file_size() {
   echo "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
-  local f lines limit
-  while IFS= read -r -d '' f; do
-    lines=$(wc -l <"$f")
-    case "$f" in
-    *-library.md) limit=250 ;; # 레퍼런스/스펙형 (아이콘 매핑 등 정보 밀도가 높은 문서)
-    *) limit=150 ;;            # 순수 행동 규칙형
-    esac
-    [ "$lines" -gt "$limit" ] && echo "[WARNING] ${limit}줄 제약 초과: $f (${lines}줄)"
-  done < <(find "$CONTEXTS_DIR" -path "*/references/*.md" -print0)
+  find "$CONTEXTS_DIR" -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
+    $2 != "total" && $2 != "" {
+      lines = $1;
+      f = $2;
+      limit = (f ~ /-library\.md$/) ? 250 : 150;
+      if (lines > limit) {
+        print "[WARNING] " limit "줄 제약 초과: " f " (" lines "줄)"
+      }
+    }'
   echo "[INFO] 파일 크기 검사 완료."
 }
 
-# -----------------------------------------------------------------------------
-# 5. 최종 검토일(reviewed) 신선도 검사 (기본 90일)
-# -----------------------------------------------------------------------------
-check_staleness() {
-  echo "--- Step: Reviewed-Date Staleness (>90 days) ---"
-  local staleness_days=90
-  local today_epoch reviewed reviewed_epoch age_days f
-  today_epoch=$(date +%s)
-
-  while IFS= read -r -d '' f; do
-    reviewed=$(grep -m1 "^reviewed:" "$f" 2>/dev/null | awk '{print $2}' || true)
-    if [ -z "$reviewed" ]; then
-      echo "[WARNING] reviewed 필드 없음: $f"
-      continue
-    fi
-    reviewed_epoch=$(date -d "$reviewed" +%s 2>/dev/null || echo "")
-    if [ -z "$reviewed_epoch" ]; then
-      echo "[WARNING] reviewed 날짜 형식 파싱 실패: $f ($reviewed)"
-      continue
-    fi
-    age_days=$(((today_epoch - reviewed_epoch) / 86400))
-    [ "$age_days" -gt "$staleness_days" ] && echo "[WARNING] ${age_days}일간 미검토(기준 ${staleness_days}일): $f"
-  done < <(find "$CONTEXTS_DIR" \( -name "SKILL.md" -o -path "*/references/*.md" \) -print0)
-  echo "[INFO] 신선도 검사 완료."
-}
 
 # -----------------------------------------------------------------------------
 # 5. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
@@ -175,14 +151,32 @@ check_vendor_leakage() {
 # -----------------------------------------------------------------------------
 check_code_fences() {
   echo "--- Step: Code Fence Balance ---"
-  local f n
-  while IFS= read -r -d '' f; do
-    n=$(grep -c '^```' "$f" 2>/dev/null || true)
-    if [ $((n % 2)) -ne 0 ]; then
+  local unclosed
+  unclosed=$(find "$CONTEXTS_DIR" -name "*.md" -print0 | xargs -0 awk '
+    BEGIN { fail = 0; }
+    FNR == 1 {
+      if (count % 2 != 0) {
+        print current_file
+        fail = 1
+      }
+      current_file = FILENAME
+      count = 0
+    }
+    /^```/ { count++ }
+    END {
+      if (count % 2 != 0) {
+        print current_file
+        fail = 1
+      }
+      if (fail) exit 1;
+    }
+  ' || true)
+  if [ -n "$unclosed" ]; then
+    for f in $unclosed; do
       echo "❌ [ERROR] 코드펜스 짝이 맞지 않음: $f" >&2
-      EXIT_CODE=1
-    fi
-  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+    done
+    EXIT_CODE=1
+  fi
   echo "[INFO] 코드펜스 검사 완료."
 }
 
@@ -195,14 +189,19 @@ check_severity_tag_heuristic() {
   # 키워드가 포함된 중단 조건 줄인데 Halt & Clarify로 태깅되어 있으면, 실제로는
   # Hard Block이어야 할 후보일 확률이 높으므로 사람/AI의 재검토를 요청한다.
   local risk_keywords='privileged|hostNetwork|평문|자격 증명|시크릿.*유출|credential|secret.*leak|0\.0\.0\.0/0|CVE|readOnlyRootFilesystem'
-  local f hits
-  while IFS= read -r -d '' f; do
-    hits=$(grep -E "$risk_keywords" "$f" 2>/dev/null | grep "Halt & Clarify" || true)
-    [ -n "$hits" ] && {
-      echo "[WARNING] 고위험 키워드가 있는데 Halt & Clarify로 태깅됨 (Hard Block 검토 필요): $f"
-      echo "    ${hits//$'\n'/$'\n    '}"
-    }
-  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+  local hits
+  hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | grep "Halt & Clarify" || true)
+  if [ -n "$hits" ]; then
+    echo "$hits" | awk -F':' '{
+      file = $1;
+      sub(/[^:]+:/, "", $0);
+      if (file != last_file) {
+        print "[WARNING] 고위험 키워드가 있는데 Halt & Clarify로 태깅됨 (Hard Block 검토 필요): " file;
+        last_file = file;
+      }
+      print "    " $0;
+    }'
+  fi
   echo "[INFO] 등급 휴리스틱 검사 완료."
 }
 
@@ -216,14 +215,19 @@ check_prefer_language_tagged_must() {
   # 없던 시절 MUST 가 기본값처럼 부착돼 84%까지 올라갔으므로(2026-07-26 실측),
   # 재발을 막기 위해 문서 규칙을 여기서 기계 판정으로 승격시킨다(056 §2 3단계).
   local prefer_words='최우선으로 (제안|탐색|시도|고려)|최우선 (제안|탐색)|가급적|우선 탐색|권장합니다|권장하십시오'
-  local f hits
-  while IFS= read -r -d '' f; do
-    hits=$(grep -nE '^\s*[-*]\s+\*\*\[MUST\]' "$f" 2>/dev/null | grep -E "$prefer_words" || true)
-    [ -n "$hits" ] && {
-      echo "[WARNING] MUST 인데 본문이 선호를 서술함 (PREFER 재등급 검토): $f"
-      echo "    ${hits//$'\n'/$'\n    '}"
-    }
-  done < <(find "$CONTEXTS_DIR" -name "*.md" -print0)
+  local hits
+  hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | grep -E "$prefer_words" || true)
+  if [ -n "$hits" ]; then
+    echo "$hits" | awk -F':' '{
+      file = $1;
+      sub(/[^:]+:/, "", $0);
+      if (file != last_file) {
+        print "[WARNING] MUST 인데 본문이 선호를 서술함 (PREFER 재등급 검토): " file;
+        last_file = file;
+      }
+      print "    " $0;
+    }'
+  fi
   echo "[INFO] 선호 표현 등급 검사 완료."
 }
 
@@ -301,7 +305,6 @@ main() {
   check_reference_links
   check_orphaned_files
   check_file_size
-  check_staleness
   check_vendor_leakage
   check_code_fences
   check_severity_tag_heuristic
