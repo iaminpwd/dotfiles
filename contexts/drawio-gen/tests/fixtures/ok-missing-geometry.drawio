@@ -1,0 +1,18 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <!-- mxGeometry 가 없는 vertex 셀(그룹 래퍼 등 실제로 존재하는 형태)이 형제와 함께 있는 경우.
+       _abs_geom() 이 g.get() 을 무방비로 호출하던 시절에는 overlaps() 경로에서
+       AttributeError 로 검증기가 통째로 죽었다(2026-07-28 실측). 크래시 없이 판정이
+       나오는지만 본다 — 형제가 2개 이상이어야 overlaps() 가 실제로 호출된다. -->
+  <diagram id="ok-missing-geometry" name="ok-missing-geometry">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="nogeom" value="Geometry 없는 래퍼" style="group;" vertex="1" parent="1" />
+        <mxCell id="sibling" value="EC2" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1"><mxGeometry x="400" y="400" width="60" height="60" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

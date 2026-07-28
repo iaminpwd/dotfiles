@@ -238,9 +238,12 @@ check_code_fences() {
     }
   ' || true)
   if [ -n "$unclosed" ]; then
-    for f in $unclosed; do
+    # 비인용 `for f in $unclosed` 를 쓰지 않는다. 단어 분리가 일어나 공백이 들어간 경로가
+    # 여러 건으로 쪼개져 보고된다. awk 가 파일마다 한 줄씩 내보내므로 줄 단위로 읽는다.
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
       echo "❌ [ERROR] 코드펜스 짝이 맞지 않음: $f" >&2
-    done
+    done <<<"$unclosed"
     EXIT_CODE=1
   fi
   log_info "[INFO] 코드펜스 검사 완료."

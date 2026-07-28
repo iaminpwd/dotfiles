@@ -94,7 +94,7 @@ cd ~/dotfiles
 | **[1/6]** 필수 패키지 & Docker 설치 | 판별된 패키지 매니저(`apt-get`/`dnf`/`brew`)로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine을 **공식 저장소에 등록해** 설치하고 `docker` 그룹 권한 부여 (배포 GPG 키 지문을 상수와 대조하며, 불일치 시 설치 중단. macOS는 Docker Desktop 수동 설치 안내만 출력. `fd`는 시스템 패키지 대신 `mise`로 통합 관리) |
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
-| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 44개 데브옵스 도구 일괄 설치 |
+| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 40개 이상의 데브옵스 도구 일괄 설치 |
 | **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업, 루트 `AGENTS.md`/`CLAUDE.md` 링킹, Claude 커밋/PR Co-Authored-By 어트리뷰션 기본 비활성화, AI 편집 이력 훅(`agent-edits-hook.sh`)을 Claude Code·Antigravity 양쪽 `PostToolUse`에 병합 등록 |
 | **[6/6]** 시크릿 보안 훅 | TruffleHog 전역 시크릿 스캔 + `git/.githooks/{pre-commit,commit-msg}`를 `core.hooksPath`로 등록하여 모든 로컬 저장소에 정적 분석·FinOps 게이트·시맨틱 커밋 검증 자동 적용 |
 
@@ -178,7 +178,7 @@ ls ~/.gemini/config/skills/
 
 ## 포함된 도구 및 생산성 설정
 
-### 1. `config.toml` 선언 도구 목록 (버전 고정, 46개)
+### 1. `config.toml` 선언 도구 목록 (버전 고정, 40개 이상)
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
 **보안 & 정책 검증**

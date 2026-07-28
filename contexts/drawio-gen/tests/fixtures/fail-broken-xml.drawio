@@ -1,0 +1,12 @@
+<!-- 의도적으로 닫는 태그를 빠뜨린 픽스처. 090 §1 완료 조건 1번("XML 이 파싱 에러 없이
+     로드됨")의 실패 경로를 재현한다. 예전에는 이 입력이 [FAIL] 이 아니라 ParseError
+     트레이스백으로 빠져나가, 나머지 두 조건과 보고 형식이 갈렸다(2026-07-28 확인). -->
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="fail-broken-xml" name="fail-broken-xml">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="닫히지 않은 트리" style="rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="60" height="60" as="geometry"/></mxCell>

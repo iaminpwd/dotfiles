@@ -1,0 +1,19 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <!-- 부모 체인이 순환하는 경우(wrap → a → wrap). 손으로 XML 을 편집하거나 생성 스크립트가
+       parent 를 잘못 물리면 실제로 만들어진다. _abs_geom() 에 방문 집합이 없던 시절에는
+       RecursionError 로 검증기가 죽어, 종료 코드가 "위반 발견"과 구분되지 않았다
+       (2026-07-28 실측). 크래시 없이 판정이 나오는지만 본다. -->
+  <diagram id="ok-cyclic-parent" name="ok-cyclic-parent">
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="A" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="wrap"><mxGeometry x="0" y="0" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="b" value="B" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="wrap"><mxGeometry x="200" y="0" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="wrap" value="순환 래퍼" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="a"><mxGeometry x="40" y="40" width="400" height="200" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

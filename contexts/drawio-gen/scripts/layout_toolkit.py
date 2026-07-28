@@ -33,6 +33,13 @@ GX, GY = 35, 70          # 아이콘 간 기본 간격 (GY는 2줄 라벨 공간
 # 다시 넓혔다. 콘텐츠 기준 역산 원칙(§10 "컨테이너 크기는 콘텐츠로부터 역산")은 그대로 유지하고
 # 간격 상수만 조정한 것이므로, 이 값을 더 키우더라도 고정 캔버스 크기를 하드코딩하지는 말 것.
 PAD = 25                 # 컨테이너 내부 여백
+# 형제 컨테이너(서브넷/VPC 등) 사이 간격. hstack()/vstack() 이 기본값으로 쓴다.
+# 예전에는 두 함수가 30 을 하드코딩해서, 015 §3 "형제 간 간격은 고정 gap 상수로 관리"
+# 규칙을 정작 그 구현체가 지키지 않았다(2026-07-28 확인).
+# GX/GY 를 여기에 재사용하지 않는 이유: 그 둘은 아이콘 전용 상수이고, 특히 GY(70)는
+# 아이콘 아래 2줄 라벨 공간을 포함한 값이라 컨테이너 행 간격으로 쓰면 015 §3 이 예시로
+# 드는 수준("서브넷 간 30px, 행 간 25px")의 2배 이상으로 벌어진다.
+GAP_SIBLING = 30
 HEADER_SUBNET = 45       # Subnet 헤더 높이
 HEADER_VPC = 40          # VPC/VNet 헤더 높이
 HEADER_REGION = 30       # Cloud/Region 헤더 높이
@@ -61,10 +68,11 @@ def grid(n, cols, iw=IW, ih=IH, gx=GX, gy=GY, pad=PAD):
     return pos, w, h
 
 
-def hstack(sizes, gap=30):
+def hstack(sizes, gap=GAP_SIBLING):
     """가로로 나열할 요소들의 크기(width) 목록 → 각 요소의 x좌표 목록, 전체 너비.
 
     §10 "형제 간 간격은 고정 gap 상수로 관리" 규칙의 구현체.
+    서브넷/컨테이너 배치용이므로 아이콘 간격(GX)이 아니라 GAP_SIBLING 을 기본으로 쓴다.
     """
     xs, x = [], 0
     for w in sizes:
@@ -73,8 +81,11 @@ def hstack(sizes, gap=30):
     return xs, (x - gap if sizes else 0)
 
 
-def vstack(sizes, gap=30):
-    """세로로 나열할 요소들의 크기(height) 목록 → 각 요소의 y좌표 목록, 전체 높이."""
+def vstack(sizes, gap=GAP_SIBLING):
+    """세로로 나열할 요소들의 크기(height) 목록 → 각 요소의 y좌표 목록, 전체 높이.
+
+    hstack() 과 같은 이유로 아이콘 간격(GY)이 아니라 GAP_SIBLING 을 기본으로 쓴다.
+    """
     ys, y = [], 0
     for h in sizes:
         ys.append(y)
@@ -325,15 +336,34 @@ class Diagram:
 # ────────────────────────────────────────────────────────────────
 # 절대 좌표 변환 (validate/render_preview 공용)
 # ────────────────────────────────────────────────────────────────
-def _abs_geom(cells, cid):
-    """cid의 부모 체인을 따라가며 절대 좌표 (x, y, w, h)를 계산한다."""
+def _abs_geom(cells, cid, _seen=None):
+    """cid의 부모 체인을 따라가며 절대 좌표 (x, y, w, h)를 계산한다.
+
+    부모 체인이 순환하거나(A→B→A) mxGeometry 가 없는 셀을 만나도 죽지 않는다. 예전에는
+    두 경우 모두 RecursionError / AttributeError 로 이 함수가 크래시했고, 호출자인
+    validate() 에는 예외 처리가 없어 검증기 자체가 스택트레이스로 죽었다. 그러면 종료
+    코드가 "위반 발견"과 구분되지 않아 [FAIL] 판정을 통째로 삼킨다(2026-07-28 실측:
+    형제가 2개 이상이면 overlaps() 가 이 함수를 호출하면서 재현).
+    """
     if cid in ("0", "1", None) or cid not in cells:
         return 0.0, 0.0, 0.0, 0.0
+    # 순환 참조 차단. 손으로 편집한 XML 이나 생성 스크립트 버그로 실제로 만들어질 수 있고,
+    # 그 자체는 별도 검사가 잡을 문제이지 좌표 계산이 죽을 이유는 아니다.
+    if _seen is None:
+        _seen = set()
+    if cid in _seen:
+        return 0.0, 0.0, 0.0, 0.0
+    _seen.add(cid)
     c = cells[cid]
     g = c.find("mxGeometry")
-    x, y = float(g.get("x", 0)), float(g.get("y", 0))
-    w, h = float(g.get("width", 0)), float(g.get("height", 0))
-    px, py, _, _ = _abs_geom(cells, c.get("parent"))
+    if g is None:
+        # geometry 없는 셀(그룹 래퍼 등)은 자체 크기를 0으로 보되 부모 오프셋은 계승한다.
+        px, py, _, _ = _abs_geom(cells, c.get("parent"), _seen)
+        return px, py, 0.0, 0.0
+    # 속성이 빈 문자열인 경우까지 흡수한다. float("") 는 ValueError 다.
+    x, y = float(g.get("x") or 0), float(g.get("y") or 0)
+    w, h = float(g.get("width") or 0), float(g.get("height") or 0)
+    px, py, _, _ = _abs_geom(cells, c.get("parent"), _seen)
     return x + px, y + py, w, h
 
 
@@ -350,7 +380,16 @@ def validate(path):
     import xml.etree.ElementTree as ET
     from collections import defaultdict
 
-    root = ET.parse(path).getroot()
+    # 090 §1 은 "XML 이 파싱 에러 없이 로드됨"을 완료 조건 1번으로 규정한다. 그런데 예전에는
+    # 이 검사만 [FAIL] 항목이 아니라 ParseError 트레이스백으로 빠져나가, 나머지 두 조건
+    # (ID 중복/끊어진 참조)과 보고 형식이 갈렸다. 검증기가 예외로 죽는 것과 위반을 검출한
+    # 것을 호출자가 구분할 수 없게 되는 구조라, 파싱 실패도 다른 위반과 같은 형식으로 낸다.
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError as e:
+        return False, (f"[FAIL] XML 파싱 실패 (090 §1 완료 조건 1번): {e}\n"
+                       f"    닫히지 않은 태그나 잘못된 문자가 없는지 확인하십시오. "
+                       f"XML 속성값에는 <, & 를 그대로 넣을 수 없습니다(esc() 를 쓰십시오).")
     # 중복 ID 검사는 반드시 원본 순서 목록에서 세야 한다. dict 로 먼저 접으면 중복 키가
     # 합쳐져 090 §1 항목 2("모든 mxCell id 중복 없음")가 영구히 통과한다
     # (2026-07-26, tests/fixtures/fail-duplicate-id.drawio 로 발견).
@@ -569,7 +608,9 @@ def render_preview(path, out_png):
     구멍이 있었다(2026-07-22 발견). Read 도구로 이 PNG를 열어 박스 정렬뿐 아니라
     연결선 경로까지 확인한 뒤에만 완료를 선언하십시오.
     """
+    import html as _html
     import logging
+    import re
     import warnings
     import matplotlib
     matplotlib.use("Agg")
@@ -611,7 +652,11 @@ def render_preview(path, out_png):
                                   linewidth=1.8 if is_container else 0.8, edgecolor=stroke,
                                   facecolor=fill, alpha=0.5 if is_container else 0.85)
         ax.add_patch(rect)
-        label = (c.get("value") or "").split("<br>")[0].replace("&amp;", "&")
+        # validate() 의 plain_lines() 와 같은 정규식을 쓴다. `.split("<br>")` 로만 자르면
+        # `<br/>` 형태를 놓쳐 미리보기 라벨에 태그가 그대로 찍히고, 육안 검증 대상인 그림이
+        # 실제 렌더링과 달라진다.
+        label = re.split(r"<br\s*/?>", c.get("value") or "")[0]
+        label = _html.unescape(re.sub(r"<[^>]+>", "", label)).strip()
         ax.text(x + 3, -y - 10, label[:34], fontsize=7.5 if is_container else 6, va="top")
         maxx, maxy = max(maxx, x + w), max(maxy, y + h)
 
@@ -667,6 +712,7 @@ def check_icon_urls(path, timeout=3):
     """
     import re
     import xml.etree.ElementTree as ET
+    import urllib.error
     import urllib.request
 
     root = ET.parse(path).getroot()
@@ -684,8 +730,16 @@ def check_icon_urls(path, timeout=3):
         try:
             req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
+                # urlopen 은 4xx/5xx 를 HTTPError 로 올리므로 이 분기는 평소 도달하지 않는다.
+                # 리다이렉트 처리기가 상태 코드를 그대로 돌려주는 경우에 대비해 남겨 둔다.
                 if resp.status >= 400:
                     lines.append(f"[WARN] 아이콘 URL 응답 이상 (status={resp.status}): {url}")
+        except urllib.error.HTTPError as e:
+            # HTTPError 를 아래 일반 except 에 맡기면 "죽은 링크"가 "네트워크 확인 불가"로
+            # 강등되어, 문서(090 §7, 015)가 약속한 [WARN] 판정이 한 번도 나오지 않는다.
+            # 이 검사의 목적 자체가 URL 생존 확인이므로 두 경우를 반드시 갈라야 한다
+            # (2026-07-28 실측: 로컬 404 서버로 확인하니 전부 [INFO] 로 보고됨).
+            lines.append(f"[WARN] 아이콘 URL 응답 이상 (status={e.code}): {url}")
         except Exception as e:
             lines.append(f"[INFO] 아이콘 URL 확인 불가(네트워크/타임아웃, FAIL 아님): {url} ({e.__class__.__name__})")
     if not lines:
@@ -694,13 +748,28 @@ def check_icon_urls(path, timeout=3):
 
 
 if __name__ == "__main__":
+    import os
     import sys
     if len(sys.argv) != 2:
         print("usage: python3 layout_toolkit.py <path-to.drawio>")
         raise SystemExit(1)
+    if not os.path.isfile(sys.argv[1]):
+        print(f"[ERROR] 파일을 찾을 수 없습니다: {sys.argv[1]}")
+        raise SystemExit(1)
     ok, report = validate(sys.argv[1])
     print(report)
+    # 미리보기는 육안 검증 보조이지 판정 근거가 아니다. matplotlib 은 이 저장소의 어떤 설치
+    # 경로(mise config.toml, setup.sh)에도 선언되어 있지 않아 신규 환경에는 없는데, 예전에는
+    # 그 ImportError 가 아래 SystemExit 앞에서 그대로 터졌다. 그 결과 검증을 통과한 파일과
+    # 위반한 파일이 똑같이 exit 1 로 끝나, 090 §2~3 이 요구하는 기계 판정이 무의미해졌다
+    # (2026-07-28 실측). 렌더링 실패는 안내로 낮추고 판정은 validate() 결과로만 낸다.
     preview_path = sys.argv[1].rsplit(".", 1)[0] + "-preview.png"
-    render_preview(sys.argv[1], preview_path)
-    print(f"[INFO] 엣지 포함 렌더링 미리보기 저장: {preview_path}")
+    try:
+        render_preview(sys.argv[1], preview_path)
+        print(f"[INFO] 엣지 포함 렌더링 미리보기 저장: {preview_path}")
+    except ImportError:
+        print("[INFO] matplotlib 이 없어 미리보기를 건너뜁니다(검증 판정에는 영향 없음). "
+              "육안 검증까지 하려면: pip install matplotlib")
+    except Exception as e:
+        print(f"[WARN] 미리보기 생성 실패({e.__class__.__name__}: {e}) — 검증 판정에는 영향 없음")
     raise SystemExit(0 if ok else 1)

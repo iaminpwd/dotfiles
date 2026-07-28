@@ -88,6 +88,13 @@ cp "$MOCKBIN/mise" "$TMPHOME/.local/bin/mise" # setup.sh 는 ~/.local/bin/mise �
 # 백업 경로 검증용: stow 대상과 충돌하는 "사용자의 진짜 파일"을 미리 둔다.
 printf 'user-owned zshrc\n' >"$TMPHOME/.zshrc"
 
+# 고아 스킬 회수 검증용. 저장소에 없는 스킬의 배포본(링크)은 회수되어야 하고, 사용자가
+# 직접 만든 스킬은 그대로 남아야 한다. 사용자 스킬은 제미나이 쪽에 둔다 — 클로드 쪽은
+# 아래 "글로벌 스킬 등록" 케이스가 목록을 통째로 대조하므로 무관한 항목을 섞으면 안 된다.
+mkdir -p "$TMPHOME/.claude/skills/gone-skill" "$TMPHOME/.gemini/config/skills/user-own"
+ln -sfn "$TMPREPO/contexts/gone-skill/SKILL.md" "$TMPHOME/.claude/skills/gone-skill/SKILL.md"
+printf '# 사용자가 직접 만든 스킬\n' >"$TMPHOME/.gemini/config/skills/user-own/SKILL.md"
+
 # 병합 보존 검증용: 사용자가 이미 설정해둔 값과 무관한 훅을 미리 둔다.
 mkdir -p "$TMPHOME/.claude"
 cat >"$TMPHOME/.claude/settings.json" <<'JSON'
@@ -235,6 +242,17 @@ if [ "$EXPECTED_SKILLS" = "$ACTUAL_SKILLS" ]; then
 else
   report "클로드 글로벌 스킬 등록 (dotfiles 제외)" 1 \
     "차이: $(diff <(echo "$EXPECTED_SKILLS") <(echo "$ACTUAL_SKILLS") | grep -E '^[<>]' | tr '\n' ' ')"
+fi
+
+# 스킬 회수: 저장소에서 사라진 스킬의 배포본은 걷어내고, 사용자가 직접 만든 스킬은 남긴다.
+# 등록만 하고 회수하지 않으면 스킬을 지워도 에이전트가 삭제된 룰을 계속 로드한다.
+GONE_LEFT=$([ -e "$TMPHOME/.claude/skills/gone-skill" ] && echo Y || echo N)
+USER_KEPT=$([ -f "$TMPHOME/.gemini/config/skills/user-own/SKILL.md" ] && echo Y || echo N)
+if [ "$GONE_LEFT" = "N" ] && [ "$USER_KEPT" = "Y" ]; then
+  report "사라진 스킬 배포본만 회수(사용자 스킬 보존)" 0
+else
+  report "사라진 스킬 배포본만 회수(사용자 스킬 보존)" 1 \
+    "고아 잔존=$GONE_LEFT (N 기대), 사용자 스킬 보존=$USER_KEPT (Y 기대)"
 fi
 
 # agent-handoff 만 링크가 아니라 역할별 복사본으로 배포된다. setup.sh 주석이 명시한

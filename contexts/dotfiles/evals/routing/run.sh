@@ -42,7 +42,11 @@ echo "======================================================"
 # 1. description 용어 중복 분석 (정적)
 # -----------------------------------------------------------------------------
 echo "--- Step: Description 용어 중복 (라우팅 모호성 후보) ---"
-python3 - "$CONTEXTS_DIR" <<'PY'
+# 이 단계가 실패해도 즉시 죽이지 않고 종료 코드만 붙잡아 둔다. 채점(2단계)은 이 분석과
+# 독립적으로 유용한 정보이므로, 어느 항목이 실패했는지 전부 보여준 뒤 마지막에 한 번
+# 차단한다(compact-runner.sh 와 동일한 규범).
+DESC_RC=0
+python3 - "$CONTEXTS_DIR" <<'PY' || DESC_RC=$?
 import re, sys, glob, os
 from collections import defaultdict
 
@@ -87,9 +91,23 @@ for path in sorted(glob.glob(os.path.join(contexts, "*", "SKILL.md"))):
     if skill in NOT_ROUTED:
         continue
     text = open(path, encoding="utf-8").read()
-    m = re.search(r"^description:(.*?)^[a-z_]+:", text, re.M | re.S)
+    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. 예전 패턴은 description 뒤에
+    # 또 다른 '필드:' 가 오는 것만 전제해서, reviewed: 필드가 제거되어 description 이
+    # frontmatter 의 마지막 항목이 된 순간 12개 스킬 전부 파싱에 실패했다(2026-07-28 실측).
+    m = re.search(r"^description:(.*?)(?=^[a-z_]+:|^---\s*$)", text, re.M | re.S)
     if m:
         desc[skill] = tokens(m.group(1))
+
+# 파싱 0건은 "겹치는 용어가 없다"가 아니라 "검사를 한 건도 못 했다"이다. 그 둘을 구분하지
+# 않았던 탓에, frontmatter 에서 description 뒤 필드가 사라져 정규식이 전부 빗나가는 동안에도
+# "[INFO] 3개 이상 스킬이 공유하는 용어 없음" 이라는 초록불이 그대로 출력됐다(2026-07-28
+# 실측: 12개 중 0개 파싱). 이 분석은 CLAUDE.md 의 Paid Eval Gate 가 유료 측정의 무료
+# 대체재로 지정한 경로라, 조용히 죽으면 "토큰을 아끼려고 이쪽을 썼다"는 판단이 근거를 잃는다.
+if not desc:
+    print("[ERROR] SKILL.md 에서 description 을 하나도 파싱하지 못했습니다.")
+    print("        frontmatter 형식이 바뀌었을 수 있습니다. 현재 정규식은 description 다음에")
+    print("        다른 '필드:' 또는 frontmatter 종료 구분자 '---' 가 오는 것을 전제합니다.")
+    sys.exit(1)
 
 owners = defaultdict(list)
 for skill, toks in desc.items():
@@ -137,7 +155,10 @@ for path in sorted(glob.glob(os.path.join(contexts, "*", "SKILL.md"))):
     if skill in NOT_ROUTED:
         continue
     text = open(path, encoding="utf-8").read()
-    m = re.search(r"^description:(.*?)^[a-z_]+:", text, re.M | re.S)
+    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. 예전 패턴은 description 뒤에
+    # 또 다른 '필드:' 가 오는 것만 전제해서, reviewed: 필드가 제거되어 description 이
+    # frontmatter 의 마지막 항목이 된 순간 12개 스킬 전부 파싱에 실패했다(2026-07-28 실측).
+    m = re.search(r"^description:(.*?)(?=^[a-z_]+:|^---\s*$)", text, re.M | re.S)
     if m:
         words = [w.strip(".,()") for w in m.group(1).split()]
         raw[skill] = {
@@ -169,12 +190,14 @@ echo "--- Step: 라우팅 정확도 ---"
 if [ ! -f "$OBSERVED" ]; then
   # 종료 코드 0으로 끝내면 "라우팅 정확도가 검증됐다"는 초록불로 오해된다. 실제로는
   # 한 건도 채점하지 않은 미측정 상태이므로 별도 코드(2)로 구분해 반환한다
-  # (1=오라우팅 발견, 2=미측정, 0=전부 일치).
+  # (1=오라우팅 발견 또는 description 분석 실패, 2=미측정, 0=전부 일치).
   echo "[UNMEASURED] $OBSERVED 가 없어 채점하지 못했습니다. 정확도는 '미측정'입니다."
   echo "             측정하려면 아래를 실행하십시오 (별도 CLI 설치 불필요 —"
   echo "             Claude Code IDE 확장의 번들 바이너리를 자동 탐색합니다):"
   echo "               bash $EVAL_DIR/measure.sh"
   echo "======================================================"
+  # 검사기가 고장난 상태는 미측정보다 심각하므로 그쪽을 우선 보고한다.
+  [ "$DESC_RC" -eq 0 ] || exit 1
   exit 2
 fi
 
@@ -316,4 +339,9 @@ PY
 fi
 
 echo "======================================================"
+if [ "$DESC_RC" -ne 0 ]; then
+  echo "[ERROR] description 중복 분석 단계가 실패했습니다 (위 [ERROR] 참조)." >&2
+  echo "        검사기가 죽은 상태의 라우팅 정확도는 반쪽짜리 신호이므로 실패로 종료합니다." >&2
+  exit 1
+fi
 exit "$SCORE_RC"

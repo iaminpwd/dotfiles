@@ -156,7 +156,10 @@ validate_shell() {
   done
 
   # Idempotency Static Analysis
-  local IDEMPOTENCY_SCRIPT="$PFC_SCRIPT_DIR/../../contexts/dotfiles/scripts/idempotency-check.sh"
+  # PFC_SCRIPT_DIR 이 이미 contexts/ 안쪽(contexts/pre-flight-check/scripts)이므로 경로에
+  # contexts/ 를 다시 붙이면 <repo>/contexts/contexts/... 로 빗나간다. 그 상태에서는 바로
+  # 아래 [ -f ] 가드에 걸려 멱등성 검사가 아무 경고 없이 통째로 건너뛰어졌다(427450d 이후).
+  local IDEMPOTENCY_SCRIPT="$PFC_SCRIPT_DIR/../../dotfiles/scripts/idempotency-check.sh"
   if [ -f "$IDEMPOTENCY_SCRIPT" ]; then
     bash "$IDEMPOTENCY_SCRIPT" "${shell_files[@]}" || true
   fi
@@ -270,7 +273,7 @@ validate_sam() {
   log_info "[SUCCESS] SAM template validation passed."
 }
 
-# 4. Azure Bicep Validation
+# 3b. Azure Bicep Validation (3. AWS SAM 과 같은 계열: 클라우드 네이티브 템플릿)
 validate_bicep() {
   local bicep_files=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then

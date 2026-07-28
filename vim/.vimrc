@@ -22,5 +22,10 @@ set colorcolumn=80  " 80자 가이드라인 옅은 세로줄 표시
 syntax on           " 구문 강조
 
 " YAML 파일 작성 시 공백 에러 방지를 위한 강제 설정
-autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab
+" augroup + autocmd! 로 감싸는 이유: 맨 autocmd 는 :source ~/.vimrc 를 반복할 때마다
+" 같은 훅이 중복 등록되어 파일을 열 때 여러 번 실행된다(vim 의 고전적 함정).
+augroup infra_filetypes
+  autocmd!
+  autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab
+augroup END
 " ---------------------------------------

@@ -335,15 +335,19 @@ if [ ! -d "$HOME/.oh-my-zsh" ] && ! plan_only "Oh My Zsh 설치 (unattended)"; t
   fi
   sh "$OMZ_INSTALLER" "" --unattended
   rm -f "$OMZ_INSTALLER"
-  trap - EXIT
 fi
 
 ZSH_CUSTOM=${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}
 [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && run git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && run git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 
-ZSH_BIN=$(command -v zsh)
-if [ "$SHELL" != "$ZSH_BIN" ]; then
+# dry-run 은 패키지 설치를 출력으로만 대체하므로, zsh 가 아직 없는 신규 환경에서는 이 조회가
+# 실패한다. set -e 아래에서 명령 치환 대입 실패는 아무 메시지도 남기지 않고 스크립트를 죽이므로,
+# "처음 돌리는 환경에서 계획을 먼저 본다"는 dry-run 의 목적이 정확히 그 환경에서만 무너졌다.
+ZSH_BIN=$(command -v zsh || true)
+if [ -z "$ZSH_BIN" ]; then
+  echo "   ⏭️ zsh 가 아직 설치되지 않아 기본 셸 변경을 건너뜁니다."
+elif [ "$SHELL" != "$ZSH_BIN" ]; then
   # chsh 는 대상 셸이 /etc/shells 에 등록되어 있어야만 성공한다. 배포판 기본 zsh 는 이미
   # 등록되어 있지만 brew 로 설치한 zsh(/opt/homebrew/bin/zsh)는 그렇지 않아 여기서 막힌다.
   if ! grep -qxF "$ZSH_BIN" /etc/shells 2>/dev/null; then
@@ -395,11 +399,20 @@ for PKG in "${STOW_PKGS[@]}"; do
     # 삭제되는 사고로 이어진다. TARGET의 실제 경로가 소스 파일과 동일하면(이미 올바르게 연결된
     # 상태) 건드리지 않도록 realpath 비교를 추가한다.
     if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(readlink -f "$TARGET")" != "$(readlink -f "$SRC_FILE")" ]; then
-      if plan_only "$TARGET → $TARGET.backup.$(date +%F) 백업 후 제거 (stow 링크로 교체 대상)"; then
+      # 백업 파일명에 시분초까지 넣는다. 예전에는 날짜(%F)만 써서, 같은 날 이미 백업이 있는
+      # 상태로 재실행하면 cp -n 이 "이미 있음"으로 조용히 건너뛰고(종료 코드 0) 그 직후 rm 이
+      # 원본을 지웠다. 그날 새로 만든 사용자 실파일이 백업 없이 사라지는 경로였다.
+      BACKUP_FILE="$TARGET.backup.$(date +%F-%H%M%S)"
+      if plan_only "$TARGET → $BACKUP_FILE 백업 후 제거 (stow 링크로 교체 대상)"; then
         continue
       fi
       mkdir -p "$(dirname "$TARGET")"
-      cp -n "$TARGET" "$TARGET.backup.$(date +%F)" 2>/dev/null || true
+      # 백업에 실패하면 원본을 남긴다. 지우면 복구 수단이 사라지고, stow 충돌은 그 자리에서
+      # 눈에 보이는 실패로 끝나지만 원본 소실은 되돌릴 수 없다.
+      if ! cp "$TARGET" "$BACKUP_FILE"; then
+        echo "   ⚠️ 백업 실패로 $TARGET 을 그대로 둡니다 (이 파일에서 stow 충돌이 발생할 수 있습니다)." >&2
+        continue
+      fi
       rm -f "$TARGET"
     fi
   done < <(find "$DOTFILES_DIR/$PKG" -type f -print0)
@@ -444,6 +457,12 @@ echo "[5/6] 사용자 워크스페이스 생성 및 제미나이/클로드 AI �
 
 CONTEXTS_DIR="$DOTFILES_DIR/contexts"
 
+# jq 는 apt/brew 패키지 목록이 아니라 mise 로 들어오므로([4/6] 단계), 그 단계가 실패하면 이
+# 시점에 없을 수 있다. 없는 상태에서 `jq empty` 를 호출하면 127 로 실패하는데, 아래 두 블록의
+# else 분기는 그것을 "파일이 유효한 JSON 이 아니다"로 보고해 엉뚱한 곳을 고치게 만든다.
+HAS_JQ=true
+command -v jq &>/dev/null || HAS_JQ=false
+
 # 사용자 실제 작업용 기본 워크스페이스 폴더 생성
 run mkdir -p "$HOME/workspace"
 ok "기본 워크스페이스 생성 완료: ~/workspace"
@@ -473,6 +492,8 @@ if ! plan_only "$GEMINI_HOOKS 에 편집 이력 훅(agent-edits-log) 병합"; th
       "$GEMINI_HOOKS" "$CONTEXTS_DIR/base.hooks.json" >"$GEMINI_HOOKS_TMP"
     mv "$GEMINI_HOOKS_TMP" "$GEMINI_HOOKS"
     ok "제미나이 편집 이력 훅 등록 완료: $GEMINI_HOOKS"
+  elif [ "$HAS_JQ" = false ]; then
+    echo "   ⚠️ jq를 찾을 수 없어 훅 등록을 건너뜁니다. 'mise install -y'로 설치한 뒤 setup.sh를 다시 실행하세요."
   else
     echo "   ⚠️ $GEMINI_HOOKS 파일이 유효한 JSON이 아니어서 훅 등록을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
   fi
@@ -502,6 +523,8 @@ if ! plan_only "$CLAUDE_SETTINGS 에 어트리뷰션 비활성화 및 편집 이
     ' "$CLAUDE_SETTINGS" >"$CLAUDE_SETTINGS_TMP"
     mv "$CLAUDE_SETTINGS_TMP" "$CLAUDE_SETTINGS"
     ok "클로드 어트리뷰션 비활성화 및 편집 이력 훅 등록 완료: $CLAUDE_SETTINGS"
+  elif [ "$HAS_JQ" = false ]; then
+    echo "   ⚠️ jq를 찾을 수 없어 어트리뷰션 설정과 훅 등록을 건너뜁니다. 'mise install -y'로 설치한 뒤 setup.sh를 다시 실행하세요."
   else
     echo "   ⚠️ $CLAUDE_SETTINGS 파일이 유효한 JSON이 아니어서 어트리뷰션 설정을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
   fi
@@ -511,7 +534,10 @@ fi
 echo "=> [AI Global Rules] 각 AI 에이전트 글로벌 스킬 등록 중..."
 for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
   [ -d "$TARGET_DIR" ] || continue
-  ENV_NAME="$(basename "${TARGET_DIR%/}")"
+  # 글롭의 트레일링 슬래시를 여기서 한 번 걷어낸다. 그대로 두면 아래 모든 경로 조립이
+  # contexts/k8s//SKILL.md 처럼 이중 슬래시로 출력되어 로그를 읽기 어렵게 만든다.
+  TARGET_DIR="${TARGET_DIR%/}"
+  ENV_NAME="$(basename "$TARGET_DIR")"
 
   # dotfiles 컨텍스트는 글로벌 등록에서 제외 (글로벌 룰 오염 방지)
   if [ "$ENV_NAME" = "dotfiles" ]; then
@@ -559,6 +585,32 @@ for TARGET_DIR in "$CONTEXTS_DIR"/*/; do
     ok "클로드 글로벌 스킬 등록 완료 (온디맨드): ~/.claude/skills/${ENV_NAME}/"
   fi
 done
+
+# 저장소에서 사라진 스킬의 배포본을 회수한다. 위 루프는 등록만 하므로, 스킬을 지워도
+# 글로벌 링크가 남아 에이전트가 삭제된 룰을 계속 로드했다(재실행해도 선언한 상태로 수렴하지
+# 않는 상태). 이 저장소가 배포한 것만 대상으로 삼는다: SKILL.md 가 contexts/ 를 가리키는
+# 심볼릭 링크인 항목. 사용자가 직접 만든 스킬이나 다른 도구가 넣은 디렉토리는 그 조건에
+# 걸리지 않아 보존된다. agent-handoff 는 링크가 아니라 역할 결합 복사본이라 이 규칙으로
+# 식별되지 않는데, 사용자 스킬과 구분할 방법이 없으므로 의도적으로 회수 대상에서 뺀다.
+prune_orphan_skills() {
+  local skills_root=$1 skill_dir name link_target
+  [ -d "$skills_root" ] || return 0
+  for skill_dir in "$skills_root"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_dir="${skill_dir%/}"
+    name="$(basename "$skill_dir")"
+    [ -d "$CONTEXTS_DIR/$name" ] && continue
+    link_target="$(readlink "$skill_dir/SKILL.md" 2>/dev/null || true)"
+    case "$link_target" in
+    "$CONTEXTS_DIR"/*) ;;
+    *) continue ;;
+    esac
+    run rm -rf "$skill_dir"
+    ok "저장소에서 제거된 스킬의 배포본 회수: $skill_dir"
+  done
+}
+prune_orphan_skills "$HOME/.gemini/config/skills"
+prune_orphan_skills "$HOME/.claude/skills"
 
 echo "=> [AI Local Rules] 워크스페이스 전용 로컬 규칙 링크 구성 중..."
 # 로컬 루트 폴더 간결화 및 에이전트별 상시 자동 로드 100% 보장

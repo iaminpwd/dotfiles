@@ -145,8 +145,11 @@ tf_run_checkov_pair() {
   tf_judge_checkov ok-baseline 0 "" "$ok_status" "$tmpdir/ok"
   tf_judge_checkov "$fail_label" 1 "$want_id" "$fail_status" "$tmpdir/fail"
 
+  # `trap - EXIT` 로 해제하지 않는다. 라이브러리 함수가 트랩을 무조건 해제하면 호출자가
+  # 걸어 둔 EXIT 트랩까지 함께 날아간다(setup.sh 에서 실제로 그 형태의 잔재가 임시 디렉토리
+  # 정리를 무력화했다). 아래 rm 으로 이미 지운 뒤라 트랩이 다시 돌아도 무해하고, local
+  # 변수라 함수 반환 후에는 ${tmpdir:-} 가 빈 문자열로 평가된다.
   rm -rf "$tmpdir"
-  trap - EXIT
 }
 
 # validate_terraform 과 동일하게 'terraform init -backend=false' 후 validate.

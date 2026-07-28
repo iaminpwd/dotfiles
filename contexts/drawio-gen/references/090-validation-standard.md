@@ -33,6 +33,8 @@ assert not missing, f"끊어진 참조: {missing}"
 
 ```bash
 python3 ~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}
+# 종료 코드가 판정입니다: 0=통과, 1=위반. 미리보기 PNG 는 matplotlib 이 있을 때만 함께
+# 생성되며, 없으면 [INFO] 안내 후 검증만 수행합니다(판정에는 영향 없음).
 ```
 
 - **[MUST] 검증기를 수정하면 회귀 테스트를 먼저 통과시키십시오**: `layout_toolkit.py`의 `validate()`를 고칠 때는 아래를 실행해 기존 검사가 조용히 죽지 않았는지 확인하십시오. 각 픽스처는 이 문서와 010의 규칙이 만들어진 실제 실패 사례를 재현합니다. 새 검사를 추가하면 그 검사를 유발하는 픽스처와 `run.sh`의 기대 결과도 함께 추가하십시오.

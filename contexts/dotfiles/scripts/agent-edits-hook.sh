@@ -79,4 +79,14 @@ printf '%s | %s | hook:%s | - | %s\n' \
   "$(date -Iseconds 2>/dev/null || date)" "$rel" "${tool:-unknown}" "$result" \
   2>/dev/null >>"$root/.agent-state/edits.log"
 
+# 로그 상한. 이 훅은 편집마다 1줄씩 append 하기만 해서 파일이 무한히 자란다. 소비처인
+# prompt-flywheel.sh 는 tail -20 만 보고, 그보다 오래된 편집 근거는 git 이력으로 확인하는
+# 편이 정확하므로 최근 것만 남기면 충분하다. 훅이 에이전트 루프를 막아서는 안 되므로
+# 어떤 실패도 무시한다(로테이션 실패는 다음 편집에서 다시 시도된다).
+EDITS_LOG="$root/.agent-state/edits.log"
+if [ "$(wc -l <"$EDITS_LOG" 2>/dev/null || echo 0)" -gt 5000 ]; then
+  { tail -n 2500 "$EDITS_LOG" >"$EDITS_LOG.tmp" && mv "$EDITS_LOG.tmp" "$EDITS_LOG"; } 2>/dev/null || true
+  rm -f "$EDITS_LOG.tmp" 2>/dev/null || true
+fi
+
 exit 0
