@@ -5,13 +5,12 @@ on:
     - cron: '0 18 * * *' # KST 03:00 (UTC 18:00)
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   review:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # 권한은 잡 레벨에만 선언한다. 워크플로우 레벨에 같은 값을 중복 선언하면
+    # 잡이 늘었을 때 의도치 않게 상속되어 최소 권한 원칙이 흐려진다.
     permissions:
       contents: write
     env:
@@ -36,7 +35,7 @@ jobs:
           pip install google-genai
 
       # 검증기가 깨지면 코퍼스 린트는 통과해도 파이프라인이 무력해진다. 외부 도구가
-      # 거의 필요 없는 세 스위트만 CI 에서 돌린다. terraform/checkov 계열이 필요한
+      # 거의 필요 없는 네 스위트만 CI 에서 돌린다. terraform/checkov 계열이 필요한
       # 나머지 스위트는 설치 비용이 커서 로컬 pre-commit 훅에 맡긴다.
       - name: Install Suite Dependencies
         run: |
@@ -45,7 +44,7 @@ jobs:
 
       - name: Validator Regression Suites
         run: |
-          for suite in dotfiles agent-handoff drawio-gen; do
+          for suite in dotfiles agent-handoff drawio-gen pre-flight-check; do
             echo "::group::$suite"
             bash "contexts/$suite/tests/run.sh"
             echo "::endgroup::"

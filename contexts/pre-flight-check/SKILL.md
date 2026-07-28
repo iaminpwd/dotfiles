@@ -12,6 +12,7 @@ description: |
 
 - **[MUST] 정본 절대 경로 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `bash ~/dotfiles/contexts/pre-flight-check/scripts/compact-runner.sh`를 실행하여 검증(tflint, trivy 등)을 통합 수행하십시오.
   *   위 단일 실행으로 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등이 일괄 수행됩니다.
+  *   **[MUST] 종료 코드 기준 판정:** 래퍼는 각 스크립트의 종료 코드로만 합격을 판정하며, 통과 항목은 `-> [✓] <경로>` 한 줄로 접고 실패 항목은 압축 없이 원형 로그를 출력합니다. 실패가 있어도 남은 항목을 끝까지 실행한 뒤 마지막에 `검증 실패 N/M` 을 남기므로, 중간의 `[✓]` 몇 줄만 보고 완료를 선언하지 말고 **마지막 요약 줄과 종료 코드까지 확인**하십시오. 통과 항목이라도 `[WARNING]` 은 접지 않으므로, 도구 미설치로 검증이 건너뛰어졌는지 함께 확인하십시오. (래퍼 자신의 회귀 테스트: `contexts/pre-flight-check/tests/run.sh`)
   *   **[MUST] 자율 자가 치유 시 연쇄 종속성 동시 수정:** `pre-flight-check.sh` 검증 실패로 인해 에이전트가 자가 치유(Self-Healing)를 시도할 때, 특정 리소스(예: AWS RDS)의 엔진 버전을 올리는 경우 연관된 종속성 속성(예: `parameter_group_name`, `option_group_name` 등)을 해당 엔진 버전에 호환되는 규격으로 함께 변경하여 2차 유효성 검사 실패(tflint, terraform validate 등)를 방지하십시오.
 
 ## 2. 정성적 정책 자가 검증 (Policy Self-Check)
