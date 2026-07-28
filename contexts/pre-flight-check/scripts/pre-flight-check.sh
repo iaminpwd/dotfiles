@@ -156,14 +156,10 @@ validate_shell() {
   done
 
   # Idempotency Static Analysis
-  for FILE in "${shell_files[@]}"; do
-    [ -f "$FILE" ] || continue
-    if grep -qE ">>|tee -a" "$FILE"; then
-      if ! grep -qE "(grep -q|if \[|if test)" "$FILE"; then
-        echo "⚠️ [WARNING] Idempotency check: '$FILE' uses append (>> or tee -a) but lacks state checking logic (e.g., grep -q or if [ ... ]). Consider adding idempotency guards." >&2
-      fi
-    fi
-  done
+  local IDEMPOTENCY_SCRIPT="$PFC_SCRIPT_DIR/../../contexts/dotfiles/scripts/idempotency-check.sh"
+  if [ -f "$IDEMPOTENCY_SCRIPT" ]; then
+    bash "$IDEMPOTENCY_SCRIPT" "${shell_files[@]}" || true
+  fi
 
   log_info "[SUCCESS] Shell scripts validation passed."
 }
