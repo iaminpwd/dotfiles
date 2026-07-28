@@ -609,10 +609,15 @@ validate_security() {
     fi
 
     # 1. 시크릿(비밀키, 토큰 등) 검사는 강제 차단 (exit-code 1)
-    if ! trivy fs "${skip_flags[@]}" --scanners secret --exit-code 1 .; then
+    local tmp_secret
+    tmp_secret=$(mktemp)
+    if ! trivy fs -q "${skip_flags[@]}" --scanners secret --exit-code 1 . >"$tmp_secret" 2>&1; then
+      cat "$tmp_secret"
       echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 차단되었습니다."
+      rm -f "$tmp_secret"
       return 1
     fi
+    rm -f "$tmp_secret"
     echo "[SUCCESS] Trivy secret scan passed."
 
     # 2. 보안 취약점 및 설정 오류(vuln, misconfig)는 발견되어도 커밋을 막지 않지만(exit-code 0),
@@ -628,10 +633,27 @@ validate_security() {
     #    (시크릿 스캔에는 적용하지 않는다. 픽스처에 실제 자격 증명이 섞여 들어가는 사고는
     #     막아야 하며, 그쪽은 애초에 출력이 12줄이라 노이즈 문제도 없다.)
     echo "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
-    if trivy fs "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
-      --skip-dirs '**/tests/fixtures' .; then
+    local tmp_vuln
+    tmp_vuln=$(mktemp)
+    # Trivy는 --exit-code 0일 때 무조건 exit 0을 반환하므로 성공/실패 여부를 판단하기 어렵다.
+    # 하지만 출력이 빈 테이블이 아니면 취약점이 있는 것이다.
+    # grep "Total: 0" 등으로 파싱할 수 있으나, 더 간단히 실행 자체의 실패만 잡으려면 파이프나 임시파일을 사용한다.
+    if trivy fs -q "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
+      --skip-dirs '**/tests/fixtures' . >"$tmp_vuln" 2>&1; then
+      # 결과 테이블에 취약점이 있는지 확인 (Total: 0 이 아닌 경우)
+      # Trivy 출력에 ANSI 색상 코드가 포함되어 있을 수 있으므로 제거 후 검사
+      local clean_out
+      clean_out=$(sed -r 's/\x1B\[[0-9;]*[mK]//g' "$tmp_vuln")
+      if ! echo "$clean_out" | grep -qE "Total: 0 \(UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0\)" 2>/dev/null &&
+        ! echo "$clean_out" | grep -q "'0': Clean (no security findings detected)" 2>/dev/null; then
+        # 취약점이 있으면 출력
+        cat "$tmp_vuln"
+      fi
+      rm -f "$tmp_vuln"
       echo "[SUCCESS] Trivy vuln/misconfig scan passed."
     else
+      cat "$tmp_vuln"
+      rm -f "$tmp_vuln"
       echo "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
     fi
 

@@ -31,7 +31,7 @@
 - **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
 - **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
-- **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다.
+- **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
 
 ### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
 로컬 프롬프트 아키텍처에는 Andrew Ng의 Agentic Workflow 디자인 패턴, ReAct/ToT 등의 추론 아키텍처, 그리고 벤더별 공식 가이드를 반영한 고급 프롬프트 설계가 반영되어 있습니다.
@@ -43,6 +43,7 @@
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
+- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 출력 스트림을 실시간으로 병합하는 `compact-runner.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 에러(FAIL) 발생 시에만 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다.
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.

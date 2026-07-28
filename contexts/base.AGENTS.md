@@ -75,7 +75,7 @@ priority: highest
 ## 6. 자율 주행 및 안전장치 (Autonomous Operations & Safety)
 - **[MUST] Tool Availability Gate:** CLI 도구 실행을 지시받았을 때, 해당 도구의 로컬 설치 여부를 사전에 확인하십시오. 미설치 시 임의로 건너뛰지 말고 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구하십시오.
 - **[MUST] Permission Boundary (로컬 파일):** 로컬 권한 필요 시 대화 시작 부분에서 사용자에게 최소 경로 권한만 요청하여 확보하십시오.
-- **[MUST] Pre-Flight Gate (정량 검증 게이트):** 인프라 코드(Terraform, Ansible, Helm, Dockerfile) 또는 쉘 스크립트(`.sh`, `.zsh`)를 수정한 경우, 도메인 스킬 발동 여부와 무관하게 `pre-flight-check` 스킬을 호출하여 정량 검증을 통과시킨 뒤 작업을 종결하십시오. 스킬 호출이 불가능한 환경에서는 `~/dotfiles/contexts/pre-flight-check/SKILL.md`를 절대 경로로 읽어 동일 절차를 수행하십시오.
+- **[MUST] Pre-Flight Gate (정량 검증 게이트):** 인프라 코드(Terraform, Ansible, Helm, Dockerfile) 또는 쉘 스크립트(`.sh`, `.zsh`)를 수정한 경우, 도메인 스킬 발동 여부와 무관하게 `pre-flight-check` 스킬을 호출하여 정량 검증을 통과시킨 뒤 작업을 종결하십시오. 스킬 호출이 불가능한 환경에서는 `~/dotfiles/contexts/pre-flight-check/scripts/compact-runner.sh`를 절대 경로로 실행하여 동일 절차를 수행하십시오.
 - **[Trigger: Handoff Protocol] Multi-Agent Collaboration Gate:** 아래 조건 중 자신의 역할에 해당하는 것이 충족될 때만 `agent-handoff` 스킬을 발동하십시오.
   - **아키텍트**: 작업 디렉토리에 `Gemini-to-Claude.md`(실행 결과 리포트)가 존재하거나, 사용자가 설계·위임을 요청한 경우. 단 후자는 바로 아래 경제성 게이트를 먼저 통과해야 합니다.
   - **실행자**: 작업 디렉토리에 `Claude-to-Gemini.md`(설계도)가 존재하거나, 사용자가 특정 문서를 가리키며 실행을 지시한 경우.

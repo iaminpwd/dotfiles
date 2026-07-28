@@ -10,7 +10,7 @@ description: |
 
 ## 1. 정량적 일괄 검증 파이프라인 (Automated Validation)
 
-- **[MUST] 정본 절대 경로 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `bash ~/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh`를 실행하여 검증(tflint, trivy 등)을 통합 수행하십시오.
+- **[MUST] 정본 절대 경로 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `bash ~/dotfiles/contexts/pre-flight-check/scripts/compact-runner.sh`를 실행하여 검증(tflint, trivy 등)을 통합 수행하십시오.
   *   위 단일 실행으로 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등이 일괄 수행됩니다.
   *   **[MUST] 자율 자가 치유 시 연쇄 종속성 동시 수정:** `pre-flight-check.sh` 검증 실패로 인해 에이전트가 자가 치유(Self-Healing)를 시도할 때, 특정 리소스(예: AWS RDS)의 엔진 버전을 올리는 경우 연관된 종속성 속성(예: `parameter_group_name`, `option_group_name` 등)을 해당 엔진 버전에 호환되는 규격으로 함께 변경하여 2차 유효성 검사 실패(tflint, terraform validate 등)를 방지하십시오.
 
