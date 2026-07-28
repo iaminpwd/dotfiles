@@ -24,7 +24,6 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 TODAY=$(date +%F)
-STALE=$(date -d '200 days ago' +%F)
 
 report() {
   local name=$1 ok=$2 detail=${3:-}

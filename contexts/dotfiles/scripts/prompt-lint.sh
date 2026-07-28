@@ -33,7 +33,7 @@ echo "======================================================"
 check_ssot_module_lists() {
   echo "--- Step: Self-Critique SSOT Module List Consistency ---"
   local core_files
-  mapfile -d '' -t core_files < <(grep -lE "공통 자가 비판 절차 \(전 .+ 모듈 SSOT\)" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null | tr '\n' '\0')
+  mapfile -d '' -t core_files < <(grep -lZE "공통 자가 비판 절차 \(전 .+ 모듈 SSOT\)" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null || true)
 
   if [ "${#core_files[@]}" -eq 0 ]; then
     echo "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
@@ -96,7 +96,7 @@ check_orphaned_files() {
     for f in "${skill_dir}references"/*.md; do
       [ -f "$f" ] || continue
       fname=$(basename "$f")
-      grep -q "$fname" "$skill_md" || echo "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
+      grep -Fq "$fname" "$skill_md" || echo "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
     done
   done
   echo "[INFO] 고아 파일 검사 완료."
@@ -118,7 +118,6 @@ check_file_size() {
     }'
   echo "[INFO] 파일 크기 검사 완료."
 }
-
 
 # -----------------------------------------------------------------------------
 # 5. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
