@@ -13,6 +13,7 @@
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/prompt-lint.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LINT="$TESTS_DIR/../scripts/prompt-lint.sh"

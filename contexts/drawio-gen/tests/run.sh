@@ -6,6 +6,7 @@
 # 사용: bash ~/dotfiles/contexts/drawio-gen/tests/run.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_DIR="$(cd "$TESTS_DIR/../scripts" && pwd)"

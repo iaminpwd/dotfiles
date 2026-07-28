@@ -14,6 +14,14 @@
 
 set -euo pipefail
 
+# Setup Quiet Mode Logging
+log_info() {
+  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
+  if [ "${QUIET:-1}" != "1" ]; then
+    echo "$@"
+  fi
+}
+
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT" || {
   echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
@@ -23,20 +31,20 @@ cd "$REPO_ROOT" || {
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 EXIT_CODE=0
 
-echo "======================================================"
-echo "=== Prompt Corpus Lint Started ==="
-echo "======================================================"
+log_info "======================================================"
+log_info "=== Prompt Corpus Lint Started ==="
+log_info "======================================================"
 
 # -----------------------------------------------------------------------------
 # 1. 자가비판 SSOT 모듈 목록 vs 실제 파일 목록 대조
 # -----------------------------------------------------------------------------
 check_ssot_module_lists() {
-  echo "--- Step: Self-Critique SSOT Module List Consistency ---"
+  log_info "--- Step: Self-Critique SSOT Module List Consistency ---"
   local core_files
   mapfile -d '' -t core_files < <(grep -lZE "공통 자가 비판 절차 \(전 .+ 모듈 SSOT\)" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null || true)
 
   if [ "${#core_files[@]}" -eq 0 ]; then
-    echo "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
+    log_info "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
     return
   fi
 
@@ -62,14 +70,14 @@ check_ssot_module_lists() {
       EXIT_CODE=1
     fi
   done
-  echo "[INFO] SSOT 모듈 목록 대조 완료."
+  log_info "[INFO] SSOT 모듈 목록 대조 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 2. 참조 링크(references: frontmatter, 본문 내 경로) 무결성
 # -----------------------------------------------------------------------------
 check_reference_links() {
-  echo "--- Step: Reference Link Integrity ---"
+  log_info "--- Step: Reference Link Integrity ---"
   local match f ref
   # 아래 grep 패턴 주의: 스킬 루트의 role.*.md(agent-handoff 역할 파일)와 scripts/tests
   # 한 단계 하위 디렉토리(scripts/preflight/*.sh, tests/lib/*.sh)는 예전 패턴이 매칭하지
@@ -84,14 +92,14 @@ check_reference_links() {
       EXIT_CODE=1
     }
   done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | sort -u || true)
-  echo "[INFO] 참조 링크 검사 완료."
+  log_info "[INFO] 참조 링크 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 3. 라우팅 테이블 고아 파일 탐지 (SKILL.md에 언급되지 않은 reference 파일)
 # -----------------------------------------------------------------------------
 check_orphaned_files() {
-  echo "--- Step: Orphaned Reference File Detection ---"
+  log_info "--- Step: Orphaned Reference File Detection ---"
   local skill_dir skill_md fname
   for skill_dir in "$CONTEXTS_DIR"/*/; do
     skill_md="${skill_dir}SKILL.md"
@@ -100,17 +108,17 @@ check_orphaned_files() {
     for f in "${skill_dir}references"/*.md; do
       [ -f "$f" ] || continue
       fname=$(basename "$f")
-      grep -Fq "$fname" "$skill_md" || echo "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
+      grep -Fq "$fname" "$skill_md" || log_info "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
     done
   done
-  echo "[INFO] 고아 파일 검사 완료."
+  log_info "[INFO] 고아 파일 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 3b. 문서가 "살아 있는 조항"으로 인용한 조항이 실제 룰북에 존재하는지 검사
 # -----------------------------------------------------------------------------
 check_documented_clause_existence() {
-  echo "--- Step: Documented Clause Existence ---"
+  log_info "--- Step: Documented Clause Existence ---"
   # contexts/README.md 는 룰북 조항을 코드펜스에 인용해 설계 의도를 설명한다. 그런데
   # 조항이 룰북에서 삭제되거나 이름이 갈려도 이 인용은 그대로 남아, 문서만 보면 규칙이
   # 살아 있는 것처럼 보인다. 실제로 커밋 393926b 가 base.AGENTS.md 9장의 자가 진화
@@ -119,7 +127,7 @@ check_documented_clause_existence() {
   # 단위의 이 드리프트를 구조적으로 잡을 수 없었다.
   local readme="$CONTEXTS_DIR/README.md"
   [ -f "$readme" ] || {
-    echo "[INFO] 조항 실재성 검사 건너뜀 (contexts/README.md 없음)."
+    log_info "[INFO] 조항 실재성 검사 건너뜀 (contexts/README.md 없음)."
     return
   }
 
@@ -158,14 +166,14 @@ check_documented_clause_existence() {
     done <"$names_file"
   fi
   rm -f "$names_file" "$found_file"
-  echo "[INFO] 조항 실재성 검사 완료."
+  log_info "[INFO] 조항 실재성 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 4. 파일 크기 제약 (150줄) 검사
 # -----------------------------------------------------------------------------
 check_file_size() {
-  echo "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
+  log_info "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
   find "$CONTEXTS_DIR" -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
     $2 != "total" && $2 != "" {
       lines = $1;
@@ -175,14 +183,14 @@ check_file_size() {
         print "[WARNING] " limit "줄 제약 초과: " f " (" lines "줄)"
       }
     }'
-  echo "[INFO] 파일 크기 검사 완료."
+  log_info "[INFO] 파일 크기 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 5. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
 # -----------------------------------------------------------------------------
 check_vendor_leakage() {
-  echo "--- Step: Cross-Vendor Terminology Leakage ---"
+  log_info "--- Step: Cross-Vendor Terminology Leakage ---"
   local hit
 
   # azurecr.io는 azure/ 폴더 밖에서 등장하면 안 됨 (예시 코드에 벤더 종속 레지스트리 하드코딩)
@@ -201,14 +209,14 @@ check_vendor_leakage() {
     EXIT_CODE=1
   }
 
-  echo "[INFO] 벤더 용어 오염 검사 완료."
+  log_info "[INFO] 벤더 용어 오염 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 6. 코드펜스 짝 검사
 # -----------------------------------------------------------------------------
 check_code_fences() {
-  echo "--- Step: Code Fence Balance ---"
+  log_info "--- Step: Code Fence Balance ---"
   local unclosed
   unclosed=$(find "$CONTEXTS_DIR" -name "*.md" -print0 | xargs -0 awk '
     BEGIN { fail = 0; }
@@ -235,14 +243,14 @@ check_code_fences() {
     done
     EXIT_CODE=1
   fi
-  echo "[INFO] 코드펜스 검사 완료."
+  log_info "[INFO] 코드펜스 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 7. Halt & Clarify / Hard Block 등급 휴리스틱 (경고 전용)
 # -----------------------------------------------------------------------------
 check_severity_tag_heuristic() {
-  echo "--- Step: Halt & Clarify vs Hard Block Severity Heuristic (Warning Only) ---"
+  log_info "--- Step: Halt & Clarify vs Hard Block Severity Heuristic (Warning Only) ---"
   # base.AGENTS.md 정의상 "보안 취약점 발견"은 Hard Block이 맞다. 아래 고위험
   # 키워드가 포함된 중단 조건 줄인데 Halt & Clarify로 태깅되어 있으면, 실제로는
   # Hard Block이어야 할 후보일 확률이 높으므로 사람/AI의 재검토를 요청한다.
@@ -260,14 +268,14 @@ check_severity_tag_heuristic() {
       print "    " $0;
     }'
   fi
-  echo "[INFO] 등급 휴리스틱 검사 완료."
+  log_info "[INFO] 등급 휴리스틱 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 7b. MUST 로 태깅됐지만 본문이 선호를 서술하는 조항 탐지 (경고 전용)
 # -----------------------------------------------------------------------------
 check_prefer_language_tagged_must() {
-  echo "--- Step: Preference Wording Tagged as MUST (Warning Only) ---"
+  log_info "--- Step: Preference Wording Tagged as MUST (Warning Only) ---"
   # 050 §1.1 조항 등급 기준: 본문에 "최우선 제안"/"우선 탐색"/"가급적" 같은
   # 선호 표현이 있으면 그 조항은 MUST 가 아니라 PREFER 다. 등급 기준이 코퍼스에
   # 없던 시절 MUST 가 기본값처럼 부착돼 84%까지 올라갔으므로(2026-07-26 실측),
@@ -286,14 +294,14 @@ check_prefer_language_tagged_must() {
       print "    " $0;
     }'
   fi
-  echo "[INFO] 선호 표현 등급 검사 완료."
+  log_info "[INFO] 선호 표현 등급 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 8. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
 # -----------------------------------------------------------------------------
 check_cross_skill_duplication() {
-  echo "--- Step: Cross-Skill Concept Duplication Candidates (Warning Only) ---"
+  log_info "--- Step: Cross-Skill Concept Duplication Candidates (Warning Only) ---"
   # aws/azure 미러링(같은 개념이 두 클라우드 스킬에 각각 존재)은 의도된 구조이므로
   # 그 둘만 겹치는 경우는 제외하고, 그 외 스킬(k8s/aiops/containers/observability/
   # multi-cloud)까지 걸치면 실수일 확률이 높아 경고한다.
@@ -317,18 +325,18 @@ check_cross_skill_duplication() {
     # (2026-07-27 실측). 카운트 0은 정상 결과이므로 아래 미러링 검사(275행)와 동일하게 흡수한다.
     skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
     if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
-      echo "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
+      log_info "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
       echo "    ${files//$'\n'/$'\n    '}"
     fi
   done
-  echo "[INFO] 크로스 스킬 중복 후보 검사 완료."
+  log_info "[INFO] 크로스 스킬 중복 후보 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
 # 10. aws/azure 미러링 대칭성 검사 (Warning Only)
 # -----------------------------------------------------------------------------
 check_vendor_mirror_symmetry() {
-  echo "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
+  log_info "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
   # aws/azure 미러링은 9번 검사 주석대로 의도된 구조다. 다만 한쪽 벤더에만 조항을
   # 추가하면 드리프트가 쌓이므로(2026-07-26 실측: azure 에 Vulnerability & Data
   # Classification / Continuous Right-Sizing / Managed Observability 대응 조항 누락),
@@ -344,18 +352,18 @@ check_vendor_mirror_symmetry() {
     [ -z "$prefix" ] && continue
     azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
     if [ -z "$azure_file" ]; then
-      echo "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
+      log_info "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
       continue
     fi
     a_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$f" || true)
     z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$azure_file" || true)
     if [ "$a_count" -ne "$z_count" ]; then
-      echo "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
+      log_info "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
       echo "    $f"
       echo "    $azure_file"
     fi
   done
-  echo "[INFO] aws/azure 미러링 대칭성 검사 완료."
+  log_info "[INFO] aws/azure 미러링 대칭성 검사 완료."
 }
 
 main() {
@@ -371,13 +379,13 @@ main() {
   check_cross_skill_duplication
   check_vendor_mirror_symmetry
 
-  echo "======================================================"
+  log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then
-    echo "=== Prompt Corpus Lint Passed (경고는 위 WARNING 참조) ==="
+    log_info "=== Prompt Corpus Lint Passed (경고는 위 WARNING 참조) ==="
   else
-    echo "=== Prompt Corpus Lint Failed — ERROR 항목을 수정하십시오 ==="
+    log_info "=== Prompt Corpus Lint Failed — ERROR 항목을 수정하십시오 ==="
   fi
-  echo "======================================================"
+  log_info "======================================================"
 
   exit "$EXIT_CODE"
 }

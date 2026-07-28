@@ -15,6 +15,7 @@
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/run.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$TESTS_DIR/../scripts/compact-runner.sh"
@@ -126,6 +127,7 @@ LIB_CONSUMERS=(
 LIB="$TESTS_DIR/../scripts/lib/tool-probe.sh"
 code=0
 bash -c 'set -euo pipefail
+export QUIET=0
   source "$1"
   for fn in has_tool record_unavailable print_unavailable_tools; do
     declare -F "$fn" >/dev/null || exit 1
@@ -140,6 +142,7 @@ fi
 #     k8s/scripts/ 는 ~/.claude/skills/k8s/scripts 로 링크되어 배포되므로, BASH_SOURCE 를
 #     그대로 쓰면(readlink -f 누락) 링크 위치 기준으로 상대 경로가 빗나간다. 경로가 깨지면
 #     source 가 실패하고 set -euo pipefail 이 즉시 죽이므로 완주 여부로 판정한다.
+export QUIET=0
 #     k8s 스위트는 k8s-check.sh 를 구동하지 않고 로직을 복제 검증하므로, 이 스크립트의
 #     라이브러리 적재 경로를 덮는 테스트가 여기 말고는 없다.
 for consumer in "${LIB_CONSUMERS[@]}"; do

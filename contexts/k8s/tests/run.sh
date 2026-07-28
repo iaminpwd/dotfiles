@@ -12,6 +12,7 @@
 # 사용: bash ~/dotfiles/contexts/k8s/tests/run.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"

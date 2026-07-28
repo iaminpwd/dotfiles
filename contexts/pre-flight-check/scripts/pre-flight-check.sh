@@ -3,9 +3,17 @@
 
 set -euo pipefail
 
-echo "============================================="
-echo "=== Pre-Flight Validation Pipeline Started ==="
-echo "============================================="
+# Setup Quiet Mode Logging
+log_info() {
+  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
+  if [ "${QUIET:-1}" != "1" ]; then
+    echo "$@"
+  fi
+}
+
+log_info "============================================="
+log_info "=== Pre-Flight Validation Pipeline Started ==="
+log_info "============================================="
 
 # -----------------------------------------------------------------------------
 # Common Helpers
@@ -71,12 +79,12 @@ validate_shell() {
   fi
 
   if [ "${#shell_files[@]}" -eq 0 ] || [ -z "${shell_files[0]}" ]; then
-    echo "--- Step: Shell Script Validation ---"
-    echo "[INFO] No staged shell script changes detected. Skipping shell validation."
+    log_info "--- Step: Shell Script Validation ---"
+    log_info "[INFO] No staged shell script changes detected. Skipping shell validation."
     return 0
   fi
 
-  echo "--- Step: Shell Script Validation ---"
+  log_info "--- Step: Shell Script Validation ---"
 
   # zsh 방언 파일은 shfmt(-ln 에 zsh 없음)와 shellcheck(셔뱅 없는 rc 파일에 SC2148 오류)가
   # 둘 다 처리하지 못하므로 두 도구에서 제외하고 zsh -n 으로만 검사한다. 판정을 한 군데로
@@ -101,7 +109,7 @@ validate_shell() {
 
     # shfmt가 존재하면 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감)
     if [ "$has_shfmt" -eq 1 ]; then
-      echo "Checking format for all shell scripts..."
+      log_info "Checking format for all shell scripts..."
       if ! shfmt -d -i 2 "${sh_only_files[@]}"; then
         echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
         return 1
@@ -109,7 +117,7 @@ validate_shell() {
     fi
 
     if [ "$has_shellcheck" -eq 1 ]; then
-      echo "Running shellcheck..."
+      log_info "Running shellcheck..."
       # -x: source 로 불러오는 라이브러리까지 따라가 분석한다. 없으면 라이브러리를 쓰는
       # 스크립트마다 SC1091("not specified as input")이 info 로 뜨고, shellcheck 는 지적이
       # 하나라도 있으면 exit 1 이므로 정상 코드가 커밋 차단으로 이어진다(2026-07-28 실측:
@@ -119,7 +127,7 @@ validate_shell() {
         return 1
       fi
     else
-      echo "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
+      log_info "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
     fi
   fi
 
@@ -128,25 +136,36 @@ validate_shell() {
   # zsh 방언 파일은 zsh -n 이 유일한 검증 수단이므로, zsh 가 없으면 이 파일들은 아무 검사도
   # 받지 못한 채 통과한다. 그 사실을 UNAVAILABLE_TOOLS 요약에 실어 무검증 통과를 드러낸다.
   for f in "${zsh_files[@]}"; do
-    echo "Checking syntax: $f"
+    log_info "Checking syntax: $f"
     if [ "$has_zsh" -eq 1 ]; then
       if ! zsh -n "$f"; then
         echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
         return 1
       fi
     else
-      echo "[WARNING] zsh not found, skipping syntax check for: $f"
+      log_info "[WARNING] zsh not found, skipping syntax check for: $f"
     fi
   done
 
   for f in "${sh_only_files[@]}"; do
-    echo "Checking syntax: $f"
+    log_info "Checking syntax: $f"
     if ! bash -n "$f"; then
       echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
       return 1
     fi
   done
-  echo "[SUCCESS] Shell scripts validation passed."
+
+  # Idempotency Static Analysis
+  for FILE in "${shell_files[@]}"; do
+    [ -f "$FILE" ] || continue
+    if grep -qE ">>|tee -a" "$FILE"; then
+      if ! grep -qE "(grep -q|if \[|if test)" "$FILE"; then
+        echo "⚠️ [WARNING] Idempotency check: '$FILE' uses append (>> or tee -a) but lacks state checking logic (e.g., grep -q or if [ ... ]). Consider adding idempotency guards." >&2
+      fi
+    fi
+  done
+
+  log_info "[SUCCESS] Shell scripts validation passed."
 }
 
 # 2. Terraform Validation
@@ -157,14 +176,14 @@ validate_terraform() {
   local tf_files=("${GLOBAL_STAGED_TF_FILES[@]}")
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
-    echo "--- Step: Terraform Validation ---"
+    log_info "--- Step: Terraform Validation ---"
 
     # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
     if [ "$GLOBAL_TF_HASH" = "empty" ]; then
-      echo "[INFO] No staged Terraform changes detected. Skipping Terraform validation (Cache hit - empty)."
+      log_info "[INFO] No staged Terraform changes detected. Skipping Terraform validation (Cache hit - empty)."
       return 0
     elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
-      echo "[INFO] Staged Terraform configuration is unchanged. Skipping Terraform validation (Cache hit)."
+      log_info "[INFO] Staged Terraform configuration is unchanged. Skipping Terraform validation (Cache hit)."
       return 0
     fi
     if ! has_tool terraform; then
@@ -172,13 +191,13 @@ validate_terraform() {
       return 1
     fi
 
-    echo "Running terraform fmt check..."
+    log_info "Running terraform fmt check..."
     if ! terraform fmt -check -recursive; then
       echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
       return 1
     fi
 
-    echo "Running terraform validate (offline initialization)..."
+    log_info "Running terraform validate (offline initialization)..."
     if [ ! -d ".terraform" ]; then
       if ! terraform init -backend=false -input=false >/dev/null; then
         echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 차단되었습니다." >&2
@@ -191,7 +210,7 @@ validate_terraform() {
     fi
 
     if has_tool tflint; then
-      echo "Running tflint..."
+      log_info "Running tflint..."
       if [ -f ".tflint.hcl" ]; then
         tflint --init || true
       fi
@@ -200,7 +219,7 @@ validate_terraform() {
         return 1
       fi
     else
-      echo "[WARNING] tflint is not installed. Skipping static analysis."
+      log_info "[WARNING] tflint is not installed. Skipping static analysis."
     fi
 
     if has_tool checkov; then
@@ -211,15 +230,15 @@ validate_terraform() {
       # 등급 필터가 걸리지 않는다(2026-07-26 실측, contexts/aws/tests 로 확인). 즉 지적이
       # 하나라도 나오면 커밋이 차단된다. 등급별 완화가 실제로 필요해지면 Prisma Cloud API
       # 키를 연동하거나 --skip-check로 개별 체크를 명시 제외해야 한다.
-      echo "Running checkov (Terraform security misconfiguration scan)..."
+      log_info "Running checkov (Terraform security misconfiguration scan)..."
       if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM; then
         echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
     else
-      echo "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
+      log_info "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
     fi
-    echo "[SUCCESS] Terraform validation passed."
+    log_info "[SUCCESS] Terraform validation passed."
   fi
 }
 
@@ -238,21 +257,21 @@ validate_sam() {
   fi
 
   if ! has_tool sam; then
-    echo "--- Step: AWS SAM Validation ---"
-    echo "[WARNING] SAM templates found but sam CLI is not installed."
+    log_info "--- Step: AWS SAM Validation ---"
+    log_info "[WARNING] SAM templates found but sam CLI is not installed."
     return 0
   fi
 
-  echo "--- Step: AWS SAM Validation ---"
+  log_info "--- Step: AWS SAM Validation ---"
   for tpl in "${sam_templates[@]}"; do
     [ -z "$tpl" ] && continue
-    echo "Validating SAM template: $tpl"
+    log_info "Validating SAM template: $tpl"
     if ! sam validate --template-file "$tpl"; then
       echo "❌ [ERROR] SAM 템플릿 검증에 실패하여 커밋이 차단되었습니다: $tpl" >&2
       return 1
     fi
   done
-  echo "[SUCCESS] SAM template validation passed."
+  log_info "[SUCCESS] SAM template validation passed."
 }
 
 # 4. Azure Bicep Validation
@@ -270,12 +289,12 @@ validate_bicep() {
   export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 
   if ! has_tool bicep && ! { has_tool az && az bicep version &>/dev/null; }; then
-    echo "--- Step: Azure Bicep Validation ---"
-    echo "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
+    log_info "--- Step: Azure Bicep Validation ---"
+    log_info "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
     return 0
   fi
 
-  echo "--- Step: Azure Bicep Validation ---"
+  log_info "--- Step: Azure Bicep Validation ---"
   local bicep_cmd="none"
   if has_tool bicep && bicep --version &>/dev/null; then
     bicep_cmd="standalone"
@@ -285,7 +304,7 @@ validate_bicep() {
 
   for bf in "${bicep_files[@]}"; do
     [ -z "$bf" ] && continue
-    echo "Validating bicep file: $bf"
+    log_info "Validating bicep file: $bf"
 
     if [ "$bicep_cmd" = "standalone" ]; then
       if ! bicep build "$bf" --stdout >/dev/null; then
@@ -302,7 +321,7 @@ validate_bicep() {
       return 1
     fi
   done
-  echo "[SUCCESS] Bicep validation passed."
+  log_info "[SUCCESS] Bicep validation passed."
 }
 
 # 4. Ansible Validation
@@ -317,11 +336,11 @@ validate_ansible() {
   fi
 
   if { [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ]; } || { [ "${#staged_roles[@]}" -gt 0 ] && [ -n "${staged_roles[0]}" ]; }; then
-    echo "--- Step: Ansible Validation ---"
+    log_info "--- Step: Ansible Validation ---"
     if has_tool ansible-playbook && [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ]; then
       for pf in "${ansible_files[@]}"; do
         [ -z "$pf" ] && continue
-        echo "Checking ansible syntax: $pf"
+        log_info "Checking ansible syntax: $pf"
         if ! ansible-playbook --syntax-check "$pf"; then
           echo "❌ [ERROR] Ansible 플레이북 문법 검사에 실패하여 커밋이 차단되었습니다: $pf" >&2
           return 1
@@ -329,14 +348,14 @@ validate_ansible() {
       done
     fi
     if has_tool ansible-lint; then
-      echo "Running ansible-lint..."
+      log_info "Running ansible-lint..."
       if ! ansible-lint; then
         echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
-      echo "[SUCCESS] Ansible validation passed."
+      log_info "[SUCCESS] Ansible validation passed."
     else
-      echo "[WARNING] ansible-lint is not installed. Skipping lint validation."
+      log_info "[WARNING] ansible-lint is not installed. Skipping lint validation."
     fi
   fi
 }
@@ -356,8 +375,8 @@ validate_helm() {
   fi
 
   if ! has_tool helm; then
-    echo "--- Step: Helm Chart Validation ---"
-    echo "[WARNING] Chart.yaml found but helm CLI is not installed."
+    log_info "--- Step: Helm Chart Validation ---"
+    log_info "[WARNING] Chart.yaml found but helm CLI is not installed."
     return 0
   fi
 
@@ -384,15 +403,15 @@ validate_helm() {
     return 0
   fi
 
-  echo "--- Step: Helm Chart Validation ---"
+  log_info "--- Step: Helm Chart Validation ---"
   for d in "${chart_dirs[@]}"; do
-    echo "Linting chart: $d"
+    log_info "Linting chart: $d"
     if ! helm lint "$d"; then
       echo "❌ [ERROR] Helm lint 지적 사항이 발견되어 커밋이 차단되었습니다: $d" >&2
       return 1
     fi
   done
-  echo "[SUCCESS] Helm lint passed."
+  log_info "[SUCCESS] Helm lint passed."
 }
 
 # 6. Raw K8s Manifest Validation
@@ -410,16 +429,16 @@ validate_k8s_manifests() {
   done
 
   if [ "${#k8s_manifests[@]}" -gt 0 ] && [ -n "${k8s_manifests[0]}" ]; then
-    echo "--- Step: K8s Manifest Validation ---"
+    log_info "--- Step: K8s Manifest Validation ---"
     if has_tool kube-linter; then
-      echo "Running kube-linter for all manifests..."
+      log_info "Running kube-linter for all manifests..."
       if ! kube-linter lint "${k8s_manifests[@]}"; then
         echo "❌ [ERROR] kube-linter 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
-      echo "[SUCCESS] kube-linter passed."
+      log_info "[SUCCESS] kube-linter passed."
     elif has_tool kubectl; then
-      echo "Running kubectl --dry-run (client-side) for manifest validation..."
+      log_info "Running kubectl --dry-run (client-side) for manifest validation..."
       for mf in "${k8s_manifests[@]}"; do
         [ -z "$mf" ] && continue
         echo "Validating: $mf"
@@ -428,9 +447,9 @@ validate_k8s_manifests() {
           return 1
         fi
       done
-      echo "[SUCCESS] kubectl dry-run validation passed."
+      log_info "[SUCCESS] kubectl dry-run validation passed."
     else
-      echo "[WARNING] K8s manifests found but neither kube-linter nor kubectl is installed."
+      log_info "[WARNING] K8s manifests found but neither kube-linter nor kubectl is installed."
     fi
   fi
 }
@@ -444,15 +463,15 @@ validate_docker() {
 
   if [ "${#dockerfiles[@]}" -gt 0 ] && [ -n "${dockerfiles[0]}" ]; then
     if has_tool hadolint; then
-      echo "--- Step: Dockerfile Validation ---"
-      echo "Linting Dockerfiles..."
+      log_info "--- Step: Dockerfile Validation ---"
+      log_info "Linting Dockerfiles..."
       if ! hadolint "${dockerfiles[@]}"; then
         echo "❌ [ERROR] hadolint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
-      echo "[SUCCESS] Dockerfile validation passed."
+      log_info "[SUCCESS] Dockerfile validation passed."
     else
-      echo "[WARNING] Dockerfiles found but hadolint is not installed."
+      log_info "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
 
     # 여기에는 예전에 syft(소스 SBOM 생성)와 grype(의존성 CVE 스캔)의 `dir:.` 소스 스캔이
@@ -485,15 +504,15 @@ validate_yaml() {
 
   if [ "${#yaml_files[@]}" -gt 0 ] && [ -n "${yaml_files[0]}" ]; then
     if has_tool yamllint; then
-      echo "--- Step: YAML Style Validation (Relaxed) ---"
+      log_info "--- Step: YAML Style Validation (Relaxed) ---"
       # find로 필터링된 모든 YAML 파일을 일괄 검사
       if ! yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "${yaml_files[@]}"; then
         echo "❌ [ERROR] yamllint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
-      echo "[SUCCESS] YAML format validation passed."
+      log_info "[SUCCESS] YAML format validation passed."
     else
-      echo "[WARNING] YAML files found but yamllint is not installed."
+      log_info "[WARNING] YAML files found but yamllint is not installed."
     fi
   fi
 }
@@ -520,7 +539,7 @@ validate_conftest() {
 
   if [ "$has_staged_rego" -eq 1 ] || { [ "$has_any_rego" -eq 1 ] && [ "$has_staged_config" -eq 1 ]; }; then
     if has_tool conftest; then
-      echo "--- Step: Conftest Policy Validation ---"
+      log_info "--- Step: Conftest Policy Validation ---"
 
       # conftest는 --policy를 안 주면 기본적으로 CWD 기준 ./policy 디렉토리만 찾는다.
       # infra/policy/ 처럼 다른 위치에 정책이 있으면 "stat policy: no such file or
@@ -545,7 +564,7 @@ validate_conftest() {
       if [ "$has_staged_rego" -eq 1 ]; then
         # 정책(.rego) 자체가 바뀐 경우: 기존에 이미 존재하던 설정 파일들이 새 정책도
         # 여전히 통과하는지 확인해야 하므로 저장소 전체를 대상으로 검사한다.
-        echo "[INFO] Rego policy changed. Testing against the entire repository for regressions."
+        log_info "[INFO] Rego policy changed. Testing against the entire repository for regressions."
         if ! conftest test "${policy_flags[@]}" .; then
           echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 차단되었습니다." >&2
           return 1
@@ -558,18 +577,18 @@ validate_conftest() {
           return 1
         fi
       fi
-      echo "[SUCCESS] Conftest validation passed."
+      log_info "[SUCCESS] Conftest validation passed."
     else
-      echo "[WARNING] Rego policies found but conftest is not installed."
+      log_info "[WARNING] Rego policies found but conftest is not installed."
     fi
   fi
 }
 
 # 10. Security & Secret Scan
 validate_security() {
-  echo "--- Step: Security and Secret Scan ---"
+  log_info "--- Step: Security and Secret Scan ---"
   if has_tool trivy; then
-    echo "Running trivy fs scan..."
+    log_info "Running trivy fs scan..."
 
     # 24시간(86400초) 수명 주기 정책 설정
     local db_ttl=86400
@@ -592,7 +611,7 @@ validate_security() {
 
       # 캐시 수명이 아직 유효한 경우 업데이트 스킵 플래그 동적 주입
       if [ "$age" -lt "$db_ttl" ]; then
-        echo "[INFO] Trivy DB cache is still valid ($((age / 3600))h old). Skipping DB update."
+        log_info "[INFO] Trivy DB cache is still valid ($((age / 3600))h old). Skipping DB update."
         skip_flags=(--skip-db-update --skip-check-update)
       fi
     fi
@@ -607,7 +626,7 @@ validate_security() {
       return 1
     fi
     rm -f "$tmp_secret"
-    echo "[SUCCESS] Trivy secret scan passed."
+    log_info "[SUCCESS] Trivy secret scan passed."
 
     # 2. 보안 취약점 및 설정 오류(vuln, misconfig)는 발견되어도 커밋을 막지 않지만(exit-code 0),
     #    스캔 자체의 실행 실패(네트워크 오류 등)는 구분하여 "성공"으로 오보되지 않도록 한다.
@@ -621,7 +640,7 @@ validate_security() {
     #    main.tf 를 픽스처 밖에 두고 AWS-0107 이 계속 잡히는 것을 확인).
     #    (시크릿 스캔에는 적용하지 않는다. 픽스처에 실제 자격 증명이 섞여 들어가는 사고는
     #     막아야 하며, 그쪽은 애초에 출력이 12줄이라 노이즈 문제도 없다.)
-    echo "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
+    log_info "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
     local tmp_vuln
     tmp_vuln=$(mktemp)
     # Trivy는 --exit-code 0일 때 무조건 exit 0을 반환하므로 성공/실패 여부를 판단하기 어렵다.
@@ -639,11 +658,11 @@ validate_security() {
         cat "$tmp_vuln"
       fi
       rm -f "$tmp_vuln"
-      echo "[SUCCESS] Trivy vuln/misconfig scan passed."
+      log_info "[SUCCESS] Trivy vuln/misconfig scan passed."
     else
       cat "$tmp_vuln"
       rm -f "$tmp_vuln"
-      echo "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
+      log_info "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
     fi
 
     # 실제 업데이트를 진행한 경우에만 타임스탬프 최신화.
@@ -656,14 +675,14 @@ validate_security() {
       echo "$now" 2>/dev/null >"$timestamp_file" || true
     fi
   elif has_tool trufflehog; then
-    echo "Running trufflehog filesystem scan..."
+    log_info "Running trufflehog filesystem scan..."
     if ! trufflehog filesystem --no-update --fail .; then
       echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 차단되었습니다."
       return 1
     fi
-    echo "[SUCCESS] Trufflehog secret scan passed."
+    log_info "[SUCCESS] Trufflehog secret scan passed."
   else
-    echo "[WARNING] Neither trivy nor trufflehog is installed. Skipping security scanning."
+    log_info "[WARNING] Neither trivy nor trufflehog is installed. Skipping security scanning."
   fi
 }
 
@@ -671,8 +690,8 @@ validate_security() {
 validate_finops_costs() {
   # 커밋 시점이 아닐 경우 비용 검사 생략 (API 호출 제한 절약)
   if [ "${RUN_COST_CHECK:-false}" != "true" ]; then
-    echo "--- Step: FinOps Cost Validation (Infracost) ---"
-    echo "[INFO] Not in Git commit stage. Skipping cost validation to save API limits."
+    log_info "--- Step: FinOps Cost Validation (Infracost) ---"
+    log_info "[INFO] Not in Git commit stage. Skipping cost validation to save API limits."
     return 0
   fi
 
@@ -682,17 +701,17 @@ validate_finops_costs() {
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
     if [ "$GLOBAL_TF_HASH" = "empty" ]; then
-      echo "--- Step: FinOps Cost Validation (Infracost) ---"
-      echo "[INFO] No staged Terraform changes detected. Skipping cost validation (Cache hit - empty)."
+      log_info "--- Step: FinOps Cost Validation (Infracost) ---"
+      log_info "[INFO] No staged Terraform changes detected. Skipping cost validation (Cache hit - empty)."
       return 0
     elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
-      echo "--- Step: FinOps Cost Validation (Infracost) ---"
-      echo "[INFO] Staged Terraform configuration is unchanged. Skipping cost validation (Cache hit)."
+      log_info "--- Step: FinOps Cost Validation (Infracost) ---"
+      log_info "[INFO] Staged Terraform configuration is unchanged. Skipping cost validation (Cache hit)."
       return 0
     fi
     if has_tool infracost; then
-      echo "--- Step: FinOps Cost Validation (Infracost) ---"
-      echo "Checking for AWS/Azure Extended Support & LTS pricing..."
+      log_info "--- Step: FinOps Cost Validation (Infracost) ---"
+      log_info "Checking for AWS/Azure Extended Support & LTS pricing..."
 
       local cost_output_tmp
       cost_output_tmp=$(mktemp)
@@ -713,10 +732,10 @@ validate_finops_costs() {
           return 1
         fi
       else
-        echo "[WARNING] Infracost analysis failed (check API key or network connection). Skipping cost validation."
+        log_info "[WARNING] Infracost analysis failed (check API key or network connection). Skipping cost validation."
       fi
       rm -f "$cost_output_tmp"
-      echo "[SUCCESS] FinOps cost validation passed."
+      log_info "[SUCCESS] FinOps cost validation passed."
     fi
   fi
 }
@@ -812,10 +831,10 @@ main() {
     echo "$GLOBAL_TF_HASH" 2>/dev/null >"$CACHE_FILE" || true
   fi
 
-  echo "================================================="
-  echo "=== All Pre-Flight Checks Passed Successfully ==="
+  log_info "================================================="
+  log_info "=== All Pre-Flight Checks Passed Successfully ==="
   print_unavailable_tools
-  echo "================================================="
+  log_info "================================================="
 }
 
 # Run execution

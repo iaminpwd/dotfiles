@@ -17,6 +17,7 @@
 # 사용: bash ~/dotfiles/contexts/openstack/tests/run.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # source-path=SCRIPTDIR 은 shellcheck 가 아래 상대 경로를 이 스크립트의 디렉토리 기준으로

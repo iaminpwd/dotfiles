@@ -11,6 +11,7 @@
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/run.sh
 
 set -euo pipefail
+export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
