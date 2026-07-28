@@ -11,7 +11,7 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Bash Fail-Fast & Cleanup:** 셸 스크립트 실행 시 에러 발생 시 즉각 실행을 정지하도록 `set -euo pipefail`을 강제하고, 종료 시 임시 리소스를 해제하는 `trap` 회수 로직을 보증하십시오.
-- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 파일이나 디렉토리 존재 여부, CLI 도구 설치 여부를 사전에 분기 검증하여 멱등성을 달성하십시오.
+- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
 - **[PREFER] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

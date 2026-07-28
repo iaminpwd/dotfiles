@@ -188,7 +188,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 파일이나 디렉토리 존재 여부, CLI 도구 설치 여부를 사전에 분기 검증하여 멱등성을 달성하십시오. (출처: aws/references/040-automation-scripting.md)
+- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
 - **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오. (출처: aws/references/040-automation-scripting.md)
 ```
 
@@ -284,14 +284,8 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 초기 판본은 "3회 실패 시 의심하라"는 지시뿐이라 근거로 삼을 데이터가 없었습니다. 현재는 관찰 기록을 남기고 그것을 입력으로 삼는 구조입니다.
 
 ```markdown
-- **[Trigger: After Code Change] Workspace-Scoped Prompt Provenance Logging:** 파일을 변경한 턴은
-  프로젝트 루트 `.agent-state/edits.log`에 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 남긴다.
-  일시·경로·도구명은 PostToolUse 훅이 자동 기록하고, 참조 룰 문서(`agent:<파일>#<조항명>`)와
-  목적은 에이전트가 덧붙인다. (출처: base.AGENTS.md 9장)
-- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 논리 오류·설계 미흡 지적]
-  Prompt Self-Evolution & Quality Flywheel:** 로그의 non-OK 라인을 조회하고, 각 라인의 출처 조항을
-  그 시점 버전(`git show <커밋>:<룰북>`)과 현재 본문으로 대조해 이미 개정된 항목을 제외한 뒤,
-  남은 항목만 `<loss_analysis>`로 분석해 프롬프트 개정안을 역제안한다. (출처: base.AGENTS.md 9장)
+- **[Trigger: After Code Change] Provenance Logging:** 파일 변경 후 `log-edit.sh` 를 실행해 근거를 기록한다. (출처: base.AGENTS.md 9장)
+- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 지적] Quality Flywheel:** 계속 실패 시 `prompt-flywheel.sh` 를 실행하여 분석 및 개정안을 제안한다. (출처: base.AGENTS.md 9장)
 ```
 
 핵심은 **기록과 판정을 사람의 기억이 아니라 기계적 산출물에 위임**했다는 점입니다. 훅이 남긴 이력은 토큰을 소비하지 않고, 조항 개정 여부는 로그 일시와 룰북 git 이력을 대조해 판정하므로 별도의 상태 관리가 필요 없습니다.

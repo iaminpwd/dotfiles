@@ -217,6 +217,25 @@ if [ -f "$HANDOFF_CHECK" ]; then
   fi
 fi
 
+# [추가] agent-handoff 설계도(Blueprint) 포맷 검사
+HANDOFF_LINT="$REPO_ROOT/contexts/agent-handoff/scripts/handoff-lint.sh"
+if [ ! -f "$HANDOFF_LINT" ]; then
+  HANDOFF_LINT="$HOME/dotfiles/contexts/agent-handoff/scripts/handoff-lint.sh"
+fi
+if [ -f "$HANDOFF_LINT" ]; then
+  # 배열 앞에 REPO_ROOT 경로를 붙여서 스크립트에 전달합니다.
+  HANDOFF_FILES=()
+  for f in "${STAGED_FILES[@]:-}"; do
+    HANDOFF_FILES+=("$REPO_ROOT/$f")
+  done
+
+  if [ ${#HANDOFF_FILES[@]} -gt 0 ]; then
+    if ! bash "$HANDOFF_LINT" "${HANDOFF_FILES[@]}"; then
+      exit 1
+    fi
+  fi
+fi
+
 # 검증 대상 판정. 예전에는 "저장소 루트에 pre-flight-check.sh 링크가 있는가"를 옵트인
 # 마커로 삼고 ~/workspace 하위에만 링크를 자동 생성했다. 그 방식은 링크 자체가 게이트라서,
 # workspace 밖의 상시 검증 대상(dotfiles 자신)이 수동으로 만든 링크에 의존했고 링크가

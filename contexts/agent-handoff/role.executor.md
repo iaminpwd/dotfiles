@@ -39,11 +39,5 @@
 - **[MUST] 부분 완료도 SUCCESS 가 아님**: `## 1. Status` 는 지시된 모든 항목이 확인된
   경우에만 SUCCESS 입니다. 하나라도 미반영이면 FAILED 로 기재하십시오. 부분 성공을
   SUCCESS 로 보고하면 아키텍트가 다음 단계로 넘어가 결함이 그대로 남습니다.
-- **[MUST] Report & Archive (통신 제어)**: 터미널 제어 권한을 활용하여 통신 파일의 라이프사이클을 스스로 관리하십시오. 작업 종료 시 (성공/실패 무관) 프로젝트 루트에 다음 4가지 섹션을 포함한 `Gemini-to-Claude.md` 결과 보고서를 작성하십시오.
-  0. 리포트 최상단 첫 줄에 `task-id: <이번 작업의 task-id>` 를 기재하십시오.
-     아키텍트는 이 값으로 `.agent-state/handoff-archive/<task-id>/` 경로를 확정합니다.
-  1. `## 1. Status`: [ SUCCESS / FAILED ] 명시
-  2. `## 2. Actions Taken`: 실제로 수정한 파일 목록 및 실행한 명령어
-  3. `## 3. Logs`: 빌드나 테스트 중 발생한 Raw 에러 로그 또는 성공 메시지
-  4. `## 4. Blockers & Questions`: 실행 중 발견된 논리적 결함이나 아키텍트에게 묻는 질문
+- **[MUST] Report & Archive (통신 제어)**: 터미널 제어 권한을 활용하여 통신 파일의 라이프사이클을 스스로 관리하십시오. 작업 종료 시 (성공/실패 무관) 프로젝트 루트에 `Gemini-to-Claude.md` 결과 보고서를 작성하십시오. 필수 헤더는 `## 1. Status`, `## 2. Actions Taken`, `## 3. Logs`, `## 4. Blockers & Questions` 이며 최상단에 `task-id: <이번 작업의 task-id>` 명시가 필수입니다. (포맷 누락 시 훅 차단됨)
   - 워크스페이스 루트에 지난 턴의 `Gemini-to-Claude.md` 파일이 존재할 경우, 새 리포트를 쓰기 전에 기존 파일을 타임스탬프를 붙여 `.agent-state/handoff-archive/<task-id>/` 폴더로 덮어쓰기 없이 백업하십시오.

@@ -21,6 +21,14 @@
 
 set -euo pipefail
 
+# Setup Quiet Mode Logging
+log_info() {
+  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
+  if [ "${QUIET:-1}" != "1" ]; then
+    echo "$@"
+  fi
+}
+
 BLUEPRINT="Claude-to-Gemini.md"
 REPORT="Gemini-to-Claude.md"
 ARCHIVE=".agent-state/handoff-archive"
@@ -53,9 +61,9 @@ if [ "${1:-}" = "--run-verification" ]; then
     echo "❌ [ERROR] '## 4. Verification' 에서 bash 코드펜스를 찾지 못했습니다: $BLUEPRINT_FILE" >&2
     exit 1
   }
-  echo "=== 설계도 검증 블록 재실행: $BLUEPRINT_FILE ==="
+  log_info "=== 설계도 검증 블록 재실행: $BLUEPRINT_FILE ==="
   echo "$BLOCK"
-  echo "--- 실행 결과 ---"
+  log_info "--- 실행 결과 ---"
   (cd "$ROOT" && bash -c "$BLOCK")
   echo "✅ 설계도 검증 블록이 종료 코드 0 으로 통과했습니다."
   exit 0
@@ -79,7 +87,7 @@ if [ ! -e "$BLUEPRINT" ] && [ ! -e "$REPORT" ] && [ ! -d "$ARCHIVE" ]; then
   exit 0
 fi
 
-echo "--- Step: Agent Handoff State Check ($ROOT) ---"
+log_info "--- Step: Agent Handoff State Check ($ROOT) ---"
 
 # 1. 통신 파일 동시 존재: 아키텍트가 리포트를 소비(아카이브 이동)하지 않은 채 새 설계도를
 #    발행했거나, 실행자가 선점 아카이브에 실패한 상태다. 트리거가 해제되지 않아 다음 턴에
@@ -112,7 +120,7 @@ if [ -d "$ARCHIVE" ]; then
     count=$(find "$d" -maxdepth 1 -type f | wc -l)
     if [ "$count" -gt 6 ]; then
       if [ "$COMMIT_GATE" -eq 1 ]; then
-        echo "[WARNING] 3왕복 상한 초과: $ARCHIVE/$name 에 파일 ${count}개 (상한 6개)."
+        log_info "[WARNING] 3왕복 상한 초과: $ARCHIVE/$name 에 파일 ${count}개 (상한 6개)."
         echo "    커밋은 막지 않습니다. 양 에이전트는 작업을 중단하고 경과와 Blockers 를"
         echo "    사용자에게 브리핑하십시오."
       else
@@ -123,18 +131,18 @@ if [ -d "$ARCHIVE" ]; then
     fi
     [ "$count" -le 2 ] && single_round=$((single_round + 1))
     grep -qE "$DIR_RE" <<<"$name" ||
-      echo "[WARNING] 아카이브 폴더명이 <YYYYMMDD_HHMMSS> 형식이 아닙니다: $ARCHIVE/$name"
+      log_info "[WARNING] 아카이브 폴더명이 <YYYYMMDD_HHMMSS> 형식이 아닙니다: $ARCHIVE/$name"
   done < <(find "$ARCHIVE" -mindepth 1 -maxdepth 1 -type d | sort)
 
   if [ "$total_dirs" -ge 3 ] && [ "$single_round" -eq "$total_dirs" ]; then
-    echo "[WARNING] 아카이브 폴더 ${total_dirs}개가 전부 1왕복(파일 2개 이하)에 머물러 있습니다."
+    log_info "[WARNING] 아카이브 폴더 ${total_dirs}개가 전부 1왕복(파일 2개 이하)에 머물러 있습니다."
     echo "    같은 작업의 재발행에 새 task-id 를 발급하면 3왕복 상한이 발동하지 않습니다."
   fi
 fi
 
 if [ "$EXIT_CODE" -eq 0 ]; then
-  echo "[INFO] 핸드오프 상태 검사 통과."
+  log_info "[INFO] 핸드오프 상태 검사 통과."
 else
-  echo "[INFO] 핸드오프 상태 검사 실패 — 위 ERROR 를 해소하십시오."
+  log_info "[INFO] 핸드오프 상태 검사 실패 — 위 ERROR 를 해소하십시오."
 fi
 exit "$EXIT_CODE"

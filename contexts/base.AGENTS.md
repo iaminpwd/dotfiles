@@ -115,26 +115,11 @@ priority: highest
 - **[MUST] Semantic Commits:** 코드나 문서 커밋 시, 반드시 `feat:`, `fix:`, `chore:`, `docs:` 와 같은 시맨틱 커밋 컨벤션을 사용하십시오.
 - **[MUST] Non-Destructive Git Operations:** 에이전트는 원자적 커밋 생성을 위해 `git commit`을 주로 사용하되, 충돌 리스크가 높은 원격 리베이스(`git rebase`)나 강제 푸시(`git push -f`) 등의 파괴적인 깃 조작은 사용자가 명시적으로 요구한 경우에 한해 제한적으로 실행하십시오.
 - **[MUST] Explicit Commit Request:** `git commit`은 사용자가 커밋을 명시적으로 요청한 턴(Turn)에만 수행하십시오. 코드 수정이나 검증 완료 자체가 커밋 승인을 의미하지 않으므로, 요청이 없다면 다음 지시를 대기하십시오.
-- **[MUST] Explicit Atomic Commits:** 사용자가 커밋을 요청한 경우, 변경 사항을 논리적 목적 단위로 분리하여 커밋하십시오. 판단 기준은 다음과 같습니다: 동일한 기능 추가·동일한 버그 수정·동일한 리팩토링처럼 하나의 목적을 위해 여러 파일을 함께 수정했다면 파일 단위로 쪼개지 말고 하나의 커밋으로 묶으십시오. 서로 다른 기능, 서로 다른 버그 수정, 또는 코드 변경과 무관한 문서 변경이 섞여 있는 경우에만 목적별로 별도 커밋으로 분리하십시오.
-  <examples>
-  <example>
-  [Good] 서로 다른 목적은 분리
-  git commit -m "feat: 로그인 플로우 추가"
-  git commit -m "fix: 대시보드 메모리 누수 해결"
-  </example>
-  <example>
-  [Good] 하나의 목적을 위해 여러 파일을 수정했다면 하나로 묶음
-  git commit -m "feat: 로그인 플로우 추가 (LoginForm.tsx, authApi.ts, auth.test.ts)"
-  </example>
-  <example>
-  [Bad] 서로 다른 목적이 한 커밋에 뒤섞임
-  git commit -m "update files and fix bugs"
-  </example>
-  </examples>
+- **[MUST] Explicit Atomic Commits:** 변경 사항을 논리적 목적 단위로 분리하여 원자적 커밋(Atomic Commit)을 수행하십시오. (위반 시 `commit-msg` 훅 내의 `semantic-commit-lint.sh`가 기계적으로 경고함)
 - **[MUST] Pre-Commit Gate:** 커밋 전 검증(lint, syntax check, secret scan 등)의 모든 항목이 pass 상태일 때만 커밋을 수행하십시오. 검증 실패 시 원인을 수정한 뒤 재검증을 통과해야 합니다.
 
 ## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
-- **[Trigger: After Code Change] Workspace-Scoped Prompt Provenance Logging:** 파일을 변경한 턴은 해당 프로젝트 루트의 `.agent-state/edits.log`에 `<ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>` 형식으로 1줄을 조용히 누적(Append) 기록하십시오. 일시·경로·도구명은 `agent-edits-hook.sh`(PostToolUse 훅)가 `hook:<도구명>` 출처로 자동 기록하므로, 에이전트는 훅이 알 수 없는 정보인 참조 룰 문서와 작업 목적만 `agent:<문서명>` 출처로 1줄 추가하십시오. 이 라인은 파일 편집 도구가 아니라 쉘 append(`echo '...' >> .agent-state/edits.log`)로 추가하고, 출처의 문서명은 `agent:RULE`, `agent:dotfiles` 같은 뭉뚱그린 표기 대신 `agent:056-rule-provenance-standard.md`처럼 나중에 조항을 특정할 수 있는 실제 파일명으로 기재하십시오(쉼표로 복수 나열 가능). 판단을 결정지은 특정 조항이 있으면 `agent:base.AGENTS.md#Realistic-Error-Handling`처럼 조항의 볼드 영문명을 `#`로 이어 붙여 조항 단위까지 특정하십시오. 문서의 그 시점 전문은 일시 필드로 복원 가능하므로(`git log --until <일시> -- <문서경로>`) 내용을 로그에 옮겨 적지 마십시오. 훅이 동작하지 않는 환경에서는 5개 필드를 직접 채워 기록하십시오. 파일 경로만 남기고 파일 내용은 기록하지 마십시오(7장 민감 데이터 마스킹).
-- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 논리 오류·설계 미흡 지적] Prompt Self-Evolution & Quality Flywheel:** 먼저 `grep -v ' | OK$' .agent-state/edits.log | tail -20`을 실행하고(사용자 지적 트리거의 경우 지적된 파일의 라인은 결과가 `OK`더라도 `grep <파일경로> .agent-state/edits.log`로 함께 조회하여 문제 코드가 어떤 룰 문서를 참고해 작성되었는지 역추적), 각 라인의 출처 조항에 대해 그 일시의 조항 본문(`git -C ~/dotfiles show "$(git -C ~/dotfiles log -1 --format=%H --until='<일시>' -- <룰북경로>)":<룰북경로> | grep -F '<조항명>'` — zsh에서 `"$rev:contexts/..."`처럼 큰따옴표 안에 콜론과 경로를 함께 넣으면 `:c`/`:s` 등이 파라미터 수식자로 해석되어 실패하므로 따옴표를 리비전에서 닫으십시오)과 현재 작업 트리의 본문(`grep -F '<조항명>' ~/dotfiles/<룰북경로>`)을 대조해, 문장이 달라졌으면 이미 개정된 것으로 보고 제외한 뒤(커밋 시각이 아니라 본문 자체를 비교해야 미커밋 개정도 정확히 판정됩니다), 남은 항목에 대해 '현재 프롬프트의 어떤 허점이 이 문제를 유발했는가?'를 분석하는 `<loss_analysis>` 태그와 함께 프롬프트 개정안을 역제안하십시오.
+- **[Trigger: After Code Change] Provenance Logging:** 파일 변경 후 `~/dotfiles/contexts/dotfiles/scripts/log-edit.sh "<참조 룰북 파일명>" "<작업 목적>"` 을 실행해 수동으로 근거를 기록하십시오. (훅 미동작 환경 대비용)
+- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 지적] Quality Flywheel:** 계속 실패 시 `~/dotfiles/contexts/dotfiles/scripts/prompt-flywheel.sh` 를 실행하여 문제 원인을 분석하고 룰 개정안을 역제안하십시오.
 - **[MUST] Code Execution & Safety Boundaries (팩트 검증):** 수치 계산이나 로직 검증 시 반드시 스크립트 실행(Code Execution) 도구를 통해 물리적 팩트를 검증하고, 명확한 안전선(Safety Boundary)을 선언하십시오.
 - **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오.

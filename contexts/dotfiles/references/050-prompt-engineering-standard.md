@@ -65,7 +65,7 @@ limits:
 ## 5. 방어적 로컬 환경 철학 (Defensive Environment Architecture)
 Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시오.
 1. **Zero-Trust Security:** 최소 권한, Git 저장소 내 시크릿 하드코딩 엄격 차단.
-2. **Idempotency First:** 여러 번 실행해도 시스템 환경이 망가지지 않게 방어 로직을 적용하여 멱등성 검증 로직 강제.
+2. **Idempotency First:** 멱등성을 달성하도록 코드를 작성하십시오. (pre-flight-check가 검증함)
 3. **Fail-Fast & Recovery:** 에러 발생 시 무한 루프를 막고, 핵심 설정 덮어쓰기 전 항상 `.bak` 백업을 수행하도록 유도.
 
 ## 6. 프롬프트 최적화 (Readability)

@@ -8,9 +8,17 @@
 
 set -euo pipefail
 
-echo "======================================================"
-echo "=== K8s-Specific Validation Pipeline Started ==="
-echo "======================================================"
+# Setup Quiet Mode Logging
+log_info() {
+  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
+  if [ "${QUIET:-1}" != "1" ]; then
+    echo "$@"
+  fi
+}
+
+log_info "======================================================"
+log_info "=== K8s-Specific Validation Pipeline Started ==="
+log_info "======================================================"
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT" || {
@@ -53,9 +61,9 @@ check_kyverno() {
     return 0
   fi
 
-  echo "--- Step: Kyverno Policy Test ---"
+  log_info "--- Step: Kyverno Policy Test ---"
   if ! has_tool kyverno; then
-    echo "[WARNING] kyverno-test.yaml found but 'kyverno' CLI is not installed. Skipping."
+    log_info "[WARNING] kyverno-test.yaml found but 'kyverno' CLI is not installed. Skipping."
     return 0
   fi
 
@@ -73,13 +81,13 @@ check_kyverno() {
   done
 
   for d in "${dirs[@]}"; do
-    echo "Running kyverno test: $d"
+    log_info "Running kyverno test: $d"
     if ! kyverno test "$d"; then
       echo "❌ [ERROR] Kyverno 정책 테스트가 실패하여 커밋이 차단되었습니다: $d" >&2
       return 1
     fi
   done
-  echo "[SUCCESS] Kyverno policy test passed."
+  log_info "[SUCCESS] Kyverno policy test passed."
 }
 
 # 2. Prometheus Alerting Rule Validation (PrometheusRule CRD)
@@ -94,18 +102,18 @@ check_prometheus_rules() {
     return 0
   fi
 
-  echo "--- Step: Prometheus Alerting Rule Validation ---"
+  log_info "--- Step: Prometheus Alerting Rule Validation ---"
   if ! has_tool promtool; then
-    echo "[WARNING] PrometheusRule manifest found but 'promtool' is not installed. Skipping."
+    log_info "[WARNING] PrometheusRule manifest found but 'promtool' is not installed. Skipping."
     return 0
   fi
   if ! has_tool yq; then
-    echo "[WARNING] PrometheusRule manifest found but 'yq' is not installed (required to extract .spec from the CRD wrapper before promtool can parse it). Skipping."
+    log_info "[WARNING] PrometheusRule manifest found but 'yq' is not installed (required to extract .spec from the CRD wrapper before promtool can parse it). Skipping."
     return 0
   fi
 
   for f in "${rule_files[@]}"; do
-    echo "Checking PrometheusRule: $f"
+    log_info "Checking PrometheusRule: $f"
     local tmp
     tmp=$(mktemp)
     # promtool은 순수 groups: 포맷만 이해하므로, CRD 래퍼(apiVersion/kind/metadata)를
@@ -122,7 +130,7 @@ check_prometheus_rules() {
     fi
     rm -f "$tmp"
   done
-  echo "[SUCCESS] Prometheus rule validation passed."
+  log_info "[SUCCESS] Prometheus rule validation passed."
 }
 
 # 3. Deprecated / Removed K8s API Detection
@@ -140,9 +148,9 @@ check_deprecated_apis() {
     return 0
   fi
 
-  echo "--- Step: Deprecated K8s API Detection ---"
+  log_info "--- Step: Deprecated K8s API Detection ---"
   if ! has_tool pluto; then
-    echo "[WARNING] pluto is not installed. Skipping deprecated API scan."
+    log_info "[WARNING] pluto is not installed. Skipping deprecated API scan."
     return 0
   fi
 
@@ -150,7 +158,7 @@ check_deprecated_apis() {
     echo "❌ [ERROR] 삭제 예정(Deprecated/Removed) K8s API 버전이 감지되어 커밋이 차단되었습니다." >&2
     return 1
   fi
-  echo "[SUCCESS] No deprecated/removed K8s API versions detected."
+  log_info "[SUCCESS] No deprecated/removed K8s API versions detected."
 }
 
 # -----------------------------------------------------------------------------
@@ -165,10 +173,10 @@ main() {
   check_prometheus_rules
   check_deprecated_apis
 
-  echo "======================================================"
-  echo "=== K8s-Specific Checks Passed Successfully ==="
+  log_info "======================================================"
+  log_info "=== K8s-Specific Checks Passed Successfully ==="
   print_unavailable_tools
-  echo "======================================================"
+  log_info "======================================================"
 }
 
 main
