@@ -10,7 +10,14 @@ set hlsearch        " 검색어 하이라이트
 set incsearch       " 점진적 검색
 set ignorecase      " 검색 시 대소문자 무시
 set smartcase       " 소문자 검색 시 무시, 대문자 포함 시 구분
-set clipboard=unnamedplus " 시스템 클립보드와 양방향 연동 (터미널 밖 복사/붙여넣기)
+" 시스템 클립보드와 양방향 연동 (터미널 밖 복사/붙여넣기)
+" unnamedplus 가 쓰는 + 레지스터는 X11 CLIPBOARD 셀렉션이라 리눅스 전용이다.
+" macOS 는 + 레지스터가 없고 시스템 페이스트보드가 * 에 연결되므로 unnamed 를 써야 한다.
+if has('macunix')
+  set clipboard=unnamed
+else
+  set clipboard=unnamedplus
+endif
 set colorcolumn=80  " 80자 가이드라인 옅은 세로줄 표시
 syntax on           " 구문 강조
 
