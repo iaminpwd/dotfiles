@@ -7,9 +7,7 @@ trufflehog = "3.95.6"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 "pipx:checkov" = "3.3.1"
-"pipx:pre-commit" = "4.6.0"
 "pipx:yamllint" = "1.38.0"
-"pipx:cfn-lint" = "1.51.5"
 
 # Container Image Supply Chain (SBOM/Vuln/Layer Analysis)
 syft = "1.48.0"

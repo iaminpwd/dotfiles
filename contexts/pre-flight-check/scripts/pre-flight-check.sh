@@ -466,30 +466,18 @@ validate_docker() {
       echo "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
 
-    # syft/grype는 본래 "빌드된 이미지"를 대상으로 하는 도구다. 커밋마다 docker build를 돌려
-    # 이미지를 스캔하면 베이스 이미지 pull과 빌드 시간 때문에 수 분까지 걸릴 수 있어 이 파이프라인의
-    # 속도 목표(0.5초대)와 정면 충돌한다. 대신 `dir:.` 소스 스캔으로 전환해, Dockerfile과 함께
-    # 저장소에 있는 requirements.txt/package.json/go.mod 등 의존성 매니페스트에 이미 알려진 취약
-    # 버전이 박혀있는지를 빌드 없이 확인한다. (이미지 레이어 자체의 취약점/서명은 여기서 잡히지
-    # 않으므로, 실제 배포 전에는 containers 스킬의 030-supply-chain-security-standard.md가 요구하는
-    # 이미지 단계 스캔·서명이 별도로 필요하다.) Trivy의 vuln/misconfig 스캔과 동일하게 경고만
-    # 남기고 커밋을 막지는 않는다 — 베이스 이미지의 기존 CVE로 매 커밋이 막히는 것을 피하기 위함.
-    echo "--- Step: Container Supply Chain Scan (SBOM/Vuln, Source-level) ---"
-    if has_tool syft; then
-      echo "[INFO] Generating source SBOM (syft)..."
-      syft dir:. -o table || echo "[WARNING] syft SBOM 생성에 실패했습니다."
-    else
-      echo "[WARNING] syft is not installed. Skipping SBOM generation."
-    fi
-
-    if has_tool grype; then
-      echo "[INFO] Scanning dependency manifests for known CRITICAL vulnerabilities (grype, warning-only)..."
-      if ! grype dir:. --fail-on critical; then
-        echo "[WARNING] grype 스캔에서 CRITICAL 취약점이 발견되었습니다. 이미지 빌드 전 의존성 버전을 확인하십시오."
-      fi
-    else
-      echo "[WARNING] grype is not installed. Skipping dependency vulnerability scan."
-    fi
+    # 여기에는 예전에 syft(소스 SBOM 생성)와 grype(의존성 CVE 스캔)의 `dir:.` 소스 스캔이
+    # 있었으나 제거했다. 두 도구가 보던 대상(requirements.txt/package.json/go.mod 등 의존성
+    # 매니페스트)은 validate_security 의 `trivy fs --scanners vuln` 이 이미 같은 저장소를
+    # 훑으며 검사한다. 둘 다 --exit-code 0 상당의 경고 전용이라 차단력이 겹치는 것도 아니고,
+    # 특히 syft 는 게이트가 아니라 SBOM 테이블을 stdout 에 통째로 출력할 뿐이어서 Dockerfile
+    # 을 건드린 커밋마다 순수 노이즈만 남겼다. 취약점 DB가 서로 달라 검출 결과가 완전히
+    # 같지는 않지만, 커밋 시점에 경고 전용 스캐너를 두 개 돌릴 근거로는 약하다.
+    #
+    # 이미지 레이어 자체의 취약점·SBOM·서명은 여기서 다루지 않는다. 그 단계는 커밋이 아니라
+    # 릴리즈 시점의 책임이며, containers 스킬의 030-supply-chain-security-standard.md 가
+    # 요구하는 이미지 단계 스캔(`trivy image`/`grype`)과 `cosign` 서명이 담당한다.
+    # (mise 는 그 용도로 syft/grype 를 계속 설치한다.)
   fi
 }
 
@@ -629,8 +617,19 @@ validate_security() {
 
     # 2. 보안 취약점 및 설정 오류(vuln, misconfig)는 발견되어도 커밋을 막지 않지만(exit-code 0),
     #    스캔 자체의 실행 실패(네트워크 오류 등)는 구분하여 "성공"으로 오보되지 않도록 한다.
+    #
+    #    --skip-dirs: 검증기 회귀 테스트용 픽스처는 "일부러 위반하도록" 만든 파일이라
+    #    스캔할 때마다 같은 지적이 그대로 재보고된다. dotfiles 저장소에서 실측하니 HIGH
+    #    이상 지적 6건이 전부 fail-* 픽스처였고 실제 코드 지적은 0건인데, 픽스처 31개를
+    #    나열하는 요약 테이블까지 더해 매 커밋 212줄이 출력됐다(2026-07-28). 막지도 않는
+    #    경고가 매번 그만큼 흐르면 사람이 읽지 않게 되어 경고 자체가 무력해진다. 픽스처만
+    #    빼면 출력이 12줄로 줄고, 픽스처 밖 실제 코드에 대한 검출력은 그대로다(같은
+    #    main.tf 를 픽스처 밖에 두고 AWS-0107 이 계속 잡히는 것을 확인).
+    #    (시크릿 스캔에는 적용하지 않는다. 픽스처에 실제 자격 증명이 섞여 들어가는 사고는
+    #     막아야 하며, 그쪽은 애초에 출력이 12줄이라 노이즈 문제도 없다.)
     echo "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
-    if trivy fs "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 .; then
+    if trivy fs "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
+      --skip-dirs '**/tests/fixtures' .; then
       echo "[SUCCESS] Trivy vuln/misconfig scan passed."
     else
       echo "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
@@ -714,8 +713,18 @@ validate_finops_costs() {
 # 12. Skill-Specific Delegated Checks (auto-discovered)
 # 특정 스킬(k8s 등)에만 필요한 도구(kyverno, promtool, yq, pluto 등)를 이 범용
 # 스크립트에 직접 넣으면 그 스킬과 무관한 프로젝트까지 의존성이 늘어난다. 대신 각
-# 스킬 폴더의 전용 검증 스크립트(*-check.sh 네이밍 컨벤션)를 자동으로 찾아 호출한다.
-# 나중에 aws-check.sh, azure-check.sh 등이 추가되어도 이 파일을 다시 고칠 필요가 없다.
+# 스킬의 contexts/<skill>/scripts/preflight/ 에 놓인 스크립트를 자동으로 찾아 호출한다.
+# 나중에 aws, azure 등이 추가되어도 그 디렉토리에 파일을 넣기만 하면 되고 이 파일을
+# 다시 고칠 필요가 없다.
+#
+# 예전에는 대상을 '*-check.sh' 네이밍으로 판정했는데, 위임 대상이 아닌 스크립트까지
+# 이름만으로 걸려들었다. agent-handoff/scripts/handoff-check.sh 가 그 사례로, 이미
+# pre-commit 훅이 --commit-gate 로 직접 호출하는데 여기서 인자 없이 한 번 더 실행되어
+# 훅이 의도적으로 WARNING 으로 낮춰둔 3왕복 상한이 ERROR 로 되살아났다. 그 결과 동일한
+# 저장소 상태에서 "yaml 을 스테이징했는지" 만으로 커밋 차단 여부가 갈렸다(2026-07-28
+# 실측: yaml 스테이징 시 exit 1, 아니면 exit 0). 이름이 아니라 위치를 계약으로 삼으면
+# 위임 대상이 명시적으로 옵트인되고, 이 스크립트 자신도 글롭에 걸리지 않아 예전의
+# readlink 자기 제외 방어 코드가 필요 없어진다.
 run_delegated_skill_checks() {
   # 스테이징된 yaml이 하나도 없으면 스킬별 스크립트를 띄울 필요조차 없다 (지금까지
   # 존재하는 스킬 스크립트의 대상 파일은 전부 yaml이므로 이 필터로 놓치는 케이스는 없다).
@@ -724,27 +733,22 @@ run_delegated_skill_checks() {
     return 0
   fi
 
-  # 이 스크립트 자신(심볼릭 링크로 호출된 경우 포함)을 실제 경로로 해석해두고,
-  # glob 결과에서 스스로를 걸러내 무한 재귀 호출을 방지한다.
-  local self_path
-  self_path=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)
-
   # 스킬 스크립트는 이 저장소(dotfiles) 안에 있고, 검증 대상인 REPO_ROOT는 보통 다른
   # 프로젝트다. 따라서 REPO_ROOT가 아니라 "이 스크립트 자신의 위치"에서 contexts/ 를
   # 역산한다(정본 경로: <dotfiles>/contexts/pre-flight-check/scripts/이 파일).
   # $HOME/dotfiles 하드코딩은 저장소를 다른 경로에 클론하면 glob이 전부 빗나가
-  # 위임 검증이 경고 없이 통째로 건너뛰어진다.
-  local contexts_dir
+  # 위임 검증이 경고 없이 통째로 건너뛰어진다. 심볼릭 링크로 호출된 경우에도 정본
+  # 위치를 얻어야 하므로 readlink 로 실제 경로를 해석한 뒤 역산한다.
+  local self_path contexts_dir
+  self_path=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null)
   contexts_dir=$(dirname "$(dirname "$(dirname "$self_path")")")
   if [ ! -d "$contexts_dir" ]; then
     contexts_dir="$HOME/dotfiles/contexts"
   fi
 
-  local skill_script resolved
+  local skill_script
   shopt -s nullglob
-  for skill_script in "$contexts_dir"/*/scripts/*-check.sh; do
-    resolved=$(readlink -f "$skill_script" 2>/dev/null)
-    [ "$resolved" = "$self_path" ] && continue
+  for skill_script in "$contexts_dir"/*/scripts/preflight/*.sh; do
     if ! bash "$skill_script"; then
       shopt -u nullglob
       return 1

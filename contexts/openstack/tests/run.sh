@@ -23,7 +23,7 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 정적으로 따라갈 수 없어 SC1091 을 내는데, pre-flight-check.sh 가 shellcheck 를
 # 플래그 없이 호출하므로 info 등급도 커밋 차단 사유가 된다. 그래서 명시 억제한다.
 # shellcheck disable=SC1091
-source "$TESTS_DIR/../../pre-flight-check/scripts/tf-fixture-lib.sh"
+source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
 
 echo "=== openstack Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_OPENSTACK_2

@@ -7,7 +7,13 @@
 # (2026-07-26: containers 러너에서 set -e + grep 무매치로 조용히 죽는 버그를
 # 겪은 뒤 이 구조로 결정).
 #
-# 사용법: 각 스킬의 tests/run.sh 에서 source 한 뒤 tf_run_standard_suite 호출.
+#
+# 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌 tests/lib/
+# 에 둔다. scripts/ 는 setup.sh 가 에이전트에게 심볼릭 링크로 노출하는 디렉토리이므로
+# (setup.sh 의 글로벌 스킬 등록 루프), 테스트 헬퍼가 거기 있으면 런타임 배포 표면에
+# 불필요하게 포함된다. 또한 pre-commit 훅은 contexts/pre-flight-check/scripts/* 변경을
+# "모든 스킬의 회귀 테스트 실행" 신호로 쓰는데, 이 파일을 쓰는 것은 tf 계열 3개 스킬
+# 뿐이라 그 자리에 있으면 매번 과잉 실행됐다.
 #
 # 이 파일은 단독 실행용이 아니다.
 
@@ -17,9 +23,22 @@ FAIL_COUNT=0
 # 도구 미설치는 SKIP 이 아니라 실패로 처리한다. 조용히 건너뛰면 회귀 테스트가
 # 통과했다는 신호만 남기고 실제로는 아무것도 검증하지 않는다.
 # mise shim 은 command -v 로 항상 발견되므로 실제 호출까지 해봐야 한다.
+#
+# $2 에 'skip-version-probe' 를 주면 --version 호출을 생략한다. Go 바이너리(terraform,
+# tflint)는 이 확인이 0.03 초지만 checkov 는 파이썬 인터프리터 기동만으로 1.37 초가 들어
+# 스위트 전체 시간의 18% 를 차지했다(2026-07-28 실측). 생략해도 검출력은 그대로다:
+# 도구가 실행 불가능하면 ok 픽스처는 exit≠0 으로, 위반 픽스처는 기대 체크 ID 부재로
+# 각각 FAIL 이 되어 "조용한 통과"가 구조적으로 불가능하다(exit 127 을 내는 가짜 checkov
+# 로 두 케이스 모두 FAIL 임을 실측 확인). 잃는 것은 진단 메시지뿐이므로, 그 대신
+# tf_judge_checkov 가 실패 상세에 출력 마지막 줄을 실어 원인을 보존한다.
 tf_require_tool() {
-  command -v "$1" >/dev/null 2>&1 && "$1" --version >/dev/null 2>&1 && return 0
-  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 불가: $1"
+  local tool=$1 mode=${2:-probe-version}
+  if command -v "$tool" >/dev/null 2>&1; then
+    if [ "$mode" = "skip-version-probe" ] || "$tool" --version >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 불가: $tool"
   FAIL_COUNT=$((FAIL_COUNT + 1))
   return 1
 }
@@ -75,16 +94,53 @@ tf_run_tflint() {
 # 의 severity 가 None 이다. 따라서 --soft-fail-on LOW,MEDIUM 은 실질적으로
 # 아무것도 완화하지 못하며, 어떤 지적이든 커밋을 차단한다(2026-07-26 실측).
 # 이 러너는 스크립트의 의도가 아니라 실제 동작을 기준으로 검증한다.
-tf_run_checkov() {
-  local dir=$1 label=$2 want_fail=$3 want_id=${4:-}
-  local out status
-  out=$(checkov --directory "$dir" --framework terraform --compact --quiet \
-    --soft-fail-on LOW,MEDIUM 2>&1) && status=0 || status=$?
-  if [ -n "$want_id" ] && ! echo "$out" | grep -q "$want_id"; then
-    tf_report "$label (checkov)" 1 "기대 체크 '$want_id' 가 지적되지 않았습니다 (exit=$status)"
+#
+# 실행부와 판정부를 나눈 이유는 tf_run_checkov_pair 의 병렬 호출에서 판정 로직을
+# 그대로 재사용하기 위함이다. 판정 기준은 분리 전과 동일하다.
+tf_exec_checkov() {
+  local dir=$1 outfile=$2
+  checkov --directory "$dir" --framework terraform --compact --quiet \
+    --soft-fail-on LOW,MEDIUM >"$outfile" 2>&1
+}
+
+tf_judge_checkov() {
+  local label=$1 want_fail=$2 want_id=$3 status=$4 outfile=$5
+  if [ -n "$want_id" ] && ! grep -q "$want_id" "$outfile"; then
+    tf_report "$label (checkov)" 1 "기대 체크 '$want_id' 가 지적되지 않았습니다 (exit=$status): $(tail -1 "$outfile")"
     return
   fi
   tf_assert_gate "$label (checkov)" "$want_fail" "$status"
+}
+
+# ok / 위반 두 픽스처를 동시에 스캔한다. checkov 는 인터프리터 기동에만 약 3 초가 들어
+# 순차 호출이 6.1 초를 쓰는데, 두 프로세스가 서로 다른 픽스처 디렉토리만 읽고 각자의
+# 출력 파일과 종료 코드만 쓰므로 공유 상태가 없어 3.25 초로 줄어든다(2026-07-28 실측,
+# 5 코어). 검사 대상·옵션·판정 기준은 순차 실행일 때와 동일하며, 판정과 출력도 wait
+# 이후 고정된 순서로 수행해 결과 출력 순서까지 그대로 유지한다.
+tf_run_checkov_pair() {
+  local ok_dir=$1 fail_dir=$2 fail_label=$3 want_id=${4:-}
+  local tmpdir ok_pid fail_pid ok_status fail_status
+  tmpdir=$(mktemp -d)
+  # 스캔 도중 인터럽트되어 아래 rm 이 실행되지 못하는 경우에 대비한다.
+  # 함수 반환 후 스크립트 종료 시점에 발동할 수 있으므로 set -u 하에서도 안전하도록
+  # ${tmpdir:-} 로 참조한다(pre-flight-check.sh 의 infracost 임시파일과 동일한 처리).
+  trap 'rm -rf "${tmpdir:-}"' EXIT
+
+  tf_exec_checkov "$ok_dir" "$tmpdir/ok" &
+  ok_pid=$!
+  tf_exec_checkov "$fail_dir" "$tmpdir/fail" &
+  fail_pid=$!
+
+  # 위반 픽스처는 반드시 0 이 아닌 코드로 끝나므로, set -e 가 그 실패를 잡아 러너를
+  # 죽이지 않도록 wait 의 종료 코드를 && / || 로 회수한다.
+  wait "$ok_pid" && ok_status=0 || ok_status=$?
+  wait "$fail_pid" && fail_status=0 || fail_status=$?
+
+  tf_judge_checkov ok-baseline 0 "" "$ok_status" "$tmpdir/ok"
+  tf_judge_checkov "$fail_label" 1 "$want_id" "$fail_status" "$tmpdir/fail"
+
+  rm -rf "$tmpdir"
+  trap - EXIT
 }
 
 # validate_terraform 과 동일하게 'terraform init -backend=false' 후 validate.
@@ -124,9 +180,8 @@ tf_run_standard_suite() {
   fi
 
   echo "--- checkov ---"
-  if tf_require_tool checkov; then
-    tf_run_checkov "$fx/ok-baseline" ok-baseline 0
-    tf_run_checkov "$fx/fail-open-ssh" fail-open-ssh 1 "$ssh_check_id"
+  if tf_require_tool checkov skip-version-probe; then
+    tf_run_checkov_pair "$fx/ok-baseline" "$fx/fail-open-ssh" fail-open-ssh "$ssh_check_id"
   fi
 
   local total=$((PASS_COUNT + FAIL_COUNT))
