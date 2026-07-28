@@ -53,25 +53,19 @@ if ! [[ "$SUBJECT" =~ $CONVENTIONAL_PATTERN ]]; then
 fi
 
 # Atomic Commit Analyzer
-STAGED_FILES=()
-mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+LINT_SCRIPT="$REPO_ROOT/contexts/dotfiles/scripts/semantic-commit-lint.sh"
 
-if [ ${#STAGED_FILES[@]} -gt 4 ]; then
-  TOPLEVELS=()
-  for file in "${STAGED_FILES[@]}"; do
-    top="${file%%/*}"
-    if [ "$top" != "$file" ]; then
-      TOPLEVELS+=("$top")
-    else
-      TOPLEVELS+=("ROOT")
-    fi
-  done
+if [ ! -f "$LINT_SCRIPT" ]; then
+  LINT_SCRIPT="$HOME/dotfiles/contexts/dotfiles/scripts/semantic-commit-lint.sh"
+fi
 
-  UNIQUE_CONTEXTS=$(printf "%s\n" "${TOPLEVELS[@]:-}" | sort -u | grep -c -v "^$" || true)
+if [ -f "$LINT_SCRIPT" ]; then
+  STAGED_FILES=()
+  mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null)
 
-  if [ "$UNIQUE_CONTEXTS" -gt 2 ]; then
-    echo "⚠️ [WARNING] Atomic Commit 위반 가능성: ${#STAGED_FILES[@]}개의 파일이 $UNIQUE_CONTEXTS 개의 서로 다른 디렉토리(Context)에 걸쳐 수정되었습니다." >&2
-    echo "    관련 없는 기능이 한 번에 커밋되는 것은 아닌지 확인하십시오. (예: aws와 zsh가 섞임)" >&2
+  if [ ${#STAGED_FILES[@]} -gt 0 ]; then
+    bash "$LINT_SCRIPT" "${STAGED_FILES[@]}" || true
   fi
 fi
 
