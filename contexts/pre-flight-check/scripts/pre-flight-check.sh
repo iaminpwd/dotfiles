@@ -23,49 +23,18 @@ cd "$REPO_ROOT" || {
   exit 1
 }
 
-# 실제로 검증을 수행하지 못한 도구 목록. 마지막 요약에서 함께 출력해, 아무것도 검사하지
-# 않고 "All Checks Passed"만 보이는 상황(가짜 초록불)을 사용자가 알아챌 수 있게 한다.
-UNAVAILABLE_TOOLS=()
-
-record_unavailable() {
-  local t existing
-  t=$1
-  for existing in "${UNAVAILABLE_TOOLS[@]:-}"; do
-    [ "$existing" = "$t" ] && return 0
-  done
-  UNAVAILABLE_TOOLS+=("$t")
-}
-
-has_tool() {
-  local resolved
-  resolved=$(command -v "$1") || {
-    record_unavailable "$1"
-    return 1
-  }
-  # mise shim 파일은 command -v로 항상 발견되지만, 해당 도구의 버전이 현재 디렉토리에서
-  # 해석되지 않으면(예: mise 설정이 미치지 못하는 위치) 실제 호출 시점에 실패한다.
-  # 각 도구마다 다른 --version 플래그를 흉내내는 대신, mise 자체에 해석 가능 여부를 물어본다.
-  # 단, PATH에서 찾은 경로가 mise shims 디렉토리 소속일 때만 이 재검증을 수행한다. zsh처럼
-  # mise가 애초에 관리하지 않는 시스템 도구(apt 설치)까지 무조건 "mise which"로 되물으면
-  # "not a mise bin" 오류로 오탐 처리되어, 실제로는 정상 설치된 도구를 건너뛰게 된다.
-  if [[ "$resolved" == "$HOME/.local/share/mise/shims/"* ]] && command -v mise &>/dev/null; then
-    if ! mise which "$1" &>/dev/null; then
-      # 해석 실패는 "미설치"가 아니라 "이 위치에서 shim이 동작하지 않음"이다. 설치 원본이
-      # 존재하면 그 경로를 PATH 앞에 붙여 실제로 호출 가능하게 만든다. 이 폴백이 없으면
-      # $HOME 밖 저장소에서 모든 검증이 "미설치"로 스킵된 채 "All Checks Passed"가 출력되어
-      # 무검증 통과로 이어진다(2026-07-26 실측: /tmp 클론에서 shellcheck/shfmt 전부 스킵).
-      local real
-      real=$(find "$HOME/.local/share/mise/installs/$1" -maxdepth 3 -name "$1" -type f -perm -u+x 2>/dev/null | sort -V | tail -1)
-      if [ -n "$real" ] && "$real" --version &>/dev/null; then
-        PATH="$(dirname "$real"):$PATH"
-        export PATH
-        return 0
-      fi
-      record_unavailable "$1"
-      return 1
-    fi
-  fi
-}
+# 도구 가용성 조회(has_tool / record_unavailable / print_unavailable_tools)는 위임 검증기와
+# 공유하는 정본을 source 한다. 이 스크립트는 저장소 루트의 심볼릭 링크로 호출되는 하위 호환
+# 경로가 있으므로(git/.githooks/pre-commit 의 옵트인 분기), BASH_SOURCE 를 그대로 쓰면 링크
+# 위치 기준으로 상대 경로가 빗나간다. readlink -f 로 정본 위치를 먼저 확정한다.
+#
+# 경로에서 `lib/` 를 변수 밖(리터럴)에 두는 것이 중요하다. shellcheck 는 source 인자에서
+# 해석할 수 없는 선두 변수를 떼어내고 남은 리터럴만 source-path 기준으로 찾으므로,
+# `.../lib` 를 변수에 넣으면 남는 것이 `tool-probe.sh` 뿐이라 scripts/ 바로 아래를
+# 뒤지다 SC1091 로 실패한다(2026-07-28 실측).
+PFC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$PFC_SCRIPT_DIR/lib/tool-probe.sh"
 
 calculate_tf_hash() {
   # main()에서 1회만 판정한 Git 저장소 여부 및 스테이징 .tf 목록을 재사용 (중복 git 호출 제거)
@@ -93,9 +62,12 @@ validate_shell() {
   # 저장소 전체를 스캔하면 이번 커밋과 무관한 기존 파일의 포맷 문제로도 커밋이
   # 막히므로, 실제로 이번에 add/copy/modify된 파일로 범위를 한정한다.
   # Git 훅 스크립트(pre-commit 등)는 관례상 확장자가 없으므로 */.githooks/* 경로도 함께 포함한다.
+  # .zshrc/.zshenv 도 확장자가 없어 '*.zsh' 글롭에 걸리지 않는다. 020-shell-scripting-standard.md
+  # 가 명시적으로 관장하는 파일인데도 예전 pathspec 에 없어서, 이 저장소의 zsh 설정 2개가
+  # 검증에서 통째로 빠져 있었다(2026-07-28 실측: 스테이징해도 매칭 0건).
   local shell_files=()
   if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t shell_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.sh' '*.zsh' '*/.githooks/*' 2>/dev/null)
+    mapfile -d '' -t shell_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.sh' '*.zsh' '*.zshrc' '*.zshenv' '*/.githooks/*' 2>/dev/null)
   fi
 
   if [ "${#shell_files[@]}" -eq 0 ] || [ -z "${shell_files[0]}" ]; then
@@ -105,56 +77,73 @@ validate_shell() {
   fi
 
   echo "--- Step: Shell Script Validation ---"
-  # 루프 외부에서 툴 가용성 1회만 확인 (파일마다 command -v 반복 방지)
+
+  # zsh 방언 파일은 shfmt(-ln 에 zsh 없음)와 shellcheck(셔뱅 없는 rc 파일에 SC2148 오류)가
+  # 둘 다 처리하지 못하므로 두 도구에서 제외하고 zsh -n 으로만 검사한다. 판정을 한 군데로
+  # 모아 shfmt/shellcheck/문법 세 곳의 기준이 어긋나지 않게 한다.
+  local sh_only_files=() zsh_files=()
+  for f in "${shell_files[@]}"; do
+    [ -z "$f" ] && continue
+    case "$f" in
+    *.zsh | *.zshrc | *.zshenv) zsh_files+=("$f") ;;
+    *) sh_only_files+=("$f") ;;
+    esac
+  done
+
+  # 도구 조회는 분류 이후에, 그 부류의 파일이 실제로 있을 때만 한다. 무조건 조회하면
+  # 검사할 파일이 없는 도구까지 UNAVAILABLE_TOOLS 에 실려, 최종 요약이 "그 검증이 수행되지
+  # 않았다"고 잘못 경고한다(.sh 만 스테이징했는데 zsh 미설치 경고가 뜨는 식). 파일마다
+  # command -v 를 반복하지 않도록 부류당 1회만 조회하는 성질은 그대로 유지된다.
   local has_shfmt=0 has_zsh=0 has_shellcheck=0
-  if has_tool shfmt; then has_shfmt=1; fi
-  if has_tool zsh; then has_zsh=1; fi
-  if has_tool shellcheck; then has_shellcheck=1; fi
+  if [ "${#sh_only_files[@]}" -gt 0 ]; then
+    if has_tool shfmt; then has_shfmt=1; fi
+    if has_tool shellcheck; then has_shellcheck=1; fi
 
-  # shfmt가 존재하면 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감)
-  if [ "$has_shfmt" -eq 1 ]; then
-    echo "Checking format for all shell scripts..."
-    if ! shfmt -d -i 2 "${shell_files[@]}"; then
-      echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
-      return 1
+    # shfmt가 존재하면 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감)
+    if [ "$has_shfmt" -eq 1 ]; then
+      echo "Checking format for all shell scripts..."
+      if ! shfmt -d -i 2 "${sh_only_files[@]}"; then
+        echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
+        return 1
+      fi
     fi
-  fi
 
-  # zsh 방언은 정적 분석 도구가 지원하지 않으므로 .zsh를 제외한 나머지(.sh, 확장자 없는 훅 파일 등)만 대상으로 삼음
-  if [ "$has_shellcheck" -eq 1 ]; then
-    local sh_only_files=()
-    for f in "${shell_files[@]}"; do
-      [[ "$f" != *.zsh ]] && sh_only_files+=("$f")
-    done
-    if [ "${#sh_only_files[@]}" -gt 0 ]; then
+    if [ "$has_shellcheck" -eq 1 ]; then
       echo "Running shellcheck..."
-      if ! shellcheck "${sh_only_files[@]}"; then
+      # -x: source 로 불러오는 라이브러리까지 따라가 분석한다. 없으면 라이브러리를 쓰는
+      # 스크립트마다 SC1091("not specified as input")이 info 로 뜨고, shellcheck 는 지적이
+      # 하나라도 있으면 exit 1 이므로 정상 코드가 커밋 차단으로 이어진다(2026-07-28 실측:
+      # tool-probe.sh 분리 직후 k8s-check.sh 가 exit 1). 따라가는 편이 분석 품질도 낫다.
+      if ! shellcheck -x "${sh_only_files[@]}"; then
         echo "❌ [ERROR] shellcheck 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
         return 1
       fi
+    else
+      echo "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
     fi
-  else
-    echo "[WARNING] shellcheck is not installed. Skipping static analysis for shell scripts."
   fi
 
-  for f in "${shell_files[@]}"; do
-    [ -z "$f" ] && continue
+  if [ "${#zsh_files[@]}" -gt 0 ] && has_tool zsh; then has_zsh=1; fi
+
+  # zsh 방언 파일은 zsh -n 이 유일한 검증 수단이므로, zsh 가 없으면 이 파일들은 아무 검사도
+  # 받지 못한 채 통과한다. 그 사실을 UNAVAILABLE_TOOLS 요약에 실어 무검증 통과를 드러낸다.
+  for f in "${zsh_files[@]}"; do
     echo "Checking syntax: $f"
-    # .zsh 파일은 zsh로, .sh 파일은 bash로 문법 검사
-    if [[ "$f" == *.zsh ]]; then
-      if [ "$has_zsh" -eq 1 ]; then
-        if ! zsh -n "$f"; then
-          echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
-          return 1
-        fi
-      else
-        echo "[WARNING] zsh not found, skipping syntax check for: $f"
-      fi
-    else
-      if ! bash -n "$f"; then
-        echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+    if [ "$has_zsh" -eq 1 ]; then
+      if ! zsh -n "$f"; then
+        echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
         return 1
       fi
+    else
+      echo "[WARNING] zsh not found, skipping syntax check for: $f"
+    fi
+  done
+
+  for f in "${sh_only_files[@]}"; do
+    echo "Checking syntax: $f"
+    if ! bash -n "$f"; then
+      echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+      return 1
     fi
   done
   echo "[SUCCESS] Shell scripts validation passed."
@@ -644,8 +633,8 @@ validate_security() {
       # Trivy 출력에 ANSI 색상 코드가 포함되어 있을 수 있으므로 제거 후 검사
       local clean_out
       clean_out=$(sed -r 's/\x1B\[[0-9;]*[mK]//g' "$tmp_vuln")
-      if ! echo "$clean_out" | grep -qE "Total: 0 \(UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0\)" 2>/dev/null &&
-        ! echo "$clean_out" | grep -q "'0': Clean (no security findings detected)" 2>/dev/null; then
+      if ! grep -qE "Total: 0 \(UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0\)" <<<"$clean_out" 2>/dev/null &&
+        ! grep -q "'0': Clean (no security findings detected)" <<<"$clean_out" 2>/dev/null; then
         # 취약점이 있으면 출력
         cat "$tmp_vuln"
       fi
@@ -825,12 +814,7 @@ main() {
 
   echo "================================================="
   echo "=== All Pre-Flight Checks Passed Successfully ==="
-  if [ "${#UNAVAILABLE_TOOLS[@]}" -gt 0 ]; then
-    echo "=== ⚠️  단, 아래 도구를 사용할 수 없어 해당 검증은 수행되지 않았습니다:"
-    echo "===    ${UNAVAILABLE_TOOLS[*]}"
-    echo "===    (미설치라면 'mise install -y', 설치했는데도 뜨면 mise 전역 설정"
-    echo "===     ~/.config/mise/config.toml 존재 여부를 확인하십시오)"
-  fi
+  print_unavailable_tools
   echo "================================================="
 }
 

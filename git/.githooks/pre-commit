@@ -87,9 +87,11 @@ add_skill() {
 for FILE in "${STAGED_FILES[@]:-}"; do
   case "$FILE" in
   contexts/pre-flight-check/tests/lib/*)
-    # tf 픽스처 공용 라이브러리. 이 파일이 속한 pre-flight-check 스킬에는 자체
-    # 스위트가 없고, 실제로 이 라이브러리를 source 하는 것은 아래 세 스킬뿐이다.
-    # 일반 규칙에 맡기면 add_skill pre-flight-check 가 되어 아무것도 실행되지 않는다.
+    # tf 픽스처 공용 라이브러리. 이 라이브러리를 source 하는 것은 아래 세 스킬의
+    # 스위트뿐이므로, 일반 규칙에 맡겨 pre-flight-check 스위트만 돌리면 정작 이
+    # 라이브러리를 쓰는 코드가 한 번도 실행되지 않는다.
+    # (pre-flight-check 스킬에도 자체 스위트가 생겼지만 그쪽은 compact-runner 와
+    #  scripts/lib/tool-probe.sh 를 검증할 뿐 tf 픽스처와 무관하다.)
     for LIB_SKILL in aws azure openstack; do
       add_skill "$LIB_SKILL"
     done

@@ -19,10 +19,11 @@
 set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# 공용 라이브러리는 실행 시점에 절대 경로로 해석된다. shellcheck 는 이 경로를
-# 정적으로 따라갈 수 없어 SC1091 을 내는데, pre-flight-check.sh 가 shellcheck 를
-# 플래그 없이 호출하므로 info 등급도 커밋 차단 사유가 된다. 그래서 명시 억제한다.
-# shellcheck disable=SC1091
+# source-path=SCRIPTDIR 은 shellcheck 가 아래 상대 경로를 이 스크립트의 디렉토리 기준으로
+# 찾게 한다. 예전에는 SC1091 을 disable 로 억제했는데, 그러면 경로가 오타나 파일 이동으로
+# 깨져도 린트가 통과한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로 이제
+# 라이브러리를 실제로 따라가 존재 여부까지 검증한다.
+# shellcheck source-path=SCRIPTDIR
 source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
 
 echo "=== azure Terraform 검증 파이프라인 회귀 테스트 ==="

@@ -18,48 +18,18 @@ cd "$REPO_ROOT" || {
   exit 1
 }
 
-# 실제로 검증을 수행하지 못한 도구 목록. 마지막 요약에서 함께 출력해, 아무것도 검사하지
-# 않고 "Checks Passed"만 보이는 상황(가짜 초록불)을 사용자가 알아챌 수 있게 한다.
-# pre-flight-check.sh와 동일한 장치이며, 이 스크립트에만 없어서 promtool/pluto 부재 시
-# 문법이 깨진 PrometheusRule을 한 번도 검사하지 않고 "Passed Successfully"를 출력했다
-# (2026-07-27 실측: PATH에서 도구를 제거하면 exit 0 + 성공 배너).
-UNAVAILABLE_TOOLS=()
-
-record_unavailable() {
-  local t existing
-  t=$1
-  for existing in "${UNAVAILABLE_TOOLS[@]:-}"; do
-    [ "$existing" = "$t" ] && return 0
-  done
-  UNAVAILABLE_TOOLS+=("$t")
-}
-
-has_tool() {
-  local resolved
-  resolved=$(command -v "$1") || {
-    record_unavailable "$1"
-    return 1
-  }
-  # mise shim 파일은 command -v로 항상 발견되지만, 해당 도구의 버전이 현재 디렉토리에서
-  # 해석되지 않으면 실제 호출 시점에 실패한다. mise가 관리하는 shim 경로일 때만
-  # 재검증하여, mise가 관리하지 않는 시스템 도구까지 잘못 걸러내지 않도록 한다.
-  if [[ "$resolved" == "$HOME/.local/share/mise/shims/"* ]] && command -v mise &>/dev/null; then
-    if ! mise which "$1" &>/dev/null; then
-      # 해석 실패는 "미설치"가 아니라 "이 위치에서 shim이 동작하지 않음"이다. 설치 원본이
-      # 존재하면 그 경로를 PATH 앞에 붙여 실제로 호출 가능하게 만든다(pre-flight-check.sh의
-      # 동일 폴백). 이것이 없으면 $HOME 밖 저장소에서 전 검증이 조용히 건너뛰어진다.
-      local real
-      real=$(find "$HOME/.local/share/mise/installs/$1" -maxdepth 3 -name "$1" -type f -perm -u+x 2>/dev/null | sort -V | tail -1)
-      if [ -n "$real" ] && "$real" --version &>/dev/null; then
-        PATH="$(dirname "$real"):$PATH"
-        export PATH
-        return 0
-      fi
-      record_unavailable "$1"
-      return 1
-    fi
-  fi
-}
+# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이 장치가
+# 이 스크립트에 없던 시절에는 promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 한 번도
+# 검사하지 않고 "Passed Successfully"를 출력했다(2026-07-27 실측: PATH에서 도구를 제거하면
+# exit 0 + 성공 배너).
+#
+# 이 스크립트는 contexts/<skill>/scripts/preflight/ 배치 규약으로만 존재하며 그 규약의
+# 주인이 pre-flight-check 스킬이므로, 라이브러리도 같은 곳에서 가져온다. scripts/ 디렉토리는
+# ~/.claude/skills/k8s/scripts 로 심볼릭 링크되어 배포되므로 BASH_SOURCE 를 그대로 쓰면
+# 상대 경로가 배포 위치로 빗나간다. readlink -f 로 저장소 내 정본 위치를 먼저 확정한다.
+K8S_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$K8S_CHECK_DIR/../../../pre-flight-check/scripts/lib/tool-probe.sh"
 
 GLOBAL_IS_GIT_REPO=0
 if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -197,12 +167,7 @@ main() {
 
   echo "======================================================"
   echo "=== K8s-Specific Checks Passed Successfully ==="
-  if [ "${#UNAVAILABLE_TOOLS[@]}" -gt 0 ]; then
-    echo "=== ⚠️  단, 아래 도구를 사용할 수 없어 해당 검증은 수행되지 않았습니다:"
-    echo "===    ${UNAVAILABLE_TOOLS[*]}"
-    echo "===    (미설치라면 'mise install -y', 설치했는데도 뜨면 mise 전역 설정"
-    echo "===     ~/.config/mise/config.toml 존재 여부를 확인하십시오)"
-  fi
+  print_unavailable_tools
   echo "======================================================"
 }
 
