@@ -12,8 +12,14 @@ if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
 fi
 
 # 주석(#으로 시작, git status 안내 등) 및 빈 줄을 건너뛰고 첫 실제 제목 줄만 검사한다.
+#
+# `|| [ -n "$line" ]` 주의: read 는 개행으로 끝나지 않는 마지막 줄을 읽고도 1을 반환하므로,
+# 조건에 이것이 없으면 그 줄이 통째로 버려진다. 그러면 SUBJECT 가 빈 문자열로 남아 아래
+# "빈 커밋 메시지" 분기를 타고 컨벤션 검사 없이 통과한다(2026-07-28 실측: 훅을 직접 호출하면
+# 재현됨. git 은 메시지를 정규화해 개행을 붙이므로 `git commit` 경로로는 도달하지 않지만,
+# 검증 게이트가 입력 형태에 따라 조용히 무력화되는 구조를 남겨두지 않는다).
 SUBJECT=""
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
   '#'* | '') continue ;;
   *)
