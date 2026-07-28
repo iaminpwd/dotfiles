@@ -10,7 +10,6 @@ references:
   - contexts/aws/references/050-iac-standard.md
   - contexts/aws/references/060-eks-standard.md
   - contexts/aws/references/090-day2-operations.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: AWS 프로젝트 마스터 플랜(계획서) 작성 표준
 

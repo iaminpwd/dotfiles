@@ -6,7 +6,6 @@ references:
   - contexts/openstack/references/050-iac-standard.md
   - contexts/openstack/references/080-database-standard.md
   - contexts/openstack/references/030-finops-optimization.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: 컨트롤플레인 수명주기 및 Day-2 운영 표준
 

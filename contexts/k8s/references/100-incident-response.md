@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when investigating a K8s error, CrashLoopBackOff
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/050-observability-standard.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: K8s 장애 대응 및 사후 분석 (Incident Response)
 

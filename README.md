@@ -26,11 +26,11 @@
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
-- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `contexts/*/scripts/*-check.sh`를 자동 탐색해 위임 호출하므로, 새 검증 스크립트를 추가하는 것만으로 파이프라인이 확장됩니다.
-- **컨테이너 공급망 스캔 (소스 레벨):** Dockerfile이 스테이징된 커밋에 한해 `syft`/`grype`로 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, CRITICAL 취약점은 경고만 남기고 커밋을 막지는 않습니다.
+- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `contexts/*/scripts/preflight/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
+- **의존성 취약점 스캔 (소스 레벨):** `trivy fs --scanners vuln`이 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, 취약점은 경고만 남기고 커밋을 막지는 않습니다. 이미지 레이어 자체의 SBOM/취약점/서명은 커밋이 아니라 릴리즈 단계의 책임이며 `syft`/`grype`/`cosign`이 담당합니다.
 - **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
-- **글로벌 훅 & 자가 치유:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행하며, `~/workspace` 하위 저장소에 `pre-flight-check.sh` 링크가 없으면 자동 생성합니다. 개별 저장소마다 훅을 복사하거나 링크를 챙길 필요가 없습니다.
+- **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
 - **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다.
 
 ### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
@@ -53,7 +53,7 @@
 |---|---|---|
 | **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
 | **Azure** (`azure/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
-| **Dotfiles** (`dotfiles/`) | 9개 (`000`~`060`) | 인지 엔진, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 규칙 근거·승격 표준, 트러블슈팅 |
+| **Dotfiles** (`dotfiles/`) | 10개 (`000`~`060`) | 인지 엔진, 계획서·핸드오프 설계도 작성 표준, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 규칙 근거·승격 표준, 트러블슈팅 |
 
 > K8s, Multi-Cloud, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
 
@@ -83,7 +83,7 @@ cd ~/dotfiles
 | **[1/6]** 필수 패키지 & Docker 설치 | `apt`로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine 자동 설치 및 `docker` 그룹 권한 부여 (`fd`는 apt 대신 `mise`로 통합 관리) |
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
-| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 46개 데브옵스 도구 일괄 설치 |
+| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 44개 데브옵스 도구 일괄 설치 |
 | **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업, 루트 `AGENTS.md`/`CLAUDE.md` 링킹, Claude 커밋/PR Co-Authored-By 어트리뷰션 기본 비활성화, AI 편집 이력 훅(`agent-edits-hook.sh`)을 Claude Code·Antigravity 양쪽 `PostToolUse`에 병합 등록 |
 | **[6/6]** 시크릿 보안 훅 | TruffleHog 전역 시크릿 스캔 + `git/.githooks/{pre-commit,commit-msg}`를 `core.hooksPath`로 등록하여 모든 로컬 저장소에 정적 분석·FinOps 게이트·시맨틱 커밋 검증 자동 적용 |
 
@@ -121,7 +121,8 @@ ls ~/.gemini/config/skills/
 │   ├── k8s/, multi-cloud/, aiops/,
 │   │   containers/, observability/,
 │   │   drawio-gen/                        # 🟡 Draft 워크스페이스 룰북
-│   ├── pre-flight-check/                  # 사전 안전성 검증 룰북 및 스킬별 위임 스크립트
+│   ├── pre-flight-check/                  # 사전 검증 정본 스크립트 및 tf 픽스처 공용 테스트 라이브러리
+│   │                                      #   (스킬별 위임 검증기는 각 스킬의 scripts/preflight/ 에 위치)
 │
 ├── git/
 │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
@@ -170,7 +171,7 @@ ls ~/.gemini/config/skills/
 시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
 
 **보안 & 정책 검증**
-`trivy` · `conftest` · `cosign` · `trufflehog` · `shellcheck` · `shfmt` · `checkov` · `pre-commit` · `yamllint` · `cfn-lint`
+`trivy` · `conftest` · `cosign` · `trufflehog` · `shellcheck` · `shfmt` · `checkov` · `yamllint`
 
 **컨테이너 이미지 공급망 (SBOM/취약점/레이어 분석)**
 `syft` · `grype` · `dive`

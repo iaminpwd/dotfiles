@@ -7,7 +7,6 @@ references:
   - contexts/openstack/references/020-security-compliance.md
   - contexts/openstack/references/025-cloud-security.md
   - contexts/openstack/references/030-finops-optimization.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: 데이터베이스 (Trove / 자체 관리 DB) 엔지니어링 표준
 

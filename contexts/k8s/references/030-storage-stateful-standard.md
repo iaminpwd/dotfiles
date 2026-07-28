@@ -4,14 +4,13 @@ priority: high
 trigger: Apply these rules ONLY when designing stateful workloads, PVs, or cluster DR backups.
 references:
   - contexts/k8s/references/010-k8s-core.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 스토리지, 상태 보존(Stateful) 워크로드 및 DR 표준
 
 본 모듈은 Kubernetes 스토리지 볼륨 프로비저닝, StatefulSet 설계 및 클러스터 재해 복구(DR) 아키텍처 수립 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[PREFER] Managed Database Delegation:** 클러스터 내부에 데이터베이스(MySQL, PostgreSQL 등)를 직접 배포하는 행위를 배제하고, 클라우드 관리형 데이터베이스(RDS 등)를 우선 제안하되 Crossplane을 통해 선언적으로 생성하십시오.
+- **[MUST] Managed Database Delegation:** 클러스터 내부에 데이터베이스(MySQL, PostgreSQL 등)를 직접 배포하는 행위를 배제하고, 클라우드 관리형 데이터베이스(RDS 등)를 우선 제안하되 Crossplane을 통해 선언적으로 생성하십시오.
 - **[MUST] CSI Drivers:** 기존 In-tree 스토리지 프로비저너 대신, 최신 CSI(Container Storage Interface) 드라이버 기반의 `StorageClass` 설정을 강제하십시오.
 - **[MUST] StatefulSet over Deployment:** 고정 네트워크 ID, 순차적 롤링 업데이트 및 영구 스토리지가 필요한 워크로드에는 `Deployment` 대신 `StatefulSet`을 사용하십시오.
 

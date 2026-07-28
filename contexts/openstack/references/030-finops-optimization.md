@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules ONLY when designing OpenStack infrastructure, provisioning resources, or optimizing private cloud capacity and cost.
 references:
   - contexts/openstack/references/010-openstack-core.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: FinOps 및 용량·비용 최적화 (Cost Optimization)
 

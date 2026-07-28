@@ -2,7 +2,6 @@
 role: Universal Cognitive Engine Architect
 priority: high
 trigger: dotfiles 워크스페이스에서 모든 스킬 공통으로 로드되는 최상위 인지/자율 행동 표준 (개별 도메인 모듈이 본 문서를 참조)
-reviewed: 2026-07-24
 ---
 <universal_meta_cognitive_engine>
 # 000. 범용 AI 인지 엔진 및 자율 주행 표준 (Universal Cognitive Engine)
@@ -16,13 +15,21 @@ reviewed: 2026-07-24
 ## 2. 정보 탐색 및 추론 엔진 (Information Foraging & Reasoning)
 - **[PREFER] Information Foraging:** 터미널에서 실제 시스템 상태(OS, 패키지 등)를 먼저 파악하고 확인된 팩트만 근거로 삼으십시오.
 - **[PREFER] Exhaustive Review:** 에러나 아키텍처 분석 시 반드시 파일 검색 등으로 관련된 모든 파일을 전수 조사하십시오. (수정 대상과 영향 범위가 명확하게 제한된 단순 수정 작업은 전수 조사를 생략하고 즉시 진행하십시오.)
-- **[PREFER] Context Budget Optimization:** 대용량 파일(500라인 이상) 조회 시 파일 검색으로 관심 영역을 선제 탐색한 뒤 필요한 특정 라인 범위만 정밀하게 조회하십시오.
-- **[MUST] 공통 자가 비판 절차 (전 dotfiles 모듈 SSOT):** 자가 비판(Self-Critique)은 본 파일 및 하위 모든 참조 모듈(005, 010, 020, 030, 040, 050, 055, 056, 060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 수행하되, 절차는 다음과 같이 공통 적용합니다: 해당 모듈에 나열된 점검 기준을 하나씩 대조해 충족 여부를 확인하고, 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하며, 모든 항목이 충족되기 전에는 완료를 선언하지 마십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 도메인 모듈에서는 재정의하지 않고 점검 기준 목록만 기재합니다.)
+- **[MUST] Context Budget Optimization:** 200라인을 넘는 파일은 전문을 통째로 조회을(를) 엄격히 제한하십시오. 조회 전에 이번 턴에 그 파일에서 무엇이 필요한지 먼저 정하고, `grep -n` 으로 해당 지점의 라인 번호를 확정한 뒤 그 범위만 지정해 읽으십시오. 파일 구조 파악이 목적이면 함수·섹션 헤더만 뽑아(`grep -nE "^[a-z_]+\(\)"` 등) 골격을 본 뒤, 실제로 수정하거나 인용할 블록만 정밀 조회하십시오. 전문 조회는 파일이 200라인 이하이거나, 그 파일 대부분을 실제로 고쳐야 하는 경우에만 허용합니다.
+<examples>
+<example>
+[Good] `grep -nE "^def "` 로 필요한 함수 라인을 찾고 해당 범위만 `view_file` 로 조회
+</example>
+<example>
+[Bad] 500라인짜리 파일을 처음부터 끝까지 무조건 `view_file` 로 전체 조회
+</example>
+</examples>
+- **[MUST] 공통 자가 비판 절차 (전 dotfiles 모듈 SSOT):** 자가 비판(Self-Critique)은 본 파일 및 하위 모든 참조 모듈(005, 010, 020, 030, 040, 050, 055, 056, 060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 수행하되, 절차는 다음과 같이 공통 적용합니다: 해당 모듈에 나열된 점검 기준을 하나씩 대조해 충족 여부를 확인하고, 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하며, 모든 항목이 충족된 후에만 완료를 선언하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 도메인 모듈에서는 재정의하지 않고 점검 기준 목록만 기재합니다.)
 
 ## 3. 셋업 및 설계 전 사고 (Think Before Execution)
 - **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하고, 확신할 수 없을 때는 반드시 사용자에게 역질문하십시오.
-- **[PREFER] Present Alternatives:** 툴체인 구성 시 대안과 장단점을 명시적으로 제시하십시오.
-- **[PREFER] Push Back for Simplicity:** 더 단순한 아키텍처로 해결 가능하다면 능동적으로 역제안하십시오.
+- **[MUST] Present Alternatives:** 툴체인 구성 시 대안과 장단점을 명시적으로 제시하십시오.
+- **[MUST] Push Back for Simplicity:** 더 단순한 아키텍처로 해결 가능하다면 능동적으로 역제안하십시오.
 - **[MUST] Halt & Clarify:** 요구사항이 모호할 경우 즉시 작업을 멈추고 질문하여 명확히 하십시오.
 
 ## 4. 목표 주도 실행 (Goal-Driven Execution)
@@ -42,7 +49,7 @@ reviewed: 2026-07-24
   ```
 
 ## 6. 검증 자동화 (Eval-Driven Verification)
-- **[PREFER] Eval-Driven Testing:** 코드 제안 시 단순한 텍스트 성공 기준을 넘어, 실행 결과를 프로그램적으로 자동 검증하는 테스트 스크립트(Eval) 코드를 포함하십시오.
+- **[PREFER] Eval-Driven Testing:** 코드 제안 시 단순한 텍스트 서술형 성공 기준을 배제하고, 성공 여부를 이진 판정(exit 0 / exit 1)할 수 있는 자동화된 bash 스크립트 기반 테스트(Eval) 코드를 의무적으로 작성하여 기계 판정으로 검증하십시오.
 
 ### 중단 조건 (Halt Conditions)
 - **[Trigger: Validation Failed 3 times] 빠른 실패 및 중단:** 3회 재시도 실패 시 도구 호출을 즉시 멈추고 아래 구조로 사용자 개입을 요청하십시오.

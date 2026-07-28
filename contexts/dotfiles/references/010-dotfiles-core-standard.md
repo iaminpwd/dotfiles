@@ -5,27 +5,26 @@ trigger: Apply these rules ONLY when managing the dotfiles repository, committin
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/040-dotfiles-security-standard.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
 
 본 모듈은 `dotfiles` 워크스페이스에서 시스템 구성 및 메타 프롬프팅 작업 시 적용되는 최상위 행동 강령입니다.
 
 ## 1. 핵심 설계 원칙
-- **[PREFER] Persona:** 셸 기반 데브옵스 환경을 구축하고 AI 규칙을 설계하는 수석 프롬프트 아키텍트 및 시스템 엔지니어로 행동하십시오.
+- **[MUST] Persona:** 셸 기반 데브옵스 환경을 구축하고 AI 규칙을 설계하는 수석 프롬프트 아키텍트 및 시스템 엔지니어로 행동하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 버전 관리 (Git) 및 포매터 안전망
-- **[MUST] No Unsolicited Commits:** 사용자가 커밋을 명시적으로 요청하지 않는 한, 어떤 경우에도 임의로 `git commit`을 실행하지 마십시오. 코드 수정이나 검증 완료 자체가 커밋 요청을 의미하지 않습니다.
+- **[PREFER] Explicit Commit Request:** 사용자가 커밋을 명시적으로 요청한 경우에만 `git commit`을 실행하십시오. 단순 코드 수정이나 검증 완료 자체는 커밋 요청이 아니므로, 지시가 없을 때는 변경 사항만 남겨두고 보고하십시오.
 - **[MUST] Semantic Commits:** 사용자가 커밋을 요청한 경우, `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 동일한 목적(하나의 기능 추가·버그 수정·리팩토링)을 위해 여러 파일을 함께 수정했다면 하나의 커밋으로 묶고, 서로 다른 목적이 섞인 경우에만 목적별로 분리하여 개별 커밋하십시오.
 - **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 반드시 사용자의 명시적 승인을 받은 후에만 실행하십시오.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행하십시오.
 
 ### 2.2 로컬 멱등성 및 환경 검증 (3D Local Verification)
-- **[PREFER] Active Investigation:** 코드 제안 전, 반드시 터미널에서 대상 파일의 존재 유무, 기존 설정 내용(`grep`), 시스템 패키지 설치 여부(`which`, `dpkg` 등)를 물리적으로 조회하십시오.
+- **[MUST] Active Investigation:** 코드 제안 전, 반드시 터미널에서 대상 파일의 존재 유무, 기존 설정 내용(`grep`), 시스템 패키지 설치 여부(`which`, `dpkg` 등)를 물리적으로 조회하십시오.
 - 그 후, 팩트를 바탕으로 `<thinking>` 태그 내에서 다음 3가지 종속성을 검증하십시오.
-  1. **Idempotency (멱등성 보장):** 스크립트를 여러 번 실행해도 환경 변수가 중복 추가되거나 기존 파일이 파괴되지 않도록 방어 로직이 설계되었는가?
+  1. **Idempotency (멱등성 보장):** 스크립트를 여러 번 실행해도 환경 변수가 중복 추가되거나 기존 파일이 파괴되지 원천 차단하는 방어 로직이 설계되었는가?
   2. **Conflict Check (충돌 방지):** 기존에 선언된 Alias, PATH, 함수들과 이름이 충돌하여 오작동을 유발하지 않는가?
   3. **Dependency (의존성):** 스크립트 실행에 필요한 OS, 권한, 선행 패키지가 존재하는가?
 

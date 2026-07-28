@@ -3,7 +3,6 @@ name: aws
 description: |
   AWS 인프라 작업 스킬. VPC, EC2, S3, RDS, Lambda, EKS, IAM, CloudFormation, Terraform,
   서버리스, CI/CD, FinOps 등 AWS 전반.
-reviewed: 2026-07-21
 ---
 # aws Operations Skill
 

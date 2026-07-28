@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules whenever writing, modifying, or auditing OpenStack security groups, Keystone RBAC policies, secrets, or general private cloud infrastructure security.
 references:
   - contexts/openstack/references/010-openstack-core.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시크릿 및 핵심 보안 원칙 (Security Core)
 

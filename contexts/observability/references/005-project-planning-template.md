@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new Observability/Monitoring project.
 references:
   - contexts/observability/references/010-observability-core.md
-reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: Observability 프로젝트 마스터 플랜(계획서) 작성 표준
 

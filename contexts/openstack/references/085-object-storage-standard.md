@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when designing Swift object storage — storage 
 references:
   - contexts/openstack/references/010-openstack-core.md
   - contexts/openstack/references/030-finops-optimization.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: Swift 객체 스토리지 표준
 

@@ -6,7 +6,6 @@ references:
   - contexts/openstack/references/010-openstack-core.md
   - contexts/openstack/references/025-cloud-security.md
   - contexts/openstack/references/026-networking-standard.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: 하이브리드 연결성 및 엣지 표준
 

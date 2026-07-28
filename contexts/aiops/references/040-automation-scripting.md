@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when writing automation scripts, testing edge-ca
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/060-agent-logic.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 자동화 카오스 엔지니어링
 
@@ -14,7 +13,7 @@ reviewed: 2026-07-21
 ## 1. 핵심 설계 원칙
 - **[MUST] Idempotency:** 네트워크 지연으로 인한 중복 웹훅 인입 시 상태의 단일 변경을 보장하도록 DynamoDB나 Redis 기반의 Idempotency Key(멱등성 키) 패턴을 핵심 로직에 구현하십시오.
 - **[MUST] Exponential Backoff & Circuit Breaker:** 외부 API(GitHub, PagerDuty 등) 호출 시 Rate Limit(429) 및 일시 장애에 대응하도록 지수적 백오프와 지터(Exponential Backoff & Jitter)를 적용하고, 장애 장기화 시 시스템 리소스 보호를 위한 서킷 브레이커(Circuit Breaker)를 결합하십시오.
-- **[MUST] Prompt Injection Defense:** 에이전트가 클라우드 로그(CloudWatch, Azure Monitor Logs 등) 등 외부 텍스트를 파싱할 때, 로그 내에 포함된 악성 명령어에 노출되지 않도록 입력값을 철저히 소독(Sanitization)하고 시스템 프롬프트와 물리적으로 격리하십시오.
+- **[MUST] Prompt Injection Defense:** 에이전트가 클라우드 로그(CloudWatch, Azure Monitor Logs 등) 등 외부 텍스트를 파싱할 때, 로그 내에 포함된 악성 명령어에 노출을 차단하기 위해 입력값을 철저히 소독(Sanitization)하고 시스템 프롬프트와 물리적으로 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

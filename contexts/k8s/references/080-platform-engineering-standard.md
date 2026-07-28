@@ -5,14 +5,13 @@ trigger: Apply these rules ONLY when designing platform engineering, internal de
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/070-advanced-security-standard.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise Platform Engineering 및 고급 아키텍처 패턴
 
 본 모듈은 내부 개발자 플랫폼(IDP) 추상화, 다중 클러스터(Fleet) 제어 평면 아키텍처 및 복잡한 Stateful 미들웨어의 오퍼레이터 패턴 설계 시 적용되는 기술 표준 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[PREFER] Developer Experience (DevEx) & Abstraction:** 개발자에게 로우 레벨 K8s YAML을 직접 기재하게 하는 방식을 배제하고, Helm/Kustomize 기반의 템플릿 형태로 인프라 속성을 추상화하여 제공하십시오.
+- **[MUST] Developer Experience (DevEx) & Abstraction:** 개발자에게 로우 레벨 K8s YAML을 직접 기재하게 하는 방식을 배제하고, Helm/Kustomize 기반의 템플릿 형태로 인프라 속성을 추상화하여 제공하십시오.
 - **[PREFER] Hard Isolation via vCluster:** 다중 테넌트(Multi-tenant) 환경 구축 시, API 서버와 Control Plane을 테넌트별로 완벽히 격리하도록 vcluster (Virtual Cluster) 아키텍처를 도입하십시오.
 - **[MUST] Operator First for Stateful Apps:** 클러스터 내부에 Kafka, PostgreSQL, Redis 등 복잡한 Stateful 미들웨어를 구축할 때 원시 StatefulSet 작성을 거부하고, 장애 조치(Failover) 지식이 코드로 내장된 벤더의 공식 Operator CRD를 강제 규정으로 제시하십시오.
 

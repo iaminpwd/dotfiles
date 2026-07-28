@@ -4,7 +4,6 @@ priority: high
 trigger: AWS/Azure 네이티브 리소스가 아닌 OSS/서드파티 도구 아이콘을 drawio XML에 표현할 때 적용 (클라우드 공통 SSOT)
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
-reviewed: 2026-07-21
 ---
 # 서드파티/OSS 도구 아이콘 라이브러리 (클라우드 공통)
 
@@ -21,7 +20,7 @@ reviewed: 2026-07-21
 | ArgoCD | 이미지형, `{URL}` = `https://argo-cd.readthedocs.io/en/stable/assets/logo.png` |
 | Prometheus | 이미지형, `{URL}` = `https://upload.wikimedia.org/wikipedia/commons/3/38/Prometheus_software_logo.svg` |
 | Grafana | 이미지형, `{URL}` = `https://upload.wikimedia.org/wikipedia/commons/3/3b/Grafana_icon.svg` |
-| GitLab | **예외** — 이미지형 템플릿에 대입 금지. style 전체를 다음으로 교체: `shape=mxgraph.ibm_cloud.logo--gitlab;fillColor=#E24329;strokeColor=none;html=1;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=#ffffff;` |
+| GitLab | **예외** — 이미지형 템플릿에 대입 제한. style 전체를 다음으로 교체: `shape=mxgraph.ibm_cloud.logo--gitlab;fillColor=#E24329;strokeColor=none;html=1;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=#ffffff;` |
 
 ## 2. 표에 없는 도구
 

@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt,
 references:
   - contexts/aws/references/010-aws-core.md
   - contexts/aws/references/020-security-compliance.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: IaC (Terraform & Ansible) 엔지니어링 표준
 

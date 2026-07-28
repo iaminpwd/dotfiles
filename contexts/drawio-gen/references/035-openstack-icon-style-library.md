@@ -5,7 +5,6 @@ trigger: OpenStack 관련 drawio XML 파일을 생성하거나 수정할 때 적
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
   - contexts/drawio-gen/references/040-third-party-icon-library.md
-reviewed: 2026-07-23
 ---
 # OpenStack 아이콘 스타일 라이브러리 매핑
 
@@ -34,7 +33,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   다른 색을 5~6개씩 쓰는 것은 이 표준에 맞지 않습니다.
 - **[MUST] 동일 기능 = 동일 색 재사용**: 같은 기능/목적의 객체군(예: "API 진입점"
   역할을 하는 Keystone/Nova-api/Neutron-server 등)은 같은 강조색을 재사용해 그룹으로
-  묶으십시오. 서비스마다 새 색을 배정하지 마십시오.
+  묶으십시오. 서비스마다 사전 정의된 색상을 유지하십시오.
 
 **객체 형태 (Objects) — 원문 그대로 인용**
 > "An object must be a closed geometric shape or icon. Objects must have a
@@ -62,7 +61,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
 - **[MUST]** `layout_toolkit.py`의 `edge()`는 `dashed=True`/`dotted=True` 불리언
   인자로 위 3종(둘 다 `False`=실선)을 지원한다. 사용자 입력이 흐르는 엣지(로그인
   폼 제출, Horizon/CLI에서 발생한 최초 요청 등)에는 반드시 `dotted=True`를 쓰고,
-  지금까지처럼 "논리적 연결"이라는 이유로 전부 `dashed=True`로 뭉뚱그리지 마십시오.
+  지금까지처럼 "논리적 연결"이라는 이유로 전부 `dashed=True`로 명확히 분리하십시오.
   두 인자를 동시에 `True`로 주지 않는다(`dotted`가 우선 적용됨).
 
 ## 1. draw.io 내장 OpenStack 스텐실 (실재함 — 과거 버전 문서 정정)
@@ -83,7 +82,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   labelPosition=center;verticalLabelPosition=bottom;outlineConnect=0;verticalAlign=top;
   align=center;shape=mxgraph.openstack.{name};fillColor=#{COLOR};
   ```
-  `{name}` (17종 고정, 임의 이름 창작 금지): `cinder_volume`, `cinder_volumeattachment`,
+  `{name}` (17종 고정, 임의 이름 창작 제한): `cinder_volume`, `cinder_volumeattachment`,
   `designate_recordset`, `designate_zone`, `heat_autoscalinggroup`, `heat_resourcegroup`,
   `heat_scalingpolicy`, `neutron_floatingip`, `neutron_floatingipassociation`,
   `neutron_net`, `neutron_port`, `neutron_router`, `neutron_routerinterface`,
@@ -94,7 +93,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   팔레트는 draw.io 에디터 UI 자체가 제공하는 스텐실 전용 색상이며, 0절의
   "밝은 원색 3종" 규칙과는 별개 체계다. 네이티브 스텐실을 쓸 때는 이 4색에서,
   2절의 기능형 블록을 쓸 때는 0절 규칙을 따르라.
-- **[MUST] 이름 유사성만으로 대체 금지**: 매핑 테이블에 없는 서비스는 억지로
+- **[MUST] 이름 유사성만으로 대체 제한**: 매핑 테이블에 없는 서비스는 억지로
   끼워 맞추지 말고 2절의 기능형 블록으로 대체하거나 사용자에게 확인하십시오.
 
 ## 2. 컨트롤 플레인 서비스 — 기능형 블록 (네이티브 스텐실이 없는 경우)
@@ -117,7 +116,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   ```
 - **[MUST] 라벨은 도형 "아래"에 배치 — `aws_icon()`/`azure_icon()`/
   `openstack_native_icon()`과 동일한 관례**: `verticalLabelPosition=bottom`을
-  쓴다(사용자가 아이콘류 공통 스타일을 선호함을 확인, 2026-07-23). `openstack_icon()`의
+  쓴다. `openstack_icon()`의
   rounded/cylinder/hexagon은 실제 픽토그램이 없는 빈 도형이라 라벨이 상대적으로
   허전해 보일 수 있으나, 대신 **기본 크기를 60x60보다 크게(90x70)** 잡아 도형
   자체의 존재감을 키우고 라벨과의 시각적 균형을 맞춘다.
@@ -125,15 +124,13 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   `grid()`/`hstack()`/`vstack()`과 함께 쓸 때, 기본 크기(90x70)와 다국어/여러 줄
   라벨 분량에 맞춰 `gy`(행 간격)를 최소 90 이상으로 넉넉히 지정하라. 도형 크기만
   키우고 간격 상수를 그대로 두면 라벨이 다음 행 요소와 다시 겹치는 회귀가
-  발생한다(2026-07-23, openstack-basic Logical Architecture 작업에서 실측 확인).
+  발생한다.
 - **[MUST] `openstack_icon()`을 swimlane 컨테이너 안에 넣을 때는 컨테이너 자체
   높이에도 라벨 공간을 반영할 것**: 라벨이 도형 "아래"에 그려지므로, `grid()`가
   반환한 콘텐츠 높이(`ch`)는 도형 높이만 반영하고 그 아래 라벨 줄 공간은 포함하지
   않는다. 이 콘텐츠를 감싸는 swimlane을 `subnet_box_size(cw, ch, header=...)`로
   만들 때 `extra_below`(최소 40~45)를 반드시 함께 지정하라. 빠뜨리면 라벨 텍스트가
-  swimlane의 파란 경계선 밖으로 삐져나온다(2026-07-23, openstack-basic Logical
-  Architecture 작업에서 실측 확인 — Nova/Neutron/Cinder/Glance 그룹 박스 전부 이
-  문제를 겪었다). `grid()`가 이미 gy로 "행 사이" 간격은 처리하므로, `extra_below`는
+  swimlane의 파란 경계선 밖으로 삐져나온다. `grid()`가 이미 gy로 "행 사이" 간격은 처리하므로, `extra_below`는
   그 그룹의 "마지막 행 아래"에 한정된 별도 여백이다 — 서로 다른 문제이니 둘 다
   챙길 것.
 - **[MUST] 강조는 3색 중 하나만, 테두리로만**: 정말 강조가 필요할 때만
@@ -141,12 +138,12 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   테두리(strokeWidth=3)만 강조색으로 바꿔 텍스트 라벨 가독성을 유지한다.
 - **[MUST] 동일 기능 = 동일 강조색 재사용**: 예) "API 진입점"이라는 동일 역할의
   여러 서비스(Keystone/Nova-api/Neutron-server/Cinder-api/Glance-api)에는 전부
-  같은 강조색(예: red)을 재사용하고, 서비스마다 새 색을 만들지 마십시오.
+  같은 강조색(예: red)을 재사용하고, 서비스마다 새 색을 생성을 지양하십시오.
 - **[MUST] `{SHAPE}` 도형 토큰 — `rounded` / `cylinder` 2종만 사용**:
   `rounded`(기본형 — API·워커·브로커 등 모든 프로세스) / `cylinder`(DB, 이미지·볼륨
   저장소 등 데이터 저장소). 도형 구분은 색상 규칙과 무관한 별개 축이므로 0절의 색상
   제한을 받지 않는다.
-  - **[MUST] `hexagon` 사용 금지 (2026-07-25 폐기)**: 이전 판본은 `hexagon`을
+  - **[MUST] `hexagon` 사용 제한**: 이전 판본은 `hexagon`을
     "네트워크 관련 데몬·큐"에 배정했으나 폐기한다. 근거는 세 가지다.
     (1) **공식 표준은 도형에 의미를 부여하지 않는다** — 원문은 *"An object must be a
     closed geometric shape or icon ... All objects must be labeled **according to their
@@ -163,7 +160,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   - **[MUST] 도형 종류가 3종을 넘으면 범례에 도형 항목을 넣을 것**: 사각형은 개수가
     가장 많아 "기본형"으로 읽히므로 설명이 불필요하고, 원통은 보편 관례라 설명 없이
     통한다. 그 외 도형을 추가하는 순간 범례 설명이 필수가 되므로, **범례를 늘릴
-    각오가 없으면 도형을 늘리지 마십시오.**
+    각오가 없으면 도형을 원본 비율을 유지하십시오.**
 
 ## 3. 3rd Party Custom Icon (팀 컨벤션)
 
@@ -177,7 +174,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
 - **[MUST]** OpenStack 계층은 `Cloud > Region > Neutron Network(VPC/VNet 자리) >
   Subnet > Resource`로 매핑하고, 컨테이너(swimlane) 색은 010 §4 "색상 팔레트
   (클라우드 공통)" 표의 **기존 승인 색을 그대로 재사용**하십시오(SSOT는 010, 본
-  절에서 재나열 금지).
+  절에서 재나열 제한).
   - OpenStack Cloud 테두리: `#232F3E`(검정, AWS/Azure와 동일)
   - Region (OpenStack): `#007CBC` dashed(파랑 점선)
   - Neutron Network 테두리: `#147E40`(초록, VPC/VNet과 동일)
@@ -188,29 +185,29 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   *"a closed geometric shape ... must have a hollow middle, where text can be added"*로
   정의하는데 swimlane 컨테이너는 이 정의에 정확히 부합합니다. 따라서 컨테이너 테두리도
   **검정(기본) 또는 밝은 원색 3종(`#4A90D9`/`#DA1A32`/`#2E7D32`)** 안에서 고르고,
-  회색(`#888888`/`#555555`) 같은 무채색은 쓰지 마십시오.
-  - 실사례(2026-07-25, openstack-basic): "비-OpenStack 공유 인프라" 컨테이너에
+  회색(`#888888`/`#555555`) 같은 무채색은 사용을 배제하십시오.
+  - 실사례: "비-OpenStack 공유 인프라" 컨테이너에
     `#888888`을 썼다가 색상 감사에서 적발 → `#2E7D32`(green)로 교체. 010 §4 팔레트
     표에 OpenStack 강조 3색이 없어 `validate()`가 오히려 정상 색을 위반으로 잡는
     2차 충돌까지 발생했다. 010 §4와 본 절이 어긋나면 **본 절(공식 원문)이 우선**이다.
   - drawio 기본 도형 색(예: 클라우드 스텐실의 `fillColor=#dae8fc`/`strokeColor=#6c8ebf`)을
-    그대로 두지 마십시오. 이것도 원색이 아니므로 흰 채움 + 검정 테두리로 교체합니다.
+    그대로 두는 것을 제한합니다. 이것도 원색이 아니므로 흰 채움 + 검정 테두리로 교체하여 명확히 합니다.
 - **[MUST] AZ 서브라벨 공통 적용**: Nova Availability Zone에 분산된 동일 목적
   서브넷/리소스는 010 §7·§8의 `[AZ-A, C]` 논리 병합 및 서브라벨 규칙을 그대로
   적용하십시오.
 
 ## 5. 아이콘-리소스 정확성 가드레일 (Icon Fidelity)
 
-- **[MUST] 네이티브 스텐실 창작 금지**: `mxgraph.openstack.*`는 실재하는 17종
-  (1절)만 유효합니다. 그 외 이름이나 OpenStack 프로젝트 로고 URL을 지어내지
-  마십시오.
-- **[MUST] 이름 유사성만으로 대체 금지**: 실제 리소스 타입과 정확히 일치하는
+- **[MUST] 네이티브 스텐실 창작 제한**: `mxgraph.openstack.*`는 실재하는 17종
+  (1절)만 유효합니다. 그 외 이름이나 OpenStack 프로젝트 로고 URL 창작을
+  엄격히 제한합니다.
+- **[MUST] 이름 유사성만으로 대체 제한**: 실제 리소스 타입과 정확히 일치하는
   서비스에만 해당 도형을 사용하고, 매핑 테이블에 없는 서비스는 억지로 끼워
   맞추지 말고 `note()`(rect+텍스트)로 대체하거나 사용자에게 확인하십시오.
 
 ## 6. 아키텍처 팩트 가드레일 (OpenStack 도메인 — 반복 발생한 오류)
 
-openstack-basic 작업(2026-07-25)에서 실제로 그렸다가 공식 문서 대조로 정정한
+openstack-basic 작업에서 실제로 그렸다가 공식 문서 대조로 정정한
 사실들입니다. 개념/논리 아키텍처를 그릴 때마다 아래를 먼저 확인하십시오.
 출처는 모두 `docs.openstack.org/install-guide` 및 `docs.openstack.org/nova/latest`
 (조회일 2026-07-25).

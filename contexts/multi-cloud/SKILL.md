@@ -6,7 +6,6 @@ description: |
   전용선(Direct Connect, ExpressRoute), VPN, Peering, Transit Gateway,
   크로스 환경 IAM 및 DNS 통합. 단일 클라우드 내부 작업이 아니라 두 환경의
   경계를 잇는 요청이면 이 스킬을 사용하십시오.
-reviewed: 2026-07-27
 ---
 # multi-cloud Skill
 

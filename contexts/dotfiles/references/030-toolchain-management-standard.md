@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when installing packages, managing global toolch
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: 시스템 환경 패키지 도구(Toolchain) 셋업 관리 표준
 
@@ -22,7 +21,7 @@ reviewed: 2026-07-27
 ### 2.1 버전 통제 및 멱등성 보장
 - **[PREFER] Verifiable Pinning:** 도구 추가 시 로컬에 `mise`가 설치되어 있다면 터미널에서 `mise ls-remote <tool>`을 실행하여 안정성(Stable) 검증된 버전을 하드코딩하십시오.
 - **[MUST] Non-Interactive Package Installation:** `apt`, `apt-get` 등을 통해 시스템 패키지를 설치해야 하는 경우, 반드시 `DEBIAN_FRONTEND=noninteractive` 환경 변수와 `-y` 플래그를 조합하여 비대화형으로 실행하십시오. (예: `sudo DEBIAN_FRONTEND=noninteractive apt-get install -y <package>`)
-- **[MUST] OS Package Manager Compatibility:** 특정 패키지 매니저(`apt`)를 임의로 가정하지 말고, `command -v apt-get || command -v yum || command -v brew` 등으로 현재 OS의 매니저를 사전에 분기 판별하십시오.
+- **[MUST] OS Package Manager Compatibility:** 패키지 설치 시 OS 매니저를 임의로 가정하지 말고, `command -v apt-get || command -v yum || command -v brew` 구문으로 사전에 매니저를 판별하여 분기하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -38,7 +37,7 @@ terraform = "1.5.7"
 [Bad]
 ```toml
 [tools]
-terraform = "latest" # 절대 사용 금지 (미래에 멱등성 깨짐)
+terraform = "latest" # 절대 사용 제한 (미래에 멱등성 깨짐)
 ```
 </example>
 </examples>

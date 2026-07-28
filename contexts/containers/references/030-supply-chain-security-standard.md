@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules ONLY when generating SBOMs, signing images, or gating builds on vulnerability scan results.
 references:
   - contexts/containers/references/010-containers-core.md
-reviewed: 2026-07-21
 ---
 # 컨테이너 공급망 보안 표준 (Supply Chain Security)
 

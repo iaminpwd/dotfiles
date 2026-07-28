@@ -7,7 +7,6 @@ references:
   - contexts/azure/references/020-security-compliance.md
   - contexts/azure/references/025-cloud-security.md
   - contexts/azure/references/030-finops-optimization.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Kubernetes (AKS) 특화 표준
 

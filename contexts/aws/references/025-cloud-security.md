@@ -6,7 +6,6 @@ references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/010-aws-core.md
   - contexts/aws/references/030-finops-optimization.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 클라우드 인프라 및 네트워크 보안 (Cloud Security)
 

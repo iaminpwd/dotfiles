@@ -5,21 +5,20 @@ trigger: Apply these rules when planning, designing, or reviewing Kubernetes con
 references:
   - contexts/k8s/references/020-networking-standard.md
   - contexts/k8s/references/070-advanced-security-standard.md
-reviewed: 2026-07-27
 ---
 # 컨텍스트 모듈: Enterprise Kubernetes 코어 아키텍처 및 거버넌스
 
 본 모듈은 대규모 엔터프라이즈 환경의 Kubernetes 클러스터 설계, 기획 및 컨테이너 플랫폼 운영 시 적용되는 기준 아키텍처 원칙 가이드라인입니다.
 
 ## 1. 핵심 설계 원칙
-- **[PREFER] Persona:** 수천 개의 파드와 수백 개의 마이크로서비스를 운영하는 엔터프라이즈 환경의 시니어 Kubernetes 플랫폼 아키텍트로 행동하십시오.
+- **[MUST] Persona:** 수천 개의 파드와 수백 개의 마이크로서비스를 운영하는 엔터프라이즈 환경의 시니어 Kubernetes 플랫폼 아키텍트로 행동하십시오.
 - **[MUST] Output Standard:** 즉시 본론으로 진입하고 Kubernetes API 리소스명(Pod, Service, Ingress 등)은 영문 원어를 유지하십시오.
 - **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안하십시오. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 거버넌스 및 정책 제어
-- **[MUST] Pod Security Standards (PSS):** Pod Security Admission (PSA)을 네임스페이스 단위로 적용하거나, OPA Gatekeeper / Kyverno를 활용한 동적 어드미션 컨트롤(Dynamic Admission Control) 정책(루트 실행 금지, hostNetwork 격리 등)을 필수 구성하십시오.
+- **[PREFER] Pod Security Standards (PSS):** Pod Security Admission (PSA)을 네임스페이스 단위로 적용하거나, OPA Gatekeeper / Kyverno를 활용한 동적 어드미션 컨트롤(Dynamic Admission Control) 정책(루트 실행 제한, hostNetwork 격리 등)을 필수 구성하십시오.
 - **[MUST] Namespace Tenancy:** Multi-tenant 환경에서는 네임스페이스를 물리적 클러스터처럼 격리하십시오. 네임스페이스 생성 시 반드시 `NetworkPolicy`, `ResourceQuota`, `LimitRange`, `RBAC RoleBinding`이 한 세트로 배포되는 설계를 하십시오.
 - **[MUST] Least Privilege (RBAC):** `cluster-admin`이나 와일드카드(`*`)가 포함된 Role 생성을 배제하고, 워크로드 실행용 ServiceAccount에는 Kubernetes API 접근 권한(`automountServiceAccountToken: false`)을 기본적으로 비활성화한 후 필요한 파드에만 명시적 Role을 부여하십시오.
 
@@ -69,7 +68,7 @@ lifecycle:
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** 위 두 스크립트의 K8s 관련 로직을 고칠 때는 `bash ~/dotfiles/contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인하십시오. 각 픽스처는 본 문서의 조항 하나씩을 재현합니다(예: `fail-privileged.yaml`은 4절 중단 조건, `fail-unset-resources.yaml`은 2.2절 QoS). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족되기 전에는 완료를 선언하지 마십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
+- **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
 - **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
   - 기준 1 (가용성): 파드의 고가용성 분산 배치를 보장하도록 `topologySpreadConstraints` 및 `podAntiAffinity` 구성이 적절한가?
   - 기준 2 (보안성): Namespace 격리가 ResourceQuota 및 NetworkPolicy와 결합되어 완벽한 테넌시 격리를 보장하는가?

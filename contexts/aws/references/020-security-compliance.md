@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules whenever writing, modifying, or auditing AWS Security Groups, IAM Policies, Secrets, or general cloud infrastructure security.
 references:
   - contexts/aws/references/010-aws-core.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시크릿 및 핵심 보안 원칙 (Security Core)
 

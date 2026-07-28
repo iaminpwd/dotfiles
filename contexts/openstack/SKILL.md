@@ -4,7 +4,6 @@ description: |
   OpenStack 프라이빗 클라우드 작업 스킬. Nova, Neutron, Cinder, Swift, Glance, Keystone,
   Heat, Octavia, Barbican, Magnum, Trove, Ironic, Ceph 백엔드, Terraform/Ansible IaC,
   Kolla-Ansible 컨트롤플레인 운영, 쿼터/FinOps 등 OpenStack 전반.
-reviewed: 2026-07-23
 ---
 # openstack Operations Skill
 

@@ -6,7 +6,6 @@ references:
   - contexts/azure/references/050-iac-standard.md
   - contexts/azure/references/080-database-standard.md
   - contexts/azure/references/030-finops-optimization.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Cloud Native 및 Day-2 운영 표준
 

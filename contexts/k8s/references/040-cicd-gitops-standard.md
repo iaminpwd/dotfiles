@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows
 references:
   - contexts/k8s/references/010-k8s-core.md
   - contexts/k8s/references/070-advanced-security-standard.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Enterprise GitOps 및 CI/CD 파이프라인 표준
 

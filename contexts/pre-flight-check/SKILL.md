@@ -3,7 +3,6 @@ name: pre-flight-check
 description: |
   Terraform, Ansible, Helm, Dockerfile 등 모든 인프라 코드 및 쉘 스크립트 작성 시
   공통적으로 작동되는 정량적 검증 파이프라인(pre-flight-check.sh) 가이드 스킬입니다.
-reviewed: 2026-07-21
 ---
 # 사전 검증 스킬 (Pre-Flight Check)
 

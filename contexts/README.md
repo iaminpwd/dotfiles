@@ -172,7 +172,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [PREFER] Positive Action Override: 부정형 금지어보다 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
+- [PREFER] Positive Action Override: 부정형 제한어보다 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
 ```
 
 ---
@@ -253,7 +253,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 ```
 
 ### 5.4. Pragmatic Verification (실용적 검증 및 팩트 수집 패턴)
-**이론:** 머릿속 파라미터 지식에 의존한 이론적 에러 핸들링을 금지하고, 로컬 터미널 명령을 통해 팩트부터 수집하도록 제약하는 기법.
+**이론:** 머릿속 파라미터 지식에 의존한 이론적 에러 핸들링을 제한하고, 로컬 터미널 명령을 통해 팩트부터 수집하도록 제약하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown

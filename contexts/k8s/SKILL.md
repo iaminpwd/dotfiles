@@ -7,7 +7,6 @@ description: |
   작업까지 포함하며, 이때는 클러스터를 제공하는 클라우드 쪽 스킬도 같이 필요합니다.
   Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션
   정책 관련 질문도 여기서 다룹니다.
-reviewed: 2026-07-27
 ---
 # k8s Skill
 

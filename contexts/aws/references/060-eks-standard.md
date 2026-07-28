@@ -7,7 +7,6 @@ references:
   - contexts/aws/references/020-security-compliance.md
   - contexts/aws/references/025-cloud-security.md
   - contexts/aws/references/030-finops-optimization.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: Kubernetes (EKS) 특화 표준
 

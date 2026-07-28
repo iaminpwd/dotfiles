@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when working with FinOps, DORA metrics, CloudWat
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/020-security-compliance.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: 고급 FinOps 및 DORA 지표 관측성 (Observability)
 

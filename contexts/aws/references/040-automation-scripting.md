@@ -4,7 +4,6 @@ priority: high
 trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.
 references:
   - contexts/aws/references/010-aws-core.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 

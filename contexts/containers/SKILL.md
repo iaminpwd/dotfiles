@@ -4,7 +4,6 @@ description: |
   컨테이너 이미지 엔지니어링 스킬. Dockerfile/OCI 이미지 빌드, 멀티스테이지,
   이미지 하드닝(non-root, distroless), SBOM/서명/취약점 스캔 등 공급망 보안,
   레지스트리 태깅 및 라이프사이클, 컨테이너 런타임 트러블슈팅.
-reviewed: 2026-07-21
 ---
 # containers Skill
 

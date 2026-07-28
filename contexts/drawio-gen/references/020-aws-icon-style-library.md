@@ -5,7 +5,6 @@ trigger: AWS 관련 drawio XML 파일을 생성하거나 수정할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md
   - contexts/drawio-gen/references/040-third-party-icon-library.md
-reviewed: 2026-07-24
 ---
 # AWS 아이콘 스타일 라이브러리 매핑
 
@@ -27,8 +26,8 @@ https://aws.amazon.com/architecture/icons/
 > Flip or rotate icons. Change icon shapes."
 
 - **[MUST]** 아이콘 크기·색상·형태는 사전 정의된 값 그대로 사용하십시오. 크롭/반전/
-  회전/형태 변경을 금지합니다. §2 매핑 표의 `fillColor`는 AWS가 카테고리별로
-  사전 정의한 색상이므로, 매핑 표에 없는 임의의 색을 배정하지 마십시오.
+  원본 형태 유지를 원칙으로 합니다. §2 매핑 표의 `fillColor`는 AWS가 카테고리별로
+  사전 정의한 색상이므로, 매핑 표에 없는 사전 정의된 색상만 배정하십시오.
 
 **그룹(Groups) — 원문 그대로 인용 (슬라이드 14)**
 > "DO: Use a generic group type if the presets do not suit your needs. Add a
@@ -101,7 +100,7 @@ aspect=fixed;shape={SHAPE};
 | Route 53 | `mxgraph.aws4.route_53` | `#8C4FFF` | Networking |
 | VPN Gateway | `mxgraph.aws4.site_to_site_vpn` | `#8C4FFF` | Networking |
 | Transit Gateway | `mxgraph.aws4.transit_gateway` | `#8C4FFF` | Networking |
-| MSK (Kafka) | `mxgraph.aws4.managed_streaming_for_kafka` (§1 템플릿 직접 대입 금지, §3 resourceIcon 래퍼 필수) | `#8C4FFF` | Analytics |
+| MSK (Kafka) | `mxgraph.aws4.managed_streaming_for_kafka` (§1 템플릿 직접 대입 제한, §3 resourceIcon 래퍼 필수) | `#8C4FFF` | Analytics |
 | SQS | `mxgraph.aws4.sqs` | `#D15100` | App Integration |
 | SNS | `mxgraph.aws4.sns` | `#D15100` | App Integration |
 | EventBridge | `mxgraph.aws4.eventbridge` | `#D15100` | App Integration |
@@ -129,4 +128,4 @@ aspect=fixed;shape={SHAPE};
 
 ## 5. 아이콘-리소스 정확성 가드레일 (Icon Fidelity)
 
-- **[MUST] 이름 유사성만으로 아이콘 대체 금지**: 리소스명이나 개념이 AWS 관리형 서비스 이름과 비슷하다는 이유만으로 해당 서비스 아이콘을 대체 사용하지 마십시오. (예: 온프레미스 AD 연동 자체 관리형 Windows EC2 VDI 풀을 `WorkSpaces` 아이콘으로 표현하면, 실제로는 사용하지 않는 Amazon WorkSpaces 관리형 서비스를 쓰는 것처럼 오인시킵니다.) 아이콘은 실제 Terraform 리소스 타입(예: `aws_workspaces_*` vs `aws_instance`+`aws_autoscaling_group`)과 정확히 일치할 때만 사용하고, 다르면 EC2 등 실제 리소스 타입에 맞는 아이콘을 쓰십시오. 매핑 테이블에 정확히 대응하는 아이콘이 없으면 억지로 유사 아이콘을 끼워 맞추지 말고 텍스트 노트(rect+텍스트)로 대체하십시오.
+- **[MUST] 정확한 리소스 타입 기반 아이콘 매핑**: 리소스명이나 개념이 AWS 관리형 서비스 이름과 비슷하다는 이유만으로 해당 서비스 아이콘을 대체 사용을 배제하십시오. (예: 온프레미스 AD 연동 자체 관리형 Windows EC2 VDI 풀을 `WorkSpaces` 아이콘으로 표현하면, 실제로는 사용하지 않는 Amazon WorkSpaces 관리형 서비스를 쓰는 것처럼 오인시킬 수 있으므로 주의하십시오.) 아이콘은 실제 Terraform 리소스 타입(예: `aws_workspaces_*` vs `aws_instance`+`aws_autoscaling_group`)과 정확히 일치할 때만 사용하고, 다르면 EC2 등 실제 리소스 타입에 맞는 아이콘을 쓰십시오. 매핑 테이블에 정확히 대응하는 아이콘이 없으면 억지로 유사 아이콘을 끼워 맞추지 말고 텍스트 노트(rect+텍스트)로 대체하십시오.

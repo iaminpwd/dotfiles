@@ -10,7 +10,6 @@ references:
   - contexts/openstack/references/050-iac-standard.md
   - contexts/openstack/references/060-magnum-k8s-standard.md
   - contexts/openstack/references/090-day2-operations.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: OpenStack 프로젝트 마스터 플랜(계획서) 작성 표준
 

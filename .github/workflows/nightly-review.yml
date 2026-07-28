@@ -35,6 +35,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install google-genai
 
+      # 검증기가 깨지면 코퍼스 린트는 통과해도 파이프라인이 무력해진다. 외부 도구가
+      # 거의 필요 없는 세 스위트만 CI 에서 돌린다. terraform/checkov 계열이 필요한
+      # 나머지 스위트는 설치 비용이 커서 로컬 pre-commit 훅에 맡긴다.
+      - name: Install Suite Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq stow zsh
+
+      - name: Validator Regression Suites
+        run: |
+          for suite in dotfiles agent-handoff drawio-gen; do
+            echo "::group::$suite"
+            bash "contexts/$suite/tests/run.sh"
+            echo "::endgroup::"
+          done
+
       # 링크/코드펜스/SSOT 무결성은 결정론적 검사가 정확하고 무료다.
       # LLM 패스로 중복 검사하지 않으며, 여기서 실패하면 API 호출 없이 조기 종료한다.
       - name: Prompt Corpus Lint

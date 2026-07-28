@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when writing or reviewing Terraform, Heat (HOT) 
 references:
   - contexts/openstack/references/010-openstack-core.md
   - contexts/openstack/references/020-security-compliance.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: IaC (Terraform / Heat / Ansible) 엔지니어링 표준
 

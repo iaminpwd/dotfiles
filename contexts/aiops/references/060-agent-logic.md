@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when designing LLM agent workflows, RAG systems,
 references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/040-automation-scripting.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: AI 에이전트 워크플로우 설계 및 RAG / Guardrails 패턴
 

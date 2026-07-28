@@ -5,7 +5,6 @@ trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompt
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 
@@ -16,19 +15,19 @@ reviewed: 2026-07-24
 - **[MUST] Waterfall Modularity:** 파일명에 도메인별 3자리 숫자 Prefix(`010-core`, `020-network` 등)를 강제하십시오.
 
 ### 1.1 조항 등급 기준 (Clause Severity)
-등급은 에이전트가 컨텍스트 압박 시 무엇을 먼저 버릴지 정하는 신호입니다. 판정 없이 습관적으로 `[MUST]`를 붙이면 그 신호가 사라집니다(2026-07-26 실측: `contexts/dotfiles` 129건 전부 MUST, `contexts/drawio-gen` 140건 중 139건 MUST — 등급 기준이 코퍼스에 정의되지 않아 기본값처럼 부착됨). 아래 기준으로만 판정하십시오.
+등급은 에이전트가 컨텍스트 압박 시 무엇을 먼저 버릴지 정하는 신호입니다. 판정 없이 습관적으로 `[MUST]`를 붙이면 그 신호가 사라집니다. 아래 기준으로만 판정하십시오.
 - **[MUST]:** 위반이 곧 실패인 조항. (a) 안전·보안·데이터 손실 방지, (b) 검증 스크립트가 pass/fail을 판정하는 항목, (c) 출력 계약(언어·포맷·완료 조건) 중 최소 하나에 해당해야 합니다. 같은 파일의 중단 조건(Halt Conditions)이 그 조항을 근거로 삼고 있다면 (a)에 해당합니다.
 - **[PREFER]:** 기본 선택지는 명확하지만 상황에 따라 차선책이 정당화될 수 있는 조항. 본문에 "최우선 제안", "우선 탐색", "가급적" 같은 표현이 있거나 바로 뒤에 예외 조항이 붙어 있으면 `[MUST]`가 아니라 이 등급입니다.
-- **[NEVER]:** 예외 없는 금지. §2 Positive Action Override에 따라 대체 행위를 반드시 함께 명시하십시오.
+- **[NEVER]:** 예외 없는 제한. §2 Positive Action Override에 따라 대체 행위를 반드시 함께 명시하십시오.
 
 ## 2. 페르소나 및 어조 제어 (Tone & Persona)
 - **[MUST] Strict Command Tone:** 대상 에이전트가 이모지 없이 엔터프라이즈 군대식 명령어조를 쓰도록 룰북에 명문화하십시오.
-- **[PREFER] Positive Action Override (긍정 행동 지시):** 금지형 부정 명령(`~수용해서는 안 됩니다`, `~하지 마십시오`)보다, 대체 가능한 구체적 행동(`~대신 B를 수행하십시오`, `~를 능동적으로 제안하십시오`) 위주의 긍정 지시어로 프롬프트를 설계하십시오. AI는 "무엇을 해야 하는가"를 명시할 때 가장 정확하게 작동합니다.
+- **[PREFER] Positive Action Override (긍정 행동 지시):** 제한형 부정 명령(`~수용해서는 안 됩니다`, `~하지 마십시오`)보다, 대체 가능한 구체적 행동(`~대신 B를 수행하십시오`, `~를 능동적으로 제안하십시오`) 위주의 긍정 지시어로 프롬프트를 설계하십시오. AI는 "무엇을 해야 하는가"를 명시할 때 가장 정확하게 작동합니다.
 
 ## 3. AI 추론 및 컨텍스트 제어 (Reasoning & Context)
 - **[PREFER] Long Context Strategy:** 방대한 로그나 공식 문서는 최상단에, 핵심 지시사항은 맨 아래에 배치하여 위치 편향(Position Bias)을 막으십시오.
 - **[PREFER] Reference Text:** 환각(Hallucination) 방지를 위해 기준이 되는 팩트/문서 스니펫을 프롬프트 내부에 직접 주입하십시오.
-- **[MUST] Context Isolation:** 룰과 데이터(로그, 코드)가 섞이지 않도록 반드시 `<example>`, `<context>` 등 XML 태그로 격리하십시오.
+- **[MUST] Context Isolation:** 룰과 데이터(로그, 코드)가 섞이지 않게 방어 로직을 적용하여 반드시 `<example>`, `<context>` 등 XML 태그로 격리하십시오.
 - **[PREFER] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입하십시오.
 - **[PREFER] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제하십시오.
 - **[PREFER] CoT 예외:** 추론 네이티브 모델(GPT-5 계열 thinking 모드, DeepSeek-R1, Qwen3 thinking 등 — 구체 모델명은 시점에 따라 은퇴되므로 웹 검색으로 현행 여부 확인)에는 CoT 및 추론 스캐폴딩 대신, 짧고 깔끔한 최종 목표 지시만 직접 제공하십시오.
@@ -66,7 +65,7 @@ limits:
 ## 5. 방어적 로컬 환경 철학 (Defensive Environment Architecture)
 Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시오.
 1. **Zero-Trust Security:** 최소 권한, Git 저장소 내 시크릿 하드코딩 엄격 차단.
-2. **Idempotency First:** 여러 번 실행해도 시스템 환경이 망가지지 않도록 멱등성 검증 로직 강제.
+2. **Idempotency First:** 여러 번 실행해도 시스템 환경이 망가지지 않게 방어 로직을 적용하여 멱등성 검증 로직 강제.
 3. **Fail-Fast & Recovery:** 에러 발생 시 무한 루프를 막고, 핵심 설정 덮어쓰기 전 항상 `.bak` 백업을 수행하도록 유도.
 
 ## 6. 프롬프트 최적화 (Readability)
@@ -85,7 +84,7 @@ Dotfiles 룰북 작성 시 아래의 로컬 멱등성 철학을 강제하십시�
 새로운 컨텍스트 룰북(`contexts/*.md` 또는 `references/*.md`)을 작성할 때 일관된 프롬프트 품질 유지를 위해 아래 템플릿을 복사하여 사용하십시오.
 
 > [!IMPORTANT]
-> 플랫폼 연동 및 자동 인덱싱을 담당하는 최상위 스킬 정의서(`SKILL.md`)는 본 보일러플레이트 템플릿의 대상이 아닙니다. 로더 호환성을 위해 `SKILL.md` 최상단에는 반드시 표준 `name` 및 `description` 키워드 스키마만 기재하고, 전체 룰북에 대한 일괄 `references` 사전 로드는 토큰 낭비 방지를 위해 금지하십시오.
+> 플랫폼 연동 및 자동 인덱싱을 담당하는 최상위 스킬 정의서(`SKILL.md`)는 본 보일러플레이트 템플릿의 대상이 아닙니다. 로더 호환성을 위해 `SKILL.md` 최상단에는 반드시 표준 `name` 및 `description` 키워드 스키마만 기재하고, 전체 룰북에 대한 일괄 `references` 사전 로드는 토큰 낭비 방지를 위해 제한하십시오.
 
 ````markdown
 ---
@@ -95,7 +94,6 @@ trigger: [본 룰북이 트리거되어야 하는 작업 상황 및 조건 예: 
 references:
   - [참조할 다른 룰북 파일 경로 1 (예: contexts/dotfiles/references/000-core.md)]
   - [참조할 다른 룰북 파일 경로 2]
-reviewed: [최종 검토일 YYYY-MM-DD — prompt-lint.sh가 90일 초과 시 WARNING 처리하므로 필수]
 ---
 # [도메인명] 설계 및 개발 표준 가이드
 
@@ -107,7 +105,7 @@ reviewed: [최종 검토일 YYYY-MM-DD — prompt-lint.sh가 90일 초과 시 WA
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 - **[MUST]** [행동 지시 1: 구체적 동사, 대상, 제약 조건 포함]
 - **[MUST]** [행동 지시 2: 교착상태 방지 및 예외 규정 명시]
-- **[NEVER]** [금지 사항: 부정어를 사용할 경우 반드시 대체 가능한 구체적 행위 명시]
+- **[NEVER]** [제한 사항: 부정어를 사용할 경우 반드시 대체 가능한 구체적 행위 명시]
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -131,7 +129,7 @@ reviewed: [최종 검토일 YYYY-MM-DD — prompt-lint.sh가 90일 초과 시 WA
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 > [!IMPORTANT]
-> 이 스킬 그룹에 이미 자가 비판 절차의 SSOT 역할을 하는 코어 모듈(예: `010-xxx-core.md`)이 존재한다면, 절차(태그 열기/점수 스케일/게이트 조건)를 이 파일에서 재정의하지 마십시오. 코어 모듈을 참조 링크로 지목하고, 아래처럼 점검 기준 목록만 기재하십시오.
+> 이 스킬 그룹에 이미 자가 비판 절차의 SSOT 역할을 하는 코어 모듈(예: `010-xxx-core.md`)이 존재한다면, 절차(태그 열기/점수 스케일/게이트 조건)를 이 파일에서 재정의을(를) 엄격히 제한하십시오. 코어 모듈을 참조 링크로 지목하고, 아래처럼 점검 기준 목록만 기재하십시오.
 - **[Trigger: Before Action/Apply] 점검 기준 (절차는 [코어 모듈 경로]의 공통 자가 비판 절차 참조):**
   - [자가 점검 기준 1 (예: 보안 위반 여부)]
   - [자가 점검 기준 2 (예: 리소스 누출 여부)]

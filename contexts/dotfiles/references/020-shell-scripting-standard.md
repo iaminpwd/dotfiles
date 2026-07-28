@@ -5,14 +5,13 @@ trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. s
 references:
   - contexts/dotfiles/references/000-core.md
   - contexts/dotfiles/references/010-dotfiles-core-standard.md
-reviewed: 2026-07-24
 ---
 # 컨텍스트 모듈: Dotfiles 환경 설정 및 셸 스크립트 작성 표준
 
 본 모듈은 자동화 스크립트(`setup.sh`, `install.sh`) 및 시스템 셸 설정(`zshrc`, `bashrc`, `tmux.conf` 등) 작성 시 적용됩니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Bash Strict Mode:** 스크립트 최상단에 반드시 `set -euo pipefail`을 선언하여 오류 발생 시 즉각 Fail-Fast 하도록 방어하십시오.
+- **[MUST] Bash Strict Mode:** 스크립트 최상단에 반드시 `set -euo pipefail`을 선언하십시오.
 - **[MUST] Explicit Idempotency:** 다중 실행 시에도 안전하도록, 상태 검증 로직(`if ! command -v <tool>; then`)을 반드시 포함하여 멱등성을 보장하십시오.
 - **[MUST] Symlink Awareness (GNU Stow):** `stow` 심볼릭 링크 구조를 존중하여, 반드시 `~/dotfiles/zsh/.zshrc` 등 원본(Source) 파일만을 조작하십시오.
 
@@ -57,7 +56,7 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Bash Script Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (Fail-Fast 보장): 에러 발생 시 스크립트가 즉시 중단되며, `set -euo pipefail`이 선언되었는가?
-  - 기준 2 (중복 방지): 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복으로 무한 증식되지 않도록 멱등 검증 로직이 완벽히 설계되었는가?
+  - 기준 2 (중복 방지): 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복 증식을 원천 차단하도록 멱등 검증 로직이 완벽히 설계되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 스크립트 최상단에 `set -euo pipefail` 선언이 누락된 상태로 배포를 제안하려는 패턴이 감지되면 즉시 작업을 중단(Hard Block)하고 보완하십시오.
   - `stow` 링크 대상의 부모 디렉토리 생성(`mkdir -p`) 로직 없이 `stow` 명령을 바로 실행하려는 스크립트가 감지되면 즉시 멈추고 사전 생성 절차를 주입하십시오.

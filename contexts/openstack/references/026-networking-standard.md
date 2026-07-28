@@ -5,14 +5,13 @@ trigger: Apply these rules ONLY when designing Neutron network architecture, SDN
 references:
   - contexts/openstack/references/010-openstack-core.md
   - contexts/openstack/references/025-cloud-security.md
-reviewed: 2026-07-23
 ---
 # 컨텍스트 모듈: Neutron 네트워크 아키텍처 표준
 
 본 모듈은 OpenStack Neutron의 SDN 백엔드 선택, tenant/provider 네트워크 토폴로지 및 라우팅 아키텍처 설계 시 적용되는 기술 표준 가이드라인입니다. 네트워크 보안(보안 그룹/FWaaS)은 `025-cloud-security.md`를 참조하십시오.
 
 ## 1. 핵심 설계 원칙
-- **[PREFER] SDN Backend Selection:** 신규 배포는 OVN(`ovn` ML2 드라이버)을 기본으로 채택하고, 레거시 OVS/ML2 + L3 agent 조합은 기존 환경 유지보수 목적에만 사용하십시오. 선택 근거(에이전트 수, 분산 라우팅 지원, 커뮤니티 방향성)를 명시하십시오.
+- **[MUST] SDN Backend Selection:** 신규 배포는 OVN(`ovn` ML2 드라이버)을 기본으로 채택하고, 레거시 OVS/ML2 + L3 agent 조합은 기존 환경 유지보수 목적에만 사용하십시오. 선택 근거(에이전트 수, 분산 라우팅 지원, 커뮤니티 방향성)를 명시하십시오.
 - **[MUST] Tenant/Provider 분리:** tenant 오버레이(VXLAN/GENEVE)와 provider(VLAN/flat) 네트워크의 역할을 분리하고, 외부 연결은 provider network + 라우터 external gateway로만 노출하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

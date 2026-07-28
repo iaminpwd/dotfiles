@@ -6,7 +6,6 @@ references:
   - contexts/aiops/references/010-aiops-core.md
   - contexts/aiops/references/020-security-compliance.md
   - contexts/aiops/references/030-finops-optimization.md
-reviewed: 2026-07-21
 ---
 # 컨텍스트 모듈: AIOps 파이프라인 마스터 플랜(계획서) 작성 표준
 

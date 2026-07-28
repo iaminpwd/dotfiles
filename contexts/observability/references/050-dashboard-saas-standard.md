@@ -5,7 +5,6 @@ trigger: Apply these rules ONLY when designing Grafana dashboards or integrating
 references:
   - contexts/observability/references/010-observability-core.md
   - contexts/observability/references/020-metrics-alerting-standard.md
-reviewed: 2026-07-21
 ---
 # 대시보드 및 SaaS 통합 표준
 
