@@ -64,7 +64,7 @@ run_hadolint() {
   local out status rules
   out=$(hadolint "$FIXTURES/$name" 2>&1) && status=0 || status=$?
   # 지적 0건이면 grep 이 1을 반환해 set -e 에 걸리므로 반드시 흡수해야 한다.
-  rules=$(echo "$out" | grep -oE 'DL[0-9]+|SC[0-9]+' | sort -u | tr '\n' ' ' || true)
+  rules=$(grep -oE 'DL[0-9]+|SC[0-9]+' <<<"$out" | sort -u | tr '\n' ' ' || true)
 
   if [ -z "$want_rule" ]; then
     if [ "$status" -eq 0 ]; then
@@ -75,7 +75,7 @@ run_hadolint() {
     return
   fi
 
-  if [ "$status" -ne 0 ] && echo "$out" | grep -q "$want_rule"; then
+  if [ "$status" -ne 0 ] && grep -q "$want_rule" <<<"$out"; then
     report "$name" 0
   else
     report "$name" 1 "기대: $want_rule 지적 / 실제 exit=$status, rules=$rules"
@@ -108,7 +108,7 @@ print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misc
     return
   fi
 
-  if echo " $ids " | grep -q " $want_id "; then
+  if grep -q " $want_id " <<<" $ids "; then
     report "$name" 0
   else
     report "$name" 1 "기대: $want_id 탐지 / 실제: ${ids:-(없음)}"

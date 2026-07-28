@@ -122,7 +122,7 @@ if [ -d "$ARCHIVE" ]; then
       fi
     fi
     [ "$count" -le 2 ] && single_round=$((single_round + 1))
-    echo "$name" | grep -qE "$DIR_RE" ||
+    grep -qE "$DIR_RE" <<<"$name" ||
       echo "[WARNING] 아카이브 폴더명이 <YYYYMMDD_HHMMSS> 형식이 아닙니다: $ARCHIVE/$name"
   done < <(find "$ARCHIVE" -mindepth 1 -maxdepth 1 -type d | sort)
 

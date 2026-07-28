@@ -53,15 +53,15 @@ run_kube_linter() {
     if [ "$status" -eq 0 ]; then
       report "$name" 0
     else
-      report "$name" 1 "기대: 지적 0건 / 실제: $(echo "$out" | grep -oE '\(check: [a-z-]+' | sed 's/(check: //' | sort -u | tr '\n' ' ')"
+      report "$name" 1 "기대: 지적 0건 / 실제: $(grep -oE '\(check: [a-z-]+' <<<"$out" | sed 's/(check: //' | sort -u | tr '\n' ' ')"
     fi
     return
   fi
 
-  if [ "$status" -ne 0 ] && echo "$out" | grep -q "(check: $want_check"; then
+  if [ "$status" -ne 0 ] && grep -q "(check: $want_check" <<<"$out"; then
     report "$name" 0
   else
-    report "$name" 1 "기대: '$want_check' 지적 / 실제 exit=$status, checks=$(echo "$out" | grep -oE '\(check: [a-z-]+' | sed 's/(check: //' | sort -u | tr '\n' ' ')"
+    report "$name" 1 "기대: '$want_check' 지적 / 실제 exit=$status, checks=$(grep -oE '\(check: [a-z-]+' <<<"$out" | sed 's/(check: //' | sort -u | tr '\n' ' ')"
   fi
 }
 

@@ -81,7 +81,13 @@ tf_run_tflint() {
   local dir=$1 label=$2 want_fail=$3 want_rule=${4:-}
   local out status
   out=$(tflint --chdir="$dir" 2>&1) && status=0 || status=$?
-  if [ -n "$want_rule" ] && ! echo "$out" | grep -q "$want_rule"; then
+  # `echo "$out" | grep -q` 를 쓰지 않는다. grep 이 첫 매치에서 stdin 을 닫으면 echo 가
+  # SIGPIPE 로 141 을 반환하고, 호출자 스위트의 set -o pipefail 이 그것을 파이프라인
+  # 결과로 채택해 "룰을 찾았는데 못 찾음"으로 뒤집힌다. 현재 tflint 출력은 최대 327바이트라
+  # 파이프 버퍼(64KB) 안에 들어가 발현되지 않지만, 출력이 커지는 순간 조용히 오탐이 된다.
+  # here-string 은 쓰는 쪽 프로세스가 없어 이 함정 자체가 성립하지 않는다.
+  # (아래 checkov 검사가 outfile 을 직접 grep 하는 것과 같은 이유다.)
+  if [ -n "$want_rule" ] && ! grep -q "$want_rule" <<<"$out"; then
     tf_report "$label (tflint)" 1 "기대 룰 '$want_rule' 이 지적되지 않았습니다 (exit=$status)"
     return
   fi
