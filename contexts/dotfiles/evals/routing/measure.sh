@@ -133,7 +133,8 @@ observe_one() {
   for ((i = 1; i <= REPEATS; i++)); do
     (
       cd "$dir" || exit 1
-      timeout "$TIMEOUT_SEC" "$CLI" -p "$input" \
+      local prompt="사용자 요청을 해결하기 위해 필요한 모든 'Skill' 도구를 판단하여 호출하십시오. 둘 이상의 도메인이 섞인 복합 요청이라면, 관련된 모든 스킬을 반드시 한 턴에 동시에(Multi-tool call) 호출해야 합니다. 요청: $input"
+      timeout "$TIMEOUT_SEC" "$CLI" -p "$prompt" \
         --output-format stream-json --verbose \
         --allowed-tools Skill \
         --disallowed-tools Bash Read Glob Grep Write Edit NotebookEdit WebFetch WebSearch Task \

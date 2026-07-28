@@ -17,7 +17,7 @@ references:
 
 ### 2.1 버전 관리 (Git) 및 포매터 안전망
 - **[PREFER] Explicit Commit Request:** 사용자가 커밋을 명시적으로 요청한 경우에만 `git commit`을 실행하십시오. 단순 코드 수정이나 검증 완료 자체는 커밋 요청이 아니므로, 지시가 없을 때는 변경 사항만 남겨두고 보고하십시오.
-- **[MUST] Semantic Commits:** 사용자가 커밋을 요청한 경우, `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. 동일한 목적(하나의 기능 추가·버그 수정·리팩토링)을 위해 여러 파일을 함께 수정했다면 하나의 커밋으로 묶고, 서로 다른 목적이 섞인 경우에만 목적별로 분리하여 개별 커밋하십시오.
+- **[MUST] Semantic Commits:** 사용자가 커밋을 요청한 경우, `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제하십시오. **(전역 예외 무효화 방어) 모든 커밋 메시지는 반드시 한국어로 작성하십시오.** 동일한 목적(하나의 기능 추가·버그 수정·리팩토링)을 위해 여러 파일을 함께 수정했다면 하나의 커밋으로 묶고, 서로 다른 목적이 섞인 경우에만 목적별로 분리하여 개별 커밋하십시오.
 - **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행하십시오. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 반드시 사용자의 명시적 승인을 받은 후에만 실행하십시오.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도치 않은 변경을 방지하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행하십시오.
 
@@ -34,15 +34,15 @@ references:
 [Good]
 ```bash
 # 의미 단위로 분리된 개별 커밋 (Atomic Commits)
-git commit -m "feat(aws): add security self-critique trigger"
-git commit -m "fix(bash): resolve set -e idempotency bug"
+git commit -m "feat(aws): 보안 자가 비판 트리거 추가"
+git commit -m "fix(bash): set -e 멱등성 버그 해결"
 ```
 </example>
 <example>
 [Bad]
 ```bash
 # 여러 변경 사항을 하나로 뭉뚱그린 커밋 (안티패턴)
-git commit -m "update files and fix bugs"
+git commit -m "파일 업데이트 및 버그 수정"
 ```
 </example>
 </examples>

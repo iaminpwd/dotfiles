@@ -1,8 +1,8 @@
 ---
 name: drawio-gen
 description: |
-  아키텍처 다이어그램 생성 스킬. "다이어그램 그려줘", "구성도 만들어줘", "도식화해줘",
-  "시각화해줘", ".drawio 로 정리해줘" 같은 요청에 사용하십시오.
+  인프라 및 시스템 아키텍처 다이어그램 생성(draw.io) 스킬. "다이어그램 그려줘", "구성도 만들어줘", "도식화해줘",
+  "시각화해줘", ".drawio 로 정리해줘", "아키텍처 그려줘" 같은 요청에 반드시 사용하십시오.
   입력은 IaC 코드(Terraform, CloudFormation, Bicep/ARM, Heat HOT) 또는 자연어 아키텍처
   설명(예: "EKS 2개와 NAT Gateway를 쓴다") 둘 다 가능하며,
   AWS · Azure · OpenStack 아키텍처 다이어그램(.drawio XML)을 산출합니다.
