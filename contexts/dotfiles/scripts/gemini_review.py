@@ -128,12 +128,26 @@ def scan_doc_groups() -> Dict[str, Dict[str, str]]:
 
 
 def scan_script_files() -> Dict[str, str]:
-    """쉘 및 파이썬 스크립트를 수집한다. 코퍼스가 작아 그룹 분할 없이 통째로 사용한다."""
-    targets = set(glob.glob("**/*.sh", recursive=True)) | set(glob.glob("contexts/dotfiles/scripts/*.py"))
+    """쉘 및 파이썬 스크립트를 수집한다. 코퍼스가 작아 그룹 분할 없이 통째로 사용한다.
+
+    `**/*.sh` 만으로는 git 훅을 놓친다. 훅은 관례상 확장자가 없어서, 저장소에서 가장
+    보안 민감한 스크립트(pre-commit 의 시크릿 스캔·커밋 차단 로직)가 리뷰 대상 밖에
+    있었다(2026-07-28 실측: 수집 28개 중 git/.githooks/* 2개 누락). pre-flight-check.sh
+    의 validate_shell 이 같은 이유로 '*/.githooks/*' pathspec 을 명시하는 것과 맞춘다.
+    """
+    targets = (set(glob.glob("**/*.sh", recursive=True))
+               | set(glob.glob("contexts/dotfiles/scripts/*.py"))
+               | {p for p in glob.glob("**/.githooks/*", recursive=True) if os.path.isfile(p)})
     files: Dict[str, str] = {}
 
     for path in dedupe_symlinks(sorted(targets)):
         if not os.path.isfile(path):
+            continue
+        # 회귀 테스트 픽스처는 "일부러 결함을 넣은" 파일이라 코드 리뷰 대상이 아니다.
+        # 리뷰어에게 넘기면 의도된 결함을 매번 지적으로 되돌려받아 보고서가 오염된다.
+        # (pre-flight-check.sh 의 trivy 스캔이 --skip-dirs '**/tests/fixtures' 로 같은
+        #  판단을 이미 내려두었다. 두 수집기의 기준을 일치시킨다.)
+        if "/tests/fixtures/" in f"/{path}":
             continue
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -228,6 +242,13 @@ def call_gemini_with_retry(client: Any, model_name: str, prompt: str, label: str
                 contents=prompt,
                 config=types.GenerateContentConfig(temperature=0.2),
             )
+            # 안전 필터 차단이나 MAX_TOKENS 로 후보가 비면 .text 가 None 이다. 그대로
+            # 반환하면 f-string 이 문자열 "None" 을 보고서에 박아 넣어, 검사를 수행했으나
+            # 결과가 없는 것처럼 보인다. 무엇이 비었는지 남기고 재시도 없이 진행한다.
+            if not response.text:
+                print(f"[WARN] {label}: 응답 본문이 비었습니다 (안전 필터 또는 토큰 상한).",
+                      file=sys.stderr, flush=True)
+                return "(이 패스는 응답 본문이 비어 결과를 얻지 못했습니다.)"
             return response.text
         except APIError as e:
             detail = str(e)
@@ -240,6 +261,12 @@ def call_gemini_with_retry(client: Any, model_name: str, prompt: str, label: str
                 raise RuntimeError(
                     f"{label}: 일일 할당량(RPD) 소진으로 판단됩니다. 대기해도 회복되지 않으므로 중단합니다."
                 ) from e
+
+            # 마지막 시도까지 실패했으면 더 기다릴 이유가 없다. 예전에는 여기서도
+            # 대기해서, 실패가 확정된 상태로 최대 270초(CALL_INTERVAL_SEC * MAX_RETRIES)를
+            # 흘려보낸 뒤에야 아래 RuntimeError 로 빠졌다.
+            if attempt == MAX_RETRIES:
+                break
 
             match = RETRY_DELAY_PATTERN.search(detail)
             wait_sec = int(match.group(1)) + 5 if match else CALL_INTERVAL_SEC * attempt

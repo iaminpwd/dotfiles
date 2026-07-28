@@ -109,7 +109,11 @@ def check_daily_plan(gr, doc_groups, script_files) -> int:
         print(f"    요일 {weekday}: 패스 {len(calls)}개  최대 단일 {max(tokens):>7,} tok  "
               f"합계 {sum(tokens):>8,} tok  {labels}")
 
-        has_global = any(label in ("A-1", "A-4", "A-3") for label in labels)
+        # 전역 패스 ID 는 검사 대상 모듈에서 파생시킨다. 예전에는 ("A-1","A-4","A-3") 을
+        # 하드코딩해서, GLOBAL_PASSES 에 패스를 추가해도 이 검사가 그 패스를 모른 채
+        # 계속 통과했다(검사가 대상을 따라가지 않는 드리프트).
+        global_ids = {pass_id for pass_id, _ in gr.GLOBAL_PASSES} | {gr.HANDOFF_PASS[0]}
+        has_global = any(label in global_ids for label in labels)
         expected_global = weekday == gr.GLOBAL_PASS_WEEKDAY
         check(f"요일 {weekday}: 전역 패스 {'포함' if expected_global else '제외'}",
               has_global == expected_global, str(labels))
