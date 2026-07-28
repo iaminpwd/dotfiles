@@ -50,7 +50,7 @@ check_ssot_module_lists() {
     own_prefix=$(basename "$corefile" | grep -oE '^[0-9]{3}' || true)
 
     declared_line=$(grep "공통 자가 비판 절차" "$corefile" || true)
-    declared=$(echo "$declared_line" | grep -oE '\([0-9]{3}(, [0-9]{3})*\)' | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u || true)
+    declared=$(grep -oE '\([0-9]{3}(, [0-9]{3})*\)' <<<"$declared_line" | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u || true)
 
     actual=$(find "$skill_dir/references" -maxdepth 1 -name "*.md" -printf '%f\n' 2>/dev/null |
       grep -oE '^[0-9]{3}' | grep -v "^${own_prefix}$" | sort -u || true)
@@ -71,6 +71,10 @@ check_ssot_module_lists() {
 check_reference_links() {
   echo "--- Step: Reference Link Integrity ---"
   local match f ref
+  # 아래 grep 패턴 주의: 스킬 루트의 role.*.md(agent-handoff 역할 파일)와 scripts/tests
+  # 한 단계 하위 디렉토리(scripts/preflight/*.sh, tests/lib/*.sh)는 예전 패턴이 매칭하지
+  # 못해, 그 경로가 깨져도 검사에 걸리지 않는 사각지대였다(2026-07-28 실측: 문서에
+  # 등장하는 contexts/ 경로 64건 중 63건만 커버). 실재하는 파일 배치를 전부 포함시킨다.
   while IFS= read -r match; do
     [ -z "$match" ] && continue
     f="${match%%:*}"
@@ -79,7 +83,7 @@ check_reference_links() {
       echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
       EXIT_CODE=1
     }
-  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|(scripts|tests)/[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | sort -u || true)
+  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | sort -u || true)
   echo "[INFO] 참조 링크 검사 완료."
 }
 
@@ -100,6 +104,61 @@ check_orphaned_files() {
     done
   done
   echo "[INFO] 고아 파일 검사 완료."
+}
+
+# -----------------------------------------------------------------------------
+# 3b. 문서가 "살아 있는 조항"으로 인용한 조항이 실제 룰북에 존재하는지 검사
+# -----------------------------------------------------------------------------
+check_documented_clause_existence() {
+  echo "--- Step: Documented Clause Existence ---"
+  # contexts/README.md 는 룰북 조항을 코드펜스에 인용해 설계 의도를 설명한다. 그런데
+  # 조항이 룰북에서 삭제되거나 이름이 갈려도 이 인용은 그대로 남아, 문서만 보면 규칙이
+  # 살아 있는 것처럼 보인다. 실제로 커밋 393926b 가 base.AGENTS.md 9장의 자가 진화
+  # 조항 2개를 삭제했는데도 인용 4곳이 전부 통과했고, PostToolUse 훅은 소비처 없는
+  # 로그를 계속 쌓았다(2026-07-28 실측). 기존 검사들은 "파일 경로"만 대조하므로 조항
+  # 단위의 이 드리프트를 구조적으로 잡을 수 없었다.
+  local readme="$CONTEXTS_DIR/README.md"
+  [ -f "$readme" ] || {
+    echo "[INFO] 조항 실재성 검사 건너뜀 (contexts/README.md 없음)."
+    return
+  }
+
+  # 조항명 추출: `- **[MUST] 조항명:**` / `- **[Trigger: ...] 조항명:**` 형태만 정의로 본다.
+  # 조항명은 영숫자로 끝나도록 잡아 뒤따르는 공백을 흡수한다. `Break-Glass (예외 승인)`
+  # 처럼 괄호 주석이 붙는 조항에서 공백이 남으면 원문과 어긋나 오탐이 된다.
+  # PCRE(grep -P)를 쓰지 않는 이유: 코퍼스의 다른 모든 검사가 -E 로 되어 있고, -P 는
+  # macOS/busybox grep 에 없어 이 스크립트에만 이식성 제약을 새로 들이게 된다.
+  local names_file found_file
+  names_file=$(mktemp)
+  found_file=$(mktemp)
+  sed -nE 's/^[[:space:]]*[-*][[:space:]]+\*\*(\[[^]]+\][[:space:]]*)?([A-Za-z][A-Za-z0-9 &'"'"'\/-]*[A-Za-z0-9])[[:space:]]*(\([^)]*\))?[[:space:]]*:\*\*.*/\2/p' \
+    "$readme" | sort -u >"$names_file"
+
+  # 조항마다 grep -r 을 돌리면 코퍼스 트리를 조항 수만큼 훑는다(2026-07-28 실측: 19회
+  # 순회로 린터 전체가 0.35초에서 0.91초로 늘었다). 이 린터는 룰북 .md 를 건드리는 모든
+  # 커밋에서 실행되는 경로이므로, 패턴 파일 1개로 트리를 한 번만 훑어 "실재하는 이름 집합"을
+  # 먼저 만든 뒤 집합 비교로 판정한다.
+  #
+  # 전문을 변수에 모아 `printf ... | grep -q` 로 넘기는 방식은 쓰지 않는다. grep 이 첫
+  # 매치에서 종료하며 stdin 을 닫고, 그 SIGPIPE 로 printf 가 141 을 반환하는데 set -o
+  # pipefail 이 그것을 파이프라인 결과로 채택해 "찾았는데 못 찾음"으로 뒤집힌다
+  # (2026-07-28 실측: 실재하는 조항 20건이 전부 오탐).
+  if [ -s "$names_file" ]; then
+    grep -rhoFf "$names_file" --include="*.md" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
+      sort -u >"$found_file" || true
+
+    local name line_no
+    while IFS= read -r name; do
+      grep -qxF -- "$name" "$found_file" && continue
+      # 행 번호는 실패한 조항에만 되찾는다. 정상 경로에서는 추가 비용이 들지 않는다.
+      line_no=$(grep -nF -- "$name" "$readme" | head -1 | cut -d: -f1)
+      echo "❌ [ERROR] 룰북에 없는 조항을 문서가 인용: $readme:${line_no:-?} -> '$name'" >&2
+      echo "    조항이 삭제·개명되었거나 문서가 낡았습니다. 양쪽을 일치시키십시오." >&2
+      EXIT_CODE=1
+    done <"$names_file"
+  fi
+  rm -f "$names_file" "$found_file"
+  echo "[INFO] 조항 실재성 검사 완료."
 }
 
 # -----------------------------------------------------------------------------
@@ -257,7 +316,7 @@ check_cross_skill_duplication() {
     # set -euo pipefail 하에서 이 대입이 린터 전체를 아무 메시지 없이 exit 1로 중단시킨다
     # (2026-07-27 실측). 카운트 0은 정상 결과이므로 아래 미러링 검사(275행)와 동일하게 흡수한다.
     skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
-    if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && echo "$files" | grep -qE "$CONTEXTS_DIR/(aws|azure)/"; }; then
+    if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
       echo "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
       echo "    ${files//$'\n'/$'\n    '}"
     fi
@@ -303,6 +362,7 @@ main() {
   check_ssot_module_lists
   check_reference_links
   check_orphaned_files
+  check_documented_clause_existence
   check_file_size
   check_vendor_leakage
   check_code_fences

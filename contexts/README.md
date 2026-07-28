@@ -188,7 +188,8 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Bash Idempotency & Safe Appending:** 리소스 중복 생성 방지를 위한 멱등성을 보장하고, 설정 파일 수정 시 반드시 `grep` 등으로 기존 존재 여부를 검증한 후 안전하게 추가(Append)하십시오. (출처: 040-automation-scripting.md)
+- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 파일이나 디렉토리 존재 여부, CLI 도구 설치 여부를 사전에 분기 검증하여 멱등성을 달성하십시오. (출처: aws/references/040-automation-scripting.md)
+- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오. (출처: aws/references/040-automation-scripting.md)
 ```
 
 ### 4.2. Fail-Fast & Safety Boundary (빠른 실패와 안전선 패턴)

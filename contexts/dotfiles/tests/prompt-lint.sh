@@ -97,8 +97,8 @@ check() {
     report "$name" 1 "기대 exit=$want_code / 실제 exit=$code — $(echo "$out" | tail -1)"
     return
   fi
-  if ! echo "$out" | grep -qF "$want_text"; then
-    report "$name" 1 "출력에 '$want_text' 가 없습니다 — $(echo "$out" | grep -E 'ERROR|WARNING' | head -1)"
+  if ! grep -qF "$want_text" <<<"$out"; then
+    report "$name" 1 "출력에 '$want_text' 가 없습니다 — $(grep -E 'ERROR|WARNING' <<<"$out" | head -1)"
     return
   fi
   report "$name" 0
@@ -114,9 +114,9 @@ check_clean() {
     report "$name" 1 "기대 exit=0 / 실제 exit=$code — $(echo "$out" | tail -1)"
     return
   fi
-  hits=$(echo "$out" | grep -cE '\[(ERROR|WARNING)\]' || true)
+  hits=$(grep -cE '\[(ERROR|WARNING)\]' <<<"$out" || true)
   if [ "$hits" -ne 0 ]; then
-    report "$name" 1 "지적 ${hits}건: $(echo "$out" | grep -E '\[(ERROR|WARNING)\]' | head -2 | tr '\n' ' ')"
+    report "$name" 1 "지적 ${hits}건: $(grep -E '\[(ERROR|WARNING)\]' <<<"$out" | head -2 | tr '\n' ' ')"
     return
   fi
   report "$name" 0
@@ -147,6 +147,43 @@ check "fail-ssot-mismatch" 1 "SSOT 모듈 목록 불일치" "$D"
 D=$(new_case fail-broken-link)
 echo "| 없는 모듈 | contexts/demo/references/999-missing.md |" >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link" 1 "깨진 참조 링크" "$D"
+
+# 2b. 깨진 참조 링크(스킬 루트 role.*.md / scripts 하위 디렉토리). 두 배치는 예전
+#     정규식이 매칭하지 못해 경로가 깨져도 조용히 통과했다(2026-07-28 실측).
+D=$(new_case fail-broken-link-nested)
+{
+  echo "| 역할 지침 | contexts/demo/role.missing.md |"
+  echo "| 위임 검증기 | contexts/demo/scripts/preflight/demo-check.sh |"
+} >>"$D/contexts/demo/SKILL.md"
+check "fail-broken-link-nested (role.*.md / scripts 하위)" 1 "깨진 참조 링크" "$D"
+
+# 2c. 룰북에서 삭제된 조항을 contexts/README.md 가 계속 인용. 커밋 393926b 가
+#     base.AGENTS.md 9장의 자가 진화 조항 2개를 지웠는데도 인용 4곳이 전부 통과했던
+#     실측 사건(2026-07-28)을 고정한다.
+D=$(new_case fail-documented-clause-missing)
+cat >"$D/contexts/README.md" <<'EOF'
+# 프롬프트 아키텍처 문서
+
+**적용 사례:**
+```markdown
+- **[Trigger: After Code Change] Ghost Clause Never Defined:** 이 조항은 어떤 룰북에도 없습니다.
+```
+EOF
+check "fail-documented-clause-missing" 1 "룰북에 없는 조항을 문서가 인용" "$D"
+
+# 2d. 위 검사의 오탐 회귀: 실재하는 조항을 인용한 README 는 통과해야 한다.
+#     구현이 `printf | grep -q` 였을 때 SIGPIPE + pipefail 로 실재 조항 20건이 전부
+#     오탐으로 뒤집혔다(2026-07-28 실측).
+D=$(new_case ok-documented-clause-present)
+cat >"$D/contexts/README.md" <<'EOF'
+# 프롬프트 아키텍처 문서
+
+**적용 사례:**
+```markdown
+- **[MUST] Deterministic Output:** 출력은 결정론적이어야 합니다.
+```
+EOF
+check_clean "ok-documented-clause-present (오탐 없음)" "$D"
 
 # 3. 코드펜스 짝 불일치: 여는 펜스만 남긴다.
 D=$(new_case fail-odd-code-fence)
