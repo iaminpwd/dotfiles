@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # agent-handoff 검증기 회귀 테스트
 # 각 케이스는 프로토콜이 실제로 뚫렸던 상태(트리거 미해제, task-id 누락, 왕복 상한
 # 무력화)를 재현한다. handoff-check.sh 를 수정할 때 기존 판정이 조용히 죽지 않는지

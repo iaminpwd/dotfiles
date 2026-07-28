@@ -10,4 +10,21 @@
 # (선두 우선으로 중복을 제거하므로 prepend 의 우선순위 의도도 그대로 유지된다.)
 typeset -U path PATH
 
+# macOS: GNU 툴체인을 BSD 기본 도구보다 앞에 둔다.
+# 이 저장소의 검증기(pre-flight-check.sh, prompt-lint.sh, 회귀 스위트)는 readlink -f,
+# find -printf, sha256sum, sed -i, xargs -r 처럼 GNU 전용 인터페이스를 쓴다. BSD 판으로
+# 하나씩 우회하면 검증 로직을 OS별로 갈라 놓아야 해서, 도구를 맞추는 쪽을 택했다.
+# brew --prefix 호출은 셸이 열릴 때마다 프로세스를 띄우므로 쓰지 않고 경로를 직접 확인한다.
+if [[ "$OSTYPE" == darwin* ]]; then
+  for _brew_prefix in /opt/homebrew /usr/local; do
+    [[ -d "$_brew_prefix/opt" ]] || continue
+    for _gnu_pkg in coreutils gnu-sed findutils grep; do
+      [[ -d "$_brew_prefix/opt/$_gnu_pkg/libexec/gnubin" ]] &&
+        path=("$_brew_prefix/opt/$_gnu_pkg/libexec/gnubin" $path)
+    done
+    break
+  done
+  unset _brew_prefix _gnu_pkg
+fi
+
 export PATH="$HOME/.local/share/mise/shims:$PATH"

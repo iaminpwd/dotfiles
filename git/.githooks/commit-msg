@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # commit-msg 훅: 시맨틱 커밋 컨벤션(feat/fix/docs/... : subject) 강제
 # core.hooksPath로 전역 등록되어 모든 로컬 저장소에 적용된다 (pre-commit과 동일한 연동 방식).
 set -euo pipefail

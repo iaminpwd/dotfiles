@@ -115,15 +115,18 @@ snapshot_tree() {
 
 ZSH_PATH=$(command -v zsh)
 
+# HOME 과 추가 인자를 받는다. dry-run 케이스가 사전 상태 없는 별도 HOME 을 써야 하는데,
+# 호출부마다 서브셸을 새로 여는 것보다 이 하나를 재사용하는 편이 환경 구성이 어긋나지 않는다.
 run_setup() {
-  local logfile=$1
+  local logfile=$1 home=$2
+  shift 2
   (
     cd "$TMPREPO" || exit 1
-    export HOME="$TMPHOME"
+    export HOME="$home"
     export PATH="$MOCKBIN:$PATH"
     export SHELL="$ZSH_PATH" # 값이 일치하면 setup.sh 가 chsh 를 호출하지 않는다
-    export ZSH_CUSTOM="$TMPHOME/.oh-my-zsh/custom"
-    bash "$TMPREPO/setup.sh"
+    export ZSH_CUSTOM="$home/.oh-my-zsh/custom"
+    bash "$TMPREPO/setup.sh" "$@"
   ) >"$logfile" 2>&1 </dev/null
 }
 
@@ -132,7 +135,7 @@ echo "=== setup.sh 멱등성 회귀 테스트 ==="
 for t in stow jq zsh tar sha256sum; do require_tool "$t" || exit 1; done
 
 echo "--- 1회차 실행 ---"
-if run_setup "$TMP/run1.log"; then
+if run_setup "$TMP/run1.log" "$TMPHOME"; then
   report "1회차 exit 0" 0
 else
   report "1회차 exit 0" 1 "마지막 출력: $(tail -3 "$TMP/run1.log" | tr '\n' ' ')"
@@ -145,7 +148,7 @@ HOME_SNAP1=$(snapshot_tree "$TMPHOME")
 REPO_SNAP1=$(snapshot_tree "$TMPREPO")
 
 echo "--- 2회차 실행 (멱등성) ---"
-if run_setup "$TMP/run2.log"; then
+if run_setup "$TMP/run2.log" "$TMPHOME"; then
   report "2회차 exit 0" 0
 else
   report "2회차 exit 0" 1 "마지막 출력: $(tail -3 "$TMP/run2.log" | tr '\n' ' ')"
@@ -261,6 +264,86 @@ if [ -z "$LEAKED" ]; then
   report "네트워크·sudo 경로를 타지 않음" 0
 else
   report "네트워크·sudo 경로를 타지 않음" 1 "호출됨:$LEAKED"
+fi
+
+# --dry-run 계약: 상태를 바꾸는 명령을 하나도 실행하지 않는다. 이 모드가 조용히 무언가를
+# 쓰면 "실행 전에 무엇이 바뀌는지 본다"는 목적 자체가 무너지므로 기계 판정으로 고정한다.
+# 앞선 두 실행과 달리 사전 상태를 전혀 만들지 않은 빈 HOME 을 쓴다. 설치 분기가 전부
+# "아직 없음" 쪽으로 갈라져야 dry-run 이 실제로 막아내는지 확인할 수 있다.
+echo "--- 3회차 실행 (--dry-run, 빈 HOME) ---"
+DRYHOME="$TMP/dryhome"
+mkdir -p "$DRYHOME"
+REPO_SNAP_BEFORE_DRY=$(snapshot_tree "$TMPREPO")
+
+if run_setup "$TMP/run3.log" "$DRYHOME" --dry-run; then
+  report "--dry-run exit 0" 0
+else
+  report "--dry-run exit 0" 1 "마지막 출력: $(tail -3 "$TMP/run3.log" | tr '\n' ' ')"
+fi
+
+DRY_LEFTOVER=$(find "$DRYHOME" -mindepth 1 2>/dev/null | head -3 | tr '\n' ' ')
+if [ -z "$DRY_LEFTOVER" ]; then
+  report "--dry-run 이 HOME 에 아무것도 만들지 않음" 0
+else
+  report "--dry-run 이 HOME 에 아무것도 만들지 않음" 1 "생성됨: $DRY_LEFTOVER"
+fi
+
+if [ "$REPO_SNAP_BEFORE_DRY" = "$(snapshot_tree "$TMPREPO")" ]; then
+  report "--dry-run 이 저장소를 변경하지 않음" 0
+else
+  report "--dry-run 이 저장소를 변경하지 않음" 1 \
+    "차이: $(diff <(echo "$REPO_SNAP_BEFORE_DRY") <(snapshot_tree "$TMPREPO") | grep -E '^[<>]' | head -3 | tr '\n' ' ')"
+fi
+
+# 빈 HOME 이라 설치 분기가 전부 열리는데도 마커가 늘지 않아야 dry-run 이 성립한다.
+DRY_LEAKED=""
+for m in curl sudo chsh; do
+  [ -s "$MARKERS/$m" ] && DRY_LEAKED="$DRY_LEAKED $m($(wc -l <"$MARKERS/$m")회)"
+done
+if [ -z "$DRY_LEAKED" ]; then
+  report "--dry-run 이 네트워크·sudo 를 호출하지 않음" 0
+else
+  report "--dry-run 이 네트워크·sudo 를 호출하지 않음" 1 "호출됨:$DRY_LEAKED"
+fi
+
+# 부트스트랩 이식성 계약: setup.sh 는 macOS 기본 bash(3.2)에서 실행 가능해야 한다.
+# 이 스크립트가 설치해 주는 bash 4 를 스스로 요구하면 사용자가 손으로 brew install bash 를
+# 먼저 쳐야 하는 닭-달걀이 된다. 조항으로만 두면 나중에 mapfile 한 줄로 조용히 깨지므로
+# 기계 판정으로 승격시킨다. 검증기와 훅은 대상이 아니다(bash 설치 이후에 실행된다).
+# 주석 줄은 제외한다: 계약 자체를 설명하는 주석에 금지 문법의 이름이 등장한다.
+# `|| true` 가 필수다: 지적이 0건이면(= 통과 조건) grep 이 1 을 반환하고, pipefail 아래에서
+# 그 실패가 파이프라인 전체의 실패로 올라와 set -e 가 스위트를 통째로 중단시킨다.
+BASH4_HITS=$(grep -nE '^[^#]*(mapfile|readarray|declare -A|local -n|\[\[ -v |\$\{[A-Za-z_]+(\^\^|,,))' \
+  "$REPO_ROOT/setup.sh" | head -3 | tr '\n' ' ' || true)
+if [ -z "$BASH4_HITS" ]; then
+  report "setup.sh 가 bash 4 전용 문법을 쓰지 않음" 0
+else
+  report "setup.sh 가 bash 4 전용 문법을 쓰지 않음" 1 "발견: $BASH4_HITS"
+fi
+
+# 같은 계약의 나머지 절반: GNU 전용 도구는 gnubin 을 PATH 에 얹기 전에 쓰면 안 된다.
+# macOS 의 BSD 판은 readlink 에 -f 가 없고 mktemp 는 템플릿 인자를 요구하므로, 주입 지점
+# 위쪽에서 호출하면 첫 실행이 그대로 실패한다.
+GNUBIN_LINE=$(grep -nm1 'libexec/gnubin' "$REPO_ROOT/setup.sh" | cut -d: -f1 || true)
+if [ -n "$GNUBIN_LINE" ]; then
+  EARLY_GNU=$(head -n "$((GNUBIN_LINE - 1))" "$REPO_ROOT/setup.sh" |
+    grep -nE '^[^#]*(readlink -f|mktemp|-printf|sha256sum)' | head -3 | tr '\n' ' ' || true)
+  if [ -z "$EARLY_GNU" ]; then
+    report "GNU 전용 도구를 gnubin 주입 이전에 쓰지 않음" 0
+  else
+    report "GNU 전용 도구를 gnubin 주입 이전에 쓰지 않음" 1 "발견: $EARLY_GNU"
+  fi
+else
+  report "GNU 전용 도구를 gnubin 주입 이전에 쓰지 않음" 1 "gnubin 주입 블록을 찾지 못했습니다"
+fi
+
+# 알 수 없는 옵션은 조용히 무시되면 안 된다(오타로 --dry-runn 을 치면 실제 실행된다).
+# 옵션 파싱은 스크립트의 첫 실행 구문이라 여기서 exit 하면 어떤 상태도 건드리지 않는다.
+# 그래서 이 케이스만은 목이나 임시 HOME 없이 그대로 호출해도 안전하다.
+if bash "$TMPREPO/setup.sh" --nonexistent-option >/dev/null 2>&1; then
+  report "알 수 없는 옵션에 대해 실행을 거부" 1 "exit 0 으로 통과했습니다"
+else
+  report "알 수 없는 옵션에 대해 실행을 거부" 0
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

@@ -28,7 +28,15 @@ export PATH="$HOME/.local/bin:$PATH"
 export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 
 # 1. 파일/에디터 관련
-alias e='explorer.exe .'
+# explorer.exe 는 WSL 에서만 존재한다. 리눅스 네이티브나 macOS 에서 이 별칭을 그대로 두면
+# 존재하지 않는 명령을 가리켜 command not found 로 끝나므로, 각 환경의 파일 탐색기로 건다.
+if grep -qi microsoft /proc/version 2>/dev/null; then
+  alias e='explorer.exe .'
+elif [[ "$OSTYPE" == darwin* ]]; then
+  alias e='open .'
+elif command -v xdg-open &>/dev/null; then
+  alias e='xdg-open .'
+fi
 alias c='code .'
 alias ll='ls -alF'
 

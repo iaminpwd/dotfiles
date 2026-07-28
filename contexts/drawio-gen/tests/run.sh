@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # drawio-gen 검증기 회귀 테스트
 # 각 픽스처는 규칙이 만들어진 실제 실패 사례를 재현한다. layout_toolkit.validate() 를
 # 수정할 때 기존 검사가 조용히 죽지 않는지 확인하는 것이 목적이다.

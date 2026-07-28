@@ -63,7 +63,11 @@
 ## 설치 가이드
 
 > [!WARNING]
-> **지원 OS**: Ubuntu / Debian 기반 Linux (또는 Windows WSL2 Ubuntu 환경)
+> **지원 OS**: Debian 계열(`apt-get`) · RHEL 계열(`dnf`) · macOS(`brew`)
+> `setup.sh`가 실행 시점에 패키지 매니저를 판별해 분기하며, 지원 목록에 없는 환경에서는 즉시 중단됩니다.
+> 단, **실제 실행 검증은 Ubuntu/WSL2(apt) 경로에서만 이루어졌습니다.** dnf/brew 경로는 구조만 맞춘 미검증 경로이므로, 해당 환경에서 처음 실행할 때는 아래 `--dry-run`으로 계획을 먼저 확인하십시오.
+>
+> **macOS**: 선행 조건은 Homebrew 하나뿐이며 별도 준비물은 없습니다. `setup.sh`는 macOS 기본 bash(3.2)에서 그대로 실행되도록 유지되고(회귀 테스트로 강제), 실행 중에 `bash`·`coreutils`·`gnu-sed`·`findutils`·`grep`을 설치한 뒤 `gnubin`을 PATH 앞에 얹습니다. 검증기와 git 훅은 그 이후에 실행되므로 bash 4+와 GNU 툴체인(`readlink -f`, `find -printf`, `sha256sum`, `sed -i`)을 전제해도 무방합니다.
 > WSL2 사용 시, 반드시 Linux 네이티브 홈 디렉토리(`~/`) 하위에 클론하십시오. `/mnt/c/` 경로에서 실행하면 권한 오류가 발생하며 스크립트가 즉시 종료됩니다.
 
 ### Step 1. 저장소 클론
@@ -74,14 +78,20 @@ cd ~/dotfiles
 
 ### Step 2. 자동 설치 스크립트 실행
 ```bash
+# 무엇이 바뀌는지 먼저 확인 (상태를 전혀 변경하지 않음)
+./setup.sh --dry-run
+
+# 실제 적용
 ./setup.sh
 ```
+
+`--dry-run`은 OS 판별과 조회는 실제 실행과 동일하게 수행하고, 상태를 바꾸는 모든 명령은 `[dry-run]` 접두사가 붙은 계획 출력으로 대체합니다. 처음 쓰는 머신이나 apt 외 환경에서 먼저 돌려보십시오.
 
 스크립트는 다음 6단계를 순차적으로 실행합니다.
 
 | 단계 | 작업 내용 |
 |---|---|
-| **[1/6]** 필수 패키지 & Docker 설치 | `apt`로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine 자동 설치 및 `docker` 그룹 권한 부여 (`fd`는 apt 대신 `mise`로 통합 관리) |
+| **[1/6]** 필수 패키지 & Docker 설치 | 판별된 패키지 매니저(`apt-get`/`dnf`/`brew`)로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine을 **공식 저장소에 등록해** 설치하고 `docker` 그룹 권한 부여 (배포 GPG 키 지문을 상수와 대조하며, 불일치 시 설치 중단. macOS는 Docker Desktop 수동 설치 안내만 출력. `fd`는 시스템 패키지 대신 `mise`로 통합 관리) |
 | **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
 | **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
 | **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 44개 데브옵스 도구 일괄 설치 |
