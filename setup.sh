@@ -4,6 +4,11 @@
 # 오류 시 중단 (파이프라인 오류 및 미선언 변수 참조 포함)
 set -euo pipefail
 
+# 임시 디렉토리 생성 및 스크립트 종료 시(정상/비정상 무관) 자동 정리 (020 룰북 권장)
+SETUP_TMPDIR="/tmp/dotfiles-setup-$$"
+mkdir -p "$SETUP_TMPDIR"
+trap 'rm -rf "$SETUP_TMPDIR"' EXIT
+
 # =============================================================================
 # 부트스트랩 이식성 계약: 이 파일은 bash 3.2 에서 실행 가능해야 한다
 # =============================================================================
@@ -241,7 +246,7 @@ install_docker_debian() {
 
   arch=$(dpkg --print-architecture)
   sudo install -m 0755 -d /etc/apt/keyrings
-  tmp_key=$(mktemp)
+  tmp_key="$SETUP_TMPDIR/docker.asc"
   if ! curl -fsSL "https://download.docker.com/linux/$repo_os/gpg" -o "$tmp_key"; then
     rm -f "$tmp_key"
     echo "❌ 에러: Docker GPG 키 다운로드에 실패했습니다 (네트워크 확인 필요)." >&2
@@ -323,8 +328,7 @@ if [ ! -d "$HOME/.oh-my-zsh" ] && ! plan_only "Oh My Zsh 설치 (unattended)"; t
   # sh -c "$(curl ...)" 형태는 curl이 네트워크 오류로 실패해도 sh -c ""(빈 명령)가 성공으로
   # 처리되어 set -e가 실패를 감지하지 못한다. 다운로드를 별도 임시 파일로 받아 curl의
   # 종료 코드를 직접 검사해야 네트워크 타임아웃 같은 실패를 확실히 잡아낼 수 있다.
-  OMZ_INSTALLER=$(mktemp)
-  trap 'rm -f "$OMZ_INSTALLER"' EXIT
+  OMZ_INSTALLER="$SETUP_TMPDIR/omz_install.sh"
   if ! curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o "$OMZ_INSTALLER"; then
     echo "❌ 에러: Oh My Zsh 설치 스크립트 다운로드에 실패했습니다 (네트워크 확인 필요)." >&2
     exit 1
@@ -391,11 +395,11 @@ for PKG in "${STOW_PKGS[@]}"; do
     # 삭제되는 사고로 이어진다. TARGET의 실제 경로가 소스 파일과 동일하면(이미 올바르게 연결된
     # 상태) 건드리지 않도록 realpath 비교를 추가한다.
     if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(readlink -f "$TARGET")" != "$(readlink -f "$SRC_FILE")" ]; then
-      if plan_only "$TARGET → $TARGET.backup 백업 후 제거 (stow 링크로 교체 대상)"; then
+      if plan_only "$TARGET → $TARGET.backup.$(date +%F) 백업 후 제거 (stow 링크로 교체 대상)"; then
         continue
       fi
       mkdir -p "$(dirname "$TARGET")"
-      cp -n "$TARGET" "$TARGET.backup" 2>/dev/null || true
+      cp -n "$TARGET" "$TARGET.backup.$(date +%F)" 2>/dev/null || true
       rm -f "$TARGET"
     fi
   done < <(find "$DOTFILES_DIR/$PKG" -type f -print0)
@@ -463,7 +467,7 @@ GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 if ! plan_only "$GEMINI_HOOKS 에 편집 이력 훅(agent-edits-log) 병합"; then
   [ -f "$GEMINI_HOOKS" ] || echo '{}' >"$GEMINI_HOOKS"
   if jq empty "$GEMINI_HOOKS" 2>/dev/null; then
-    GEMINI_HOOKS_TMP=$(mktemp)
+    GEMINI_HOOKS_TMP="$SETUP_TMPDIR/gemini_hooks.json"
     jq -s --arg cmd "$HOOK_SCRIPT" \
       '.[0] * (.[1] | .["agent-edits-log"].PostToolUse[0].hooks[0].command = $cmd)' \
       "$GEMINI_HOOKS" "$CONTEXTS_DIR/base.hooks.json" >"$GEMINI_HOOKS_TMP"
@@ -486,7 +490,7 @@ CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 if ! plan_only "$CLAUDE_SETTINGS 에 어트리뷰션 비활성화 및 편집 이력 훅 병합"; then
   [ -f "$CLAUDE_SETTINGS" ] || echo '{}' >"$CLAUDE_SETTINGS"
   if jq empty "$CLAUDE_SETTINGS" 2>/dev/null; then
-    CLAUDE_SETTINGS_TMP=$(mktemp)
+    CLAUDE_SETTINGS_TMP="$SETUP_TMPDIR/claude_settings.json"
     # 어트리뷰션 비활성화와 편집 이력 훅 등록을 함께 반영한다. 훅은 같은 command를 가진 기존
     # 항목을 먼저 제거한 뒤 추가하므로, setup.sh를 여러 번 실행해도 중복 등록되지 않는다.
     jq --arg cmd "$HOOK_SCRIPT" '
@@ -570,7 +574,11 @@ if command -v trufflehog &>/dev/null; then
   # --fail이 없으면 trufflehog는 시크릿을 찾아도 종료 코드 0으로 끝나 아래 || 분기가
   # 도달 불가능한 데드 코드가 되고, 스캔이 결과와 무관하게 항상 통과한다(2026-07-27 실측).
   # git/.githooks/pre-commit 및 pre-flight-check.sh의 trufflehog 호출과 동일하게 --fail을 붙인다.
-  trufflehog filesystem "$DOTFILES_DIR" --exclude-paths="$DOTFILES_DIR/.git" --no-update --fail || echo "⚠️ 경고: 시크릿 유출 의심 내역이 발견되었습니다. 즉시 확인 바랍니다."
+  trufflehog git "file://$DOTFILES_DIR" --no-update --fail || {
+    echo "❌ [Hard Block] 시크릿 유출 의심 내역이 발견되어 즉시 작업을 중단합니다." >&2
+    echo "   유출된 자격 증명을 즉시 파기(Revoke)한 후 Git 히스토리에서 완전히 정리하십시오." >&2
+    exit 1
+  }
 else
   echo "⚠️ trufflehog를 찾을 수 없어 스캔을 건너뜁니다."
 fi

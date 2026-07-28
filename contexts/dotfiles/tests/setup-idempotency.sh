@@ -184,11 +184,12 @@ else
 fi
 
 # 사용자 실파일은 백업된 뒤 링크로 교체되어야 한다.
-if [ -f "$TMPHOME/.zshrc.backup" ] && grep -q "user-owned zshrc" "$TMPHOME/.zshrc.backup" && [ -L "$TMPHOME/.zshrc" ]; then
+BACKUP_FILE=$(find "$TMPHOME" -maxdepth 1 -name ".zshrc.backup.*" 2>/dev/null | head -n 1 || true)
+if [ -n "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ] && grep -q "user-owned zshrc" "$BACKUP_FILE" && [ -L "$TMPHOME/.zshrc" ]; then
   report "충돌하는 사용자 실파일을 백업 후 링크로 교체" 0
 else
   report "충돌하는 사용자 실파일을 백업 후 링크로 교체" 1 \
-    ".zshrc.backup 존재=$([ -f "$TMPHOME/.zshrc.backup" ] && echo Y || echo N), .zshrc 링크=$([ -L "$TMPHOME/.zshrc" ] && echo Y || echo N)"
+    ".zshrc.backup 존재=$([ -n "$BACKUP_FILE" ] && echo Y || echo N), .zshrc 링크=$([ -L "$TMPHOME/.zshrc" ] && echo Y || echo N)"
 fi
 
 # stow 링크가 저장소 사본을 가리켜야 한다.

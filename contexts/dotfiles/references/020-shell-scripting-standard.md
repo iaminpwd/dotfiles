@@ -21,7 +21,6 @@ references:
 - **[MUST] Safe Configuration Appending:** 설정 추가 시 반드시 `grep -q "문자열"`로 중복 여부를 사전 검사하십시오.
 - **[MUST] GNU Stow Parent Directory Creation:** `stow` 명령 실행 전, 링크 대상 경로(Target)의 부모 디렉토리가 존재하는지 사전 검사하고 없을 경우 미리 생성(`mkdir -p`)하십시오.
 - **[MUST] Safe File Backup:** 핵심 설정 덮어쓰기 전 타임스탬프 기반 백업(`cp ~/.zshrc ~/.zshrc.bak.$(date +%F)`)을 생성하십시오.
-- **[MUST] Safe Overwrite With Diff Verification:** 설정 파일 수정 또는 기존 파일 강제 삭제(`rm -f`) 전에, `diff`로 사전 비교하여 유실 위험 설정이 감지될 경우 사용자에게 확인 후 진행하십시오.
 - **[PREFER] User-Level Isolation:** 시스템 권한 대신 `~/.local/bin` 기반의 User-Level 격리 설치를 최우선 제안하십시오.
 - **[PREFER] Temporary File Cleanup:** `/tmp` 임시 파일은 스크립트 종료 시(SIGINT 등) 자동 정리되도록 `trap 'rm -rf /tmp/xxx' EXIT` 로직을 구현하십시오.
 - **[MUST] Safe Variable Quoting:** 모든 셸 변수 참조는 반드시 큰따옴표로 감싸십시오. (예: `"$variable"`)
