@@ -25,7 +25,7 @@ Magnum K8s 클러스터 설계 및 Helm 오케스트레이션 적용 표준임.
 - **[MUST] LB & Storage Integration:** Service `type=LoadBalancer`는 Octavia로, PVC는 Cinder CSI(`cinder.csi.openstack.org`)로 프로비저닝되도록 스토리지 클래스를 구성할 것.
 
 ### 2.2 공통 K8s 코어 룰 참조
-- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 홈 디렉토리($HOME) 내에 기 설정된 `~/dotfiles/contexts/k8s/SKILL.md` 파일을 절대 경로로 조립하여 먼저 읽고(View), 그 안에 명시된 라우팅 가이드에 따라 `references/` 하위의 적절한 코어 룰을 참조할 것.
+- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 시스템에 기 등록된 `k8s` 스킬(SKILL.md)을 먼저 읽고(View), 그 안에 명시된 라우팅 가이드에 따라 `references/` 하위의 적절한 코어 룰을 참조할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

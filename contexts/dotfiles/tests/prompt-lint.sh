@@ -15,8 +15,7 @@
 set -euo pipefail
 export QUIET=0
 
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LINT="$TESTS_DIR/../scripts/prompt-lint.sh"
+LINT="prompt-lint.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0

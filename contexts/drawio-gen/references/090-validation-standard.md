@@ -29,10 +29,10 @@ missing = [(c.get("id"), a, c.get(a)) for c in cells for a in ("source", "target
 assert not missing, f"끊어진 참조: {missing}"
 ```
 
-- **[PREFER]** 위 스니펫을 매번 새로 타이핑하는 대신 `~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py`의 `validate(path)`를 호출할 것. 동일한 1~3 검증에 더해 형제 노드 간 사각형 겹침 검사(015)와 **컨테이너 색상 팔레트 준수 검사(010 §4)**까지 한 번에 수행함. 색상 검사는 swimlane 컨테이너의 `strokeColor`가 010 §4 표에 정의된 값 목록에 있는지 기계적으로 대조하며, VPC/Subnet 등에 팔레트에 없는 임의 색상(예: `#8C4FFF`)을 쓰는 것을 사람이 매번 표와 대조하지 않아도 자동으로 잡아냅니다.
+- **[PREFER]** 위 스니펫을 매번 새로 타이핑하는 대신 `layout_toolkit.py`의 `validate(path)`를 호출할 것. 동일한 1~3 검증에 더해 형제 노드 간 사각형 겹침 검사(015)와 **컨테이너 색상 팔레트 준수 검사(010 §4)**까지 한 번에 수행함. 색상 검사는 swimlane 컨테이너의 `strokeColor`가 010 §4 표에 정의된 값 목록에 있는지 기계적으로 대조하며, VPC/Subnet 등에 팔레트에 없는 임의 색상(예: `#8C4FFF`)을 쓰는 것을 사람이 매번 표와 대조하지 않아도 자동으로 잡아냅니다.
 
 ```bash
-python3 ~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}
+layout_toolkit.py {파일경로}
 # 종료 코드가 판정임: 0=통과, 1=위반. 미리보기 PNG 는 matplotlib 이 있을 때만 함께
 # 생성되며, 없으면 [INFO] 안내 후 검증만 수행합니다(판정에는 영향 없음).
 ```
@@ -40,7 +40,7 @@ python3 ~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}
 - **[MUST] 검증기를 수정하면 회귀 테스트를 먼저 통과시키십시오**: `layout_toolkit.py`의 `validate()`를 고칠 때는 아래를 실행해 기존 검사가 조용히 죽지 않았는지 확인할 것. 각 픽스처는 이 문서와 010의 규칙이 만들어진 실제 실패 사례를 재현함. 새 검사를 추가하면 그 검사를 유발하는 픽스처와 `run.sh`의 기대 결과도 함께 추가할 것.
 
 ```bash
-bash ~/dotfiles/contexts/drawio-gen/tests/run.sh
+bash contexts/drawio-gen/tests/run.sh
 ```
 
 ## 3. 레이아웃 품질 검증 (겹침/정렬/여백)

@@ -16,7 +16,7 @@ references:
 
 - **[MUST] 고유 규칙 집중:** 에이전트가 수행할 도메인 특화 핵심 동작만 추가할 것.
 - **[MUST] 삭제 판정:** 기존 조항을 검토할 때 "이 문장을 지우면 에이전트가 다르게 행동하는가"를 물으십시오. 답이 '아니오'인 조항은 삭제할 것.
-- **[MUST] 참조 구현 준수:** `contexts/drawio-gen`이 기준 사례임. 검증기는 `~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py`의 `validate()`, 픽스처는 `tests/fixtures/`, 기대 결과 대조는 `tests/run.sh`입니다. 새 검증 로직을 추가할 때는 이 구조를 그대로 따르십시오.
+- **[MUST] 참조 구현 준수:** `contexts/drawio-gen`이 기준 사례임. 검증기는 `layout_toolkit.py`의 `validate()`, 픽스처는 `tests/fixtures/`, 기대 결과 대조는 `tests/run.sh`입니다. 새 검증 로직을 추가할 때는 이 구조를 그대로 따르십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -36,8 +36,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 조항 본문에는 판정 기준만 남아 있어야 합니다.
-- **[MUST] 검증 도구 매핑:** `contexts/dotfiles/scripts/prompt-lint.sh`로 코퍼스 정합성을 확인하고, 검증기를 수정한 경우 해당 스킬의 회귀 테스트(예: `~/dotfiles/contexts/drawio-gen/tests/run.sh`)를 실행할 것. 변경된 스킬의 회귀 테스트는 `pre-commit` 훅이 자동 선택 실행함.
+- **[MUST] 커밋 전 린트 통과 (Pre-Commit Lint):** `050-prompt-engineering-standard.md` 의 제약 사항을 자동 검증하기 위해, 변경된 모든 프롬프트 파일은 터미널에서 `prompt-lint.sh` 명령어를 통과해야 커밋할 수 있습니다. 수동으로 `prompt-lint.sh` 명령어를 실행하여 린트 오류(예: 누락된 `<self_critique>`, 크기 초과, SSOT 목록 불일치)를 사전에 수정할 것. 변경된 스킬의 회귀 테스트는 `pre-commit` 훅이 자동 선택 실행함.
 - **[MUST] 조항 품질은 사람이 판정:** 조항 리뷰는 사람이 직접 수행할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

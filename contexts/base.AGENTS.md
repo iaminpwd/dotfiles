@@ -107,7 +107,7 @@ priority: highest
 - **[MUST] Pre-Commit Gate:** 커밋 전 모든 검증(lint 등) pass 필수.
 
 ## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
-- **[Trigger: After Code Change] Provenance Logging:** 변경 후 `~/dotfiles/contexts/dotfiles/scripts/log-edit.sh`를 실행하여 수동 근거 기록.
-- **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 `~/dotfiles/contexts/dotfiles/scripts/prompt-flywheel.sh`로 룰 개정안 역제안.
+- **[Trigger: After Code Change] Provenance Logging:** 변경 후 터미널에서 `log-edit.sh` 명령어를 실행하여 수동 근거 기록.
+- **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 터미널에서 `prompt-flywheel.sh` 명령어로 룰 개정안 역제안.
 - **[MUST] Code Execution & Safety Boundaries:** 로직 검증 시 스크립트 실행을 통한 물리적 팩트 검증 필수.
 - **[MUST] Eval-Driven Testing:** 핵심 로직 개발 시 자동 검증 가능한 테스트 스크립트 작성.

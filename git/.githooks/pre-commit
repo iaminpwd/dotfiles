@@ -161,7 +161,7 @@ fi
 # 기계적 강제가 없어, 사람이 직접 .md 를 고치면 SSOT 목록 불일치·깨진 참조 링크가
 # 검증 없이 커밋될 수 있었다. 이 훅은 전역 등록이라 무관한 저장소에서도 실행되므로,
 # 해당 저장소 안에 린터가 실재할 때만 동작시킨다(dotfiles 저장소에서만 참).
-PROMPT_LINT="$REPO_ROOT/contexts/dotfiles/scripts/prompt-lint.sh"
+PROMPT_LINT="$REPO_ROOT/contexts/scripts/prompt-lint.sh"
 if [ -f "$PROMPT_LINT" ]; then
   for FILE in "${STAGED_FILES[@]:-}"; do
     case "$FILE" in

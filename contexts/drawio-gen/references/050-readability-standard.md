@@ -7,7 +7,7 @@ references:
 ---
 # 다이어그램 가독성 표준 (Reader-Facing Readability)
 
-015가 "박스가 겹치지 않게"(배치 정합성)를 다룬다면, 본 모듈은 **다이어그램을 처음 보는 사람이 의미를 즉시 파악**하도록 만드는 규칙임. 메커니즘은 전부 `~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py`에 구현되어 있으니 매번 새로 짜는 대신 헬퍼를 호출할 것.
+015가 "박스가 겹치지 않게"(배치 정합성)를 다룬다면, 본 모듈은 **다이어그램을 처음 보는 사람이 의미를 즉시 파악**하도록 만드는 규칙임. 메커니즘은 전부 `layout_toolkit.py`에 구현되어 있으니 매번 새로 짜는 대신 헬퍼를 호출할 것.
 
 ## 1. 범례(Legend) 필수
 
@@ -55,7 +55,7 @@ d.legend("lg", 1560, 40, [
   1. 다이어그램에 등장한 모든 색·선 종류가 범례에 1:1로 설명되어 있음
   2. 캔버스 좌상단에 제목+범위 블록이 존재함
   3. `render_preview()` PNG를 Read로 열어 범례가 컨테이너와 겹치지 않고, 라벨이 옆 아이콘을 침범하지 않음을 육안 확인
-- **[MUST] 검증 도구 매핑:** `python3 ~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py {파일경로}`로 `validate()`(겹침/팔레트/라벨폭)를 돌리고, 생성된 `-preview.png`를 육안 확인할 것.
+- **[MUST] 검증 도구 매핑:** `layout_toolkit.py {파일경로}`로 `validate()`(겹침/팔레트/라벨폭)를 돌리고, 생성된 `-preview.png`를 육안 확인할 것.
 
 ## 6. 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 

@@ -14,7 +14,7 @@ references:
 
 ## 1. 공용 툴킷 사용
 
-- **[MUST] 공용 툴킷 재사용**: 아래 원칙을 매번 새로 구현하는 대신 `~/dotfiles/contexts/drawio-gen/scripts/layout_toolkit.py`를 `import`해서 쓰십시오. `grid()`/`hstack()`/`vstack()`/`offset_by_header()`/`subnet_box_size()`가 이미 구현되어 있고, `validate(path)`가 090 검증(ID 중복/끊어진 참조) + 형제 노드 겹침 검사를 한 번에 수행함.
+- **[MUST] 공용 툴킷 재사용**: 아래 원칙을 매번 새로 구현하는 대신 `layout_toolkit.py`를 `import`해서 쓰십시오. `grid()`/`hstack()`/`vstack()`/`offset_by_header()`/`subnet_box_size()`가 이미 구현되어 있고, `validate(path)`가 090 검증(ID 중복/끊어진 참조) + 형제 노드 겹침 검사를 한 번에 수행함.
 
 ## 2. 컨테이너 크기 및 정렬
 

@@ -541,7 +541,7 @@ step5_deploy_agent_rules() {
   # hooks.json의 command는 절대 경로만 허용되어 사용자 홈 경로에 종속되므로, 심볼릭 링크 대신
   # 템플릿의 __HOOK_SCRIPT__를 실제 경로로 치환해 생성한다. 사용자가 /hooks로 추가한 다른 훅을
   # 보존하기 위해 덮어쓰기 대신 훅 이름 기준으로 병합한다.
-  HOOK_SCRIPT="$CONTEXTS_DIR/dotfiles/scripts/agent-edits-hook.sh"
+  HOOK_SCRIPT="$CONTEXTS_DIR/scripts/agent-edits-hook.sh"
   GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
   # JSON 병합은 파일을 직접 쓰므로 dry-run 에서는 블록 전체를 건너뛴다.
   if ! plan_only "$GEMINI_HOOKS 에 편집 이력 훅(agent-edits-log) 병합"; then
@@ -590,6 +590,35 @@ step5_deploy_agent_rules() {
       echo "   ⚠️ $CLAUDE_SETTINGS 파일이 유효한 JSON이 아니어서 어트리뷰션 설정을 건너뜁니다. 파일을 직접 수정한 뒤 setup.sh를 다시 실행하세요."
     fi
   fi
+
+  # 전역 에이전트 스크립트들을 ~/.local/bin/ 에 심볼릭 링크로 꽂아 넣기 (PATH 주입)
+  echo "=> [AI Global Scripts] 에이전트 실행 스크립트들을 ~/.local/bin/ 경로에 심볼릭 링크 주입 중..."
+  run mkdir -p "$HOME/.local/bin"
+
+  # Bash 4 의 declare -A 없이 POSIX 호환으로 이름 충돌(Naming Collision)을 검사한다.
+  if ! find "$CONTEXTS_DIR" -type f -executable -path "*/scripts/*" 2>/dev/null | awk -F/ '
+  {
+      name = $NF
+      if (seen[name] != "") {
+          print "   ❌ [FATAL] 스크립트 이름 충돌 감지! '" name "' 파일이 여러 곳에 존재합니다:" > "/dev/stderr"
+          print "      1. " seen[name] > "/dev/stderr"
+          print "      2. " $0 > "/dev/stderr"
+          err = 1
+      }
+      seen[name] = $0
+  }
+  END { exit err }
+  '; then
+    echo "   ❌ 에이전트 스크립트 이름은 글로벌하게 고유해야 합니다(예: k8s-check.sh). 중복을 해결한 뒤 다시 시도해 주세요." >&2
+    exit 1
+  fi
+
+  while IFS= read -r script_path; do
+    [ -n "$script_path" ] || continue
+    script_name=$(basename "$script_path")
+    run ln -sfn "$script_path" "$HOME/.local/bin/$script_name"
+  done < <(find "$CONTEXTS_DIR" -type f -executable -path "*/scripts/*" 2>/dev/null)
+  ok "모든 에이전트 스크립트 PATH 주입 완료 (~/.local/bin/)"
 
   # 모든 컨텍스트 디렉토리 스캔 및 각 AI 에이전트 글로벌 스킬 등록
   echo "=> [AI Global Rules] 각 AI 에이전트 글로벌 스킬 등록 중..."

@@ -64,7 +64,7 @@ lifecycle:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] Observability Delegation:** SLI/SLO, 알람 설계, 로깅, 분산 추적의 검증 기준은 `050-observability-standard` 모듈을 참조하여 위임할 것.
-- **[MUST] 검증기 수정 시 회귀 테스트 선통과:** 위 두 스크립트의 K8s 관련 로직을 고칠 때는 `bash ~/dotfiles/contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. 각 픽스처는 본 문서의 조항 하나씩을 재현합니다(예: `fail-privileged.yaml`은 4절 중단 조건, `fail-unset-resources.yaml`은 2.2절 QoS). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
+- **[MUST] 검증기 수정 시 회귀 테스트 선통과:** 위 두 스크립트의 K8s 관련 로직을 고칠 때는 `bash contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. 각 픽스처는 본 문서의 조항 하나씩을 재현합니다(예: `fail-privileged.yaml`은 4절 중단 조건, `fail-unset-resources.yaml`은 2.2절 QoS). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언할 것. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재함.)

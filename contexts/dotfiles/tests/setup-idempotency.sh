@@ -211,7 +211,7 @@ else
 fi
 
 # JSON 병합은 여러 번 실행해도 훅이 중복 등록되지 않아야 한다(setup.sh 주석이 명시한 계약).
-HOOK_CMD="$TMPREPO/contexts/dotfiles/scripts/agent-edits-hook.sh"
+HOOK_CMD="$TMPREPO/contexts/scripts/agent-edits-hook.sh"
 CLAUDE_DUP=$(jq --arg c "$HOOK_CMD" '[.hooks.PostToolUse[] | select(([.hooks[].command] | index($c)) != null)] | length' "$TMPHOME/.claude/settings.json")
 if [ "$CLAUDE_DUP" = "1" ]; then
   report "클로드 편집 이력 훅이 중복 등록되지 않음" 0

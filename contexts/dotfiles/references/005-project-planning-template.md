@@ -28,7 +28,7 @@ references:
 - **[MUST] 재배포 필요 여부를 성공 기준에 포함:** 복사본 배포 대상을 수정하는 계획이면 `setup.sh` 재실행과 배포본 대조(`diff`)를 5번 섹션의 검증 항목으로 반드시 넣으십시오.
 
 ### 2.2 룰북 정합성 연쇄 영향
-- **[MUST] `references/` 신설 시 3개 파일을 한 묶음으로 지시:** 새 `NNN-*.md` 를 추가하는 계획은 아래 세 가지를 모두 4번 섹션에 포함해야 합니다. 하나라도 빠지면 `contexts/dotfiles/scripts/prompt-lint.sh` 가 실패하거나 경고를 냅니다.
+- **[MUST] `references/` 신설 시 3개 파일을 한 묶음으로 지시:** 새 `NNN-*.md` 를 추가하는 계획은 아래 세 가지를 모두 4번 섹션에 포함해야 합니다. 하나라도 빠지면 `prompt-lint.sh` 명령어가 실패하거나 경고를 냅니다.
   1. 새 모듈 파일 자체
   2. 같은 스킬 `SKILL.md` 의 라우팅 테이블 행 (누락 시 `check_orphaned_files()` WARNING)
   3. 해당 스킬 코어 모듈의 자가 비판 SSOT 모듈 번호 목록 (누락 시 `check_ssot_module_lists()` ERROR)

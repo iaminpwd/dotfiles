@@ -21,7 +21,7 @@ description: |
 | 스토리지 (PVC/PV) 및 StatefulSet | references/030-storage-stateful-standard.md |
 | CI/CD, GitOps (ArgoCD, Flux) | references/040-cicd-gitops-standard.md |
 | Prometheus Operator CRD 수집 문법 (ServiceMonitor 등) | references/050-observability-standard.md |
-| SLI/SLO, 알람 설계, 로깅, 분산 추적 등 관측성 일반 원칙 | `~/dotfiles/contexts/observability/SKILL.md` (별도 스킬) |
+| SLI/SLO, 알람 설계, 로깅, 분산 추적 등 관측성 일반 원칙 | `observability 스킬(SKILL.md)` (별도 스킬) |
 | 오토스케일링 (HPA, VPA) 및 FinOps | references/060-autoscaling-finops-standard.md |
 | 클러스터 보안 (RBAC, OPA, NetworkPolicy) | references/070-advanced-security-standard.md |
 | 플랫폼 엔지니어링, 멀티테넌시 | references/080-platform-engineering-standard.md |

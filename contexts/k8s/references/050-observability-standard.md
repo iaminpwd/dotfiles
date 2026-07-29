@@ -8,7 +8,7 @@ references:
 ---
 # 컨텍스트 모듈: Kubernetes Prometheus Operator 수집 표준
 
-본 모듈은 K8s 클러스터 내부의 Prometheus Operator CRD 기반 메트릭 수집 문법에만 집중하는 K8s 고유 표준임. SLI/SLO, RED/USE, 카디널리티, 구조화 로깅, 분산 추적 등 클라우드/K8s 공통 관측성 원칙은 `observability` 스킬(`~/dotfiles/contexts/observability/SKILL.md`)을 참조할 것.
+본 모듈은 K8s 클러스터 내부의 Prometheus Operator CRD 기반 메트릭 수집 문법에만 집중하는 K8s 고유 표준임. SLI/SLO, RED/USE, 카디널리티, 구조화 로깅, 분산 추적 등 클라우드/K8s 공통 관측성 원칙은 `observability` 스킬(`observability 스킬(SKILL.md)`)을 참조할 것.
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Observability Delegation:** SLI/SLO, 알람 설계, 로깅, 분산 추적 등 관측성 일반 원칙은 `observability` 스킬로 검증을 위임하고, 본 모듈은 K8s 네이티브 CRD 문법만 다루십시오.

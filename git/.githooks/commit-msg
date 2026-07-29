@@ -54,10 +54,10 @@ fi
 
 # Atomic Commit Analyzer
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-LINT_SCRIPT="$REPO_ROOT/contexts/dotfiles/scripts/semantic-commit-lint.sh"
+LINT_SCRIPT="$REPO_ROOT/contexts/scripts/semantic-commit-lint.sh"
 
 if [ ! -f "$LINT_SCRIPT" ]; then
-  LINT_SCRIPT="$HOME/dotfiles/contexts/dotfiles/scripts/semantic-commit-lint.sh"
+  LINT_SCRIPT="$HOME/dotfiles/contexts/scripts/semantic-commit-lint.sh"
 fi
 
 if [ -f "$LINT_SCRIPT" ]; then

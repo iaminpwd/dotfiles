@@ -107,7 +107,10 @@ EMPTY_REPO="$TMP/empty"
 mkdir -p "$EMPTY_REPO"
 git -C "$EMPTY_REPO" init -q
 CODE=0
-OUT=$( (cd "$EMPTY_REPO" && HOME="$TMP" bash "$RUNNER") 2>&1) || CODE=$?
+# compact-runner.sh 는 이제 command -v 로 글로벌 명령어를 탐색한다. HOME 만 바꾸면
+# PATH 에서 pre-flight-check.sh 를 찾아내 SCRIPTS 가 채워진다. PATH 를 최소화해
+# 글로벌 명령어도 찾히지 않게 만들어야 진짜 0건 시나리오를 재현할 수 있다.
+OUT=$( (cd "$EMPTY_REPO" && HOME="$TMP" PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
 if [ "$CODE" -eq 1 ] && grep -qF "실행할 검증 스크립트를 찾지 못했습니다" <<<"$OUT"; then
   report "대상 0건이면 실패 처리" 0
 else

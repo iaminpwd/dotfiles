@@ -37,16 +37,14 @@ done
 if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   # 인자가 없으면 디폴트로 저장소 내 모든 테스트 및 pre-flight 스캔 수집
   # 1. 공통 필수: pre-flight-check.sh (어느 환경에서든 실행)
-  PRE_FLIGHT_PATH="$HOME/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh"
-  if [ -f "$PRE_FLIGHT_PATH" ]; then
-    SCRIPTS+=("$PRE_FLIGHT_PATH")
+  if command -v pre-flight-check.sh >/dev/null 2>&1; then
+    SCRIPTS+=("pre-flight-check.sh")
   fi
 
   # 2. dotfiles 저장소인 경우 예외적으로 prompt-lint.sh 추가
   if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
-    PROMPT_LINT="$REPO_ROOT/contexts/dotfiles/scripts/prompt-lint.sh"
-    if [ -f "$PROMPT_LINT" ]; then
-      SCRIPTS+=("$PROMPT_LINT")
+    if command -v prompt-lint.sh >/dev/null 2>&1; then
+      SCRIPTS+=("prompt-lint.sh")
     fi
   fi
 
@@ -74,10 +72,16 @@ for script in "${SCRIPTS[@]}"; do
   SCRIPT_NAME="${SCRIPT_NAME#"$HOME"/}"
 
   rc=0
-  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
-    bash "$script" "${PFC_ARGS[@]}" >"$TMP_OUT" 2>&1 || rc=$?
+  if [ -f "$script" ]; then
+    CMD=(bash "$script")
   else
-    bash "$script" >"$TMP_OUT" 2>&1 || rc=$?
+    CMD=("$script")
+  fi
+
+  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
+    "${CMD[@]}" "${PFC_ARGS[@]}" >"$TMP_OUT" 2>&1 || rc=$?
+  else
+    "${CMD[@]}" >"$TMP_OUT" 2>&1 || rc=$?
   fi
 
   if [ "$rc" -eq 0 ]; then

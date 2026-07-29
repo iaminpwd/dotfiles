@@ -11,7 +11,7 @@ description: |
 
 ## 1. 정량적 일괄 검증 파이프라인 (Automated Validation)
 
-- **[MUST] 정본 절대 경로 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `bash ~/dotfiles/contexts/pre-flight-check/scripts/PRE_FLIGHT_PLACEHOLDER --pfc-args="--changed"`를 실행하여 검증을 통합 수행할 것. `--changed` 는 스테이징 여부와 무관하게 방금 수정한 변경분 전부(staged + unstaged + untracked)를 대상으로 삼습니다.
+- **[MUST] 정본 글로벌 명령어 단일 실행:** 인프라 및 스크립트 코드가 수정된 후, 검증 대상 저장소 안에서 `pre-flight-check.sh --pfc-args="--changed"`를 실행하여 검증을 통합 수행할 것. `--changed` 는 스테이징 여부와 무관하게 방금 수정한 변경분 전부(staged + unstaged + untracked)를 대상으로 삼습니다.
   *   **[MUST] 검증 범위 선택:** 인자를 생략하면 스테이징된 변경분만 검사합니다(커밋 훅과 동일한 기본값). 저장소 전체 회귀 검사는 `--pfc-args="--all"`, 특정 경로만 지정하려면 `--pfc-args="<경로>"` 를 사용할 것. 존재하지 않는 경로나 알 수 없는 옵션을 주면 검증 0건으로 통과하지 않고 즉시 실패함. 단, `terraform fmt`/`terraform validate` 는 디렉토리 단위로 동작하므로 경로 지정은 "검증을 켤지"의 게이트일 뿐 Terraform 스캔 범위를 좁히지 못함.
   *   **[MUST] 캐시 동작:** Terraform 검증 캐시는 Git 인덱스 기준 해시로만 성립하므로 기본(staged) 모드에서만 활성화됨. `--changed`/`--all`/경로 지정 모드는 매번 전체 검증을 수행함.
   *   위 단일 실행으로 포맷(fmt), 유효성(validate), 정적 분석(tflint), 보안/시크릿 스캔(trivy/trufflehog) 및 **비용 분석(infracost breakdown 기반 Extended Support 연장 요금 검증)** 등이 일괄 수행됨.

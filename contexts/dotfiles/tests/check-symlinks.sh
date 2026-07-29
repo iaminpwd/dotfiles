@@ -4,4 +4,4 @@
 set -euo pipefail
 
 echo "Running broken-symlink-detector..."
-bash "$(dirname "${BASH_SOURCE[0]}")/../scripts/broken-symlink-detector.sh"
+broken-symlink-detector.sh
