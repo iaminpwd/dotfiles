@@ -64,8 +64,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 6개 섹션이 모두 채워져 있고, 2번 섹션의 모든 경로가 `test -f` 로 확인되었으며, 5번 섹션의 명령이 계획서가 아닌 대상 파일을 조회합니다.
-- **[MUST] 검증 도구 매핑:** `contexts/dotfiles/scripts/prompt-lint.sh` 로 코퍼스 정합성을, `shellcheck` 과 `pre-flight-check.sh` 로 스크립트 변경을 검증하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Publishing Plan] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (경로 실재): 계획서에 등장하는 모든 파일 경로를 실제로 조회해 확인했는가?

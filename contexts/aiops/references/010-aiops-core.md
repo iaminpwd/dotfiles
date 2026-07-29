@@ -37,7 +37,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 파이프라인의 입출력이 기계적으로 검증되고, 멱등성이 확보된 코드만이 배포 대상 형상으로 식별되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `tflint` 및 `shellcheck`를 사용하여 작성된 자동화 파이프라인 매니페스트와 스크립트를 정적 검사하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 - **[MUST] 산출물 검증은 도메인 스킬에 위임:** 본 스킬에는 `tests/` 회귀 픽스처를 두지 않습니다. 에러 버짓 판단이나 배포 동결 권고처럼 aiops 고유 조항은 pass/fail로 고정할 결정적 출력이 없기 때문입니다. 대신 산출물의 종류에 따라 검증 경로를 나누십시오. Terraform은 `aws`/`azure`/`openstack` 스킬의 `tests/run.sh`, 쉘 스크립트는 `pre-flight-check`의 `validate_shell`, K8s 매니페스트는 `k8s` 스킬의 `tests/run.sh`가 각각 담당합니다. 검증 자산이 없다는 이유로 정적 검사를 필수적으로 수행하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

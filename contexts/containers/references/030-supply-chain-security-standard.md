@@ -47,8 +47,7 @@ docker push myapp:latest
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** SBOM 파일이 생성되어 아티팩트로 보관되고, CRITICAL 취약점 없이 이미지 서명이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `syft`, `trivy image`, `grype`, `cosign verify`를 실행하여 SBOM/취약점/서명 상태를 각각 팩트로 확인하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** 빌드된 이미지에 대해서는 `syft`, `trivy image`, `grype`, `cosign verify`를 수동으로 실행하여 SBOM/취약점/서명 상태를 각각 팩트로 확인하십시오. 그 외 구성 파일 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Image Pushed to Registry] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (추적성): SBOM이 생성되어 이미지의 구성 요소가 완전히 추적 가능한가?

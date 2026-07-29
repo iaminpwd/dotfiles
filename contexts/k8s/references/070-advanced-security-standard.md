@@ -56,8 +56,7 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `trivy`를 통한 취약점 스캔 분석 결과가 에러 없이 출력되고, 발견된 위반 내역과 조치 권고가 포함된 `security-audit-report.md` 작성이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 커밋 시점에는 존재하지 않는 대상(빌드된 컨테이너 이미지, 실제 배포된 클러스터 상태)을 스캔해야 할 때는 `trivy image` 또는 `trivy k8s`를 CI/배포 파이프라인 단계에서 실행하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** 커밋 시점에는 존재하지 않는 대상(빌드된 컨테이너 이미지, 실제 배포된 클러스터 상태)을 스캔해야 할 때는 `trivy image` 또는 `trivy k8s`를 파이프라인 단계에서 실행하십시오. 자동화된 매니페스트 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Code Review / Security Scan] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (컨테이너 격리성): 컨테이너가 Root 권한 없이 가동되며 기본 OS Capability가 완벽하게 드롭(`drop: [ALL]`)되었는가?

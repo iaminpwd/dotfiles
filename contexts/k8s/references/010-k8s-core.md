@@ -64,7 +64,7 @@ lifecycle:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] Observability Delegation:** SLI/SLO, 알람 설계, 로깅, 분산 추적의 검증 기준은 `050-observability-standard` 모듈을 참조하여 위임하십시오.
-- **[MUST] 검증 도구 매핑:** 매니페스트와 Helm Chart는 `pre-flight-check` 스킬로 정량 검증하십시오. 범용 검증(`helm lint`, `kube-linter lint`, `kubectl --dry-run`)은 `pre-flight-check.sh`가, K8s 특화 검증(Kyverno 정책 테스트, `promtool check rules`, 폐기 API 탐지)은 `k8s-check.sh`가 담당합니다. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** 위 두 스크립트의 K8s 관련 로직을 고칠 때는 `bash ~/dotfiles/contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인하십시오. 각 픽스처는 본 문서의 조항 하나씩을 재현합니다(예: `fail-privileged.yaml`은 4절 중단 조건, `fail-unset-resources.yaml`은 2.2절 QoS). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

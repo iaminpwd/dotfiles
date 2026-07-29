@@ -58,8 +58,7 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 로컬 배포 테스트 시 `kubectl diff` 또는 `helm diff`가 정상 출력되어 파급 효과가 팩트로 증명되고, 배포 결과가 `k8s-deployment-report.md`에 결함 없이 작성되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `actionlint`를 활용하여 워크플로우 문법을 사전 검증하고, `git diff`를 실행하여 변경 분을 기계적으로 추출하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** `git diff`를 실행하여 변경 분을 기계적으로 추출하십시오. 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Manual Apply] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (안전성): 배포 실패 시 서비스 지연 없이 즉각 자동 롤백(Automated Rollback)되는 구조가 결합되었는가?

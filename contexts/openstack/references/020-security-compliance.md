@@ -47,8 +47,7 @@ password = "SuperSecret123!"
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 모든 자격 증명 노출 위반 검사가 무결하게 통과되고, Keystone 역할 범위가 승인된 프로젝트/도메인으로 격리되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `trufflehog`를 사용하여 코드 내 시크릿 노출 여부를 자동 검사하고, `checkov` 또는 `tfsec`을 이용하여 보안 규칙 위반을 사전 스캔하십시오. 역할 할당을 신규 작성하거나 변경한 경우, `openstack role assignment list --names`로 의도치 않은 광역/도메인 스코프 부여 여부를 추가로 검증하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** 역할 할당을 신규 작성하거나 변경한 경우, `openstack role assignment list --names`로 의도치 않은 광역/도메인 스코프 부여 여부를 추가 검증하십시오. 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오. 단, `checkov` 스캔 결과 수정이 불가능한 항목은 반드시 `#checkov:skip` 주석과 근거를 명시하여 예외 처리하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: RBAC Policy Created] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (최소 권한): 역할 할당이 도메인/전역 스코프가 아닌 프로젝트 스코프로 한정되어 권한 상승(Privilege Escalation) 가능성이 차단되었는가?

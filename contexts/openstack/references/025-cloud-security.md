@@ -44,8 +44,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `pre-flight-check.sh` 스캔을 통해 탐지된 네트워크 취약점이나 노출 포트가 무결하게 해결되어야 합니다. 포트 추가/삭제, 보안 그룹 신규 생성 등 중대한 변경이 발생할 경우에만 완화 내역을 포함한 `security-audit-report.md`를 작성하십시오.
-- **[MUST] 검증 도구 매핑:** `tfsec` 또는 `checkov`를 사용하여 IaC 파일 내의 보안 그룹 광대역 오픈 및 암호화 누락을 자동 스캔하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오. 단, `checkov` 스캔 결과 수정이 불가능한 항목은 반드시 `#checkov:skip` 주석과 근거를 명시하여 예외 처리하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Network Rule Modified] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 모든 타겟 포트 인그레스가 `0.0.0.0/0` 없이 VPN 대역 또는 원격 보안 그룹으로만 격리되었는가?

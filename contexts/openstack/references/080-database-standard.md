@@ -45,8 +45,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** DB IaC 파일 내에 볼륨 암호화 옵션과 백업 정책이 누락 없이 선언되고, 보안 그룹 규칙 상 DB 포트가 전면 개방되지 않았음이 린팅 도구를 통해 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `tflint` 또는 `checkov`로 DB 관련 IaC 파일의 암호화 미설정 및 백업 정책 누락을 자동 스캔하고, DB 인바운드 보안 그룹 소스가 특정 Web/WAS 보안 그룹으로만 제한되어 있는지 확인하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** DB 인바운드 보안 그룹 소스가 특정 Web/WAS 보안 그룹으로만 제한되어 있는지 확인하십시오. 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오. 단, `checkov` 스캔 결과 수정이 불가능한 항목은 반드시 `#checkov:skip` 주석과 근거를 명시하여 예외 처리하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Schema Modified] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (락 리스크 최소화): DDL 쿼리가 프로덕션 테이블 전체에 Table Lock을 유발하여 API 장애를 일으킬 가능성이 없는가?

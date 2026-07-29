@@ -44,8 +44,7 @@ ENTRYPOINT ["/app/server"]
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 이미지 내 셸에서 `whoami`가 비루트 사용자로 출력되고, 불필요한 setuid 바이너리가 존재하지 않아야 합니다.
-- **[MUST] 검증 도구 매핑:** `dive <image>`를 실행하여 레이어별 파일 변경 내역과 낭비된 공간(Wasted Space)을 점검하고, `pre-flight-check.sh`의 `trivy` misconfig 스캔으로 하드닝 규정 위반(`USER` 누락 = `DS-0002`)을 확인하십시오. misconfig 결과는 커밋을 차단하지 않으므로, 스캔 출력을 직접 읽어 `DS-0002` 유무를 확인하기 전에는 하드닝이 검증됐다고 보고을(를) 엄격히 제한하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
-
+- **[MUST] 검증 도구 매핑:** `dive <image>`로 레이어 낭비를 점검하십시오. 자동 검증 스캔 출력을 직접 읽어 `DS-0002`(`USER` 누락) 위반 유무를 확인하기 전에는 하드닝 통과 보고를 엄격히 제한하십시오. 전체 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Image Hardened] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (권한 격리): 최종 이미지가 비루트 고정 UID로 실행되도록 강제되었는가?
