@@ -38,7 +38,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 에러를 해결하기 위해 수정한 스크립트나 설정 파일이 `shellcheck` 검사를 통과하고, 2회 이상 반복 실행 시 동일한 결과를 보여주는 멱등성이 확보되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `[ -L <symlink> ]` 등을 통해 심볼릭 링크의 유효성을 개별 검사하십시오. 자동화된 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Error Resolved] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (멱등성 보존): 수정 사항이 기존의 멱등성(Idempotency)을 파괴하지 않고, 영구적이고 선언적인 해결책으로 구현되었는가?

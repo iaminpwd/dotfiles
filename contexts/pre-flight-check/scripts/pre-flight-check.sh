@@ -245,6 +245,15 @@ validate_terraform() {
     else
       log_info "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
     fi
+
+    if [ -x "$HOME/dotfiles/contexts/pre-flight-check/scripts/db-sg-checker.sh" ]; then
+      log_info "Running DB SG architecture check..."
+      if ! bash "$HOME/dotfiles/contexts/pre-flight-check/scripts/db-sg-checker.sh" .; then
+        echo "❌ [ERROR] DB 보안 그룹 아키텍처 위반(Web/WAS SG 미지정)으로 커밋이 차단되었습니다." >&2
+        return 1
+      fi
+    fi
+
     log_info "[SUCCESS] Terraform validation passed."
   fi
 }

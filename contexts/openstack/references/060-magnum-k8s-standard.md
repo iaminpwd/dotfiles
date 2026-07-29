@@ -41,7 +41,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 생성될 K8s 매니페스트/Helm 차트 린트가 경고 없이 패스되고, API 리소스 스키마가 대상 클러스터 K8s 버전에 유효함이 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 클러스터 생성 전 `openstack coe cluster template list`로 규격을 대조하며 참조하는 리소스의 실존 여부를 사전 확인하십시오. 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Cluster Config Proposed] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (워크로드 권한 격리): 노드 전역 자격 대신 Application Credential 기반 `cloud.conf`가 클러스터 단위로 매핑되었는가?

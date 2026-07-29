@@ -46,7 +46,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** CI/CD 파이프라인 구문 검증이 에러 없이 패스되고, 컨트롤플레인 변경 시 사전 백업 증적과 `db-migration-plan.md`가 유효하게 작성되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `openstack compute service list` 등으로 배포 결과를 확인하십시오. 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Monitoring/Upgrade Configured] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (알람 피로 방지): 정상적인 스파이크성 트래픽으로 인한 오탐(False Alarm) 피로가 배제되었는가?

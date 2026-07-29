@@ -44,7 +44,7 @@ ENTRYPOINT ["/app/server"]
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 이미지 내 셸에서 `whoami`가 비루트 사용자로 출력되고, 불필요한 setuid 바이너리가 존재하지 않아야 합니다.
-- **[MUST] 검증 도구 매핑:** `dive <image>`로 레이어 낭비를 점검하십시오. 자동 검증 스캔 출력을 직접 읽어 `DS-0002`(`USER` 누락) 위반 유무를 확인하기 전에는 하드닝 통과 보고를 엄격히 제한하십시오. 전체 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 컨테이너 이미지와 Dockerfile의 하드닝 상태는 `bash ~/dotfiles/contexts/containers/scripts/container-hardening-gate.sh <대상>` 명령을 통해 자동 판정하십시오. 전체 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Image Hardened] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (권한 격리): 최종 이미지가 비루트 고정 UID로 실행되도록 강제되었는가?
