@@ -12,7 +12,7 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[PREFER] Mise First:** CLI 도구(`kubectl`, `terraform` 등) 관리 시 시스템 전역 설치 대신, 자유로운 버전 스왑이 가능한 `mise`를 최우선으로 제안할 것.
-- **[MUST] Global Config Path (SSOT 위치):** mise 도구 선언은 저장소의 `mise/.config/mise/config.toml`(stow 연결 후 `~/.config/mise/config.toml`)에만 기재할 것. 이 경로여야 `$HOME` 밖 저장소에서도 도구가 해석되어 `pre-flight-check.sh`의 `has_tool()`이 검증을 실제로 수행함.
+- **[MUST] Global Config Path (SSOT 위치):** mise 도구 선언은 저장소의 `mise/.config/mise/config.toml`(stow 연결 후 `~/.config/mise/config.toml`)에만 기재할 것. 이 경로여야 `$HOME` 밖 저장소에서도 도구가 해석되어 `compact-runner.sh`의 `has_tool()`이 검증을 실제로 수행함.
 - **[MUST] Pipx via Mise (SSOT):** 파이썬 기반 글로벌 도구(`checkov`, `trufflehog` 등)는 터미널에서 `pipx install`로 직접 설치하는 대신, `config.toml` 파일 내부에 `"pipx:<tool_name>" = "<version>"` 구문으로 선언하여 단일 진실 공급원(SSOT)을 유지할 것.
 - **[MUST] Explicit Version Pinning:** 멱등성 보장을 위해 `config.toml` 설정 파일에 명확한 특정 버전을 명시할 것.
 

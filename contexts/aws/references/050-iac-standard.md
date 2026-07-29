@@ -62,9 +62,7 @@ terraform {
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `terraform plan`이 에러 없이 출력되고 변경 대상 리소스 구성이 명확히 검증되며, `Pre-Flight Check`(`pre-flight-check.sh`)를 통과한 상태여야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제) 단, `checkov` 스캔 결과 수정이 불가능한 항목은 반드시 `#checkov:skip` 주석과 근거를 명시하여 예외 처리할 것.
-- **[MUST] 검증기 수정 시 회귀 테스트 선통과:** `pre-flight-check.sh`의 Terraform 검증 로직을 고칠 때는 `bash ~/dotfiles/contexts/aws/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. 각 픽스처는 조항 하나씩을 재현합니다(예: `fail-open-ssh`는 4절 SSH 개방 중단 조건, `fail-unpinned-version`은 2.1절 Version Pinning). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
+- **[MUST] 완료 조건 (Done when):** `terraform plan`이 에러 없이 출력되고 변경 대상 리소스 구성이 명확히 검증되어야 합니다.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Terraform Apply] 사전 조치 및 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 먼저 실행할 것.

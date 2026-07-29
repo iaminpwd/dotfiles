@@ -41,7 +41,6 @@ Magnum K8s 클러스터 설계 및 Helm 오케스트레이션 적용 표준임.
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 생성될 K8s 매니페스트/Helm 차트 린트가 경고 없이 패스되고, API 리소스 스키마가 대상 클러스터 K8s 버전에 유효함이 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Cluster Config Proposed] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (워크로드 권한 격리): 노드 전역 자격 대신 Application Credential 기반 `cloud.conf`가 클러스터 단위로 매핑되었는가?

@@ -45,7 +45,6 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** DB IaC 파일 내에 볼륨 암호화 옵션과 백업 정책이 누락 없이 선언되고, 보안 그룹 규칙 상 DB 포트가 전면 개방되지 않았음이 린팅 도구를 통해 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제) 단, `checkov` 스캔 결과 수정이 불가능한 항목은 반드시 `#checkov:skip` 주석과 근거를 명시하여 예외 처리할 것.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Schema Modified] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (락 리스크 최소화): DDL 쿼리가 프로덕션 테이블 전체에 Table Lock을 유발하여 API 장애를 일으킬 가능성이 없는가?

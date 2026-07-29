@@ -56,7 +56,6 @@ groups:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** Alerting Rule이 PromQL/쿼리 문법 오류 없이 검증되고, 모든 Critical 알람에 런북 링크가 포함되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Alerting Rule Authored] 점검 기준 (절차는 010-observability-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (알람 최적화): 정상 스파이크(배치/배포)로 인한 오탐이 억제되었는가?

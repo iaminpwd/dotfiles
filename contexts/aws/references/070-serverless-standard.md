@@ -59,7 +59,6 @@ resource "aws_lambda_function_event_invoke_config" "example" {
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** AWS SAM CLI를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`sam local invoke` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Serverless Deployed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (오류 격리): 비동기 이벤트 처리 실패 시 Dead Letter Queue (DLQ)로 자동 격리(On-Failure)되는 경로가 설정되었는가?

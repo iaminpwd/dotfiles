@@ -75,7 +75,7 @@ priority: highest
 ## 6. 자율 주행 및 안전장치 (Autonomous Operations & Safety)
 - **[MUST] Tool Availability Gate:** CLI 도구 실행 전 설치 여부 확인. 미설치 시 즉시 작업 중단(Halt & Clarify) 후 설치 요구.
 - **[MUST] Permission Boundary:** 로컬 권한 필요 시 최소 경로 권한만 요청.
-- **[MUST] Pre-Flight Gate:** 인프라 코드/스크립트 수정 후 도메인 무관 `pre-flight-check` 정량 검증 필수 수행.
+- **[MUST] Pre-Flight Gate:** 인프라 코드/스크립트 수정 후 도메인 무관 `pre-flight-check` 스킬(`compact-runner.sh`)을 호출하여 정량 검증 필수 수행.
 
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 일괄 완성 요구 시 중간 질문 생략, 단 한 번에 최종 산출물 출력.
 - **[Trigger: User Message Contains '빠름'] Fast-Path Mode:** '빠름' 포함 시 즉시 작업 수행 및 자동화 정량 검증만으로 완료 조건 구성.

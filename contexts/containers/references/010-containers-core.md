@@ -51,7 +51,6 @@ CMD ["node", "index.js"]
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** Dockerfile 검증 로직을 고칠 때는 `bash ~/dotfiles/contexts/containers/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. 각 픽스처는 조항 하나씩을 재현합니다(예: `fail-unpinned-base.Dockerfile`은 2.1절 Pinned Versions, `fail-root-user.Dockerfile`은 020 4절 중단 조건). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

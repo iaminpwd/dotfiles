@@ -47,7 +47,6 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 verified/unverified 합계 0건으로 통과되고, 자격 증명은 저장소 바깥의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에만 존재하여 `git status`에 나타나지 않음이 확인되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Commit / File Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시크릿 격리): AWS Access Key, PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되지 않았는가?

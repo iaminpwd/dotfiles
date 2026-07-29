@@ -440,6 +440,50 @@ run ~/.local/bin/mise trust "$HOME/.config/mise/config.toml" || true
 run ~/.local/bin/mise install -y
 run ~/.local/bin/mise ls
 
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+if command -v tflint &>/dev/null && command -v jq &>/dev/null; then
+  if ! plan_only "tflint 플러그인(AWS, Azure, GCP) 최신 버전 갱신 및 초기화"; then
+    TFLINT_HCL="$DOTFILES_DIR/tflint/.tflint.hcl"
+    mkdir -p "$(dirname "$TFLINT_HCL")"
+
+    if [ ! -f "$TFLINT_HCL" ]; then
+      echo "   => GitHub API에서 tflint 플러그인 최신 릴리즈 조회 중..."
+      AWS_LATEST=$(curl -sS https://api.github.com/repos/terraform-linters/tflint-ruleset-aws/releases/latest 2>/dev/null | jq -r '.tag_name' | sed 's/^v//' || true)
+      AZURE_LATEST=$(curl -sS https://api.github.com/repos/terraform-linters/tflint-ruleset-azurerm/releases/latest 2>/dev/null | jq -r '.tag_name' | sed 's/^v//' || true)
+      GCP_LATEST=$(curl -sS https://api.github.com/repos/terraform-linters/tflint-ruleset-google/releases/latest 2>/dev/null | jq -r '.tag_name' | sed 's/^v//' || true)
+
+      if [ -n "$AWS_LATEST" ] && [ "$AWS_LATEST" != "null" ] && [ -n "$AZURE_LATEST" ] && [ "$AZURE_LATEST" != "null" ] && [ -n "$GCP_LATEST" ] && [ "$GCP_LATEST" != "null" ]; then
+        echo "[+] tflint 글로벌 플러그인 초기화 중... (AWS: $AWS_LATEST, Azure: $AZURE_LATEST, GCP: $GCP_LATEST)"
+        cat <<EOF >"$TFLINT_HCL"
+plugin "aws" {
+  enabled = true
+  version = "${AWS_LATEST}"
+  source  = "github.com/terraform-linters/tflint-ruleset-aws"
+}
+
+plugin "azurerm" {
+  enabled = true
+  version = "${AZURE_LATEST}"
+  source  = "github.com/terraform-linters/tflint-ruleset-azurerm"
+}
+
+plugin "google" {
+  enabled = true
+  version = "${GCP_LATEST}"
+  source  = "github.com/terraform-linters/tflint-ruleset-google"
+}
+EOF
+        echo "   ✅ .tflint.hcl 플러그인 버전을 최신(AWS: ${AWS_LATEST}, Azure: ${AZURE_LATEST}, GCP: ${GCP_LATEST})으로 생성했습니다."
+      else
+        echo "   ⚠️ GitHub API 연동 실패로 기본 tflint 플러그인 구성을 생성하지 못했습니다."
+      fi
+    fi
+    run tflint --init || echo "tflint --init 실패"
+  fi
+else
+  echo "   ⏭️ tflint나 jq가 아직 설치되지 않아 초기화를 건너뜁니다."
+fi
+
 echo "[+] Helm 플러그인 설치 중 (helm-diff)..."
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 # helm 자체가 위 mise install 로 들어오므로, dry-run 이나 설치 실패 시에는 존재하지 않는다.

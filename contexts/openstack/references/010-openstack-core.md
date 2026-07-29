@@ -22,7 +22,6 @@ references:
 - **[PREFER] Information Foraging:** 리소스 ID(network, subnet, router 등)는 반드시 터미널에서 `openstack network list`, `openstack server list` 등 OpenStackClient(`openstack`) API로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보할 것.
 - **[MUST] Explicit Naming:** 리소스 구조를 예시로 들 때는 `prd-web-net`, `router-ext-gw`처럼 직관적이고 구체적인 네이밍만 엄수할 것.
 - **[MUST] Respect Constraints:** 사용자가 특정 기술(예: Nova VM 직접 구성)을 명시적으로 요구한 경우 이를 최우선 반영하되, 관리형 대안은 참고 제안으로만 덧붙이십시오.
-- **[MUST] Targeted Infrastructure Execution:** `terraform fmt`나 Heat 템플릿 검증 도구 실행 시 의도치 않은 정확한 갱신을 보장하기 위해 반드시 단일 타겟 파일명을 명시할 것.
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 네트워크 구조, Keystone 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (메타데이터 수정, 변수명 변경 등 단순 변경은 생략 가능)

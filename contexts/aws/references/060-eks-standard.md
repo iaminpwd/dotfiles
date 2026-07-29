@@ -40,7 +40,6 @@ EKS 클러스터 설계 및 Helm 오케스트레이션 표준임.
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 생성될 K8s 매니페스트 파일이나 Helm 차트의 린트 검사가 경고 없이 패스되고, API 리소스 스키마가 대상 EKS 버전에 유효함이 검증되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: EKS Config Proposed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (워크로드 권한 격리): 노드 인스턴스 프로파일 대신 Pod Identity(또는 교차 계정 시 IRSA)가 개별 파드 계정 단위로 완벽히 매핑되었는가?

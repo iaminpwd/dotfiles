@@ -49,7 +49,6 @@ git commit -m "파일 업데이트 및 버그 수정"
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 사용자가 커밋을 요청한 경우에 한해, 커밋 전 `TruffleHog` 시크릿 스캔이 통과되고 목적 단위로 분리된 시맨틱 커밋이 생성되어야 합니다. 커밋 요청이 없는 작업은 파일 수정과 검증 통과만으로 완료로 간주할 것.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Commit] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**

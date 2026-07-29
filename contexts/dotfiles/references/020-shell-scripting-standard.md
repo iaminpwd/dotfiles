@@ -12,7 +12,7 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Bash Strict Mode:** 스크립트 최상단에 반드시 `set -euo pipefail`을 선언할 것.
-- **[MUST] Explicit Idempotency:** 스크립트 작성 시 멱등성을 보장할 것. (위반 시 `pre-flight-check.sh`가 경고함)
+- **[MUST] Explicit Idempotency:** 스크립트 작성 시 멱등성을 보장할 것. (위반 시 `compact-runner.sh`가 경고함)
 - **[MUST] Symlink Awareness (GNU Stow):** `stow` 심볼릭 링크 구조를 존중하여, 반드시 `~/dotfiles/zsh/.zshrc` 등 원본(Source) 파일만을 조작할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -50,7 +50,6 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 스크립트가 2회 연속 실행 시 동일한 결과를 생성하며, `shellcheck` 검사를 경고 없이 통과해야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Bash Script Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (Fail-Fast 보장): 에러 발생 시 스크립트가 즉시 중단되며, `set -euo pipefail`이 선언되었는가?

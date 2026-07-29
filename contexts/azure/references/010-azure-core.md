@@ -22,7 +22,6 @@ Azure 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임
 - **[PREFER] Information Foraging:** 리소스 ID(VNet, Subnet 등)는 반드시 터미널에서 `az network` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보할 것. 실제 Azure API 조회 결과(팩트)를 동적으로 참조하여 기재할 것.
 - **[MUST] Explicit Naming:** 아키텍처나 리소스 구조를 예시로 들 때는 `deployment-app`, `vnet-peering-hub-spoke` 처럼 직관적이고 구체적인 네이밍만 엄수할 것.
 - **[MUST] Respect Constraints:** 사용자가 특정 기술(예: VM)을 명시적으로 요구한 경우 이를 최우선으로 반영하되, 관리형 대안은 참고 제안으로만 덧붙이십시오.
-- **[MUST] Targeted Infrastructure Execution:** `terraform fmt`와 같은 인프라 포매팅 도구 실행 시 의도치 않은 정확한 갱신을 보장하기 위해 반드시 단일 타겟 파일명을 명시할 것.
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 모든 Azure 인프라 코드를 설계하거나 작성하기 전, 네트워크 구조, RBAC 역할, NSG, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)

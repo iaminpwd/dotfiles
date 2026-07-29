@@ -33,7 +33,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `pre-flight-check.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
+- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `compact-runner.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
 ```
 
 ### 1.3. Planning (계획 수립)
@@ -49,7 +49,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **이론:** 여러 개의 각기 다른 페르소나를 가진 에이전트들이 서로 핑퐁(토론 및 비판)하며 최적해를 도출하는 기법.
 
 **통합 워크스페이스 적용 사례:**
-현재 이 패턴은 단일 에이전트 내 역할 분리 수준까지만 적용되어 있습니다. 도메인별 `SKILL.md`가 서로 다른 `role`(예: `Senior Cloud Architect`, `Senior Prompt Architect`)을 선언해 작업 맥락마다 페르소나를 교체하지만, 복수 에이전트가 서로를 비판하는 핑퐁 루프는 구현하지 않았습니다. 검증은 에이전트 토론 대신 기계적 게이트(`pre-flight-check.sh`, 스킬별 회귀 픽스처)에 위임하는 설계 선택입니다.
+현재 이 패턴은 단일 에이전트 내 역할 분리 수준까지만 적용되어 있습니다. 도메인별 `SKILL.md`가 서로 다른 `role`(예: `Senior Cloud Architect`, `Senior Prompt Architect`)을 선언해 작업 맥락마다 페르소나를 교체하지만, 복수 에이전트가 서로를 비판하는 핑퐁 루프는 구현하지 않았습니다. 검증은 에이전트 토론 대신 기계적 게이트(`compact-runner.sh`, 스킬별 회귀 픽스처)에 위임하는 설계 선택입니다.
 
 ---
 

@@ -218,7 +218,7 @@ validate_terraform() {
 
     if has_tool tflint; then
       log_info "Running tflint..."
-      if [ -f ".tflint.hcl" ]; then
+      if [ -f ".tflint.hcl" ] || [ -f "$HOME/.tflint.hcl" ]; then
         tflint --init || true
       fi
       if ! tflint; then

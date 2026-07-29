@@ -51,7 +51,6 @@ image: myregistry.example.com/payment-api:latest
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 배포 매니페스트에 가변 태그(`latest` 등)가 없고, 레지스트리 GC 정책 코드에 릴리즈 태그 보호 예외가 명시되어야 합니다.
-- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Registry Policy Proposed] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (불변성): 프로덕션 배포 경로 어디에도 가변 태그가 남아있지 않은가?
