@@ -45,19 +45,29 @@ PFC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 source "$PFC_SCRIPT_DIR/lib/tool-probe.sh"
 
 calculate_tf_hash() {
-  # main()에서 1회만 판정한 Git 저장소 여부 및 스테이징 .tf 목록을 재사용 (중복 git 호출 제거)
+  # 이 해시는 Git 인덱스(스테이징 영역)에 기록된 블롭 SHA로만 계산된다. 따라서 워킹트리를
+  # 대상으로 삼는 --changed/--all/파일 지정 모드에서는 대표성이 없다. 인덱스가 그대로인 채
+  # 워킹트리만 고치면 해시가 불변이고, untracked 파일은 인덱스에 없어 빈 입력의 상수 해시가
+  # 나온다. 그 상태로 캐시를 쓰면 첫 통과 이후 워킹트리를 어떻게 망가뜨려도 캐시 히트로
+  # fmt/validate/tflint 가 통째로 건너뛰어진다(거짓 통과). 그래서 staged 모드에서만 켠다.
+  if [ "$GLOBAL_CACHE_ENABLED" -ne 1 ]; then
+    echo "disabled"
+    return
+  fi
+
+  # main()에서 1회만 판정한 Git 저장소 여부 및 대상 .tf 목록을 재사용 (중복 git 호출 제거)
   if [ "$GLOBAL_IS_GIT_REPO" -ne 1 ]; then
     echo "non-git"
     return
   fi
 
-  if [ "${#GLOBAL_STAGED_TF_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_STAGED_TF_FILES[0]}" ]; then
+  if [ "${#GLOBAL_TARGET_TF_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_TARGET_TF_FILES[0]}" ]; then
     echo "empty"
     return
   fi
 
   # Git Index(스테이징 영역)에 기록된 파일 오브젝트들의 SHA-1 해시 목록을 종합하여 대표 해시 생성
-  git ls-files --stage "${GLOBAL_STAGED_TF_FILES[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
+  git ls-files --stage "${GLOBAL_TARGET_TF_FILES[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
 # -----------------------------------------------------------------------------
@@ -66,17 +76,15 @@ calculate_tf_hash() {
 
 # 1. Shell Script Validation
 validate_shell() {
-  # 스테이징된(Staged) .sh/.zsh 파일만 검사 (validate_terraform과 동일한 패턴).
+  # main()이 수집한 검증 대상 중 .sh/.zsh 파일만 검사한다(기본 모드는 스테이징된 변경분).
   # 저장소 전체를 스캔하면 이번 커밋과 무관한 기존 파일의 포맷 문제로도 커밋이
-  # 막히므로, 실제로 이번에 add/copy/modify된 파일로 범위를 한정한다.
+  # 막히므로, 대상 수집 단계에서 정해진 범위 밖으로 넓히지 않는다.
   # Git 훅 스크립트(pre-commit 등)는 관례상 확장자가 없으므로 */.githooks/* 경로도 함께 포함한다.
   # .zshrc/.zshenv 도 확장자가 없어 '*.zsh' 글롭에 걸리지 않는다. 020-shell-scripting-standard.md
   # 가 명시적으로 관장하는 파일인데도 예전 pathspec 에 없어서, 이 저장소의 zsh 설정 2개가
   # 검증에서 통째로 빠져 있었다(2026-07-28 실측: 스테이징해도 매칭 0건).
   local shell_files=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t shell_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.sh' '*.zsh' '*.zshrc' '*.zshenv' '*/.githooks/*' 2>/dev/null)
-  fi
+  mapfile -d '' -t shell_files < <(filter_target_files '*.sh' '*.zsh' '*.zshrc' '*.zshenv' '*/.githooks/*')
 
   if [ "${#shell_files[@]}" -eq 0 ] || [ -z "${shell_files[0]}" ]; then
     log_info "--- Step: Shell Script Validation ---"
@@ -169,19 +177,19 @@ validate_shell() {
 
 # 2. Terraform Validation
 validate_terraform() {
-  # 스테이징된(Staged) .tf 파일만 검사 (validate_shell 등 나머지 검증 함수와 동일한 패턴).
-  # 저장소 전체를 스캔하면 이번 커밋과 무관한 기존 .tf 파일 문제로도 커밋이 막히므로,
-  # main()에서 1회만 조회한 스테이징 목록을 재사용한다.
-  local tf_files=("${GLOBAL_STAGED_TF_FILES[@]}")
+  # main()이 수집한 검증 대상 중 .tf 파일만 검사한다(기본 모드는 스테이징된 변경분).
+  # 단, 아래 terraform fmt/validate 는 파일 단위가 아니라 디렉토리 단위로 동작하므로,
+  # 이 목록은 "검증을 켤지"를 정하는 게이트이고 스캔 범위 자체를 좁히지는 못한다.
+  local tf_files=("${GLOBAL_TARGET_TF_FILES[@]}")
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     log_info "--- Step: Terraform Validation ---"
 
-    # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
+    # 스테이징 영역 캐시 확인 (staged 모드 전용. 워킹트리 모드에서는 GLOBAL_CACHE_ENABLED=0)
     if [ "$GLOBAL_TF_HASH" = "empty" ]; then
       log_info "[INFO] No staged Terraform changes detected. Skipping Terraform validation (Cache hit - empty)."
       return 0
-    elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+    elif [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
       log_info "[INFO] Staged Terraform configuration is unchanged. Skipping Terraform validation (Cache hit)."
       return 0
     fi
@@ -247,9 +255,7 @@ validate_sam() {
   # 있는 경우 검증이 통째로 무력화된다. 다른 검증 함수와 동일하게 스테이징된 파일 목록을
   # git pathspec으로 조회해 위치에 무관하게 찾는다.
   local sam_templates=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t sam_templates < <(git diff --cached --name-only -z --diff-filter=ACM -- '*template.yaml' '*template.yml' 2>/dev/null)
-  fi
+  mapfile -d '' -t sam_templates < <(filter_target_files '*template.yaml' '*template.yml')
 
   if [ "${#sam_templates[@]}" -eq 0 ] || [ -z "${sam_templates[0]}" ]; then
     return 0
@@ -276,9 +282,7 @@ validate_sam() {
 # 3b. Azure Bicep Validation (3. AWS SAM 과 같은 계열: 클라우드 네이티브 템플릿)
 validate_bicep() {
   local bicep_files=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t bicep_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.bicep' 2>/dev/null)
-  fi
+  mapfile -d '' -t bicep_files < <(filter_target_files '*.bicep')
 
   if [ "${#bicep_files[@]}" -eq 0 ] || [ -z "${bicep_files[0]}" ]; then
     return 0
@@ -329,10 +333,8 @@ validate_ansible() {
   # ansible/site.yml, ansible/roles/... 처럼 서브디렉토리에 두는 구성이 흔하므로, 다른
   # 검증 함수와 동일하게 글롭을 붙여 위치에 무관하게 찾는다.
   local ansible_files=() staged_roles=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t ansible_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*playbook*.yml' '*playbook*.yaml' '*site.yml' '*site.yaml' 2>/dev/null)
-    mapfile -d '' -t staged_roles < <(git diff --cached --name-only -z --diff-filter=ACM -- '*roles/*' 2>/dev/null)
-  fi
+  mapfile -d '' -t ansible_files < <(filter_target_files '*playbook*.yml' '*playbook*.yaml' '*site.yml' '*site.yaml')
+  mapfile -d '' -t staged_roles < <(filter_target_files '*roles/*')
 
   if { [ "${#ansible_files[@]}" -gt 0 ] && [ -n "${ansible_files[0]}" ]; } || { [ "${#staged_roles[@]}" -gt 0 ] && [ -n "${staged_roles[0]}" ]; }; then
     log_info "--- Step: Ansible Validation ---"
@@ -366,9 +368,7 @@ validate_helm() {
   # 있으므로, 이 게이트로는 Helm 차트가 있는 대부분의 저장소에서 검증이 통째로
   # 무력화된다. 글롭 pathspec으로 위치에 무관하게 스테이징된 차트 관련 변경을 찾는다.
   local helm_changed=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t helm_changed < <(git diff --cached --name-only -z --diff-filter=ACM -- '*Chart.yaml' '*values.yaml' '*/templates/*' 2>/dev/null)
-  fi
+  mapfile -d '' -t helm_changed < <(filter_target_files '*Chart.yaml' '*values.yaml' '*/templates/*')
   if [ "${#helm_changed[@]}" -eq 0 ] || [ -z "${helm_changed[0]}" ]; then
     return 0
   fi
@@ -416,7 +416,7 @@ validate_helm() {
 # 6. Raw K8s Manifest Validation
 validate_k8s_manifests() {
   # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_yaml과 중복 git diff 호출 방지)
-  local staged_yaml=("${GLOBAL_STAGED_YAML_FILES[@]}")
+  local staged_yaml=("${GLOBAL_TARGET_YAML_FILES[@]}")
 
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞인 파일이라 순수 YAML 파서(kubectl/kube-linter)로 검증 불가 (validate_helm에서 helm lint로 별도 검증됨)
   local k8s_manifests=()
@@ -456,9 +456,7 @@ validate_k8s_manifests() {
 # 7. Dockerfile Validation
 validate_docker() {
   local dockerfiles=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t dockerfiles < <(git diff --cached --name-only -z --diff-filter=ACM -- '*Dockerfile*' 2>/dev/null)
-  fi
+  mapfile -d '' -t dockerfiles < <(filter_target_files '*Dockerfile*')
 
   if [ "${#dockerfiles[@]}" -gt 0 ] && [ -n "${dockerfiles[0]}" ]; then
     if has_tool hadolint; then
@@ -491,7 +489,7 @@ validate_docker() {
 # 8. YAML Style & Validation (Relaxed / Fail-safe)
 validate_yaml() {
   # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_k8s_manifests와 중복 git diff 호출 방지)
-  local staged_yaml=("${GLOBAL_STAGED_YAML_FILES[@]}")
+  local staged_yaml=("${GLOBAL_TARGET_YAML_FILES[@]}")
 
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞여 있어 순수 YAML 린터(yamllint) 검증 대상에서 제외
   local yaml_files=()
@@ -519,10 +517,8 @@ validate_yaml() {
 # 9. OPA/Conftest Policy Validation
 validate_conftest() {
   local staged_rego=() staged_config=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t staged_rego < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.rego' 2>/dev/null)
-    mapfile -d '' -t staged_config < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' '*.json' 2>/dev/null)
-  fi
+  mapfile -d '' -t staged_rego < <(filter_target_files '*.rego')
+  mapfile -d '' -t staged_config < <(filter_target_files '*.yaml' '*.yml' '*.json')
 
   local has_staged_rego=0 has_staged_config=0
   { [ "${#staged_rego[@]}" -gt 0 ] && [ -n "${staged_rego[0]}" ]; } && has_staged_rego=1
@@ -694,16 +690,16 @@ validate_finops_costs() {
     return 0
   fi
 
-  # main()에서 1회만 조회한 스테이징 .tf 목록을 재사용 (validate_terraform과 동일한 패턴)
-  local tf_files=("${GLOBAL_STAGED_TF_FILES[@]}")
+  # main()에서 1회만 수집한 대상 .tf 목록을 재사용 (validate_terraform과 동일한 패턴)
+  local tf_files=("${GLOBAL_TARGET_TF_FILES[@]}")
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
-    # 스테이징 영역 캐시 확인 (수정사항이 없거나 변경점이 일치하면 즉시 스킵)
+    # 스테이징 영역 캐시 확인 (staged 모드 전용. 워킹트리 모드에서는 GLOBAL_CACHE_ENABLED=0)
     if [ "$GLOBAL_TF_HASH" = "empty" ]; then
       log_info "--- Step: FinOps Cost Validation (Infracost) ---"
       log_info "[INFO] No staged Terraform changes detected. Skipping cost validation (Cache hit - empty)."
       return 0
-    elif [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+    elif [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
       log_info "--- Step: FinOps Cost Validation (Infracost) ---"
       log_info "[INFO] Staged Terraform configuration is unchanged. Skipping cost validation (Cache hit)."
       return 0
@@ -755,10 +751,10 @@ validate_finops_costs() {
 # 위임 대상이 명시적으로 옵트인되고, 이 스크립트 자신도 글롭에 걸리지 않아 예전의
 # readlink 자기 제외 방어 코드가 필요 없어진다.
 run_delegated_skill_checks() {
-  # 스테이징된 yaml이 하나도 없으면 스킬별 스크립트를 띄울 필요조차 없다 (지금까지
+  # 대상 yaml이 하나도 없으면 스킬별 스크립트를 띄울 필요조차 없다 (지금까지
   # 존재하는 스킬 스크립트의 대상 파일은 전부 yaml이므로 이 필터로 놓치는 케이스는 없다).
   # k8s 등과 무관한 프로젝트(순수 Terraform 등)에서 매번 서브프로세스가 뜨는 낭비를 막는다.
-  if [ "${#GLOBAL_STAGED_YAML_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_STAGED_YAML_FILES[0]}" ]; then
+  if [ "${#GLOBAL_TARGET_YAML_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_TARGET_YAML_FILES[0]}" ]; then
     return 0
   fi
 
@@ -792,20 +788,155 @@ run_delegated_skill_checks() {
 # 전역 캐시 변수 선언 (쉘 연산 호출 중복 제거)
 GLOBAL_IS_GIT_REPO=0
 GLOBAL_TF_HASH=""
-GLOBAL_STAGED_TF_FILES=()
-GLOBAL_STAGED_YAML_FILES=()
+GLOBAL_TARGET_TF_FILES=()
+GLOBAL_TARGET_YAML_FILES=()
 
-main() {
-  # Git 저장소 여부 및 여러 검증 함수(shell/ansible/helm/docker/conftest,
-  # terraform/finops, yaml/k8s-manifest)가 공유하는 스테이징 파일 목록을 여기서 1회만
-  # 조회하여, 함수마다 반복되던 git rev-parse/git diff 호출을 제거한다.
-  if git rev-parse --is-inside-work-tree &>/dev/null; then
-    GLOBAL_IS_GIT_REPO=1
-    mapfile -d '' -t GLOBAL_STAGED_TF_FILES < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.tf' 2>/dev/null)
-    mapfile -d '' -t GLOBAL_STAGED_YAML_FILES < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' 2>/dev/null)
+# 검증 대상은 main()에서 한 번만 수집하고, 각 검증 함수는 filter_target_files 로 자기
+# 확장자만 골라 쓴다(수집-필터링 분리). 예전에는 함수마다 git diff --cached 가 박혀 있어
+# 스테이징된 파일 외에는 어떤 방식으로도 검사할 수 없었다.
+GLOBAL_TARGET_FILES=()
+# 대상 수집 모드: staged(기본) | changed | all | explicit
+GLOBAL_TARGET_MODE="staged"
+# Terraform 캐시 활성 여부. 인덱스 기준 해시라 staged 모드에서만 성립한다(calculate_tf_hash 주석 참조).
+GLOBAL_CACHE_ENABLED=0
+
+print_usage() {
+  cat >&2 <<'USAGE'
+사용법: pre-flight-check.sh [모드 | 파일...]
+
+  (인자 없음)   스테이징된 변경분만 검증한다 (커밋 훅과 동일한 기본 동작).
+  --changed     스테이징 + 미스테이징 + untracked 변경분을 모두 검증한다.
+  --unstaged    --changed 의 하위 호환 별칭.
+  --all         저장소의 tracked + untracked 파일 전체를 검증한다 (회귀 검사용).
+  <파일...>     지정한 경로만 대상으로 삼는다. 존재하지 않으면 즉시 실패한다.
+                (주의: terraform fmt/validate 는 디렉토리 단위로 동작하므로 파일 지정은
+                 "검증을 켤지"의 게이트일 뿐 스캔 범위를 좁히지 못한다.)
+USAGE
+}
+
+filter_target_files() {
+  local pattern f
+  for f in "${GLOBAL_TARGET_FILES[@]}"; do
+    [ -z "$f" ] && continue
+    for pattern in "$@"; do
+      # 우변은 글롭 패턴이므로 의도적으로 인용하지 않는다(git pathspec 과 동등한 매칭).
+      # shellcheck disable=SC2053
+      if [[ "$f" == $pattern ]]; then
+        printf '%s\0' "$f"
+        break
+      fi
+    done
+  done
+}
+
+# NUL 구분 스트림을 중복 제거하여 GLOBAL_TARGET_FILES 에 채운다. 워킹트리에 실재하지 않는
+# 경로(삭제된 파일 등)는 제외한다. awk 의 RS='\0' 은 mawk 등에서 동작이 갈리므로 쓰지 않는다.
+collect_target_files() {
+  local -A seen=()
+  local f
+  while IFS= read -r -d '' f; do
+    [ -z "$f" ] && continue
+    [ -n "${seen[$f]:-}" ] && continue
+    seen["$f"]=1
+    [ -e "$f" ] || continue
+    GLOBAL_TARGET_FILES+=("$f")
+  done
+}
+
+# 인자를 해석해 GLOBAL_TARGET_MODE 와 (explicit 모드일 때) 대상 목록을 확정한다.
+# 알 수 없는 플래그와 존재하지 않는 경로는 조용히 넘기지 않고 즉시 중단한다. 예전에는
+# [ -e "$arg" ] 로 걸러내기만 해서, 오타 난 경로를 주면 검증 0건인데도 exit 0 이 나왔다.
+parse_target_args() {
+  local arg
+  if [ $# -eq 0 ]; then
+    GLOBAL_TARGET_MODE="staged"
+    return 0
   fi
 
-  # calculate_tf_hash는 위에서 채운 GLOBAL_IS_GIT_REPO/GLOBAL_STAGED_TF_FILES를 재사용한다.
+  case "$1" in
+  --help | -h)
+    print_usage
+    exit 0
+    ;;
+  --all | --changed | --unstaged)
+    if [ $# -gt 1 ]; then
+      echo "[ERROR] '$1' 은 다른 인자와 함께 사용할 수 없습니다." >&2
+      print_usage
+      exit 2
+    fi
+    if [ "$1" = "--all" ]; then
+      GLOBAL_TARGET_MODE="all"
+    else
+      GLOBAL_TARGET_MODE="changed"
+    fi
+    ;;
+  --*)
+    echo "[ERROR] 알 수 없는 옵션입니다: $1" >&2
+    print_usage
+    exit 2
+    ;;
+  *)
+    GLOBAL_TARGET_MODE="explicit"
+    for arg in "$@"; do
+      if [[ "$arg" == --* ]]; then
+        echo "[ERROR] 알 수 없는 옵션입니다: $arg" >&2
+        print_usage
+        exit 2
+      fi
+      if [ ! -e "$arg" ]; then
+        echo "[ERROR] 검증 대상 경로를 찾을 수 없습니다: $arg" >&2
+        exit 1
+      fi
+      GLOBAL_TARGET_FILES+=("$arg")
+    done
+    ;;
+  esac
+}
+
+main() {
+  parse_target_args "$@"
+
+  if git rev-parse --is-inside-work-tree &>/dev/null; then
+    GLOBAL_IS_GIT_REPO=1
+  fi
+
+  case "$GLOBAL_TARGET_MODE" in
+  staged)
+    if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+      GLOBAL_CACHE_ENABLED=1
+      collect_target_files < <(git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null)
+    else
+      # 대상 0건으로 조용히 통과하지 않도록 경고를 남긴다. 파일을 직접 지정하면 검증된다.
+      echo "[WARNING] Git 저장소가 아니어서 스테이징 기준 대상이 없습니다. 검증할 경로를 인자로 지정하십시오." >&2
+    fi
+    ;;
+  changed | all)
+    if [ "$GLOBAL_IS_GIT_REPO" -ne 1 ]; then
+      echo "[ERROR] '--$GLOBAL_TARGET_MODE' 모드는 Git 저장소 안에서만 사용할 수 있습니다." >&2
+      exit 1
+    fi
+    if [ "$GLOBAL_TARGET_MODE" = "all" ]; then
+      collect_target_files < <(
+        git ls-files -z 2>/dev/null
+        git ls-files -z --others --exclude-standard 2>/dev/null
+      )
+    else
+      collect_target_files < <(
+        git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null
+        git diff --name-only -z --diff-filter=ACM 2>/dev/null
+        git ls-files -z --others --exclude-standard 2>/dev/null
+      )
+    fi
+    if [ "${#GLOBAL_TARGET_FILES[@]}" -eq 0 ]; then
+      echo "[WARNING] '--$GLOBAL_TARGET_MODE' 대상 파일이 0건입니다. 검증이 수행되지 않았습니다." >&2
+    fi
+    ;;
+  esac
+
+  mapfile -d '' -t GLOBAL_TARGET_TF_FILES < <(filter_target_files '*.tf')
+  mapfile -d '' -t GLOBAL_TARGET_YAML_FILES < <(filter_target_files '*.yaml' '*.yml')
+
+  # calculate_tf_hash는 위에서 채운 GLOBAL_IS_GIT_REPO/GLOBAL_TARGET_TF_FILES를 재사용한다.
   GLOBAL_TF_HASH=$(calculate_tf_hash)
 
   validate_shell
@@ -826,7 +957,7 @@ main() {
   # 여기는 모든 검증을 통과한 직후이자 "All Checks Passed" 출력 직전이라, 쓰기 실패가
   # set -e로 이어지면 전 항목 통과 상태에서 pre-commit이 "사전 검증 실패로 커밋이
   # 차단되었습니다"를 띄운다. 캐시는 재실행 속도 최적화일 뿐이므로 실패해도 무시한다.
-  if [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
+  if [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
     echo "$GLOBAL_TF_HASH" 2>/dev/null >"$CACHE_FILE" || true
   fi
 
@@ -837,4 +968,4 @@ main() {
 }
 
 # Run execution
-main
+main "$@"

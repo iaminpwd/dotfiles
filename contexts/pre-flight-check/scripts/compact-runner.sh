@@ -21,10 +21,20 @@ cd "$REPO_ROOT"
 # 검증할 스크립트 목록 수집
 SCRIPTS=()
 
-if [ $# -gt 0 ]; then
-  # 인자가 주어지면 해당 스크립트들만 실행
-  SCRIPTS=("$@")
-else
+# --pfc-args=<값> 은 pre-flight-check.sh 한 곳으로만 전달되는 패스스루 인자다. 값 하나가
+# 인자 하나로 그대로 전달되므로(단어 분리 없음), 공백이 든 경로도 안전하다. 대상이 여러
+# 개면 --pfc-args= 를 여러 번 쓴다.
+PFC_ARGS=()
+
+for arg in "$@"; do
+  if [[ "$arg" == --pfc-args=* ]]; then
+    PFC_ARGS+=("${arg#--pfc-args=}")
+  else
+    SCRIPTS+=("$arg")
+  fi
+done
+
+if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   # 인자가 없으면 디폴트로 저장소 내 모든 테스트 및 pre-flight 스캔 수집
   # 1. 공통 필수: pre-flight-check.sh (어느 환경에서든 실행)
   PRE_FLIGHT_PATH="$HOME/dotfiles/contexts/pre-flight-check/scripts/pre-flight-check.sh"
@@ -64,7 +74,11 @@ for script in "${SCRIPTS[@]}"; do
   SCRIPT_NAME="${SCRIPT_NAME#"$HOME"/}"
 
   rc=0
-  bash "$script" >"$TMP_OUT" 2>&1 || rc=$?
+  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
+    bash "$script" "${PFC_ARGS[@]}" >"$TMP_OUT" 2>&1 || rc=$?
+  else
+    bash "$script" >"$TMP_OUT" 2>&1 || rc=$?
+  fi
 
   if [ "$rc" -eq 0 ]; then
     # 통과: 정상 로그(PASS/INFO/SUCCESS/구분선/통계)는 접고 경고만 남긴다. 경고까지
