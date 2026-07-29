@@ -100,7 +100,7 @@ priority: highest
 - **[MUST] Sensitive Data Masking:** 모든 텍스트 출력 영역(로그, 대화, 코드 등)에서 민감 데이터 마스킹(`***`) 필수.
 
 ## 8. 버전 관리 및 커밋 (Git)
-- **[MUST] Semantic Commits:** 커밋 시 `feat:`, `fix:` 등 시맨틱 커밋 컨벤션 준수.
+- **[MUST] Semantic Commits in Korean:** 커밋 시 접두사(`feat:`, `fix:` 등)는 시맨틱 컨벤션을 따르되, **콜론(:) 이후의 설명 및 본문은 반드시 한국어로 작성**할 것. (예: `feat: 로그인 API 추가`)
 - **[MUST] Non-Destructive Git Operations:** `git commit` 우선. `git rebase`, `git push -f` 등 파괴적 조작은 명시적 요구 시에만 실행.
 - **[MUST] Explicit Commit Request:** 커밋은 사용자 명시적 요청 시에만 수행. 코드 수정/검증 완료 시 수동 커밋을 대기할 것.
 - **[MUST] Explicit Atomic Commits:** 변경 사항을 논리적 단위로 분리해 원자적 커밋 수행.
