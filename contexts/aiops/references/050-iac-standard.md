@@ -49,7 +49,7 @@ terraform {
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `tflint` 및 `shellcheck` 검사가 성공하고, 배포 실행 시 정량적 이력이 `iac-deployment-summary.md`에 문서화되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `tflint` 및 `tfsec`를 실행하여 IaC 설정 상의 암호화 미적용 및 권한 결함을 검사하십시오.
+- **[MUST] 검증 도구 매핑:** `tflint` 및 `tfsec`를 실행하여 IaC 설정 상의 암호화 미적용 및 권한 결함을 검사하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before State Mutation] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**

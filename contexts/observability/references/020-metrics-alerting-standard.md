@@ -56,7 +56,7 @@ groups:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** Alerting Rule이 PromQL/쿼리 문법 오류 없이 검증되고, 모든 Critical 알람에 런북 링크가 포함되어야 합니다.
-- **[MUST] 검증 도구 매핑:** K8s `PrometheusRule`은 `pre-flight-check.sh`(내부적으로 `k8s-check.sh`의 `promtool check rules`)가 자동 검증합니다. K8s 외 환경(단일 Prometheus 서버 등)의 순수 rule 파일은 `promtool check rules <file>`을 직접 실행하십시오.
+- **[MUST] 검증 도구 매핑:** K8s `PrometheusRule`은 `pre-flight-check.sh`(내부적으로 `k8s-check.sh`의 `promtool check rules`)가 자동 검증합니다. K8s 외 환경(단일 Prometheus 서버 등)의 순수 rule 파일은 `promtool check rules <file>`을 직접 실행하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Alerting Rule Authored] 점검 기준 (절차는 010-observability-core.md의 공통 자가 비판 절차 참조):**

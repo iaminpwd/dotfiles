@@ -51,7 +51,7 @@ image: myregistry.example.com/payment-api:latest
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 배포 매니페스트에 가변 태그(`latest` 등)가 없고, 레지스트리 GC 정책 코드에 릴리즈 태그 보호 예외가 명시되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `grep -r "image:.*:latest"` 등으로 배포 매니페스트 내 가변 태그 잔존 여부를 점검하고, 레지스트리 IaC(Terraform 등)의 Lifecycle Policy 블록을 코드 리뷰로 확인하십시오.
+- **[MUST] 검증 도구 매핑:** `grep -r "image:.*:latest"` 등으로 배포 매니페스트 내 가변 태그 잔존 여부를 점검하고, 레지스트리 IaC(Terraform 등)의 Lifecycle Policy 블록을 코드 리뷰로 확인하십시오. 이 도구들의 통합 실행 절차는 `contexts/pre-flight-check/SKILL.md`가 SSOT이므로, 개별 호출에 앞서 그 문서가 지정한 단일 명령으로 일괄 수행하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Registry Policy Proposed] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
