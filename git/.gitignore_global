@@ -9,7 +9,12 @@
 *.tfstate
 *.tfstate.backup
 crash.log
-*.tfvars
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+*secret*.tfvars
+*credential*.tfvars
 
 # Secrets & Credentials
 *.pem
@@ -19,6 +24,9 @@ crash.log
 .env
 .env.local
 .env.*
+!.env.example
+!.env.template
+!.env.sample
 secrets.yml
 *.ovpn
 kubeconfig
