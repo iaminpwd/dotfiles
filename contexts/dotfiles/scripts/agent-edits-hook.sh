@@ -5,7 +5,7 @@
 # (2026-07-26 실측: Antigravity는 toolCall.name / toolCall.args.TargetFile / workspacePaths[0],
 #  Claude Code는 tool_name / tool_input.file_path / cwd)
 # 도구명 화이트리스트 대신 "편집 대상 경로 필드의 존재 여부"로 판별하므로, 아직 관측되지 않은
-# 파일 생성 계열 도구도 자동으로 포함되고 조회 계열(view_file의 AbsolutePath)은 자연히 배제된다.
+# 파일 생성 계열 도구도 자동으로 포함되고 조회 계열(view_file의 AbsolutePath)은 자연히 제외된다.
 #
 # 기록 포맷: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
 # 훅은 기계적 사실만 남기고(출처=hook:<도구명>, 목적=-), 참조 룰 문서와 작업 목적은
@@ -21,7 +21,7 @@ set -uo pipefail
 JQ=$(command -v jq 2>/dev/null) || JQ=""
 if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
   # mise는 jq를 installs/jq/<버전>/jq 단일 파일로 설치한다(bin/ 하위 아님). 버전 별칭
-  # 심볼릭 링크(latest 등)를 배제하기 위해 실파일만 찾아 최신 버전을 고른다.
+  # 심볼릭 링크(latest 등)를 제외하기 위해 실파일만 찾아 최신 버전을 고른다.
   JQ=$(find "$HOME/.local/share/mise/installs/jq" -maxdepth 3 -name jq -type f 2>/dev/null | sort -V | tail -1)
   { [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; } || exit 0
 fi

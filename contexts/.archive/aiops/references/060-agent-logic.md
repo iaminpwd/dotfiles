@@ -8,19 +8,19 @@ references:
 ---
 # 컨텍스트 모듈: AI 에이전트 워크플로우 설계 및 RAG / Guardrails 패턴
 
-본 모듈은 AI 에이전트 자동 의사결정 워크플로우 설계, RAG 기반 지식 연동, Semantic Cache 구성 및 Human-in-the-loop 복원 가이드라인 수립 시 적용되는 기술 표준 가이드라인입니다.
+AI 에이전트 의사결정 워크플로우, RAG 연동 및 수동 개입 방어 설계 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Runbook Integration:** 웹 검색이나 임의 추정에 의존하는 행위를 배제하고, 사내 장애 런북(Runbook) 및 사후 분석 리포트(Post-mortem) 데이터를 Vector DB에서 RAG를 통해 참조하여 근거 기반으로 답변하도록 설계하십시오.
-- **[PREFER] Semantic Caching:** 다량의 동일 알람 유입에 따른 중복 LLM API 호출(Throttling)을 방지하도록 파이프라인 앞단에 의미론적 캐싱(Semantic Caching) 레이어를 의무 배치하십시오.
-- **[MUST] Graceful Degradation:** Vector DB나 LLM API 장애 시에도 파이프라인의 최소 가동성을 보장하도록 규칙 기반 백업 로직(Rule-based Fallback)으로 자동 전환되는 방어를 설계하십시오.
+- **[MUST] Runbook Integration:** 임의 추정을 배제하고 사내 런북을 RAG로 참조해 답변하십시오. (이유: 신뢰도 확보)
+- **[PREFER] Semantic Caching:** 파이프라인 앞단에 시맨틱 캐시 레이어를 배치하십시오.
+- **[MUST] Graceful Degradation:** API 장애 시 규칙 기반 백업 로직(Fallback)으로 전환되도록 설계하십시오. (이유: 단일 장애점 최소화)
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 통제력 확보 및 Human-in-the-loop
-- **[MUST] 파괴적 조치 시 Human-in-the-loop 필수화:** 에이전트가 리소스를 삭제/재시작하거나 설정을 변경하는 등의 파괴적 조치(Destructive Actions)를 실행할 때는 반드시 Slack/Teams의 대화형 버튼(Interactive Buttons) 또는 CLI 인터랙티브 프롬프트를 통해 SRE 엔지니어의 최종 승인을 획득하도록 워크플로우를 구성하십시오.
-- **[MUST] Context-Aware Cross-Validation:** 단일 모니터링 알람에만 의존해 조치하는 행위를 배제하고, 해당 시점 전후 10분간의 로그와 인프라 메트릭(CPU, Memory 등)을 교차 검증(Cross-validation)하여 RCA(근본 원인 분석) 정확도를 입증하십시오.
-- **[MUST] Agent Action Audit Logging:** 자가 치유(Self-healing) 조치 실행 직후, 이벤트 로그에 반드시 `[AIOps-Agent-Action]` 감사 마커를 주입하여 변경 주체를 추적 가능하게 하십시오.
+- **[MUST] Human-in-the-loop:** 리소스 삭제/수정 등 파괴적 조치 시 관리자의 명시적 승인을 강제하는 워크플로우를 구성하십시오. (이유: 권한 남용 및 장애 차단)
+- **[MUST] Context-Aware Cross-Validation:** 단일 알람 의존을 배제하고 메트릭 교차 검증으로 RCA 정확도를 입증하십시오. (이유: 오진 방지)
+- **[MUST] Agent Action Audit Logging:** 자가 치유 조치 후 이벤트 로그에 `[AIOps-Agent-Action]` 마커를 기록하십시오. (이유: 변경 주체 감사)
 
 ### 2.2 에이전트의 자율적 복구
 - **[MUST] Autonomous Self-Correction:** 파이프라인 자동화 스크립트 실행 중 에러가 검출되면, 즉각 백그라운드에서 로그를 파싱 및 자율 수정하여 최대 3회까지 재시도하십시오.

@@ -27,8 +27,8 @@ FAIL_COUNT=0
 # $2 에 'skip-version-probe' 를 주면 --version 호출을 생략한다. Go 바이너리(terraform,
 # tflint)는 이 확인이 0.03 초지만 checkov 는 파이썬 인터프리터 기동만으로 1.37 초가 들어
 # 스위트 전체 시간의 18% 를 차지했다(2026-07-28 실측). 생략해도 검출력은 그대로다:
-# 도구가 실행 불가능하면 ok 픽스처는 exit≠0 으로, 위반 픽스처는 기대 체크 ID 부재로
-# 각각 FAIL 이 되어 "조용한 통과"가 구조적으로 불가능하다(exit 127 을 내는 가짜 checkov
+# 도구가 실행 미지원하면 ok 픽스처는 exit≠0 으로, 위반 픽스처는 기대 체크 ID 부재로
+# 각각 FAIL 이 되어 "조용한 통과"가 구조적으로 미지원능하다(exit 127 을 내는 가짜 checkov
 # 로 두 케이스 모두 FAIL 임을 실측 확인). 잃는 것은 진단 메시지뿐이므로, 그 대신
 # tf_judge_checkov 가 실패 상세에 출력 마지막 줄을 실어 원인을 보존한다.
 tf_require_tool() {
@@ -38,7 +38,7 @@ tf_require_tool() {
       return 0
     fi
   fi
-  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 불가: $tool"
+  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 실패: $tool"
   FAIL_COUNT=$((FAIL_COUNT + 1))
   return 1
 }
@@ -63,7 +63,7 @@ tf_assert_gate() {
   if [ "$want_fail" -eq "$([ "$status" -ne 0 ] && echo 1 || echo 0)" ]; then
     tf_report "$name" 0
   else
-    tf_report "$name" 1 "기대: $([ "$want_fail" -eq 1 ] && echo '차단' || echo '통과') / 실제 exit=$status"
+    tf_report "$name" 1 "기대: $([ "$want_fail" -eq 1 ] && echo '중단' || echo '통과') / 실제 exit=$status"
   fi
 }
 
@@ -98,7 +98,7 @@ tf_run_tflint() {
 #
 # 주의: OSS checkov 는 심각도(severity) 데이터를 제공하지 않아 모든 failed_check
 # 의 severity 가 None 이다. 따라서 --soft-fail-on LOW,MEDIUM 은 실질적으로
-# 아무것도 완화하지 못하며, 어떤 지적이든 커밋을 차단한다(2026-07-26 실측).
+# 아무것도 완화하지 않으며, 어떤 지적이든 커밋을 중단한다(2026-07-26 실측).
 # 이 러너는 스크립트의 의도가 아니라 실제 동작을 기준으로 검증한다.
 #
 # 실행부와 판정부를 나눈 이유는 tf_run_checkov_pair 의 병렬 호출에서 판정 로직을

@@ -44,7 +44,7 @@ if git rev-parse --is-inside-work-tree &>/dev/null; then
   GLOBAL_IS_GIT_REPO=1
 fi
 
-# main()에서 1회만 조회하여 각 check 함수가 재사용 (git diff 반복 호출 방지)
+# main()에서 1회만 조회하여 각 check 함수가 재사용 (git diff 반복 호출 최소화)
 GLOBAL_STAGED_YAML_FILES=()
 
 # -----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ check_kyverno() {
   for d in "${dirs[@]}"; do
     log_info "Running kyverno test: $d"
     if ! kyverno test "$d"; then
-      echo "❌ [ERROR] Kyverno 정책 테스트가 실패하여 커밋이 차단되었습니다: $d" >&2
+      echo "❌ [ERROR] Kyverno 정책 테스트가 실패하여 커밋이 중단되었습니다: $d" >&2
       return 1
     fi
   done
@@ -124,7 +124,7 @@ check_prometheus_rules() {
       return 1
     fi
     if ! promtool check rules "$tmp"; then
-      echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 차단되었습니다: $f" >&2
+      echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 중단되었습니다: $f" >&2
       rm -f "$tmp"
       return 1
     fi
@@ -155,7 +155,7 @@ check_deprecated_apis() {
   fi
 
   if ! pluto detect-files -d .; then
-    echo "❌ [ERROR] 삭제 예정(Deprecated/Removed) K8s API 버전이 감지되어 커밋이 차단되었습니다." >&2
+    echo "❌ [ERROR] 삭제 예정(Deprecated/Removed) K8s API 버전이 감지되어 커밋이 중단되었습니다." >&2
     return 1
   fi
   log_info "[SUCCESS] No deprecated/removed K8s API versions detected."

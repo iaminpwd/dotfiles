@@ -7,7 +7,7 @@
 # 실행 시 동일한 결과")을 사람의 확인이 아니라 기계 판정으로 승격시킨다.
 #
 # 실제 시스템을 건드리지 않기 위해 저장소 사본과 임시 HOME 에 대고 실행한다.
-# 네트워크·sudo·패키지 설치가 필요한 구간은 PATH 앞단의 목(mock)으로 차단하되,
+# 네트워크·sudo·패키지 설치가 필요한 구간은 PATH 앞단의 목(mock)으로 중단하되,
 # 검증 대상인 stow·jq·deploy.sh 는 진짜를 그대로 쓴다. 목이 실제로 호출되면
 # (= 네트워크나 sudo 경로로 빠졌다면) 마커 파일이 남아 테스트가 실패한다.
 #
@@ -180,7 +180,7 @@ else
     "차이: $(diff <(echo "$REPO_SNAP1") <(echo "$REPO_SNAP2") | grep -E '^[<>]' | head -3 | tr '\n' ' ')"
 fi
 
-# 과거 사고 재현 방지: stow 충돌 정리 루프가 대상이 아니라 소스 파일을 지운 적이 있다.
+# 과거 사고 근본적 해결: stow 충돌 정리 루프가 대상이 아니라 소스 파일을 지운 적이 있다.
 MISSING_SRC=$(comm -23 \
   <(cd "$REPO_ROOT" && find . -type f -not -path './.git/*' -not -path './.agent-state/*' -printf '%P\n' | LC_ALL=C sort) \
   <(cd "$TMPREPO" && find . -type f -printf '%P\n' | LC_ALL=C sort) | head -3 | tr '\n' ' ')
@@ -234,7 +234,7 @@ else
   report "사용자의 기존 설정과 훅이 보존됨" 1 "기대 'high,1' / 실제 '$KEPT'"
 fi
 
-# 스킬 등록: dotfiles 는 글로벌 룰 오염 방지를 위해 제외되어야 한다.
+# 스킬 등록: dotfiles 는 글로벌 룰 순수성 보장를 위해 제외되어야 한다.
 EXPECTED_SKILLS=$(find "$TMPREPO/contexts" -mindepth 2 -maxdepth 2 -name SKILL.md -printf '%h\n' | xargs -r -n1 basename | grep -vx dotfiles | LC_ALL=C sort)
 ACTUAL_SKILLS=$(find "$TMPHOME/.claude/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -printf '%h\n' 2>/dev/null | xargs -r -n1 basename | LC_ALL=C sort)
 if [ "$EXPECTED_SKILLS" = "$ACTUAL_SKILLS" ]; then
@@ -259,21 +259,21 @@ fi
 # 계약은 "상대 역할 지침이 배포본에 아예 존재하지 않는다"이므로, 자기 역할 헤더가 있고
 # 상대 역할 헤더는 없어야 한다. '아키텍트' 같은 낱말은 실행자 지침에도 상대를 가리키며
 # 등장하므로 판정 기준이 될 수 없다.
-HANDOFF_CLAUDE="$TMPHOME/.claude/skills/agent-handoff/SKILL.md"
-HANDOFF_GEMINI="$TMPHOME/.gemini/config/skills/agent-handoff/SKILL.md"
-handoff_role_ok() {
-  local file=$1 own=$2 other=$3
-  [ -f "$file" ] && [ ! -L "$file" ] &&
-    grep -q "\[역할: $own\]" "$file" && ! grep -q "\[역할: $other\]" "$file"
-}
-if handoff_role_ok "$HANDOFF_CLAUDE" architect executor &&
-  handoff_role_ok "$HANDOFF_GEMINI" executor architect; then
-  report "agent-handoff 가 역할별 복사본으로 분리 배포됨" 0
-else
-  report "agent-handoff 가 역할별 복사본으로 분리 배포됨" 1 \
-    "클로드=$(handoff_role_ok "$HANDOFF_CLAUDE" architect executor && echo OK || echo NG), 제미나이=$(handoff_role_ok "$HANDOFF_GEMINI" executor architect && echo OK || echo NG)"
-fi
-
+# agent-handoff 스킬은 현재 .archive 로 이동되었으므로 배포 검증을 생략함. 나중에 복원될 경우를 대비해 아래 코드를 주석으로 보존함.
+# HANDOFF_CLAUDE="$TMPHOME/.claude/skills/agent-handoff/SKILL.md"
+# HANDOFF_GEMINI="$TMPHOME/.gemini/config/skills/agent-handoff/SKILL.md"
+# handoff_role_ok() {
+#   local file=$1 own=$2 other=$3
+#   [ -f "$file" ] && [ ! -L "$file" ] &&
+#     grep -q "\[역할: $own\]" "$file" && ! grep -q "\[역할: $other\]" "$file"
+# }
+# if handoff_role_ok "$HANDOFF_CLAUDE" architect executor &&
+#   handoff_role_ok "$HANDOFF_GEMINI" executor architect; then
+#   report "agent-handoff 가 역할별 복사본으로 분리 배포됨" 0
+# else
+#   report "agent-handoff 가 역할별 복사본으로 분리 배포됨" 1 \
+#     "클로드=$(handoff_role_ok "$HANDOFF_CLAUDE" architect executor && echo OK || echo NG), 제미나이=$(handoff_role_ok "$HANDOFF_GEMINI" executor architect && echo OK || echo NG)"
+# fi
 # 네트워크·권한 상승 경로로 빠지지 않았는지 확인. 목이 호출되면 마커가 남는다.
 LEAKED=""
 for m in curl sudo chsh; do
@@ -329,7 +329,7 @@ fi
 # 이 스크립트가 설치해 주는 bash 4 를 스스로 요구하면 사용자가 손으로 brew install bash 를
 # 먼저 쳐야 하는 닭-달걀이 된다. 조항으로만 두면 나중에 mapfile 한 줄로 조용히 깨지므로
 # 기계 판정으로 승격시킨다. 검증기와 훅은 대상이 아니다(bash 설치 이후에 실행된다).
-# 주석 줄은 제외한다: 계약 자체를 설명하는 주석에 금지 문법의 이름이 등장한다.
+# 주석 줄은 제외한다: 계약 자체를 설명하는 주석에 통제 문법의 이름이 등장한다.
 # `|| true` 가 필수다: 지적이 0건이면(= 통과 조건) grep 이 1 을 반환하고, pipefail 아래에서
 # 그 실패가 파이프라인 전체의 실패로 올라와 set -e 가 스위트를 통째로 중단시킨다.
 BASH4_HITS=$(grep -nE '^[^#]*(mapfile|readarray|declare -A|local -n|\[\[ -v |\$\{[A-Za-z_]+(\^\^|,,))' \

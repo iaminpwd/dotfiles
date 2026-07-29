@@ -130,7 +130,7 @@ echo "=== prompt-lint.sh 회귀 테스트 ==="
 echo "--- 기준선 ---"
 check_clean "ok-baseline (지적 0건)" "$(new_case ok-baseline)"
 
-echo "--- ERROR (커밋 차단) ---"
+echo "--- ERROR (커밋 중단) ---"
 
 # 1. SSOT 모듈 목록 불일치: 선언에 없는 모듈 파일을 추가한다.
 D=$(new_case fail-ssot-mismatch)

@@ -8,10 +8,10 @@ references:
 ---
 # Azure 아이콘 스타일 라이브러리 매핑
 
-본 모듈은 Azure 아키텍처 다이어그램 생성 시 사용되는 아이콘들의 Image 속성 및 색상 매핑 가이드입니다.
+본 모듈은 Azure 아키텍처 다이어그램 생성 시 사용되는 아이콘들의 Image 속성 및 색상 매핑 가이드임.
 
 > [!TIP]
-> Azure 아이콘은 draw.io 내장 SVG 라이브러리(`img/lib/azure2/`)를 참조합니다. 별도 이미지 파일(base64 등) 삽입 없이 draw.io에서 즉시 렌더링됩니다.
+> Azure 아이콘은 draw.io 내장 SVG 라이브러리(`img/lib/azure2/`)를 참조함. 별도 이미지 파일(base64 등) 삽입 없이 draw.io에서 즉시 렌더링됨.
 
 ## 0. 공식 아이콘 사용 가이드라인 (SSOT — 원문 그대로 적용)
 
@@ -20,7 +20,7 @@ https://learn.microsoft.com/en-us/azure/architecture/icons/
 (조회일: 2026-07-24, 문서 `ms.date`: 2026-07-09)
 
 > **[MUST] 이 절은 여러 사례를 보고 유추한 관행이 아니라 Microsoft가 실제로 발행한
-> 규정입니다. 임의 해석 없이 원문 그대로 적용하십시오.**
+> 규정임. 임의 해석 없이 원문 그대로 적용할 것.**
 
 **일반 가이드라인(General guidelines) — 원문 그대로 인용**
 > "Do's — Use the icon to illustrate how products can work together. In
@@ -29,14 +29,13 @@ https://learn.microsoft.com/en-us/azure/architecture/icons/
 > crop, flip, or rotate icons. Don't distort or change icon shape in any way.
 > Don't use Microsoft product icons to represent your product or service."
 
-- **[MUST]** 아이콘을 크롭·반전·회전 및 형태 왜곡을 엄격히 제한합니다. §1 템플릿의
-  `image={IMAGE_PATH}` SVG를 원본 그대로 참조하고, 별도 가공(리사이즈 시 종횡비
-  변경을 엄격히 제한합니다.
-- **[MUST]** 아이콘 근처에 제품명을 병기하십시오 — §1 템플릿의
-  `verticalLabelPosition=bottom` 라벨 배치가 이 권고와 일치합니다.
+- **[MUST]** 아이콘은 크롭·반전·회전 없이 원본 형태 그대로 유지할 것. §1 템플릿의
+  `image={IMAGE_PATH}` SVG를 원본 그대로 참조하고, 별도 가공 없이 원형을 보존할 것(리사이즈 시 종횡비 유지).
+- **[MUST]** 아이콘 근처에 제품명을 병기할 것 — §1 템플릿의
+  `verticalLabelPosition=bottom` 라벨 배치가 이 권고와 일치함.
 - **[MUST]** Microsoft 제품 아이콘을 사용자 자신의 제품/서비스를 나타내는 용도로
-  대체 사용을 배제하십시오. Azure 네이티브 서비스가 아닌 대상에는 §3(서드파티
-  아이콘, 040 SSOT)을 적용하고 Azure 아이콘을 오용을 엄격히 차단하십시오.
+  사용하는 대신, 해당 대상에 맞는 정확한 아이콘을 적용할 것. Azure 네이티브 서비스가 아닌 대상에는 §3(서드파티
+  아이콘, 040 SSOT)을 적용하고 Azure 아이콘은 지정된 용도로만 정확히 사용할 것.
 
 **라이선스(Icon terms) — 원문 그대로 인용**
 > "Microsoft permits the use of these icons in architectural diagrams,
@@ -45,11 +44,11 @@ https://learn.microsoft.com/en-us/azure/architecture/icons/
 > Microsoft."
 
 - **[MUST]** 아키텍처 다이어그램·교육 자료·문서 목적 범위 내에서만 아이콘을
-  사용하십시오. 로고/상표 대체 등 이 범위를 벗어난 용도로 사용을 배제하십시오.
+  사용할 것. 로고/상표 대체 등 이 범위를 벗어난 용도로 사용하는 대신 정확한 아이콘을 적용할 것.
 
 ## 1. Azure 공통 Style 템플릿
 
-- **[MUST]** Azure 리소스 아이콘에는 다음 템플릿을 기반으로 `{IMAGE_PATH}`를 치환하여 사용하십시오.
+- **[MUST]** Azure 리소스 아이콘에는 다음 템플릿을 기반으로 `{IMAGE_PATH}`를 치환하여 사용할 것.
 
 ```xml
 image;aspect=fixed;html=1;points=[];align=center;fontSize=10;
@@ -87,12 +86,12 @@ image={IMAGE_PATH};verticalLabelPosition=bottom;verticalAlign=top;
 | Application Insights | `img/lib/azure2/management_governance/Application_Insights.svg` | Monitoring |
 | Azure Monitor | `img/lib/azure2/management_governance/Monitor.svg` | Monitoring |
 
-- **[MUST] 예외 — Traditional Server (온프레미스 서버)**: 이 리소스는 본 절 §1의 `image={IMAGE_PATH}` 템플릿 대상이 아닙니다. 위 테이블에 값을 대입하지 말고, 020(AWS) §1 템플릿과 동일한 shape 기반 스타일을 그대로 사용하십시오: `outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#5294FF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.traditional_server;`
+- **[MUST] 예외 — Traditional Server (온프레미스 서버)**: 이 리소스는 본 절 §1의 `image={IMAGE_PATH}` 템플릿 대상이 아닙니다. 위 테이블에 값을 대입하는 대신, 020(AWS) §1 템플릿과 동일한 shape 기반 스타일을 그대로 사용할 것: `outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#5294FF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;aspect=fixed;shape=mxgraph.aws4.traditional_server;`
 
 ## 3. 3rd Party Custom Icon (팀 컨벤션)
 
-- **[MUST]** Azure 기본 서비스가 아닌 오픈소스/서드파티 도구(Jenkins/ArgoCD/Prometheus/Grafana/GitLab 등)의 아이콘 표현 방식은 클라우드 공통 SSOT인 `040-third-party-icon-library.md`를 그대로 적용하십시오. 본 문서에서 재나열하지 않습니다.
+- **[MUST]** Azure 기본 서비스가 아닌 오픈소스/서드파티 도구(Jenkins/ArgoCD/Prometheus/Grafana/GitLab 등)의 아이콘 표현 방식은 클라우드 공통 SSOT인 `040-third-party-icon-library.md`를 그대로 적용할 것. 본 문서에서 재나열하지 않습니다.
 
 ## 4. 컨테이너 색상 (Azure)
 
-- **[MUST]** Azure Cloud/Region/VNet/Subnet/ACA Environment 컨테이너 색상은 010 §4 "색상 팔레트 (클라우드 공통)" 표를 그대로 적용하십시오. SSOT는 010이며 본 절에서 재나열하지 않습니다. (Azure Cloud도 010과 동일하게 검정 `#232F3E`이며 Azure 브랜드 파랑이 아님에 유의하십시오.)
+- **[MUST]** Azure Cloud/Region/VNet/Subnet/ACA Environment 컨테이너 색상은 010 §4 "색상 팔레트 (클라우드 공통)" 표를 그대로 적용할 것. SSOT는 010이며 본 절에서 재나열하지 않습니다. (Azure Cloud도 010과 동일하게 검정 `#232F3E`이며 Azure 브랜드 파랑이 아님에 유의할 것.)

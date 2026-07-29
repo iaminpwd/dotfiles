@@ -33,7 +33,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `pre-flight-check.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 차단하십시오. (출처: 020-security-compliance.md)
+- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `pre-flight-check.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
 ```
 
 ### 1.3. Planning (계획 수립)
@@ -42,7 +42,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Explicit Planning:** 다단계 작업 시 "작업 -> 검증"의 3단계 이내의 간결한 단계별 계획을 명시하십시오. (출처: base.AGENTS.md)
-- **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하십시오. 불확실한 부분은 임의로 추측하지 말고 반드시 사용자에게 질문하십시오. (출처: base.AGENTS.md)
+- **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하십시오. 불확실한 부분은 반드시 사용자 질문을 통해 명확히 확인할 것. (출처: base.AGENTS.md)
 ```
 
 ### 1.4. Multi-Agent Collaboration (다중 에이전트 협업)
@@ -134,11 +134,11 @@ priority: high
 ```
 
 #### 3.2.3. 출력 포맷 엄격화 (Output Constraints)
-**이론:** 모델이 서론/결론을 길게 말하지 못하게 하고, 출력 형태(JSON, Markdown 등)를 강제하여 파서(Parser)의 오류를 막는 기법.
+**이론:** 모델이 서론/결론을 길게 말하는 대신 간결하게 답변하도록 유도하고, 출력 형태(JSON, Markdown 등)를 강제하여 파서(Parser)의 일관성을 보장하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [MUST] Output Constraints: 산출물 형태(JSON 등)를 인터페이스 수준으로 엄격 제한.
+- [MUST] Output Constraints: 산출물 형태(JSON 등)를 인터페이스 수준으로 엄수할 것.
 ```
 
 ### 3.3. Google Gemini 핵심 기법
@@ -159,12 +159,12 @@ priority: high
 ```
 
 #### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)
-**이론:** Gemini는 최대 200만 토큰의 방대한 Context Window를 가졌지만, 모든 정보에 억지로 집중력을 강제하면 환각(Hallucination)이 발생할 수 있습니다. 이를 막기 위해 조건부 태그(`<domain_specific_rules instruction="...">`) 등을 통해 현재 태스크와 무관한 룰은 어텐션에서 배제(Mute)시켜 신호 대 잡음비(SNR)를 극대화하는 것이 공식 권장 기법입니다.
+**이론:** Gemini는 최대 200만 토큰의 방대한 Context Window를 가졌지만, 모든 정보에 억지로 집중력을 강제하면 환각(Hallucination)이 발생할 수 있습니다. 이를 막기 위해 조건부 태그(`<domain_specific_rules instruction="...">`) 등을 통해 현재 태스크와 무관한 룰은 어텐션에서 숨김 처리(Mute)하여 신호 대 잡음비(SNR)를 극대화하는 것이 공식 권장 기법입니다.
 
 **통합 워크스페이스 적용 사례 (물리적 SNR 최적화로 진화):**
 ```markdown
-- 우리 환경은 이 "SNR 최적화 철학"을 수용하되, 통짜 프롬프트 내에서 태그로 가리는(Mute) 방식을 넘어 아예 **물리적으로 컨텍스트를 차단(Dynamic RAG)**하도록 진화시켰습니다.
-- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting-standard.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 원천 차단하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
+- 우리 환경은 이 "SNR 최적화 철학"을 수용하되, 통짜 프롬프트 내에서 태그로 가리는(Mute) 방식을 넘어 아예 **물리적으로 컨텍스트를 분리(Dynamic RAG)**하도록 진화시켰습니다.
+- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting-standard.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 완벽히 분리하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
 ```
 
 #### 3.3.4. 부정어보다 긍정어 우선 (Positive Directives)
@@ -172,7 +172,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [PREFER] Positive Action Override: 부정형 제한어보다 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
+- [PREFER] Positive Action Override: 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
 ```
 
 ---
@@ -181,7 +181,7 @@ priority: high
 > [!NOTE] 
 > **기원(Origin):** Google SRE(사이트 신뢰성 엔지니어링), Cloud DevOps 커뮤니티 및 12-Factor App 설계 철학
 
-일반적인 언어 모델 연구를 넘어, **데브옵스/클라우드 엔지니어링 철학**이 결합된 최고 수준의 프롬프트 제약 조건들입니다. 아래 룰들은 LLM의 환각을 넘어, 실제 프로덕션 환경의 **시스템 오염 방지 및 신뢰성 보장**을 최우선으로 합니다.
+일반적인 언어 모델 연구를 넘어, **데브옵스/클라우드 엔지니어링 철학**이 결합된 최고 수준의 프롬프트 제약 조건들입니다. 아래 룰들은 LLM의 환각을 넘어, 실제 프로덕션 환경의 **시스템 무결성 및 신뢰성 보장**을 최우선으로 합니다.
 
 ### 4.1. Idempotency (멱등성 보장 패턴)
 **개념:** 스크립트나 명령어를 여러 번 반복 실행하더라도 시스템 상태가 오염되지 않고 동일한 결과를 유지하도록 강제하는 패턴.
@@ -189,7 +189,7 @@ priority: high
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
-- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오. (출처: aws/references/040-automation-scripting.md)
+- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 멱등성을 보장하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오. (출처: aws/references/040-automation-scripting.md)
 ```
 
 ### 4.2. Fail-Fast & Safety Boundary (빠른 실패와 안전선 패턴)
@@ -206,8 +206,8 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오. (출처: base.AGENTS.md)
-- **[MUST] Success Criteria over Manual Instructions:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오. (출처: base.AGENTS.md)
+- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오.
+- **[MUST] Success Criteria:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오. (출처: base.AGENTS.md)
 ```
 
 ### 4.4. Break-Glass & Compliance (예외 로깅 및 기술 부채 패턴)
@@ -227,25 +227,25 @@ priority: high
 LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 것을 방어하기 위한 마이크로 제어 패턴들입니다.
 
 ### 5.1. Surgical Precision (외과적 수정 패턴)
-**이론:** 지시받은 영역 외의 코드(포매팅, 주석 등)를 도와준답시고 임의로 건드려 Git 히스토리를 오염시키는 것을 막는 기법.
+**이론:** 지시받은 영역 외의 코드(포매팅, 주석 등)를 도와준답시고 임의로 건드려 Git 히스토리를 무결성을 보장하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하십시오. 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오. (출처: base.AGENTS.md)
-- **[MUST] Match Existing Style:** 개인적 선호도를 배제하고 기존 코드 스타일을 무조건 따르십시오. (출처: base.AGENTS.md)
+- **[MUST] Match Existing Style:** 기존 코드 스타일을 무조건 적용할 것. (출처: base.AGENTS.md)
 ```
 
 ### 5.2. Push-Back & Simplicity (단순성 방어 패턴)
-**이론:** 사용자가 과도하게 복잡한 아키텍처를 요구할 때, AI가 무지성으로 순응하지 않고 더 단순한 대안을 역제안하는 기법.
+**이론:** 사용자가 과도하게 복잡한 아키텍처를 요구할 때, AI가 더 단순한 대안을 능동적으로 역제안하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 무비판적으로 수용하지 말고 더 단순한 아키텍처를 능동적으로 역제안하십시오. (출처: base.AGENTS.md)
+- **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 더 단순한 아키텍처를 능동적으로 역제안하십시오. (출처: base.AGENTS.md)
 - **[MUST] Strictly Limit Features:** 명시적으로 요청된 기능만 구현하십시오. (출처: base.AGENTS.md)
 ```
 
 ### 5.3. Artifact-Driven Communication (산출물 기반 커뮤니케이션 패턴)
-**이론:** 디버깅 내역이나 분석 결과를 텍스트 채팅으로 늘어놓지 않고, 마크다운 문서로 영구 보존하게 강제하는 기법.
+**이론:** 디버깅 내역이나 분석 결과를 텍스트 채팅으로 나열하는 대신, 마크다운 문서로 영구 보존하게 강제하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
@@ -254,11 +254,11 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 ```
 
 ### 5.4. Pragmatic Verification (실용적 검증 및 팩트 수집 패턴)
-**이론:** 머릿속 파라미터 지식에 의존한 이론적 에러 핸들링을 제한하고, 로컬 터미널 명령을 통해 팩트부터 수집하도록 제약하는 기법.
+**이론:** 머릿속 파라미터 지식에 의존한 이론적 에러 핸들링 대신 로컬 터미널 명령을 통해 팩트부터 수집하도록 유도하는 기법.
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류)는 개별 로직에서 명시적으로 방어하고, 극단적인 엣지 케이스는 중복 방어하지 말고 공통 에러 핸들러나 미들웨어에 위임하십시오. (출처: base.AGENTS.md)
+- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류)는 개별 로직에서 명시적으로 방어하고, 극단적인 엣지 케이스는 개별 방어 대신 공통 에러 핸들러나 미들웨어에 위임하십시오. (출처: base.AGENTS.md)
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
 ```
 
@@ -275,7 +275,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 - 각 룰 파일 최상단 YAML Frontmatter의 `priority` 속성(`highest`, `critical`, `high`)을 기계적으로 해석.
-- `AGENTS.md`를 통해 전역으로 주입되는 000번 마스터 코어(`highest`)의 룰은 그 어떤 예외도 허용하지 않는 **절대 타협 불가능한 헌법(Hard Constraint)**으로 작동하여 모든 스킬 모듈 간의 충돌을 종식시킵니다.
+- `AGENTS.md`를 통해 전역으로 주입되는 000번 마스터 코어(`highest`)의 룰은 그 어떤 예외도 허용하지 않는 **절대적인 최우선 헌법(Hard Constraint)**으로 작동하여 모든 스킬 모듈 간의 충돌을 종식시킵니다.
 
 ### 6.2. Prompt Self-Evolution (프롬프트 자가 진화 메타인지)
 **이론:** 에러가 났을 때 무한히 '코드'만 고치는 한계를 극복하기 위한 자가 진화 트리거. 실패가 반복되면 코드 탓을 멈추고 **"현재 프롬프트 규정 원본 자체에 사각지대가 있다"**고 스스로 의심하게 만드는 기법.

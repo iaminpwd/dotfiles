@@ -44,7 +44,7 @@ echo "======================================================"
 echo "--- Step: Description 용어 중복 (라우팅 모호성 후보) ---"
 # 이 단계가 실패해도 즉시 죽이지 않고 종료 코드만 붙잡아 둔다. 채점(2단계)은 이 분석과
 # 독립적으로 유용한 정보이므로, 어느 항목이 실패했는지 전부 보여준 뒤 마지막에 한 번
-# 차단한다(compact-runner.sh 와 동일한 규범).
+# 중단한다(compact-runner.sh 와 동일한 규범).
 DESC_RC=0
 python3 - "$CONTEXTS_DIR" <<'PY' || DESC_RC=$?
 import re, sys, glob, os
@@ -80,7 +80,7 @@ def tokens(text):
     return out
 
 
-# dotfiles 는 setup.sh 의 글로벌 스킬 등록 루프가 제외한다(글로벌 룰 오염 방지).
+# dotfiles 는 setup.sh 의 글로벌 스킬 등록 루프가 제외한다(글로벌 룰 순수성 보장).
 # 프로젝트 CLAUDE.md 심볼릭 링크로 무조건 로드되므로 description 라우팅을 거치지
 # 않는다. 분석에 넣으면 존재하지 않는 경합을 보고하게 된다.
 NOT_ROUTED = {"dotfiles"}

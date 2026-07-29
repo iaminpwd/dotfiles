@@ -4,13 +4,13 @@
 # 각 픽스처는 010-containers-core.md / 020-image-hardening-standard.md 의 특정
 # 조항이나 중단 조건을 재현한다. 목적은 pre-flight-check.sh 의 Dockerfile 검증
 # 로직을 손볼 때, 기존 검사가 조용히 죽어서 위반 이미지 정의가 통과되는 상황을
-# 막는 것이다.
+# 제어하는 것이다.
 #
 # 검증기가 스테이징된 파일을 대상으로 동작하는 것과 달리 이 러너는 픽스처를
 # 직접 넘긴다. 대신 검증기가 쓰는 것과 동일한 명령·옵션을 그대로 사용한다.
 #
 # 두 검증기의 강제력이 다르므로 그룹을 나눠 표기한다.
-#   hadolint         validate_docker 가 실패 시 커밋을 차단한다 (차단 게이트)
+#   hadolint         validate_docker 가 실패 시 커밋을 중단한다 (중단 게이트)
 #   trivy misconfig  validate_security 가 --exit-code 0 으로 호출하므로 커밋을
 #                    막지 않는다. 탐지 여부만 검증한다 (경고 전용)
 #
@@ -21,8 +21,8 @@
 # 경로이므로 그대로 스캔 대상이다).
 #
 # trivy secret 스캐너용 픽스처는 두지 않는다. 실제로 탐지되는 자격 증명을
-# 저장소에 두는 셈이라 시크릿 하드코딩 금지 규칙에 정면으로 어긋나고,
-# pre-commit 훅의 trufflehog 가 커밋 자체를 차단한다.
+# 저장소에 두는 셈이라 시크릿 하드코딩 통제 규칙에 정면으로 어긋나고,
+# pre-commit 훅의 trufflehog 가 커밋 자체를 중단한다.
 #
 # 사용: bash ~/dotfiles/contexts/containers/tests/run.sh
 
@@ -40,7 +40,7 @@ CHECKED=()
 # 통과했다는 신호만 남기고 실제로는 아무것도 검증하지 않는다.
 require_tool() {
   command -v "$1" >/dev/null 2>&1 && "$1" --version >/dev/null 2>&1 && return 0
-  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 불가: $1"
+  echo "  FAIL  도구 미설치 또는 현재 위치에서 실행 실패: $1"
   FAIL_COUNT=$((FAIL_COUNT + 1))
   return 1
 }
@@ -118,7 +118,7 @@ print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misc
 
 echo "=== containers 검증 파이프라인 회귀 테스트 ==="
 
-echo "--- hadolint (pre-flight-check.sh / 커밋 차단) ---"
+echo "--- hadolint (pre-flight-check.sh / 커밋 중단) ---"
 if require_tool hadolint; then
   run_hadolint ok-baseline.Dockerfile ""
   run_hadolint fail-unpinned-base.Dockerfile DL3007

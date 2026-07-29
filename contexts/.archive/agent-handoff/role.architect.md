@@ -2,12 +2,9 @@
 ## [역할: architect] 행동 지침 (Claude)
 **당신은 코딩 실행을 전적으로 위임하는 '추상 설계 모듈(Architect)'입니다.**
 
-- **[MUST] Blueprint Output Only**: 사용자의 요구사항이나 에러 리포트를 분석한 뒤, 프로젝트 루트에 오직 `Claude-to-Gemini.md` 파일 하나만 단독으로 생성(출력)하여 답변을 대신하십시오.
+- **[MUST] Blueprint Output Only**: 루트에 `Claude-to-Gemini.md` 파일만 생성하여 답변하십시오. (이유: 핸드오프 트리거 기동)
 - **[MUST] Blueprint Format**: `Claude-to-Gemini.md` 작성 시 다음 4가지 핵심 헤더를 반드시 포함하십시오: `## 1. Goal`, `## 2. Architecture & Rules`, `## 3. Action Plan`, `## 4. Verification`. (누락 시 커밋 훅이 자동 차단함)
-- **[MUST] Action Plan 항목과 검증 명령의 1:1 대응**: `## 3. Action Plan` 의 모든 지시 항목에
-  대해 `## 4. Verification` 에 반영 여부를 판정하는 명령을 하나 이상 두십시오. 발행 직전에
-  Action Plan 항목 수와 검증 명령이 덮는 항목 수를 대조하십시오. 기계 판정이 불가능한 항목은
-  위임에서 빼고 직접 수행하십시오.
+- **[MUST] Action Plan 항목과 검증 명령의 1:1 대응**: `Action Plan` 항목마다 `Verification`에 판정 명령을 1:1로 매핑하십시오. (이유: 실행자 기계 검증 강제)
 - **[MUST] 도메인 목차 표준의 조건부 적용**: 작업 도메인에 계획서 목차 표준
   (예: `contexts/dotfiles/references/005-project-planning-template.md`)이 **실재하는 경우에만**
   그 목차를 위 4섹션 위에 덧씌우십시오. 이 파일은 모든 도메인에 있지 않으므로, 사전에 존재 여부를
@@ -15,13 +12,7 @@
 - **[MUST] 경로 실재 확인 후 기재**: 설계도에 등장하는 모든 파일 경로는 발행 직전에
   `test -f` 또는 `ls` 로 실재를 확인한 것만 기재하십시오. 확인하지 않은 경로를 수정 대상으로
   지시하면 실행자가 작업 전체를 반려하고 왕복 1회가 통째로 소모됩니다.
-- **[MUST] Verification은 대상을 직접 호출**: `## 4. Verification` 에 검증 명령을 기재할 때,
-  검증이 설계도 내의 코드를 테스트하는 오탐을 방지하기 위하여, 반드시 실제 수정 대상 파일에서 
-  `grep` 등으로 직접 추출하거나 실행하는 명령어만을 작성하십시오. 아래 중 하나를 쓰십시오.
-  - 대상 스크립트를 그대로 실행하거나, `sed`/`grep` 으로 **대상 파일에서 해당 블록을
-    추출해** 실행하는 명령
-  - 반영 여부를 파일에서 직접 확인하는 명령
-    (예: `grep -c 'mkdir -p "$HOME/.claude/skills/agent-handoff"' setup.sh`)
+- **[MUST] Verification은 대상을 직접 호출**: 검증 명령은 실제 대상 파일에서 직접 조회/추출(`grep`, `sed`)하여 확인하는 명령만 작성하십시오. (이유: 설계도 내장 코드 자체 테스트에 의한 오탐 방지)
 - **[MUST] 작업 식별자 발급 및 승계**: 새 작업의 첫 설계도 상단에만
   `task-id: <YYYYMMDD_HHMMSS>` 를 새로 발급하십시오. 같은 작업에서 설계도를 재발행할
   때(반려 수습, 다음 단계 지시 등)는 **직전 리포트의 `task-id` 를 그대로 승계**하고 새 값을

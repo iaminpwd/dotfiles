@@ -5,9 +5,9 @@
 # 바이너리를 번들하므로 그것을 자동 탐색해 쓴다(2026-07-27 확인:
 # ~/.antigravity-ide-server/extensions/anthropic.claude-code-*/resources/native-binary/claude).
 #
-# 관측 방식: 도구를 Skill 하나로 제한해 실행하면, 에이전트가 파일을 뒤지는 대신
+# 관측 방식: 도구를 Skill 하나로 한정해 실행하면, 에이전트가 파일을 뒤지는 대신
 # 라우팅 판단만 수행하므로 stream-json 의 tool_use(name=Skill) 가 곧 "로드된 스킬"이다.
-# 중립 디렉토리에서 실행해 dotfiles 의 CLAUDE.md 가 자동 로드되지 않게 한다
+# 중립 디렉토리에서 실행해 dotfiles 의 CLAUDE.md 가 자동 로드되지 않도록 한다
 # (dotfiles 스킬은 description 라우팅 대상이 아니므로 cases.tsv 에서도 제외되어 있다).
 #
 # --max-turns 1 인 이유: 필요한 것은 첫 턴의 라우팅 판단뿐이다. 턴을 더 주면 스킬을
@@ -24,7 +24,7 @@
 # [비용 주의] 이 스크립트는 케이스 1회당 실제 에이전트 세션을 1개 띄운다. 전체 측정은
 # 36건 x REPEATS 회이므로 기본값 기준 108개 세션이 뜨고 토큰이 그만큼 소모된다
 # (2026-07-27 실측: 1회 전체 측정으로 세션 토큰 예산의 상당 부분을 소진). description 을
-# 고칠 때마다 습관적으로 돌리지 말고, 아래 순서로 비용을 통제하십시오.
+# 고칠 때마다 습관적으로 돌리지 대신, 아래 순서로 비용을 통제하십시오.
 #   1. 로컬 무료 검사 먼저: run.sh 의 description 용어 중복 분석은 API 호출이 없다.
 #   2. 부분 측정: 고친 스킬과 관련된 케이스 ID 만 인자로 지정한다.
 #   3. 전체 재측정: 베이스라인을 갱신할 때만 수행한다.
@@ -32,12 +32,12 @@
 # [실행 가드] 위 비용 때문에 기본적으로 막혀 있다. 아래 두 조건을 모두 통과해야 실행된다.
 #   - 세션 수 상한: 예정 세션이 ROUTING_MAX_SESSIONS(기본 30)를 넘으면 거부한다.
 #   - 실행 승인: 대화형 터미널이면 yes 입력을 묻고, 비대화형이면 ROUTING_MEASURE_CONFIRM=yes
-#     가 없는 한 거부한다. 차단 시 종료 코드는 3 이다.
+#     가 없는 한 거부한다. 중단 시 종료 코드는 3 이다.
 #
 # 사용: bash ~/dotfiles/contexts/dotfiles/evals/routing/measure.sh [케이스ID ...]
 #       인자를 주면 해당 케이스만, 없으면 전체를 측정한다.
 #       ROUTING_REPEATS(기본 3) 반복 횟수, ROUTING_JOBS(기본 4) 동시 실행 수,
-#       ROUTING_TIMEOUT(기본 120) 케이스 1회당 제한시간,
+#       ROUTING_TIMEOUT(기본 120) 케이스 1회당 한정시간,
 #       ROUTING_MAX_SESSIONS(기본 30) 세션 수 상한,
 #       ROUTING_MEASURE_CONFIRM=yes 비대화형 실행 승인.
 
@@ -188,7 +188,7 @@ fi
 # 실행 비용 가드
 # -----------------------------------------------------------------------------
 # 이 스크립트는 케이스 1회당 실제 에이전트 세션을 띄우므로 토큰이 빠르게 소모된다
-# (2026-07-27: 전체 측정 1회로 세션 토큰 예산이 급감). 사고를 막기 위해 두 겹으로 막는다.
+# (2026-07-27: 전체 측정 1회로 세션 토큰 예산이 급감). 사고를 막기 위해 두 겹으로 제어하는다.
 #   1) 세션 수 상한: 기본 30개를 넘으면 거부하고, 올리려면 ROUTING_MAX_SESSIONS 를 명시해야 한다.
 #   2) 실행 승인: 대화형 터미널이면 직접 묻고, 비대화형(에이전트 도구 호출, CI, 훅)이면
 #      ROUTING_MEASURE_CONFIRM=yes 가 없는 한 무조건 거부한다. 에이전트 실행에는 TTY 가
@@ -216,7 +216,7 @@ if [ "${ROUTING_MEASURE_CONFIRM:-}" != "yes" ]; then
       exit 3
     fi
   else
-    echo "[BLOCKED] 비대화형 실행은 기본 차단됩니다(에이전트 도구 호출, CI, 훅 등)." >&2
+    echo "[BLOCKED] 비대화형 실행은 기본 중단됩니다(에이전트 도구 호출, CI, 훅 등)." >&2
     echo "          토큰이 소모되는 작업이므로 사용자의 명시적 승인이 필요합니다." >&2
     echo "          의도한 실행이라면 ROUTING_MEASURE_CONFIRM=yes 를 붙이십시오." >&2
     echo "            예) ROUTING_MEASURE_CONFIRM=yes bash ${BASH_SOURCE[0]} M02 M03" >&2
@@ -225,7 +225,7 @@ if [ "${ROUTING_MEASURE_CONFIRM:-}" != "yes" ]; then
 fi
 
 echo "[INFO] 실행 파일: $CLI"
-echo "[INFO] 케이스 ${#ids[@]}건 x ${REPEATS}회 = ${PLANNED}회 실행, 동시 ${JOBS}개, 1회당 제한 ${TIMEOUT_SEC}초"
+echo "[INFO] 케이스 ${#ids[@]}건 x ${REPEATS}회 = ${PLANNED}회 실행, 동시 ${JOBS}개, 1회당 한정 ${TIMEOUT_SEC}초"
 
 running=0
 for cid in "${ids[@]}"; do

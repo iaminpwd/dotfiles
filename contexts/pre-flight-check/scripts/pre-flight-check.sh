@@ -96,7 +96,7 @@ validate_shell() {
 
   # zsh 방언 파일은 shfmt(-ln 에 zsh 없음)와 shellcheck(셔뱅 없는 rc 파일에 SC2148 오류)가
   # 둘 다 처리하지 못하므로 두 도구에서 제외하고 zsh -n 으로만 검사한다. 판정을 한 군데로
-  # 모아 shfmt/shellcheck/문법 세 곳의 기준이 어긋나지 않게 한다.
+  # 모아 shfmt/shellcheck/문법 세 곳의 기준이 일치하도록 한다.
   local sh_only_files=() zsh_files=()
   for f in "${shell_files[@]}"; do
     [ -z "$f" ] && continue
@@ -119,7 +119,7 @@ validate_shell() {
     if [ "$has_shfmt" -eq 1 ]; then
       log_info "Checking format for all shell scripts..."
       if ! shfmt -d -i 2 "${sh_only_files[@]}"; then
-        echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
+        echo "❌ [ERROR] shfmt 포맷이 맞지 않아 커밋이 중단되었습니다. 'shfmt -w -i 2 <파일>'로 정리한 뒤 다시 시도하세요." >&2
         return 1
       fi
     fi
@@ -128,10 +128,10 @@ validate_shell() {
       log_info "Running shellcheck..."
       # -x: source 로 불러오는 라이브러리까지 따라가 분석한다. 없으면 라이브러리를 쓰는
       # 스크립트마다 SC1091("not specified as input")이 info 로 뜨고, shellcheck 는 지적이
-      # 하나라도 있으면 exit 1 이므로 정상 코드가 커밋 차단으로 이어진다(2026-07-28 실측:
+      # 하나라도 있으면 exit 1 이므로 정상 코드가 커밋 중단으로 이어진다(2026-07-28 실측:
       # tool-probe.sh 분리 직후 k8s-check.sh 가 exit 1). 따라가는 편이 분석 품질도 낫다.
       if ! shellcheck -x "${sh_only_files[@]}"; then
-        echo "❌ [ERROR] shellcheck 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] shellcheck 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
     else
@@ -147,7 +147,7 @@ validate_shell() {
     log_info "Checking syntax: $f"
     if [ "$has_zsh" -eq 1 ]; then
       if ! zsh -n "$f"; then
-        echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+        echo "❌ [ERROR] zsh 문법 오류가 발견되어 커밋이 중단되었습니다: $f" >&2
         return 1
       fi
     else
@@ -158,7 +158,7 @@ validate_shell() {
   for f in "${sh_only_files[@]}"; do
     log_info "Checking syntax: $f"
     if ! bash -n "$f"; then
-      echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 차단되었습니다: $f" >&2
+      echo "❌ [ERROR] bash 문법 오류가 발견되어 커밋이 중단되었습니다: $f" >&2
       return 1
     fi
   done
@@ -200,19 +200,19 @@ validate_terraform() {
 
     log_info "Running terraform fmt check..."
     if ! terraform fmt -check -recursive; then
-      echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 차단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
+      echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 중단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
       return 1
     fi
 
     log_info "Running terraform validate (offline initialization)..."
     if [ ! -d ".terraform" ]; then
       if ! terraform init -backend=false -input=false >/dev/null; then
-        echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 중단되었습니다." >&2
         return 1
       fi
     fi
     if ! terraform validate; then
-      echo "❌ [ERROR] terraform validate 검증에 실패하여 커밋이 차단되었습니다." >&2
+      echo "❌ [ERROR] terraform validate 검증에 실패하여 커밋이 중단되었습니다." >&2
       return 1
     fi
 
@@ -222,7 +222,7 @@ validate_terraform() {
         tflint --init || true
       fi
       if ! tflint; then
-        echo "❌ [ERROR] tflint 정적 분석에서 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] tflint 정적 분석에서 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
     else
@@ -235,11 +235,11 @@ validate_terraform() {
       # 주의: --soft-fail-on LOW,MEDIUM 은 현재 실질적으로 아무것도 완화하지 못한다. OSS
       # checkov는 심각도 데이터를 제공하지 않아 모든 failed_check의 severity가 None이므로
       # 등급 필터가 걸리지 않는다(2026-07-26 실측, contexts/aws/tests 로 확인). 즉 지적이
-      # 하나라도 나오면 커밋이 차단된다. 등급별 완화가 실제로 필요해지면 Prisma Cloud API
+      # 하나라도 나오면 커밋이 중단된다. 등급별 완화가 실제로 필요해지면 Prisma Cloud API
       # 키를 연동하거나 --skip-check로 개별 체크를 명시 제외해야 한다.
       log_info "Running checkov (Terraform security misconfiguration scan)..."
       if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM; then
-        echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
     else
@@ -249,7 +249,7 @@ validate_terraform() {
     if [ -x "$HOME/dotfiles/contexts/pre-flight-check/scripts/db-sg-checker.sh" ]; then
       log_info "Running DB SG architecture check..."
       if ! bash "$HOME/dotfiles/contexts/pre-flight-check/scripts/db-sg-checker.sh" .; then
-        echo "❌ [ERROR] DB 보안 그룹 아키텍처 위반(Web/WAS SG 미지정)으로 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] DB 보안 그룹 아키텍처 위반(Web/WAS SG 미지정)으로 커밋이 중단되었습니다." >&2
         return 1
       fi
     fi
@@ -281,7 +281,7 @@ validate_sam() {
     [ -z "$tpl" ] && continue
     log_info "Validating SAM template: $tpl"
     if ! sam validate --template-file "$tpl"; then
-      echo "❌ [ERROR] SAM 템플릿 검증에 실패하여 커밋이 차단되었습니다: $tpl" >&2
+      echo "❌ [ERROR] SAM 템플릿 검증에 실패하여 커밋이 중단되었습니다: $tpl" >&2
       return 1
     fi
   done
@@ -320,16 +320,16 @@ validate_bicep() {
 
     if [ "$bicep_cmd" = "standalone" ]; then
       if ! bicep build "$bf" --stdout >/dev/null; then
-        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
+        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 중단되었습니다: $bf" >&2
         return 1
       fi
     elif [ "$bicep_cmd" = "az" ]; then
       if ! az bicep build --file "$bf" --stdout >/dev/null; then
-        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 차단되었습니다: $bf" >&2
+        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 중단되었습니다: $bf" >&2
         return 1
       fi
     else
-      echo "❌ [ERROR] Bicep 실행 파일을 찾을 수 없거나 실행이 불가능합니다(OS 호환성 문제 등). 커밋이 차단되었습니다." >&2
+      echo "❌ [ERROR] Bicep 실행 파일을 찾을 수 없거나 실행이 미지원능합니다(OS 호환성 문제 등). 커밋이 중단되었습니다." >&2
       return 1
     fi
   done
@@ -352,7 +352,7 @@ validate_ansible() {
         [ -z "$pf" ] && continue
         log_info "Checking ansible syntax: $pf"
         if ! ansible-playbook --syntax-check "$pf"; then
-          echo "❌ [ERROR] Ansible 플레이북 문법 검사에 실패하여 커밋이 차단되었습니다: $pf" >&2
+          echo "❌ [ERROR] Ansible 플레이북 문법 검사에 실패하여 커밋이 중단되었습니다: $pf" >&2
           return 1
         fi
       done
@@ -360,7 +360,7 @@ validate_ansible() {
     if has_tool ansible-lint; then
       log_info "Running ansible-lint..."
       if ! ansible-lint; then
-        echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
       log_info "[SUCCESS] Ansible validation passed."
@@ -415,7 +415,7 @@ validate_helm() {
   for d in "${chart_dirs[@]}"; do
     log_info "Linting chart: $d"
     if ! helm lint "$d"; then
-      echo "❌ [ERROR] Helm lint 지적 사항이 발견되어 커밋이 차단되었습니다: $d" >&2
+      echo "❌ [ERROR] Helm lint 지적 사항이 발견되어 커밋이 중단되었습니다: $d" >&2
       return 1
     fi
   done
@@ -424,10 +424,10 @@ validate_helm() {
 
 # 6. Raw K8s Manifest Validation
 validate_k8s_manifests() {
-  # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_yaml과 중복 git diff 호출 방지)
+  # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_yaml과 중복 git diff 호출 최소화)
   local staged_yaml=("${GLOBAL_TARGET_YAML_FILES[@]}")
 
-  # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞인 파일이라 순수 YAML 파서(kubectl/kube-linter)로 검증 불가 (validate_helm에서 helm lint로 별도 검증됨)
+  # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞인 파일이라 순수 YAML 파서(kubectl/kube-linter)로 검증 미지원 (validate_helm에서 helm lint로 별도 검증됨)
   local k8s_manifests=()
   for f in "${staged_yaml[@]}"; do
     [ -z "$f" ] && continue
@@ -441,7 +441,7 @@ validate_k8s_manifests() {
     if has_tool kube-linter; then
       log_info "Running kube-linter for all manifests..."
       if ! kube-linter lint "${k8s_manifests[@]}"; then
-        echo "❌ [ERROR] kube-linter 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] kube-linter 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
       log_info "[SUCCESS] kube-linter passed."
@@ -451,7 +451,7 @@ validate_k8s_manifests() {
         [ -z "$mf" ] && continue
         echo "Validating: $mf"
         if ! kubectl apply --dry-run=client -f "$mf" 2>&1; then
-          echo "❌ [ERROR] kubectl dry-run 검증에 실패하여 커밋이 차단되었습니다: $mf" >&2
+          echo "❌ [ERROR] kubectl dry-run 검증에 실패하여 커밋이 중단되었습니다: $mf" >&2
           return 1
         fi
       done
@@ -472,7 +472,7 @@ validate_docker() {
       log_info "--- Step: Dockerfile Validation ---"
       log_info "Linting Dockerfiles..."
       if ! hadolint "${dockerfiles[@]}"; then
-        echo "❌ [ERROR] hadolint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] hadolint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
       log_info "[SUCCESS] Dockerfile validation passed."
@@ -483,7 +483,7 @@ validate_docker() {
     # 여기에는 예전에 syft(소스 SBOM 생성)와 grype(의존성 CVE 스캔)의 `dir:.` 소스 스캔이
     # 있었으나 제거했다. 두 도구가 보던 대상(requirements.txt/package.json/go.mod 등 의존성
     # 매니페스트)은 validate_security 의 `trivy fs --scanners vuln` 이 이미 같은 저장소를
-    # 훑으며 검사한다. 둘 다 --exit-code 0 상당의 경고 전용이라 차단력이 겹치는 것도 아니고,
+    # 훑으며 검사한다. 둘 다 --exit-code 0 상당의 경고 전용이라 중단력이 겹치는 것도 아니고,
     # 특히 syft 는 게이트가 아니라 SBOM 테이블을 stdout 에 통째로 출력할 뿐이어서 Dockerfile
     # 을 건드린 커밋마다 순수 노이즈만 남겼다. 취약점 DB가 서로 달라 검출 결과가 완전히
     # 같지는 않지만, 커밋 시점에 경고 전용 스캐너를 두 개 돌릴 근거로는 약하다.
@@ -497,7 +497,7 @@ validate_docker() {
 
 # 8. YAML Style & Validation (Relaxed / Fail-safe)
 validate_yaml() {
-  # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_k8s_manifests와 중복 git diff 호출 방지)
+  # main()에서 1회만 조회한 스테이징 YAML 목록을 재사용 (validate_k8s_manifests와 중복 git diff 호출 최소화)
   local staged_yaml=("${GLOBAL_TARGET_YAML_FILES[@]}")
 
   # Helm 차트의 templates/ 하위는 Go 템플릿 구문이 섞여 있어 순수 YAML 린터(yamllint) 검증 대상에서 제외
@@ -513,7 +513,7 @@ validate_yaml() {
       log_info "--- Step: YAML Style Validation (Relaxed) ---"
       # find로 필터링된 모든 YAML 파일을 일괄 검사
       if ! yamllint -d "{extends: relaxed, rules: {line-length: disable}}" "${yaml_files[@]}"; then
-        echo "❌ [ERROR] yamllint 지적 사항이 발견되어 커밋이 차단되었습니다." >&2
+        echo "❌ [ERROR] yamllint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
       log_info "[SUCCESS] YAML format validation passed."
@@ -570,14 +570,14 @@ validate_conftest() {
         # 여전히 통과하는지 확인해야 하므로 저장소 전체를 대상으로 검사한다.
         log_info "[INFO] Rego policy changed. Testing against the entire repository for regressions."
         if ! conftest test "${policy_flags[@]}" .; then
-          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 차단되었습니다." >&2
+          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 중단되었습니다." >&2
           return 1
         fi
       else
         # 정책은 그대로이고 설정 파일만 바뀐 경우: 이번에 변경된 파일만 검사해도
         # (다른 설정 파일은 이미 기존 정책을 통과한 상태이므로) 무관한 재검사를 피할 수 있다.
         if ! conftest test "${policy_flags[@]}" "${staged_config[@]}"; then
-          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 차단되었습니다." >&2
+          echo "❌ [ERROR] Conftest 정책 위반이 발견되어 커밋이 중단되었습니다." >&2
           return 1
         fi
       fi
@@ -620,12 +620,12 @@ validate_security() {
       fi
     fi
 
-    # 1. 시크릿(비밀키, 토큰 등) 검사는 강제 차단 (exit-code 1)
+    # 1. 시크릿(비밀키, 토큰 등) 검사는 강제 중단 (exit-code 1)
     local tmp_secret
     tmp_secret=$(mktemp)
     if ! trivy fs -q "${skip_flags[@]}" --scanners secret --exit-code 1 . >"$tmp_secret" 2>&1; then
       cat "$tmp_secret"
-      echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 차단되었습니다."
+      echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 중단되었습니다."
       rm -f "$tmp_secret"
       return 1
     fi
@@ -639,7 +639,7 @@ validate_security() {
     #    스캔할 때마다 같은 지적이 그대로 재보고된다. dotfiles 저장소에서 실측하니 HIGH
     #    이상 지적 6건이 전부 fail-* 픽스처였고 실제 코드 지적은 0건인데, 픽스처 31개를
     #    나열하는 요약 테이블까지 더해 매 커밋 212줄이 출력됐다(2026-07-28). 막지도 않는
-    #    경고가 매번 그만큼 흐르면 사람이 읽지 않게 되어 경고 자체가 무력해진다. 픽스처만
+    #    경고가 매번 그만큼 흐르면 사람이 무시하게 되어 경고 자체가 무력해진다. 픽스처만
     #    빼면 출력이 12줄로 줄고, 픽스처 밖 실제 코드에 대한 검출력은 그대로다(같은
     #    main.tf 를 픽스처 밖에 두고 AWS-0107 이 계속 잡히는 것을 확인).
     #    (시크릿 스캔에는 적용하지 않는다. 픽스처에 실제 자격 증명이 섞여 들어가는 사고는
@@ -681,7 +681,7 @@ validate_security() {
   elif has_tool trufflehog; then
     log_info "Running trufflehog filesystem scan..."
     if ! trufflehog filesystem --no-update --fail .; then
-      echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 차단되었습니다."
+      echo "❌ [ERROR] 시크릿(비밀키/토큰) 유출이 감지되어 커밋이 중단되었습니다."
       return 1
     fi
     log_info "[SUCCESS] Trufflehog secret scan passed."
@@ -692,7 +692,7 @@ validate_security() {
 
 # 11. FinOps Cost Validation (Infracost)
 validate_finops_costs() {
-  # 커밋 시점이 아닐 경우 비용 검사 생략 (API 호출 제한 절약)
+  # 커밋 시점이 아닐 경우 비용 검사 생략 (API 호출 한정 절약)
   if [ "${RUN_COST_CHECK:-false}" != "true" ]; then
     log_info "--- Step: FinOps Cost Validation (Infracost) ---"
     log_info "[INFO] Not in Git commit stage. Skipping cost validation to save API limits."
@@ -755,14 +755,14 @@ validate_finops_costs() {
 # 이름만으로 걸려들었다. agent-handoff/scripts/handoff-check.sh 가 그 사례로, 이미
 # pre-commit 훅이 --commit-gate 로 직접 호출하는데 여기서 인자 없이 한 번 더 실행되어
 # 훅이 의도적으로 WARNING 으로 낮춰둔 3왕복 상한이 ERROR 로 되살아났다. 그 결과 동일한
-# 저장소 상태에서 "yaml 을 스테이징했는지" 만으로 커밋 차단 여부가 갈렸다(2026-07-28
+# 저장소 상태에서 "yaml 을 스테이징했는지" 만으로 커밋 중단 여부가 갈렸다(2026-07-28
 # 실측: yaml 스테이징 시 exit 1, 아니면 exit 0). 이름이 아니라 위치를 계약으로 삼으면
 # 위임 대상이 명시적으로 옵트인되고, 이 스크립트 자신도 글롭에 걸리지 않아 예전의
 # readlink 자기 제외 방어 코드가 필요 없어진다.
 run_delegated_skill_checks() {
   # 대상 yaml이 하나도 없으면 스킬별 스크립트를 띄울 필요조차 없다 (지금까지
   # 존재하는 스킬 스크립트의 대상 파일은 전부 yaml이므로 이 필터로 놓치는 케이스는 없다).
-  # k8s 등과 무관한 프로젝트(순수 Terraform 등)에서 매번 서브프로세스가 뜨는 낭비를 막는다.
+  # k8s 등과 무관한 프로젝트(순수 Terraform 등)에서 매번 서브프로세스가 뜨는 효율을 높인다.
   if [ "${#GLOBAL_TARGET_YAML_FILES[@]}" -eq 0 ] || [ -z "${GLOBAL_TARGET_YAML_FILES[0]}" ]; then
     return 0
   fi
@@ -965,7 +965,7 @@ main() {
   # 검증 성공 시 스테이징 캐시 갱신 (변경 대상이 있을 때만 업데이트).
   # 여기는 모든 검증을 통과한 직후이자 "All Checks Passed" 출력 직전이라, 쓰기 실패가
   # set -e로 이어지면 전 항목 통과 상태에서 pre-commit이 "사전 검증 실패로 커밋이
-  # 차단되었습니다"를 띄운다. 캐시는 재실행 속도 최적화일 뿐이므로 실패해도 무시한다.
+  # 중단되었습니다"를 띄운다. 캐시는 재실행 속도 최적화일 뿐이므로 실패해도 무시한다.
   if [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
     echo "$GLOBAL_TF_HASH" 2>/dev/null >"$CACHE_FILE" || true
   fi

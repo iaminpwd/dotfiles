@@ -72,7 +72,7 @@ echo "--- 거짓 초록불 회귀 (2026-07-28 실측 버그) ---"
 
 # 1. 핵심 회귀: 실패인데 출력이 전부 무시 패턴에만 걸리는 경우. 종료 코드 판정으로
 #    바뀌기 전에는 여기서 `[✓]` 가 찍혔다.
-check "fail-silent (통과 표시 금지)" 1 "exit=1" "[✓]" fail-silent.sh
+check "fail-silent (통과 표시 예외)" 1 "exit=1" "[✓]" fail-silent.sh
 
 # 2. 실패 시 원형 로그를 압축하지 않고 보존하는지.
 check "fail-verbose (원형 로그 보존)" 1 "FIXTURE_RAW_DETAIL" "-" fail-verbose.sh
@@ -98,7 +98,7 @@ check "ok-with-warning (경고 보존)" 0 "FIXTURE_SKIPPED_TOOL" "-" ok-with-war
 # 7. 여러 스크립트가 전부 통과하면 exit 0.
 check "전건 통과" 0 "[✓]" "❌" ok-quiet.sh ok-with-warning.sh
 
-echo "--- 무검증 통과 방지 ---"
+echo "--- 무검증 통과 통제 ---"
 
 # 8. 실행 대상이 하나도 없으면 exit 0 으로 조용히 넘어가면 안 된다. "전부 통과"와
 #    구분되지 않는 무검증 통과가 되기 때문이다. HOME 을 빈 디렉토리로 덮어 정본
@@ -144,7 +144,7 @@ fi
 #     source 가 실패하고 set -euo pipefail 이 즉시 죽이므로 완주 여부로 판정한다.
 export QUIET=0
 #     k8s 스위트는 k8s-check.sh 를 구동하지 않고 로직을 복제 검증하므로, 이 스크립트의
-#     라이브러리 적재 경로를 덮는 테스트가 여기 말고는 없다.
+#     라이브러리 적재 경로를 덮는 테스트가 여기 대신는 없다.
 for consumer in "${LIB_CONSUMERS[@]}"; do
   name=$(basename "$consumer")
   ln -sfn "$(readlink -f "$consumer")" "$TMP/link-$name"

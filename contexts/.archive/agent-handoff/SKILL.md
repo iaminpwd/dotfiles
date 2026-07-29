@@ -8,9 +8,7 @@ description: |
 ---
 # Agent Handoff Protocol
 
-이 룰의 발동 조건은 `contexts/base.AGENTS.md` 의 Multi-Agent Collaboration Gate 에
-역할별로 정의되어 있습니다. 조건은 역할마다 다르므로, 자신의 역할에 해당하는 조건만
-확인하여 배타적으로 수용하십시오.
+본 룰의 발동 조건은 base.AGENTS.md의 역할을 배타적으로 수용하십시오.
 
 **[역할 확정] 이 문서 하단에는 당신의 역할 지침 한 벌만 포함되어 있습니다.** `setup.sh`
 가 배포 시점에 이 공통부와 역할 파일(`role.architect.md` 또는 `role.executor.md`) 중
@@ -18,20 +16,11 @@ description: |
 오직 배포본에 결합된 본인의 역할 지침 단 하나만을 절대적 SSOT로 신뢰하십시오.
 
 ## 공통 규약 (Shared Contract)
-- **[MUST] 통신 파일 경로 고정**: 설계도는 프로젝트 루트의 `Claude-to-Gemini.md`, 결과
-  리포트는 `Gemini-to-Claude.md` 입니다. 아카이브는 오직 `.agent-state/handoff-archive/<task-id>/`
-  하위로만 격리하여 저장하십시오.
-- **[MUST] task-id 는 왕복이 아니라 작업 단위**: `<task-id>` 는 하나의 작업 전체를
-  식별합니다. 같은 작업에서 파생된 모든 설계도와 리포트는 재발행 횟수와 무관하게 동일한
-  `.agent-state/handoff-archive/<task-id>/` 폴더에 누적되어야 합니다. 왕복마다 새 `task-id` 를
-  발급하면 아래 3왕복 상한이 계수 대상을 잃어 영원히 발동하지 않습니다.
+- **[MUST] 통신 파일 경로 고정**: 설계도(`Claude-to-Gemini.md`), 결과 리포트(`Gemini-to-Claude.md`)를 루트에 생성하고 아카이브는 `.agent-state/handoff-archive/<task-id>/`에 격리하십시오. (이유: 파일 충돌 방지)
+- **[MUST] task-id 는 작업 단위**: `<task-id>`는 동일 작업 시 누적 유지하십시오. (이유: 3왕복 상한선 회피 무한 루프 방어)
 
 ## 검증 및 중단 조건 (Success & Halt Criteria)
-- **[MUST] 완료 조건**: `Gemini-to-Claude.md` 의 상태가 SUCCESS 이고, 그 SUCCESS 가
-  실행자의 기재 전 반영 확인을 거쳤으며, 아키텍트가 리포트의 주장을 대상 파일에서
-  독립적으로 재확인해 추가 요구사항이 없을 때 프로토콜은 1왕복을 완료한 것으로
-  선언됩니다. 아키텍트는 리포트의 SUCCESS 를 그대로 신뢰하지 말고, 지시 항목마다
-  반영 여부를 직접 조회한 뒤 완료를 선언하십시오.
+- **[MUST] 완료 조건**: `Gemini-to-Claude.md`가 SUCCESS이며, 아키텍트가 대상 파일에서 직접 반영을 교차 검증한 경우에만 완료를 선언하십시오. (이유: 환각성 허위 보고 차단)
 - **[MUST] 배포 반영 확인**: 이 프로토콜은 다른 스킬처럼 심볼릭 링크로 노출되지 않고,
   `setup.sh` 가 공통부와 역할 파일을 결합한 **복사본** 두 벌
   (`~/.claude/skills/agent-handoff/`, `~/.gemini/config/skills/agent-handoff/`)로

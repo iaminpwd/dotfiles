@@ -60,7 +60,7 @@ check_ssot_module_lists() {
     declared_line=$(grep "공통 자가 비판 절차" "$corefile" || true)
     declared=$(grep -oE '\([0-9]{3}(, [0-9]{3})*\)' <<<"$declared_line" | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u || true)
 
-    actual=$(find "$skill_dir/references" -maxdepth 1 -name "*.md" -printf '%f\n' 2>/dev/null |
+    actual=$(find "$skill_dir/references" -path "*/.archive/*" -prune -o -maxdepth 1 -name "*.md" -printf '%f\n' 2>/dev/null |
       grep -oE '^[0-9]{3}' | grep -v "^${own_prefix}$" | sort -u || true)
 
     if [ "$declared" != "$actual" ]; then
@@ -91,7 +91,7 @@ check_reference_links() {
       echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
       EXIT_CODE=1
     }
-  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | sort -u || true)
+  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | sort -u || true)
   log_info "[INFO] 참조 링크 검사 완료."
 }
 
@@ -102,6 +102,7 @@ check_orphaned_files() {
   log_info "--- Step: Orphaned Reference File Detection ---"
   local skill_dir skill_md fname
   for skill_dir in "$CONTEXTS_DIR"/*/; do
+    [ "$(basename "$skill_dir")" = ".archive" ] && continue
     skill_md="${skill_dir}SKILL.md"
     [ -f "$skill_md" ] || continue
     [ -d "${skill_dir}references" ] || continue
@@ -152,7 +153,7 @@ check_documented_clause_existence() {
   # pipefail 이 그것을 파이프라인 결과로 채택해 "찾았는데 못 찾음"으로 뒤집힌다
   # (2026-07-28 실측: 실재하는 조항 20건이 전부 오탐).
   if [ -s "$names_file" ]; then
-    grep -rhoFf "$names_file" --include="*.md" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
+    grep -rhoFf "$names_file" --include="*.md" --exclude-dir=".archive" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
       sort -u >"$found_file" || true
 
     local name line_no
@@ -174,7 +175,7 @@ check_documented_clause_existence() {
 # -----------------------------------------------------------------------------
 check_file_size() {
   log_info "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
-  find "$CONTEXTS_DIR" -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
+  find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
     $2 != "total" && $2 != "" {
       lines = $1;
       f = $2;
@@ -193,8 +194,8 @@ check_vendor_leakage() {
   log_info "--- Step: Cross-Vendor Terminology Leakage ---"
   local hit
 
-  # azurecr.io는 azure/ 폴더 밖에서 등장하면 안 됨 (예시 코드에 벤더 종속 레지스트리 하드코딩)
-  hit=$(grep -rl "azurecr\.io" "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | grep -v "^$CONTEXTS_DIR/azure/" || true)
+  # azurecr.io는 azure/ 폴더 안에서만 사용할 것 (예시 코드에 벤더 종속 레지스트리 하드코딩)
+  hit=$(grep -rl "azurecr\.io" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep -v "^$CONTEXTS_DIR/azure/" || true)
   [ -n "$hit" ] && {
     echo "❌ [ERROR] azure 폴더 밖에서 azurecr.io 발견:" >&2
     echo "    ${hit//$'\n'/$'\n    '}" >&2
@@ -202,7 +203,7 @@ check_vendor_leakage() {
   }
 
   # "IAM/RBAC" 병기는 aws 폴더에서는 부정확한 표현 (AWS는 IAM/RBAC를 공식 병기하지 않음)
-  hit=$(grep -rl "IAM/RBAC" "$CONTEXTS_DIR/aws" --include="*.md" 2>/dev/null || true)
+  hit=$(grep -rl "IAM/RBAC" "$CONTEXTS_DIR/aws" --include="*.md" --exclude-dir=".archive" 2>/dev/null || true)
   [ -n "$hit" ] && {
     echo "❌ [ERROR] aws 폴더에서 'IAM/RBAC' 병기 발견 (Azure 전용 표현):" >&2
     echo "    ${hit//$'\n'/$'\n    '}" >&2
@@ -218,7 +219,7 @@ check_vendor_leakage() {
 check_code_fences() {
   log_info "--- Step: Code Fence Balance ---"
   local unclosed
-  unclosed=$(find "$CONTEXTS_DIR" -name "*.md" -print0 | xargs -0 awk '
+  unclosed=$(find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -name "*.md" -print0 | xargs -0 awk '
     BEGIN { fail = 0; }
     FNR == 1 {
       if (count % 2 != 0) {
@@ -259,7 +260,7 @@ check_severity_tag_heuristic() {
   # Hard Block이어야 할 후보일 확률이 높으므로 사람/AI의 재검토를 요청한다.
   local risk_keywords='privileged|hostNetwork|평문|자격 증명|시크릿.*유출|credential|secret.*leak|0\.0\.0\.0/0|CVE|readOnlyRootFilesystem'
   local hits
-  hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | grep "Halt & Clarify" || true)
+  hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep "Halt & Clarify" || true)
   if [ -n "$hits" ]; then
     echo "$hits" | awk -F':' '{
       file = $1;
@@ -285,7 +286,7 @@ check_prefer_language_tagged_must() {
   # 재발을 막기 위해 문서 규칙을 여기서 기계 판정으로 승격시킨다(056 §2 3단계).
   local prefer_words='최우선으로 (제안|탐색|시도|고려)|최우선 (제안|탐색)|가급적|우선 탐색|권장합니다|권장하십시오'
   local hits
-  hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" 2>/dev/null | grep -E "$prefer_words" || true)
+  hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep -E "$prefer_words" || true)
   if [ -n "$hits" ]; then
     echo "$hits" | awk -F':' '{
       file = $1;

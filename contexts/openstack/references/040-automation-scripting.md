@@ -7,23 +7,23 @@ references:
 ---
 # 컨텍스트 모듈: 시스템 자동화 및 셸 스크립트(Bash) 엔지니어링 표준
 
-본 모듈은 시스템 셋업 쉘 스크립트 작성, OpenStackClient(`openstack`) 자동화 및 스크립트 아키텍처 수립 시 적용되는 엔지니어링 표준 가이드라인입니다.
+해당 도메인 설계 및 작업 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Bash Fail-Fast & Cleanup:** 셸 스크립트 실행 시 에러 발생 시 즉각 실행을 정지하도록 `set -euo pipefail`을 강제하고, 종료 시 임시 리소스를 해제하는 `trap` 회수 로직을 보증하십시오.
-- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
-- **[PREFER] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용하십시오.
+- **[MUST] Bash Fail-Fast & Cleanup:** 셸 스크립트 실행 시 에러 발생 시 즉각 실행을 정지하도록 `set -euo pipefail`을 강제하고, 종료 시 임시 리소스를 해제하는 `trap` 회수 로직을 보증할 것.
+- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성할 것. (pre-flight-check 훅이 자동 검증함)
+- **[PREFER] Strict User-Level Installation:** 일반 사용자 소유권을 보장하기 위해 `sudo` 권한 남용을 억제하고 사용자 수준(User-level) 패키지 설치를 최우선으로 적용할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Bash 스크립트 작성 규칙
-- **[MUST] Safe File Modification:** 설정 파일(`/etc/*` 등) 수정 전, 시스템 롤백을 위해 반드시 타임스탬프가 포함된 백업 파일(`.bak`)을 먼저 생성하십시오.
-- **[PREFER] Descriptive Output:** 실행 시간이 길어질 수 있는 구문에는 `echo "[1/5] 프로비저닝 진행 중..."`처럼 단계별 진행 상황 로깅 메시지를 기재하십시오.
-- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 중복 추가를 방지하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오.
-- **[MUST] Credential Isolation:** `openstack` CLI 자동화 시 자격 증명을 스크립트에 하드코딩하지 말고, Application Credential 기반 `clouds.yaml`과 `OS_CLOUD` 환경 변수를 참조하도록 설계하십시오.
+- **[MUST] Safe File Modification:** 설정 파일(`/etc/*` 등) 수정 전, 시스템 롤백을 위해 반드시 타임스탬프가 포함된 백업 파일(`.bak`)을 먼저 생성할 것.
+- **[PREFER] Descriptive Output:** 실행 시간이 길어질 수 있는 구문에는 `echo "[1/5] 프로비저닝 진행 중..."`처럼 단계별 진행 상황 로깅 메시지를 기재할 것.
+- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 멱등성을 보장하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인할 것.
+- **[MUST] Credential Isolation:** `openstack` CLI 자동화 시 자격 증명을 스크립트에 하드코딩하는 대신, Application Credential 기반 `clouds.yaml`과 `OS_CLOUD` 환경 변수를 참조하도록 설계할 것.
 
 ### 2.2 도구 관리 및 가상환경 격리
-- **[PREFER] Tool Isolation:** `openstack` 등 Python CLI 도구 설치 시 `pipx` 또는 `mise` 도구 버전 관리 시스템을 활용하여 도구 전용 가상환경에 격리 배포하도록 설계하십시오.
+- **[PREFER] Tool Isolation:** `openstack` 등 Python CLI 도구 설치 시 `pipx` 또는 `mise` 도구 버전 관리 시스템을 활용하여 도구 전용 가상환경에 격리 배포하도록 설계할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -52,11 +52,11 @@ openstack network create prd-web-net  # 이미 존재 시 실패
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 작성된 스크립트가 구문 린트 오류 없이 통과되고, 2회 연속 실행(멱등성 테스트)에도 에러가 발생하지 않아야 합니다.
-- **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
+- **[MUST] 검증 도구 매핑:** 지정된 린터 도구 또는 `pre-flight-check.sh`로 일괄 검증할 것. (이유: 구문 검증 강제)
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Script Completed] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (멱등성): 스크립트를 동일 환경에서 2회 연속 수행해도 자원 중복 생성이나 실패 없이 동일한 결과가 보장되는가?
   - 기준 2 (보안성): 스크립트 로그와 출력에서 환경 변수·OpenStack 자격 증명 등 민감 정보가 마스킹되어 유출 리스크가 제거되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
-  - 스크립트 코드 내에 `rm -rf ${VAR}/*`와 같이 매개변수 유효성(공백 체크 등) 없이 광대역 삭제를 수행하는 위험 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고하십시오.
-  - `openstack server delete`, `openstack volume delete` 등 파괴적 명령이 대상 필터 검증 없이 광역으로 실행되는 코드가 감지될 시 작업을 멈추고 안전장치 추가를 요구하십시오.
+  - 스크립트 코드 내에 `rm -rf ${VAR}/*`와 같이 매개변수 유효성(공백 체크 등) 없이 광대역 삭제를 수행하는 위험 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고할 것.
+  - `openstack server delete`, `openstack volume delete` 등 파괴적 명령이 대상 필터 검증 없이 광역으로 실행되는 코드가 감지될 시 작업을 멈추고 안전장치 추가를 요구할 것.

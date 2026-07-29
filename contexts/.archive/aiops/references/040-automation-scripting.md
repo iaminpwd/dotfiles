@@ -8,12 +8,12 @@ references:
 ---
 # 컨텍스트 모듈: 시스템 탄력성 (Resiliency) 및 자동화 카오스 엔지니어링
 
-본 모듈은 자동화 파이프라인 스크립팅, 분산 시스템의 예외 엣지 케이스 처리 및 카오스 엔지니어링을 통한 인프라 복원력 검증 시 적용되는 기술 표준 가이드라인입니다.
+자동화 파이프라인 엣지 케이스 처리 및 카오스 엔지니어링 복원력 검증 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Idempotency:** 네트워크 지연으로 인한 중복 웹훅 인입 시 상태의 단일 변경을 보장하도록 DynamoDB나 Redis 기반의 Idempotency Key(멱등성 키) 패턴을 핵심 로직에 구현하십시오.
-- **[MUST] Exponential Backoff & Circuit Breaker:** 외부 API(GitHub, PagerDuty 등) 호출 시 Rate Limit(429) 및 일시 장애에 대응하도록 지수적 백오프와 지터(Exponential Backoff & Jitter)를 적용하고, 장애 장기화 시 시스템 리소스 보호를 위한 서킷 브레이커(Circuit Breaker)를 결합하십시오.
-- **[MUST] Prompt Injection Defense:** 에이전트가 클라우드 로그(CloudWatch, Azure Monitor Logs 등) 등 외부 텍스트를 파싱할 때, 로그 내에 포함된 악성 명령어에 노출을 차단하기 위해 입력값을 철저히 소독(Sanitization)하고 시스템 프롬프트와 물리적으로 격리하십시오.
+- **[MUST] Idempotency:** DB 기반 Idempotency Key 패턴을 로직에 구현하십시오. (이유: 중복 웹훅 호출 시 상태 단일 변경 보장)
+- **[MUST] Exponential Backoff & Circuit Breaker:** 외부 API 호출 시 지수 백오프/지터 및 서킷 브레이커를 적용하십시오. (이유: 장애 대응 및 리소스 보호)
+- **[MUST] Prompt Injection Defense:** 파싱하는 외부 텍스트 입력값을 소독하고 시스템 프롬프트와 격리하십시오. (이유: 프롬프트 인젝션 차단)
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
@@ -45,8 +45,8 @@ def process_webhook(event_id, payload):
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 멱등 키 검증 단위 테스트 및 지수 백오프 모킹 테스트가 에러 없이 성공하고, 모든 테스트 케이스의 코드 커버리지가 기준치를 상회해야 합니다.
-- **[MUST] 검증 도구 매핑:** `pytest` 또는 `jest`를 실행하여 Fault Injection 및 에러 핸들링 코드가 정상적으로 예외를 캐치 및 격리하는지 이진(Pass/Fail) 결과를 검증하십시오.
+- **[MUST] 완료 조건 (Done when):** 테스트 커버리지 달성 및 예외/멱등성 검증 모킹 성공. (이유: 안정성 보장)
+- **[MUST] 검증 도구 매핑:** `pytest`/`jest`로 예외 캐치 및 격리를 검증하십시오. (이유: 방어 로직 검증)
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Executing Critical Actions] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**

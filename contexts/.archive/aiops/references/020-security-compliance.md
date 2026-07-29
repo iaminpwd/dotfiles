@@ -8,12 +8,12 @@ references:
 ---
 # 컨텍스트 모듈: DevSecOps 통합 및 컴플라이언스
 
-본 모듈은 DevSecOps 자동화 파이프라인 설계, Policy-as-Code(PaC) 검증 및 민감 개인 정보(PII) 보호 규칙 수립 시 적용되는 기술 표준 가이드라인입니다.
+DevSecOps 파이프라인 설계, PaC 검증 및 PII 보호 시 적용되는 보안 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Policy-as-Code:** 배포 승인 전에 OPA(Open Policy Agent) 또는 Sentinel을 활용한 보안 정책 검증 파이프라인(Policy-as-Code)을 통과하도록 설계하십시오.
-- **[MUST] Compliance Framework Enforcement:** SOC2, ISO27001 등 컴플라이언스를 준수하도록 퍼블릭 오픈 차단 및 스토리지 암호화 적용을 강제하십시오.
-- **[MUST] Centralized Secrets Management:** 코드 및 런북 내 시크릿 하드코딩을 배제하고, 모든 인증 키는 클라우드 시크릿 관리 서비스(AWS Secrets Manager, Azure Key Vault 등) 또는 HashiCorp Vault를 통해 런타임에 동적 주입받도록 강제하십시오.
+- **[MUST] Policy-as-Code:** 배포 전 OPA/Sentinel 보안 검증 파이프라인(PaC)을 통과하도록 설계하십시오. (이유: 사전 배포 보안 방어)
+- **[MUST] Compliance Framework Enforcement:** 퍼블릭 접근 차단 및 스토리지 암호화를 강제하십시오. (이유: SOC2/ISO27001 규정 준수)
+- **[MUST] Centralized Secrets Management:** 시크릿 하드코딩을 배제하고, 클라우드 시크릿 매니저나 Vault를 통해 런타임 주입하십시오. (이유: 자격 증명 유출 원천 차단)
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
