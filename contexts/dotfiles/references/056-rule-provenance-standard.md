@@ -43,5 +43,7 @@ references:
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Rule Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1: 스크립트로 pass/fail 판정이 가능한 조항인데 문서 규칙에만 머물러 있지는 않은가?
+- **[Trigger: After Code Change] Provenance Logging:** 룰북 변경 후 `log-edit.sh` 실행하여 수동 근거 기록.
+- **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 `prompt-flywheel.sh`로 룰 개정안 역제안.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 기존 검증 스크립트를 수정하면서 회귀 픽스처를 함께 갱신하지 않은 상태로 완료를 선언하려 하면 즉시 중단하고 픽스처를 먼저 추가할 것.
