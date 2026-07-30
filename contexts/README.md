@@ -155,7 +155,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- `setup.sh` 실행 시 글로벌 스킬 디렉토리(`~/.gemini/config/skills/<도메인>/`, `~/.claude/skills/<도메인>/`)에 `SKILL.md`와 `references/`를 심볼릭 링크로 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
+- `just setup`(Ansible) 실행 시 글로벌 스킬 디렉토리(`~/.gemini/config/skills/<도메인>/`, `~/.claude/skills/<도메인>/`)에 `SKILL.md`와 `references/`를 심볼릭 링크로 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
 ```
 
 #### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)

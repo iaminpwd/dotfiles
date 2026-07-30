@@ -760,7 +760,7 @@ if __name__ == "__main__":
     ok, report = validate(sys.argv[1])
     print(report)
     # 미리보기는 육안 검증 보조이지 판정 근거가 아니다. matplotlib 은 이 저장소의 어떤 설치
-    # 경로(mise config.toml, setup.sh)에도 선언되어 있지 않아 신규 환경에는 없는데, 예전에는
+    # 경로(mise config.toml, bootstrap.sh/ansible)에도 선언되어 있지 않아 신규 환경에는 없는데, 예전에는
     # 그 ImportError 가 아래 SystemExit 앞에서 그대로 터졌다. 그 결과 검증을 통과한 파일과
     # 위반한 파일이 똑같이 exit 1 로 끝나, 090 §2~3 이 요구하는 기계 판정이 무의미해졌다
     # (2026-07-28 실측). 렌더링 실패는 안내로 낮추고 판정은 validate() 결과로만 낸다.

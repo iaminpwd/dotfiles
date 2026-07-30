@@ -80,7 +80,7 @@ def tokens(text):
     return out
 
 
-# dotfiles 는 setup.sh 의 글로벌 스킬 등록 루프가 제외한다(글로벌 룰 순수성 보장).
+# dotfiles 는 Ansible 셋업의 글로벌 스킬 등록 루프가 제외한다(글로벌 룰 순수성 보장).
 # 프로젝트 CLAUDE.md 심볼릭 링크로 무조건 로드되므로 description 라우팅을 거치지
 # 않는다. 분석에 넣으면 존재하지 않는 경합을 보고하게 된다.
 NOT_ROUTED = {"dotfiles"}

@@ -37,7 +37,11 @@ cd "$REPO_ROOT" || {
 # 상대 경로가 배포 위치로 빗나간다. readlink -f 로 저장소 내 정본 위치를 먼저 확정한다.
 K8S_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
-source "$K8S_CHECK_DIR/../../lib/tool-probe.sh"
+if [ -f "$K8S_CHECK_DIR/../../lib/tool-probe.sh" ]; then
+  source "$K8S_CHECK_DIR/../../lib/tool-probe.sh"
+elif [ -f "$REPO_ROOT/bin/lib/tool-probe.sh" ]; then
+  source "$REPO_ROOT/bin/lib/tool-probe.sh"
+fi
 
 GLOBAL_IS_GIT_REPO=0
 if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -119,16 +123,16 @@ check_prometheus_rules() {
     # promtool은 순수 groups: 포맷만 이해하므로, CRD 래퍼(apiVersion/kind/metadata)를
     # 벗기고 spec 블록만 추출해 넘긴다.
     if ! yq eval '.spec' "$f" >"$tmp"; then
+      rm -f "$tmp" 2>/dev/null || true
       echo "❌ [ERROR] PrometheusRule의 .spec 블록 추출에 실패했습니다: $f" >&2
-      rm -f "$tmp"
       return 1
     fi
     if ! promtool check rules "$tmp"; then
+      rm -f "$tmp" 2>/dev/null || true
       echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 중단되었습니다: $f" >&2
-      rm -f "$tmp"
       return 1
     fi
-    rm -f "$tmp"
+    rm -f "$tmp" 2>/dev/null || true
   done
   log_info "[SUCCESS] Prometheus rule validation passed."
 }

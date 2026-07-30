@@ -1,7 +1,7 @@
 ---
 name: dotfiles
 description: |
-  개인 로컬 환경 및 dotfiles 시스템 셋업 스킬. setup.sh, zsh, bash, stow, mise,
+  개인 로컬 환경 및 dotfiles 시스템 셋업 스킬. bootstrap.sh, ansible, zsh, bash, stow, mise,
   시크릿 관리, 로컬 환경 트러블슈팅.
 ---
 # dotfiles Skill

@@ -1,61 +1,43 @@
 ---
 - name: Tflint 실행 가능 여부 확인
-  ansible.builtin.command: command -v tflint
+  ansible.builtin.command: which tflint
   register: tflint_check
-  ignore_errors: true
+  failed_when: false
   changed_when: false
 
-- name: GitHub API에서 tflint 플러그인 최신 릴리즈 조회 및 설정 갱신
+- name: Tflint 플러그인 설정 및 다운로드 갱신
   when: tflint_check.rc == 0
   block:
-    - name: Get latest tflint-ruleset-aws version
-      ansible.builtin.uri:
-        url: https://api.github.com/repos/terraform-linters/tflint-ruleset-aws/releases/latest
-        return_content: true
-      register: tflint_aws
-
-    - name: Get latest tflint-ruleset-azurerm version
-      ansible.builtin.uri:
-        url: https://api.github.com/repos/terraform-linters/tflint-ruleset-azurerm/releases/latest
-        return_content: true
-      register: tflint_azure
-
-    - name: Get latest tflint-ruleset-google version
-      ansible.builtin.uri:
-        url: https://api.github.com/repos/terraform-linters/tflint-ruleset-google/releases/latest
-        return_content: true
-      register: tflint_gcp
-
     - name: Tflint 저장소 디렉토리 생성
       ansible.builtin.file:
-        path: "{{ playbook_dir }}/../tflint"
+        path: "{{ role_path }}/../../../tflint"
         state: directory
         mode: '0755'
 
-    - name: .tflint.hcl 플러그인 설정 템플릿 생성
+    - name: .tflint.hcl 플러그인 설정 템플릿 생성 (현업 IaC 결정론적 빌드)
       ansible.builtin.copy:
-        dest: "{{ playbook_dir }}/../tflint/.tflint.hcl"
+        dest: "{{ role_path }}/../../../tflint/.tflint.hcl"
         mode: '0644'
         content: |
           plugin "aws" {
             enabled = true
-            version = "{{ (tflint_aws.json.tag_name | default('v0.0.0')) | regex_replace('^v', '') }}"
+            version = "0.33.0"
             source  = "github.com/terraform-linters/tflint-ruleset-aws"
           }
 
           plugin "azurerm" {
             enabled = true
-            version = "{{ (tflint_azure.json.tag_name | default('v0.0.0')) | regex_replace('^v', '') }}"
+            version = "0.26.0"
             source  = "github.com/terraform-linters/tflint-ruleset-azurerm"
           }
 
           plugin "google" {
             enabled = true
-            version = "{{ (tflint_gcp.json.tag_name | default('v0.0.0')) | regex_replace('^v', '') }}"
+            version = "0.28.0"
             source  = "github.com/terraform-linters/tflint-ruleset-google"
           }
 
     - name: Tflint 플러그인 초기화 및 다운로드 (--init)
-      ansible.builtin.command: tflint --init --config "{{ playbook_dir }}/../tflint/.tflint.hcl"
+      ansible.builtin.command: tflint --init --config "{{ role_path }}/../../../tflint/.tflint.hcl"
       register: tflint_init_result
       changed_when: "'Installing' in tflint_init_result.stdout"

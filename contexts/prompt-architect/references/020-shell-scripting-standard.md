@@ -1,13 +1,13 @@
 ---
 role: Senior Shell Scripting & DevOps Engineer
 priority: high
-trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. setup.sh), bashrc, zshrc, or terminal configurations.
+trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. bootstrap.sh), bashrc, zshrc, or terminal configurations.
 references:
   - contexts/prompt-architect/references/010-core.md
 ---
 # 컨텍스트 모듈: Dotfiles 환경 설정 및 셸 스크립트 작성 표준
 
-본 모듈은 자동화 스크립트(`setup.sh`, `install.sh`) 및 시스템 셸 설정(`zshrc`, `bashrc`, `tmux.conf` 등) 작성 시 적용됨.
+본 모듈은 자동화 스크립트(`bootstrap.sh`, `install.sh`) 및 시스템 셸 설정(`zshrc`, `bashrc`, `tmux.conf` 등) 작성 시 적용됨.
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Bash Strict Mode:** 스크립트 최상단에 반드시 `set -euo pipefail`을 선언할 것.

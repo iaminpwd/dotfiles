@@ -50,17 +50,24 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
-    update_cache: true
+    # update_cache는 packages role에서 cache_valid_time과 함께 처리하므로 생략
   become: true
   when: ansible_os_family == "Debian"
 
-- name: 사용자를 docker 그룹에 추가
+- name: Docker 그룹 선제 확보 (멱등성 보장)
+  ansible.builtin.group:
+    name: docker
+    state: present
+  become: true
+  when: ansible_os_family in ["Debian", "RedHat"]
+
+- name: 사용자를 docker 그룹에 추가 (Debian)
   ansible.builtin.user:
     name: "{{ ansible_env.USER }}"
     groups: docker
     append: true
   become: true
-  when: ansible_os_family in ["Debian", "RedHat"]
+  when: ansible_os_family == "Debian"
 
 - name: Docker 저장소 추가 (RHEL)
   ansible.builtin.yum_repository:
@@ -82,6 +89,14 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: 사용자를 docker 그룹에 추가 (RHEL)
+  ansible.builtin.user:
+    name: "{{ ansible_env.USER }}"
+    groups: docker
+    append: true
   become: true
   when: ansible_os_family == "RedHat"
 

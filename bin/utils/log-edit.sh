@@ -10,7 +10,7 @@ fi
 FILE_PATH="$1"
 RULE_SOURCE="$2"
 PURPOSE="$3"
-ISO8601=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ISO8601=$(date -Iseconds 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
 TARGET_DIR=".agent-state"
 
 mkdir -p "$TARGET_DIR"

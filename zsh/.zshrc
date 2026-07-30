@@ -72,13 +72,21 @@ alias tfw='terraform workspace'
 
 # 4. 도구 환경 활성화 (Mise)
 # mise 존재 확인 후 eval 적용 ("command not found" 에러 방지)
-if [ -x "$HOME/.local/bin/mise" ]; then
+if [ -x "$HOME/.local/bin/mise" ] && [ -z "$MISE_ZSH_ACTIVATED" ]; then
   eval "$(~/.local/bin/mise activate zsh)"
+  export MISE_ZSH_ACTIVATED=1
 fi
 
 # 5. fzf (Fuzzy Finder) 단축키 및 자동완성 연동 (Mise 설치 기준)
-if command -v fzf &> /dev/null; then
-  eval "$(fzf --zsh)"
+# fzf --zsh는 0.48.0+에서만 지원. mise로 관리되는 버전이 PATH에 먹히지 않으면
+# 시스템 fzf(구버전)을 주울 수 있으므로 버전 확인 후 실행.
+if command -v fzf &> /dev/null && [ -z "$FZF_ZSH_ACTIVATED" ]; then
+  _fzf_ver=$(fzf --version 2>/dev/null | awk '{print $1}' | awk -F. '{printf "%d%03d", $1, $2}')
+  if [ -n "$_fzf_ver" ] && [ "$_fzf_ver" -ge 48000 ] 2>/dev/null; then
+    eval "$(fzf --zsh)"
+    export FZF_ZSH_ACTIVATED=1
+  fi
+  unset _fzf_ver
 fi
 # ------------------------------------
 
@@ -91,6 +99,3 @@ alias myip='curl -s ifconfig.me'
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
 alias src='source ~/.zshrc'
-
-
-

@@ -7,7 +7,7 @@ echo "------------------------------------------------"
 EDITS_LOG=".agent-state/edits.log"
 if [ ! -f "$EDITS_LOG" ]; then
   echo "❌ No edits.log found at $EDITS_LOG"
-  exit 0
+  exit 1
 fi
 
 echo "🚨 Recent 20 Log Entries:"

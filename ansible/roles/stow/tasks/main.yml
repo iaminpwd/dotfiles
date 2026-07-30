@@ -12,7 +12,7 @@
 
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
   ansible.builtin.find:
-    paths: "{{ playbook_dir }}/../"
+    paths: "{{ role_path }}/../../../"
     file_type: directory
     recurse: false
     excludes:
@@ -20,31 +20,28 @@
       - "assets"
       - "ansible"
       - "bin"
+      - "git"
+      - "mise"
+      - "tflint"
+      - "vim"
+      - "roles"
       - ".*"
   register: stow_dirs
 
 - name: 기존 파일 백업 (stow 충돌 방지)
-  ansible.builtin.shell: |
-    set -o pipefail
-    PKG="{{ item.path | basename }}"
-    DOTFILES_DIR="{{ playbook_dir }}/.."
-    BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
-    find "$DOTFILES_DIR/$PKG" -type f -print0 | while IFS= read -r -d '' SRC_FILE; do
-      REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
-      TARGET="{{ ansible_env.HOME }}/$REL_PATH"
-      if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(readlink -f "$TARGET")" != "$(readlink -f "$SRC_FILE")" ]; then
-        mkdir -p "$(dirname "$TARGET")"
-        mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
-      fi
-    done
-  args:
-    executable: /bin/bash
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh" "{{ item.path | basename }}" "{{ role_path }}/../../../" "{{ ansible_env.HOME }}"
   loop: "{{ stow_dirs.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
   changed_when: false
 
 - name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
   ansible.builtin.command:
-    cmd: stow -t {{ ansible_env.HOME }} -R {{ item.path | basename }}
-    chdir: "{{ playbook_dir }}/../"
+    cmd: stow -t {{ ansible_env.HOME }} -R --verbose {{ item.path | basename }}
+    chdir: "{{ role_path }}/../../../"
   loop: "{{ stow_dirs.files }}"
-  changed_when: false # stow는 멱등성을 내장하므로 기본적으로 changed=false 처리
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: stow_result
+  changed_when: "'LINK:' in stow_result.stdout or 'UNLINK:' in stow_result.stdout"

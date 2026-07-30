@@ -16,8 +16,20 @@ for FILE in "${FILES[@]}"; do
   # awk를 이용해 파일의 각 라인을 읽고, >>나 tee -a 가 쓰인 라인 주변(위아래 3줄)에
   # 멱등성 가드(grep -q, if [, if test 등)가 있는지 검사한다.
   awk '
-    BEGIN { window_size = 3 }
+    BEGIN { window_size = 3; in_heredoc = 0 }
     {
+      # heredoc 시작 탐지 (<<EOF, <<EOL 등 << 뒤에 단어가 오는 패턴)
+      if (!in_heredoc && $0 ~ /<<[A-Z_a-z]/) {
+        idx = index($0, "<<")
+        rest = substr($0, idx + 2)
+        sub(/^[[:space:]]*/, "", rest)
+        sub(/[^A-Z_a-z0-9].*/, "", rest)
+        if (rest != "") { heredoc_end = rest; in_heredoc = 1 }
+      } else if (in_heredoc && $0 == heredoc_end) {
+        in_heredoc = 0
+        next
+      }
+      if (in_heredoc) next
       if ($0 ~ />>|tee -a/) { append_lines[NR] = 1 }
       if ($0 ~ /grep -q|if \[|if test|idempotency:bypass/) { guard_lines[NR] = 1 }
     }

@@ -9,8 +9,8 @@
 #
 #
 # 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌 tests/lib/
-# 에 둔다. scripts/ 는 setup.sh 가 에이전트에게 심볼릭 링크로 노출하는 디렉토리이므로
-# (setup.sh 의 글로벌 스킬 등록 루프), 테스트 헬퍼가 거기 있으면 런타임 배포 표면에
+# 에 둔다. scripts/ 는 Ansible 셋업 과정 가 에이전트에게 심볼릭 링크로 노출하는 디렉토리이므로
+# (Ansible 셋업 과정 의 글로벌 스킬 등록 루프), 테스트 헬퍼가 거기 있으면 런타임 배포 표면에
 # 불필요하게 포함된다. 또한 pre-commit 훅은 contexts/pre-flight-check/scripts/* 변경을
 # "모든 스킬의 회귀 테스트 실행" 신호로 쓰는데, 이 파일을 쓰는 것은 tf 계열 3개 스킬
 # 뿐이라 그 자리에 있으면 매번 과잉 실행됐다.
@@ -146,7 +146,7 @@ tf_run_checkov_pair() {
   tf_judge_checkov "$fail_label" 1 "$want_id" "$fail_status" "$tmpdir/fail"
 
   # `trap - EXIT` 로 해제하지 않는다. 라이브러리 함수가 트랩을 무조건 해제하면 호출자가
-  # 걸어 둔 EXIT 트랩까지 함께 날아간다(setup.sh 에서 실제로 그 형태의 잔재가 임시 디렉토리
+  # 걸어 둔 EXIT 트랩까지 함께 날아간다(Ansible 셋업 과정 에서 실제로 그 형태의 잔재가 임시 디렉토리
   # 정리를 무력화했다). 아래 rm 으로 이미 지운 뒤라 트랩이 다시 돌아도 무해하고, local
   # 변수라 함수 반환 후에는 ${tmpdir:-} 가 빈 문자열로 평가된다.
   rm -rf "$tmpdir"

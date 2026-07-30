@@ -1,7 +1,7 @@
 ---
 role: Senior Dotfiles Architect
 priority: high
-trigger: Apply these rules when writing a plan or handoff blueprint for work inside this dotfiles repository (setup.sh, shell configs, rulebooks, skills).
+trigger: Apply these rules when writing a plan or handoff blueprint for work inside this dotfiles repository (just setup, shell configs, rulebooks, skills).
 references:
   - contexts/dotfiles/references/010-core.md
   - contexts/prompt-architect/references/020-shell-scripting-standard.md
@@ -24,8 +24,8 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 영향 파일 및 배포 반영 경로
-- **[MUST] 링크 배포와 복사본 배포를 구분해 기재:** 각 수정 대상이 `setup.sh` 에 의해 심볼릭 링크로 노출되는지, 복사본으로 생성되는지 2번 섹션에 명시할 것. 링크 대상은 저장소 수정이 곧 런타임 반영이지만, 복사본 대상(`contexts/agent-handoff/`)은 `setup.sh` 재실행 전까지 반영되지 않습니다. 이를 적지 않아 개정 직후 턴의 에이전트가 구버전 조항으로 동작한 사례가 있습니다.
-- **[MUST] 재배포 필요 여부를 성공 기준에 포함:** 복사본 배포 대상을 수정하는 계획이면 `setup.sh` 재실행과 배포본 대조(`diff`)를 5번 섹션의 검증 항목으로 반드시 넣으십시오.
+- **[MUST] 링크 배포와 복사본 배포를 구분해 기재:** 각 수정 대상이 `just setup` 에 의해 심볼릭 링크로 노출되는지, 복사본으로 생성되는지 2번 섹션에 명시할 것. 링크 대상은 저장소 수정이 곧 런타임 반영이지만, 복사본 대상(`contexts/agent-handoff/`)은 `just setup` 재실행 전까지 반영되지 않습니다. 이를 적지 않아 개정 직후 턴의 에이전트가 구버전 조항으로 동작한 사례가 있습니다.
+- **[MUST] 재배포 필요 여부를 성공 기준에 포함:** 복사본 배포 대상을 수정하는 계획이면 `just setup` 재실행과 배포본 대조(`diff`)를 5번 섹션의 검증 항목으로 반드시 넣으십시오.
 
 ### 2.2 룰북 정합성 연쇄 영향
 - **[MUST] `references/` 신설 시 3개 파일을 한 묶음으로 지시:** 새 `NNN-*.md` 를 추가하는 계획은 아래 세 가지를 모두 4번 섹션에 포함해야 합니다. 하나라도 빠지면 `prompt-lint.sh` 명령어가 실패하거나 경고를 냅니다.
@@ -37,7 +37,7 @@ references:
 ### 2.3 실행 계획 및 검증
 - **[MUST] 검증은 대상 파일을 직접 조회:** 5번 섹션의 명령은 수정 대상 파일에서 반영 여부를 읽는 명령(`grep -c`, `sed -n`, `diff`)이어야 합니다. 계획서에 옮겨 적은 코드를 실행하는 명령은 대상이 아니라 계획서 자신을 검증하므로 지시 누락을 통과시킵니다.
 - **[MUST] 스크립트 수정 시 검증 3종 고정:** `.sh`/`.zsh` 를 수정하는 계획이면 `shellcheck`, `compact-runner.sh`, 2회 연속 실행 멱등성 확인을 5번 섹션에 반드시 기재할 것.
-- **[MUST] 롤백 경로 명시:** 6번 섹션에 원상 복구 방법을 적으십시오. 커밋 전이면 대상 파일에 한정한 `git checkout --`, 배포본까지 반영된 뒤면 되돌린 원본으로 `setup.sh` 재실행임.
+- **[MUST] 롤백 경로 명시:** 6번 섹션에 원상 복구 방법을 적으십시오. 커밋 전이면 대상 파일에 한정한 `git checkout --`, 배포본까지 반영된 뒤면 되돌린 원본으로 `just setup` 재실행임.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -45,7 +45,7 @@ references:
 [Good] 배포 경로와 연쇄 영향을 명시한 2·3번 섹션
 ```markdown
 ## 2. 영향 파일 및 배포 반영 경로
-- `contexts/example-skill/custom-role.md` — 복사본 배포. setup.sh 재실행 필요.
+- `contexts/example-skill/custom-role.md` — 복사본 배포. just setup 재실행 필요.
 - `contexts/dotfiles/SKILL.md` — 링크 배포. 저장소 수정이 곧 반영.
 
 ## 3. 룰북 정합성 연쇄 영향

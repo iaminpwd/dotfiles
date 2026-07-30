@@ -6,6 +6,8 @@
 #
 # agent-edits-hook.sh: AI 편집 이력을 .agent-state/edits.log에 기록
 # 포맷: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
+# -e(errexit) 는 의도적으로 제외: 훅 실패가 에이전트 루프를 멈추지 않도록 보장.
+# 개별 오류 지점은 아래에서 각각 `|| exit 0` 으로 명시적 처리.
 set -uo pipefail
 
 # 훅 실패가 에이전트 루프를 저해하지 않도록 보장
@@ -51,7 +53,11 @@ fi
 [ -d "$root" ] || exit 0
 
 # 파일 경로만 남기고 내용은 절대 기록하지 않는다(base.AGENTS.md 7장 민감 데이터 마스킹).
-rel="${target#"$root"/}"
+if [ "$target" = "$root" ]; then
+  rel="$(basename "$target")"
+else
+  rel="${target#"$root"/}"
+fi
 [ -n "${err:-}" ] && result="ERROR:$err" || result="OK"
 
 # 로그 작성 실패 시 조용히 무시 (stderr 리다이렉션 순서 주의하여 에이전트 출력 오염 방지)

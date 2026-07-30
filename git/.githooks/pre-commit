@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# 020-shell-scripting-standard.md의 Hard Block 조건(strict mode 미선언 금지)에 따라 선언한다.
-# 형제 훅인 commit-msg는 이미 선언되어 있었고 이 파일만 누락되어 있었다(2026-07-27 확인).
-# 아래 검증 게이트는 전부 `|| { ...; exit 1; }`로 명시 처리하므로 set -e가 기존 차단/통과
-# 판정을 바꾸지 않는다(빈 스테이징/텍스트/yaml/쉘 4개 시나리오 exit 0 회귀 확인).
+# 020-shell-scripting-standard.md의 Hard Block 조건에 따라 strict mode 선언.
+# 검증 게이트는 모두 `|| { ...; exit 1; }`로 안전하게 처리됨.
 set -euo pipefail
 
-# 아래 `mapfile -d` 의 -d 옵션은 bash 4.0 이 아니라 4.4 에서 추가됐다. 예전 가드는 4.0 만
-# 요구해서, bash 4.0~4.3(예: CentOS 7 의 4.2)에서는 가드를 통과한 뒤 `mapfile: -d: invalid
-# option` 으로 죽었다. 이 훅은 core.hooksPath 로 전역 등록되어 모든 저장소의 커밋 경로에
-# 놓이므로, 그 환경에서는 원인 불명의 상태로 모든 커밋이 막힌다. 선언한 요구사항과 실제
-# 요구사항을 일치시킨다. macOS 기본 bash(3.2)도 같은 이유로 여기서 걸러진다.
-# setup.sh 와 동일하게 brew bash 로 재실행을 시도하고, 없으면 원인을 명시하고 중단한다.
+# bash 4.4 이상이 필요함 (mapfile -d 옵션 사용).
+# 구버전 bash 환경 방어 및 macOS 기본 bash(3.2) 실행 방지용 버전 체크.
+# bootstrap.sh 와 동일하게 brew bash 로 재실행을 시도함.
 BASH_VERSION_NUM=$((${BASH_VERSINFO[0]:-0} * 100 + ${BASH_VERSINFO[1]:-0}))
 if [ "$BASH_VERSION_NUM" -lt 404 ]; then
   for BASH_CANDIDATE in /opt/homebrew/bin/bash /usr/local/bin/bash; do
@@ -28,10 +23,7 @@ if [ "$BASH_VERSION_NUM" -lt 404 ]; then
   exit 1
 fi
 
-# git diff --cached 는 저장소 루트 기준 경로를 돌려주므로, 이 훅의 모든 파일 검사는
-# cwd 가 저장소 루트임을 전제한다. git 은 훅을 항상 루트에서 실행하지만 사람이
-# 하위 디렉토리에서 직접 호출하면 존재하는 파일을 "디스크에 없음"으로 오판한다
-# (2026-07-26 확인). 전제를 코드로 고정한다.
+# git 훅은 저장소 루트를 기준으로 실행되도록 cwd 고정 (하위 디렉토리 실행 시 파일 오판 방지).
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
 # 새로 추가되거나 수정된 파일 목록 추출 (공백/특수문자 포함 파일명 안전 처리를 위해 NUL 구분 배열 사용)
@@ -39,16 +31,10 @@ STAGED_FILES=()
 mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only -z --diff-filter=ACM)
 
 if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
-  # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어
-  # trufflehog 가용 여부와 무관하게 항상 수행한다: 시크릿이 담긴 파일을 git add 후
-  # 디스크에서만 지우고(git rm --cached 안 함) trufflehog가 마침 없거나 실행 불가능한
-  # 상황이면, 이 체크가 trufflehog 블록 안에만 있을 경우 통째로 건너뛰게 된다.
-  # 디스크 기반 스캐너(trivy fs 등)는 지워진 파일의 내용을 볼 수 없으므로, 그 시크릿이
-  # git 오브젝트에는 그대로 남은 채 아무 경고 없이 커밋될 수 있다.
+  # [보안 패치] 디스크 삭제 후 스테이징 메모리 잔류 취약점 방어.
+  # 파일을 디스크에서만 지우고 'git rm --cached'를 안 한 경우 시크릿 스캔이 누락될 수 있음.
   for FILE in "${STAGED_FILES[@]}"; do
-    # -f는 일반 파일만 인정하므로 서브모듈(디렉터리로 스테이징됨)을 "삭제됨"으로 오탐하고,
-    # 타겟이 아직 없는(dangling) 정상 심볼릭 링크도 오탐한다. -e(디렉터리 포함 존재 여부)와
-    # -L(심볼릭 링크 자체의 존재)을 함께 확인해야 진짜로 아무것도 없는 경우만 걸러진다.
+    # 서브모듈 및 정상 심볼릭 링크 오탐 방지용 검사
     if [ ! -e "$FILE" ] && [ ! -L "$FILE" ]; then
       echo "❌ 보안 에러: '$FILE' 파일이 디스크에 존재하지 않지만 Git 스테이징 대기열에는 남아있습니다."
       echo "   (만약 시크릿 유출을 피하려고 디스크에서 파일을 지우셨다면,"
@@ -58,44 +44,35 @@ if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
   done
 fi
 
-# command -v는 mise shim 파일의 존재만 확인할 뿐 실제 실행 가능 여부는 보장하지 않는다.
-# 이 훅은 core.hooksPath로 전역 등록되어 $HOME 트리 밖(예: /tmp, 별도 마운트)의
-# 저장소에서도 실행되는데, mise 설정이 해석되지 않는 위치에서는
-# "mise ERROR No version is set" 오류가 나면서 아래 trufflehog 호출이 실패하고,
-# 그 실패가 "시크릿 유출" 오탐으로 이어져 정상 커밋을 차단하는 문제가 있었다.
-# 따라서 실제 호출(--version)로 실행 가능 여부까지 확인한다.
+# 임시 파일 및 자원 정리용 전역 EXIT trap 헬퍼
+TMP_HOG=""
+cleanup() {
+  [ -n "$TMP_HOG" ] && rm -f "$TMP_HOG" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# mise 환경이 구성되지 않은 외부 저장소에서의 오탐 차단을 위해 실제 실행 가능 여부(--version) 점검.
 if command -v trufflehog &>/dev/null && trufflehog --version &>/dev/null; then
   if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
-    tmp_hog=$(mktemp)
+    TMP_HOG=$(mktemp)
     # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
-    if ! trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail >"$tmp_hog" 2>&1; then
+    if ! trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail >"$TMP_HOG" 2>&1; then
       echo "🔒 커밋 전 시크릿 스캔 결과 (trufflehog):"
-      cat "$tmp_hog"
+      cat "$TMP_HOG"
       echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."
-      rm -f "$tmp_hog"
       exit 1
     fi
     echo "  -> [✓] trufflehog secret scan passed"
-    rm -f "$tmp_hog"
   fi
 else
   echo "⚠️ trufflehog를 찾을 수 없거나 현재 위치에서 실행할 수 없어 시크릿 스캔을 건너뜁니다."
 fi
 
-# [추가] 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
+# 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
-# [추가] contexts/<skill>/{scripts,tests}/ 가 변경되면 해당 스킬의 회귀 테스트를 실행한다.
-# 픽스처는 자동 실행될 때만 안전망이고, 수동 실행에 의존하면 문서일 뿐이다.
-#
-# references/ 변경은 트리거하지 않는다. 픽스처가 검증하는 대상은 룰북 문서가 아니라
-# 검증기(스크립트)이므로 문서 편집만으로는 회귀가 생기지 않는다. 룰북을 자주 고치는
-# 작업 흐름에서 매번 8초씩 기다리게 만들지 않기 위한 선택이다.
-#
-# 전체 스위트를 다 돌리면 28초라 매 커밋에 쓸 수 없다(2026-07-26 실측:
-# aws/azure/openstack 각 8초대, containers 1.9초, k8s 1.0초, drawio-gen 0.08초).
-# 다만 pre-flight-check/scripts/ 는 모든 스킬의 회귀 테스트가 검증하는 공통 대상이므로
-# 이때만 전부 실행한다. 의존 스킬 목록을 여기에 하드코딩하면 스킬이 늘 때마다 드리프트한다.
+# 변경된 스킬 폴더에 한정하여 회귀 테스트 실행.
+# 성능 최적화를 위해 전체 테스트 대신 영향받는 스킬만 트리거 (공통 모듈 변경 시 전체 검증).
 CHANGED_SKILLS=()
 add_skill() {
   local s existing
@@ -110,11 +87,7 @@ add_skill() {
 for FILE in "${STAGED_FILES[@]:-}"; do
   case "$FILE" in
   contexts/pre-flight-check/tests/lib/*)
-    # tf 픽스처 공용 라이브러리. 이 라이브러리를 source 하는 것은 아래 세 스킬의
-    # 스위트뿐이므로, 일반 규칙에 맡겨 pre-flight-check 스위트만 돌리면 정작 이
-    # 라이브러리를 쓰는 코드가 한 번도 실행되지 않는다.
-    # (pre-flight-check 스킬에도 자체 스위트가 생겼지만 그쪽은 compact-runner 와
-    #  scripts/lib/tool-probe.sh 를 검증할 뿐 tf 픽스처와 무관하다.)
+    # tf 픽스처 공용 라이브러리를 참조하는 주요 클라우드 스킬 테스트 트리거
     for LIB_SKILL in aws azure openstack; do
       add_skill "$LIB_SKILL"
     done
@@ -130,17 +103,15 @@ for FILE in "${STAGED_FILES[@]:-}"; do
     SKILL=${FILE#contexts/}
     add_skill "${SKILL%%/*}"
     ;;
-  setup.sh | contexts/base.hooks.json)
-    # setup.sh 는 contexts/ 밖에 있어 위 경로 규칙에 걸리지 않는다. 그 멱등성 회귀
-    # 테스트는 dotfiles 스킬이 갖고 있으므로 명시적으로 연결한다. base.hooks.json 은
-    # setup.sh 의 jq 훅 병합이 그대로 읽어 들이는 입력이라 같은 스위트로 검증한다.
+  bootstrap.sh | ansible/site.yml | bin/utils/merge-agent-hooks.sh | contexts/base.hooks.json)
+    # bootstrap.sh 와 ansible 관련 셋업 변경 시 dotfiles 스킬 검증 묶어서 실행
     add_skill dotfiles
     ;;
   esac
 done
 
 # AI 토큰 최적화를 위해 compact-runner.sh가 존재하면 래퍼로 사용한다.
-COMPACT_RUNNER="$HOME/dotfiles/bin/hooks/compact-runner.sh"
+COMPACT_RUNNER="$REPO_ROOT/bin/hooks/compact-runner.sh"
 if [ ! -x "$COMPACT_RUNNER" ]; then
   COMPACT_RUNNER="bash"
 fi
@@ -156,11 +127,7 @@ if [ "${#CHANGED_SKILLS[@]}" -gt 0 ]; then
   done
 fi
 
-# [추가] contexts/ 하위 룰북(.md)이 변경되면 프롬프트 코퍼스 린트를 실행한다.
-# 지금까지 prompt-lint.sh 실행은 CLAUDE.md 조항에 적힌 에이전트 규율에만 의존했고
-# 기계적 강제가 없어, 사람이 직접 .md 를 고치면 SSOT 목록 불일치·깨진 참조 링크가
-# 검증 없이 커밋될 수 있었다. 이 훅은 전역 등록이라 무관한 저장소에서도 실행되므로,
-# 해당 저장소 안에 린터가 실재할 때만 동작시킨다(dotfiles 저장소에서만 참).
+# contexts/ 하위 룰북(.md) 변경 시 프롬프트 린트를 실행하여 참조 파손 방지.
 PROMPT_LINT="$REPO_ROOT/bin/linters/prompt-lint.sh"
 if [ -f "$PROMPT_LINT" ]; then
   for FILE in "${STAGED_FILES[@]:-}"; do
@@ -178,11 +145,7 @@ if [ -f "$PROMPT_LINT" ]; then
   done
 fi
 
-# [추가] agent-handoff 프롬프트 원본이 변경되면 배포본 드리프트를 자가 치유한다.
-# 이 스킬만 심볼릭 링크가 아니라 복사본으로 배포된다(나머지 11건은 링크라 원본이 곧
-# 배포본이며 드리프트가 구조적으로 불가능하다). 원본을 고치고 재배포하지 않으면 양측
-# 에이전트가 구버전 조항으로 동작한다(2026-07-27 실측). 조항으로만 막혀 있던 것을
-# 커밋 시점에 기계적으로 보장한다. $REPO_ROOT 기준이라 dotfiles 저장소에서만 동작한다.
+# agent-handoff 프롬프트 원본 변경 시 배포본 드리프트 자가 치유(자동 재배포).
 HANDOFF_DEPLOY="$REPO_ROOT/contexts/.archive/agent-handoff/scripts/deploy.sh"
 if [ -f "$HANDOFF_DEPLOY" ]; then
   for FILE in "${STAGED_FILES[@]:-}"; do
@@ -201,20 +164,13 @@ if [ -f "$HANDOFF_DEPLOY" ]; then
   done
 fi
 
-# [추가] agent-handoff 프로토콜의 구조적 상태를 검사한다.
-# 트리거 미해제(통신 파일 동시 존재)와 3왕복 상한 초과는 지금까지 SKILL.md 조항 문장에만
-# 의존했고, 그 결과 아키텍트가 성실히 확인하지 않으면 그대로 통과했다(2026-07-28 실측:
-# 왕복마다 새 task-id 가 발급되어 상한이 한 번도 발동하지 않음). 커밋 시점에 기계 판정한다.
-# 이 훅은 전역 등록이라 무관한 저장소에서도 실행되므로, 검증기는 핸드오프 산출물이 없으면
-# 아무 출력 없이 통과한다.
+# agent-handoff 프로토콜의 구조적 상태 검사 (트리거 미해제, 3왕복 상한 초과 방지).
 HANDOFF_CHECK="$REPO_ROOT/contexts/.archive/agent-handoff/scripts/handoff-check.sh"
 if [ ! -f "$HANDOFF_CHECK" ]; then
-  HANDOFF_CHECK="$HOME/dotfiles/contexts/.archive/agent-handoff/scripts/handoff-check.sh"
+  HANDOFF_CHECK="$REPO_ROOT/contexts/.archive/agent-handoff/scripts/handoff-check.sh"
 fi
 if [ -f "$HANDOFF_CHECK" ]; then
-  # --commit-gate: 3왕복 상한 초과는 경고만 남긴다. 상한은 에이전트 루프를 멈추라는
-  # 조건이지 커밋을 막으라는 조건이 아니며, 오히려 그 시점에는 지금까지의 작업을 커밋해
-  # 두고 사용자에게 개입을 요청하는 것이 정상 흐름이다.
+  # --commit-gate: 3왕복 상한 초과는 경고만 남김 (사용자 개입 유도용).
   if ! bash "$HANDOFF_CHECK" --commit-gate "$REPO_ROOT"; then
     echo "❌ 핸드오프 상태 검사 실패로 커밋이 차단되었습니다."
     echo "   재현: bash $HANDOFF_CHECK --commit-gate $REPO_ROOT"
@@ -222,17 +178,16 @@ if [ -f "$HANDOFF_CHECK" ]; then
   fi
 fi
 
-# [추가] agent-handoff 설계도(Blueprint) 포맷 검사
+# agent-handoff 설계도(Blueprint) 포맷 검사
 HANDOFF_LINT="$REPO_ROOT/contexts/.archive/agent-handoff/scripts/handoff-lint.sh"
 if [ ! -f "$HANDOFF_LINT" ]; then
-  HANDOFF_LINT="$HOME/dotfiles/contexts/.archive/agent-handoff/scripts/handoff-lint.sh"
+  HANDOFF_LINT="$REPO_ROOT/contexts/.archive/agent-handoff/scripts/handoff-lint.sh"
 fi
 if [ -f "$HANDOFF_LINT" ]; then
   # 배열 앞에 REPO_ROOT 경로를 붙여서 스크립트에 전달합니다.
   HANDOFF_FILES=()
   for f in "${STAGED_FILES[@]:-}"; do
-    # 스테이징이 비면 :- 확장이 빈 문자열 1개를 내보내, 저장소 루트 경로만 인자로 넘어간다.
-    # 린터가 [ -f ] 에서 걸러내긴 하지만 검사할 대상이 없는데 프로세스를 띄우게 된다.
+    # 스테이징 대상이 없을 경우 프로세스 실행 건너뜀
     [ -n "$f" ] || continue
     HANDOFF_FILES+=("$REPO_ROOT/$f")
   done
@@ -244,18 +199,18 @@ if [ -f "$HANDOFF_LINT" ]; then
   fi
 fi
 
-# 검증 대상 판정. 예전에는 "저장소 루트에 pre-flight-check.sh 링크가 있는가"를 옵트인
-# 마커로 삼고 ~/workspace 하위에만 링크를 자동 생성했다. 그 방식은 링크 자체가 게이트라서,
-# workspace 밖의 상시 검증 대상(dotfiles 자신)이 수동으로 만든 링크에 의존했고 링크가
-# 없으면 아무 경고 없이 검증이 통째로 빠졌다. 정본을 절대 경로로 직접 호출하고, 어떤
-# 저장소를 검증할지는 아래 조건으로만 선언한다(무관한 외부 저장소는 여전히 제외).
-DOTFILES_PFC="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
+# 검증 대상 판정: workspace 하위 및 dotfiles 저장소는 상시 대상.
+# 그 외 외부 저장소는 루트에 링크(pre-flight-check.sh)가 있는 경우만 검증.
+DOTFILES_PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
+if [ ! -f "$DOTFILES_PFC" ]; then
+  DOTFILES_PFC="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
+fi
 PFC_TARGET=""
-if [[ "$REPO_ROOT/" == "$HOME/workspace/"* || "$REPO_ROOT" == "$HOME/dotfiles" ]]; then
+if [[ "$REPO_ROOT/" == "$HOME/workspace/"* || "$(basename "$REPO_ROOT")" == "dotfiles" ]]; then
   if [ -x "$DOTFILES_PFC" ]; then
     PFC_TARGET="$DOTFILES_PFC"
   else
-    # 상시 대상인데 정본이 없으면 조용히 넘기지 않는다. 과거 실패의 재발 지점이다.
+    # 상시 대상인데 정본 스크립트가 없을 경우 경고 노출
     echo "⚠️ 상시 검증 대상 저장소이지만 정본을 실행할 수 없어 사전 검증을 건너뜁니다: $DOTFILES_PFC"
   fi
 elif [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
@@ -264,7 +219,8 @@ elif [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
 fi
 
 if [ -n "$PFC_TARGET" ]; then
-  RUN_COST_CHECK=true "$COMPACT_RUNNER" "$PFC_TARGET" || {
+  export RUN_COST_CHECK=true
+  "$COMPACT_RUNNER" "$PFC_TARGET" || {
     echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
     exit 1
   }

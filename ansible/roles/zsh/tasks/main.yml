@@ -1,30 +1,30 @@
 ---
-- name: Oh My Zsh 저장소 클론 (unattended) # noqa: latest[git]
+- name: Oh My Zsh 저장소 클론 (unattended)
   ansible.builtin.git:
     repo: 'https://github.com/ohmyzsh/ohmyzsh.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh"
     depth: 1
-    version: HEAD
+    version: 7ea697fd8138550ddf7262456d412f0dcd1cbf84
     update: false
 
-- name: Zsh-autosuggestions 플러그인 클론 # noqa: latest[git]
+- name: Zsh-autosuggestions 플러그인 클론
   ansible.builtin.git:
     repo: 'https://github.com/zsh-users/zsh-autosuggestions.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
     depth: 1
-    version: HEAD
+    version: 85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
     update: false
 
-- name: Zsh-syntax-highlighting 플러그인 클론 # noqa: latest[git]
+- name: Zsh-syntax-highlighting 플러그인 클론
   ansible.builtin.git:
     repo: 'https://github.com/zsh-users/zsh-syntax-highlighting.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
     depth: 1
-    version: HEAD
+    version: 1d85c692615a25fe2293bdd44b34c217d5d2bf04
     update: false
 
 - name: 현재 설치된 zsh 경로 확인
-  ansible.builtin.command: command -v zsh
+  ansible.builtin.command: which zsh
   register: zsh_path
   changed_when: false
   failed_when: false
@@ -42,5 +42,7 @@
     name: "{{ ansible_env.USER }}"
     shell: "{{ zsh_path.stdout }}"
   become: true
-  when: zsh_path.stdout != ""
-  failed_when: false # 일부 환경에서 루트 권한 불필요 무시
+  when:
+    - zsh_path.stdout is defined
+    - zsh_path.stdout != ""
+  failed_when: false # 루트 권한이 없는 비권한(non-root) 실행 환경을 위한 안전 가드

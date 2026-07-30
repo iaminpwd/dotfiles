@@ -11,10 +11,10 @@
       - tree
       - ca-certificates
       - gnupg
-      - jq
       - dnsutils
     state: present
     update_cache: true
+    cache_valid_time: 3600 # 1시간 이내 재실행 시 apt update 스킵
   become: true
   when: ansible_os_family == "Debian"
 
@@ -30,7 +30,6 @@
       - tree
       - ca-certificates
       - gnupg2
-      - jq
       - bind-utils
     state: present
   become: true
@@ -51,6 +50,5 @@
       - gnu-sed
       - findutils
       - grep
-      - jq
     state: present
   when: ansible_os_family == "Darwin"

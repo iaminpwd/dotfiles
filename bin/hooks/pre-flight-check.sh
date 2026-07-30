@@ -274,7 +274,13 @@ validate_bicep() {
   # Bicep(.NET 기반)이 libicu가 없는 Linux 환경에서도 정상 실행되도록 Invariant 모드 강제 활성화
   export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 
-  if ! has_tool bicep && ! { has_tool az && az bicep version &>/dev/null; }; then
+  local has_bicep=0
+  if has_tool bicep && bicep --version &>/dev/null 2>&1; then
+    has_bicep=1
+  elif has_tool az && az bicep version &>/dev/null 2>&1; then
+    has_bicep=2
+  fi
+  if [ "$has_bicep" -eq 0 ]; then
     log_info "--- Step: Azure Bicep Validation ---"
     log_info "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
     return 0
@@ -282,9 +288,9 @@ validate_bicep() {
 
   log_info "--- Step: Azure Bicep Validation ---"
   local bicep_cmd="none"
-  if has_tool bicep && bicep --version &>/dev/null; then
+  if [ "$has_bicep" -eq 1 ]; then
     bicep_cmd="standalone"
-  elif has_tool az && az bicep version &>/dev/null; then
+  elif [ "$has_bicep" -eq 2 ]; then
     bicep_cmd="az"
   fi
 
@@ -663,9 +669,11 @@ validate_finops_costs() {
 
       local cost_output_tmp
       cost_output_tmp=$(mktemp)
-      # 인터럽트 시 임시파일 정리를 보장하기 위해 trap 설정 (경로 확정 위해 겹따옴표 사용)
+      # 임시파일을 함수 종료 시 정리 (전역 EXIT trap 오염 방지)
       # shellcheck disable=SC2064
-      trap "rm -f '$cost_output_tmp'" EXIT
+      local _cleanup_cost
+      _cleanup_cost() { rm -f "$cost_output_tmp"; }
+      trap '_cleanup_cost' RETURN
 
       # infracost breakdown을 수행하여 비용 항목 확인
       if infracost breakdown --path . >"$cost_output_tmp" 2>/dev/null; then
@@ -877,9 +885,12 @@ main() {
   validate_finops_costs
   run_delegated_skill_checks
 
-  # 검증 성공 시 스테이징 캐시 갱신 (쓰기 실패 시 무시)
+  # 검증 성공 시 스테이징 캐시 갱신 (쓰기 실패 시 무시, 동시 실행 시 원자적 덮어쓰기로 캐시 파일 손상 방지)
   if [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
-    echo "$GLOBAL_TF_HASH" 2>/dev/null >"$CACHE_FILE" || true
+    cache_tmp=$(mktemp "$REPO_ROOT/.pre-flight-check.cache.XXXXXX" 2>/dev/null) || cache_tmp=""
+    if [ -n "$cache_tmp" ]; then
+      echo "$GLOBAL_TF_HASH" >"$cache_tmp" 2>/dev/null && mv "$cache_tmp" "$CACHE_FILE" 2>/dev/null || rm -f "$cache_tmp" 2>/dev/null || true
+    fi
   fi
 
   log_info "================================================="
