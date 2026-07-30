@@ -33,7 +33,7 @@ AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에�
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `compact-runner.sh` 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
+- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `compact-runner.sh` (또는 `just check`) 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
 ```
 
 ### 1.3. Planning (계획 수립)

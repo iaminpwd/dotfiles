@@ -26,11 +26,11 @@
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
-- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `bin/hooks/plugins/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
+- **정적 분석 및 문법 검증:** `bin/hooks/pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `bin/hooks/plugins/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
 - **의존성 취약점 스캔 (소스 레벨):** `trivy fs --scanners vuln`이 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, 취약점은 경고만 남기고 커밋을 막지는 않습니다. 이미지 레이어 자체의 SBOM/취약점/서명은 커밋이 아니라 릴리즈 단계의 책임이며 `syft`/`grype`/`cosign`이 담당합니다.
 - **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
-- **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
+- **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `bin/hooks/pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
 - **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
 
 ### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
@@ -39,11 +39,11 @@
 
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
-- **글로벌 룰 자동 주입:** `setup.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`) 양쪽에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
+- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`) 양쪽에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
-- **AI 편집 이력 자동 기록:** `agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
-- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `compact-runner.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/pre-flight-check/tests/run.sh`의 회귀 테스트 8건이 고정합니다.
+- **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
+- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/compact-runner.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/pre-flight-check/tests/run.sh`의 회귀 테스트 8건이 고정합니다.
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.
@@ -64,10 +64,9 @@
 
 > [!WARNING]
 > **지원 OS**: Debian 계열(`apt-get`) · RHEL 계열(`dnf`) · macOS(`brew`)
-> `setup.sh`가 실행 시점에 패키지 매니저를 판별해 분기하며, 지원 목록에 없는 환경에서는 즉시 중단됩니다.
-> 단, **실제 실행 검증은 Ubuntu/WSL2(apt) 경로에서만 이루어졌습니다.** dnf/brew 경로는 구조만 맞춘 미검증 경로이므로, 해당 환경에서 처음 실행할 때는 아래 `--dry-run`으로 계획을 먼저 확인하십시오.
+> `bootstrap.sh`가 실행 시점에 패키지 매니저를 판별해 분기하며, 지원 목록에 없는 환경에서는 즉시 중단됩니다.
 >
-> **macOS**: 선행 조건은 Homebrew 하나뿐이며 별도 준비물은 없습니다. `setup.sh`는 macOS 기본 bash(3.2)에서 그대로 실행되도록 유지되고(회귀 테스트로 강제), 실행 중에 `bash`·`coreutils`·`gnu-sed`·`findutils`·`grep`을 설치한 뒤 `gnubin`을 PATH 앞에 얹습니다. 검증기와 git 훅은 그 이후에 실행되므로 bash 4+와 GNU 툴체인(`readlink -f`, `find -printf`, `sha256sum`, `sed -i`)을 전제해도 무방합니다.
+> **macOS**: 선행 조건은 Homebrew 하나뿐이며 별도 준비물은 없습니다. `bootstrap.sh`는 macOS 기본 bash(3.2)에서 그대로 실행되도록 유지되고(회귀 테스트로 강제), 실행 중에 필수 런타임과 `mise`·`just`·`ansible`을 구성합니다.
 > WSL2 사용 시, 반드시 Linux 네이티브 홈 디렉토리(`~/`) 하위에 클론하십시오. `/mnt/c/` 경로에서 실행하면 권한 오류가 발생하며 스크립트가 즉시 종료됩니다.
 
 ### Step 1. 저장소 클론
@@ -76,27 +75,27 @@ git clone https://github.com/iaminpwd/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ```
 
-### Step 2. 자동 설치 스크립트 실행
+### Step 2. 자동 셋업 스크립트 실행
 ```bash
-# 무엇이 바뀌는지 먼저 확인 (상태를 전혀 변경하지 않음)
-./setup.sh --dry-run
+# 실제 적용 (경량 bootstrap.sh 실행 -> mise install 및 just setup / Ansible 자동 실행)
+./bootstrap.sh
 
-# 실제 적용
-./setup.sh
+# 만약 Ansible 변경 사항을 미리 확인하고 싶을 때 (Dry-run)
+just setup-dryrun
 ```
 
-`--dry-run`은 OS 판별과 조회는 실제 실행과 동일하게 수행하고, 상태를 바꾸는 모든 명령은 `[dry-run]` 접두사가 붙은 계획 출력으로 대체합니다. 처음 쓰는 머신이나 apt 외 환경에서 먼저 돌려보십시오.
+`bootstrap.sh`는 경량 진입점으로서 필수 패키지 및 `mise`, `just`, `ansible`을 준비한 후 제어권을 `Justfile` 및 Ansible Playbook(`ansible/site.yml`)으로 넘겨 모듈화된 셋업을 완료합니다.
 
-스크립트는 다음 6단계를 순차적으로 실행합니다.
+`just setup`(Ansible Playbook)은 아래 6개 역할을 순차적으로 실행합니다:
 
-| 단계 | 작업 내용 |
+| 역할 (Ansible Role) | 작업 내용 |
 |---|---|
-| **[1/6]** 필수 패키지 & Docker 설치 | 판별된 패키지 매니저(`apt-get`/`dnf`/`brew`)로 git, zsh, stow, pipx, dnsutils, tree 등 설치 + Docker Engine을 **공식 저장소에 등록해** 설치하고 `docker` 그룹 권한 부여 (배포 GPG 키 지문을 상수와 대조하며, 불일치 시 설치 중단. macOS는 Docker Desktop 수동 설치 안내만 출력. `fd`는 시스템 패키지 대신 `mise`로 통합 관리) |
-| **[2/6]** Oh My Zsh 구성 | Oh My Zsh + `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 설치 |
-| **[3/6]** Stow 심볼릭 링크 | 기존 설정 파일 백업 후, `zsh/vim/mise/git` 설정을 홈 디렉토리로 symlink |
-| **[4/6]** mise 인프라 도구 설치 | `mise install`로 `~/.config/mise/config.toml`에 선언된 40개 이상의 데브옵스 도구 일괄 설치 |
-| **[5/6]** AI 커스터마이징 구조 주입 | 글로벌 마스터 룰(`base.AGENTS.md`) 셋업, 루트 `AGENTS.md`/`CLAUDE.md` 링킹, Claude 커밋/PR Co-Authored-By 어트리뷰션 기본 비활성화, AI 편집 이력 훅(`agent-edits-hook.sh`)을 Claude Code·Antigravity 양쪽 `PostToolUse`에 병합 등록 |
-| **[6/6]** 시크릿 보안 훅 | TruffleHog 전역 시크릿 스캔 + `git/.githooks/{pre-commit,commit-msg}`를 `core.hooksPath`로 등록하여 모든 로컬 저장소에 정적 분석·FinOps 게이트·시맨틱 커밋 검증 자동 적용 |
+| **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow, pipx 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
+| **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
+| **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `mise`, `git` 설정을 홈 디렉토리(`~/`)로 symlink 구성 |
+| **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
+| **`ai_agent`** | 글로벌 룰(`base.AGENTS.md`) 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`)을 Claude Code·Antigravity `PostToolUse`에 병합 등록 |
+| **`tflint`** | IaC 전역 구성을 위한 `tflint` 설정 설치 및 초기화 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -115,6 +114,10 @@ ls -la ~/.zshrc ~/.gitconfig ~/.config/mise/config.toml
 # AI 글로벌 룰 및 스킬 레지스트리 등록 확인
 cat ~/.gemini/config/AGENTS.md | head -5
 ls ~/.gemini/config/skills/
+
+# 통합 사전 검증 및 테스트 통과 확인 (Justfile 활용)
+just check
+just test
 ```
 
 ---
@@ -123,17 +126,27 @@ ls ~/.gemini/config/skills/
 
 ```text
 ~/dotfiles
+├── ansible/              # Ansible 기반 셋업 아키텍처
+│   ├── ansible.cfg            # Ansible 글로벌 설정
+│   ├── site.yml               # 메인 플레이북 진입점
+│   └── roles/                 # 셋업 모듈 (packages, docker, stow, zsh, ai_agent, tflint)
+│
+├── bin/                  # 모듈화된 실행 스크립트 및 훅/린터
+│   ├── hooks/                 # pre-flight-check.sh, compact-runner.sh, agent-edits-hook.sh 및 plugins/
+│   ├── linters/               # semantic-commit-lint.sh, idempotency-check.sh, prompt-lint.sh 등
+│   ├── utils/                 # log-edit.sh, prompt-flywheel.sh, stow-backup.sh 등
+│   └── lib/                   # tool-probe.sh 등 공용 도구 탐색 라이브러리
+│
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
 │   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
-│   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿 (setup.sh가 경로 치환 후 병합)
+│   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/, azure/, dotfiles/            # 🟢 Production 워크스페이스 룰북
-│   ├── k8s/, multi-cloud/, aiops/,
-│   │   containers/, observability/,
-│   │   drawio-gen/                        # 🟡 Draft 워크스페이스 룰북
-│   ├── pre-flight-check/                  # 사전 검증 정본 스크립트 및 tf 픽스처 공용 테스트 라이브러리
-│   │                                      #   (스킬별 위임 검증기는 bin/hooks/plugins/ 에 통합 위치)
+│   └── containers/, drawio-gen/, k8s/,
+│       multi-cloud/, observability/,
+│       openstack/, pre-flight-check/,
+│       prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
 │
 ├── git/
 │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
@@ -151,16 +164,17 @@ ls ~/.gemini/config/skills/
 │   ├── .zshenv           # Zsh 환경변수 설정 (PATH 등 비대화형 세션 포함)
 │   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
 │
-├── .gitignore            # dotfiles 레포 자체 Git 무시 규칙
+├── bootstrap.sh          # 경량 셋업 진입점 스크립트 (set -euo pipefail)
+├── Justfile              # 통합 태스크 런너 (just setup, just check, just test)
 ├── README.md             # 본 문서
-└── setup.sh              # 전체 환경 자동 구성 스크립트 (set -euo pipefail)
+└── LICENSE
 ```
 
 ---
 
 ## 작동 논리 및 아키텍처
 
-### setup.sh 설치 파이프라인
+### bootstrap.sh & Ansible 설치 파이프라인
 ![setup.sh Installation Pipeline](assets/setup-pipeline.png)
 
 ### GNU Stow 심볼릭 링크 구조
@@ -172,7 +186,7 @@ ls ~/.gemini/config/skills/
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
 
-> `pre-flight-check.sh`의 검증 항목 및 DX 튜닝 상세는 [핵심 기능 §2](#핵심-기능)를 참고하십시오.
+> `bin/hooks/pre-flight-check.sh`의 검증 항목 및 DX 튜닝 상세는 [핵심 기능 §2](#핵심-기능)를 참고하십시오.
 
 ---
 
@@ -214,7 +228,7 @@ ls ~/.gemini/config/skills/
 자주 사용하는 인프라 명령어 단축 별칭(`k` -> `kubectl`, `tf` -> `terraform`, `ap` -> `ansible-playbook` 등)이 `zsh/.zshrc`와 `git/.gitconfig`에 구성되어 개발자 생산성을 극대화합니다.
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
-API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `setup.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
+API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `bootstrap.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
 
 ```bash
 # ~/.zshrc.local 예시
@@ -252,10 +266,10 @@ src
 ```
 
 ### AI 룰셋 핫 리로드 (Zero-Config)
-이미 셋업된 도메인 스킬의 세부 규칙을 수정하거나 확장할 경우, `setup.sh` 재실행 없이 `contexts/` 하위의 마크다운 파일을 수정하는 즉시 실시간으로 에이전트에 반영됩니다.
+이미 셋업된 도메인 스킬의 세부 규칙을 수정하거나 확장할 경우, `bootstrap.sh` 재실행 없이 `contexts/` 하위의 마크다운 파일을 수정하는 즉시 실시간으로 에이전트에 반영됩니다.
 
 > [!NOTE]
-> `setup.sh`는 `contexts/` 하위의 모든 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
+> `bootstrap.sh`(Ansible `ai_agent` 역할)는 `contexts/` 하위의 모든 도메인 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
 
 ---
 
