@@ -7,9 +7,7 @@ export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 plugins=(git kubectl terraform zsh-autosuggestions zsh-syntax-highlighting)
 
-# HIST_STAMPS는 반드시 oh-my-zsh.sh 로드 전에 선언해야 한다. lib/history.zsh가 로드 시점에
-# case ${HIST_STAMPS-} 로 한 번 읽어 history 별칭을 확정하므로, 로드 후에 선언하면 값이
-# 무시된다(2026-07-27 실측: 로드 후 선언 시 history=omz_history, 로드 전 선언 시 -i 적용).
+# HIST_STAMPS: oh-my-zsh.sh 로드 이전 선언 필수 (history.zsh 로드 시점 확정)
 HIST_STAMPS="yyyy-mm-dd"        # 히스토리에 날짜/시간 기록
 
 source $ZSH/oh-my-zsh.sh
@@ -22,14 +20,16 @@ setopt SHARE_HISTORY            # 여러 터미널 창 간에 히스토리 실�
 
 # --- [인프라 엔지니어 필수 설정] ---
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/dotfiles/bin/hooks:$HOME/dotfiles/bin/utils:$HOME/dotfiles/bin/linters:$HOME/dotfiles/bin/lib:$PATH"
 
-# Bicep(.NET 기반)이 libicu 없는 Ubuntu 환경에서도 실행되도록 Invariant 모드 강제 활성화
-# (pre-flight-check.sh의 validate_bicep()과 동일한 설정 - 훅 밖 터미널 직접 실행 시에도 적용)
+# Ansible 캐시/찌꺼기 프로젝트 오염 방지 (XDG 호환 캐시 디렉토리로 격리)
+export ANSIBLE_HOME="$HOME/.cache/ansible"
+
+# Bicep (libicu 부재 환경) Invariant 모드 강제 활성화
 export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 
 # 1. 파일/에디터 관련
-# explorer.exe 는 WSL 에서만 존재한다. 리눅스 네이티브나 macOS 에서 이 별칭을 그대로 두면
-# 존재하지 않는 명령을 가리켜 command not found 로 끝나므로, 각 환경의 파일 탐색기로 건다.
+# OS별 파일 탐색기 별칭 분기 처리 (WSL, 리눅스, macOS)
 if grep -qi microsoft /proc/version 2>/dev/null; then
   alias e='explorer.exe .'
 elif [[ "$OSTYPE" == darwin* ]]; then
@@ -71,8 +71,7 @@ alias tfa='terraform apply'
 alias tfw='terraform workspace'
 
 # 4. 도구 환경 활성화 (Mise)
-# 아래 fzf 블록과 동일하게 존재 여부를 먼저 확인한다. 무방비로 eval하면 mise 설치 전이나
-# 설치 실패 상태에서 셸을 열 때마다 "command not found"가 출력된다.
+# mise 존재 확인 후 eval 적용 ("command not found" 에러 방지)
 if [ -x "$HOME/.local/bin/mise" ]; then
   eval "$(~/.local/bin/mise activate zsh)"
 fi
@@ -88,7 +87,7 @@ fi
 alias ap='ansible-playbook'
 alias myip='curl -s ifconfig.me'
 
-# 로컬 환경 변수(GitHub Token, 클라우드 API Key 등 시크릿)를 안전하게 관리하기 위한 분리 파일 로드
+# 로컬 시크릿/환경 변수 분리 파일 로드
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 # 앞으로 터미널에 src만 치면 자동으로 .zshrc가 새로고침됩니다.
 alias src='source ~/.zshrc'

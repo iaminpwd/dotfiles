@@ -85,4 +85,6 @@ __pycache__/
 
 # Infracost cache directory
 .infracost/
-tflint/
+
+.ansible/
+*.retry

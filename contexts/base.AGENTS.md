@@ -75,8 +75,9 @@ priority: highest
 ## 6. 자율 주행 및 안전장치 (Autonomous Operations & Safety)
 - **[MUST] Tool Availability Gate:** CLI 도구 실행 전 설치 여부 확인. 미설치 시 즉시 작업 중단(Halt & Clarify) 후 설치 요구.
 - **[MUST] Permission Boundary:** 로컬 권한 필요 시 최소 경로 권한만 요청.
-- **[MUST] Pre-Flight Gate:** 인프라 코드/스크립트 수정 후 도메인 무관 `pre-flight-check` 스킬(`compact-runner.sh`)을 호출하여 정량 검증 필수 수행.
+- **[MUST] Pre-Flight Gate:** 인프라 코드나 스크립트 수정 후 검증 단계에서는 항상 모든 개별 명령어를 포괄하는 `compact-runner.sh`를 단일 실행하여 통합 정량 검증을 완수할 것.
 
+- **[Trigger: `/learn` Command Executed] Prompt Architect Loading:** 사용자가 `/learn` 명령어를 통해 룰이나 스킬 수정을 요청할 경우, 제안서(`learning_proposal.md`)를 작성하기 전에 반드시 `prompt-architect` 스킬(`SKILL.md`)을 먼저 `view_file`로 읽어 들여 룰 작성 표준을 컨텍스트에 주입할 것.
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 일괄 완성 요구 시 중간 질문 생략, 단 한 번에 최종 산출물 출력.
 - **[Trigger: User Message Contains '빠름'] Fast-Path Mode:** '빠름' 포함 시 즉시 작업 수행 및 자동화 정량 검증만으로 완료 조건 구성.
 - **[Trigger: After Code Change] Autonomous Self-Healing:** 자가 검증 실패 시 최대 3회 자율 재시도. **(단, 파괴적 명령어 요구 시 자율 치유 즉시 중단 후 승인 요청)**
@@ -111,4 +112,5 @@ priority: highest
 - **[Trigger: Ask for Code Provenance] Audit Edits Log:** 사용자가 "어떤 프롬프트/룰 때문에 이렇게 코드를 짰는가?" 등 코드 변경 사유나 출처를 질문할 경우, 답변 전 즉시 `.agent-state/edits.log` 파일을 조회하여 해당 파일의 수정 이력을 확인하고 팩트 기반으로 답변할 것.
 - **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 터미널에서 `prompt-flywheel.sh` 명령어로 룰 개정안 역제안.
 - **[MUST] Code Execution & Safety Boundaries:** 로직 검증 시 스크립트 실행을 통한 물리적 팩트 검증 필수.
-- **[MUST] Eval-Driven Testing:** 핵심 로직 개발 시 자동 검증 가능한 테스트 스크립트 작성.
+- **[MUST] Eval-Driven Testing:** 핵심 로직 개발/수정 시 자동 검증 가능한 테스트 스크립트를 작성하거나 기존 스크립트를 실행해 검증하십시오.
+  - **[NOTICE]** 테스트(`tests/`) 및 정량 평가(`evals/`) 폴더는 컨텍스트 오염을 막기 위해 에이전트의 런타임 스킬 폴더에 동기화되지 않습니다. 기존 테스트 코드를 읽거나 실행하려면 원본 저장소 경로(예: `contexts/<skill>/tests/`)를 직접 조회하거나 `just test` 등의 테스트 런너 명령어를 사용해야 합니다.

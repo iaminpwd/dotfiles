@@ -26,7 +26,7 @@
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
-- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `contexts/*/scripts/preflight/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
+- **정적 분석 및 문법 검증:** `pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `bin/hooks/plugins/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
 - **의존성 취약점 스캔 (소스 레벨):** `trivy fs --scanners vuln`이 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, 취약점은 경고만 남기고 커밋을 막지는 않습니다. 이미지 레이어 자체의 SBOM/취약점/서명은 커밋이 아니라 릴리즈 단계의 책임이며 `syft`/`grype`/`cosign`이 담당합니다.
 - **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
@@ -133,7 +133,7 @@ ls ~/.gemini/config/skills/
 │   │   containers/, observability/,
 │   │   drawio-gen/                        # 🟡 Draft 워크스페이스 룰북
 │   ├── pre-flight-check/                  # 사전 검증 정본 스크립트 및 tf 픽스처 공용 테스트 라이브러리
-│   │                                      #   (스킬별 위임 검증기는 각 스킬의 scripts/preflight/ 에 위치)
+│   │                                      #   (스킬별 위임 검증기는 bin/hooks/plugins/ 에 통합 위치)
 │
 ├── git/
 │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
