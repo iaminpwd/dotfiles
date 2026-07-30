@@ -153,7 +153,7 @@ check "fail-broken-link" 1 "깨진 참조 링크" "$D"
 D=$(new_case fail-broken-link-nested)
 {
   echo "| 역할 지침 | contexts/demo/role.missing.md |"
-  echo "| 위임 검증기 | contexts/demo/scripts/preflight/demo-check.sh |"
+  echo "| 위임 검증기 | bin/hooks/plugins/demo-check.sh |"
 } >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link-nested (role.*.md / scripts 하위)" 1 "깨진 참조 링크" "$D"
 

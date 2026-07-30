@@ -1,38 +1,16 @@
 #!/usr/bin/env bash
 # 스킬 라우팅 실측기 — cases.tsv 를 헤드리스로 반복 실행해 observed.tsv 를 생성한다.
 #
-# 별도 CLI 설치는 필요 없다. Claude Code IDE 확장(Antigravity/VS Code)이 네이티브
-# 바이너리를 번들하므로 그것을 자동 탐색해 쓴다(2026-07-27 확인:
-# ~/.antigravity-ide-server/extensions/anthropic.claude-code-*/resources/native-binary/claude).
+# IDE 확장 번들(Antigravity/VS Code) 바이너리 자동 탐색 (별도 CLI 설치 불필요)
 #
-# 관측 방식: 도구를 Skill 하나로 한정해 실행하면, 에이전트가 파일을 뒤지는 대신
-# 라우팅 판단만 수행하므로 stream-json 의 tool_use(name=Skill) 가 곧 "로드된 스킬"이다.
-# 중립 디렉토리에서 실행해 dotfiles 의 CLAUDE.md 가 자동 로드되지 않도록 한다
-# (dotfiles 스킬은 description 라우팅 대상이 아니므로 cases.tsv 에서도 제외되어 있다).
+# 관측 방식: 도구를 Skill로 한정해 호출 내역(tool_use) 추출. 중립 디렉토리 실행으로 기본 룰 로드 방지.
 #
-# --max-turns 1 인 이유: 필요한 것은 첫 턴의 라우팅 판단뿐이다. 턴을 더 주면 스킬을
-# 로드한 뒤 실제 답변까지 생성해 케이스당 3분이 걸린다(2026-07-27 실측: turns=4 약 180초,
-# turns=1 약 17초, 라우팅 결과는 동일).
+# --max-turns 1: 라우팅 판단(첫 턴)만 수행하여 케이스당 실행 시간 최소화 (약 17초)
 #
-# 반복 측정이 기본인 이유: 라우팅은 비결정적이다. 같은 입력에 S01 이 [aws] 와
-# [aws,pre-flight-check] 로, M04 가 [observability,k8s] 와 [observability] 로 갈렸다
-# (2026-07-27 실측). 1회 draw 로는 description 수정이 개선인지 노이즈인지 구분할 수 없다.
-# 필요한 스킬은 "매번" 떠야 하므로 집계는 pass@k(1회라도 성공)가 아니라 pass^k(k회 전부
-# 성공) 기준으로 본다. observed.tsv 에는 채점기 호환을 위해 다수결 결과를 기록하고,
-# 회차별 원본은 observed-runs.tsv 에 남겨 분산을 추적한다.
+# 반복 측정: 라우팅 비결정성(노이즈) 극복. pass^k(전회 성공) 기준 집계 및 다수결 결과 기록.
 #
-# [비용 주의] 이 스크립트는 케이스 1회당 실제 에이전트 세션을 1개 띄운다. 전체 측정은
-# 36건 x REPEATS 회이므로 기본값 기준 108개 세션이 뜨고 토큰이 그만큼 소모된다
-# (2026-07-27 실측: 1회 전체 측정으로 세션 토큰 예산의 상당 부분을 소진). description 을
-# 고칠 때마다 습관적으로 돌리지 대신, 아래 순서로 비용을 통제하십시오.
-#   1. 로컬 무료 검사 먼저: run.sh 의 description 용어 중복 분석은 API 호출이 없다.
-#   2. 부분 측정: 고친 스킬과 관련된 케이스 ID 만 인자로 지정한다.
-#   3. 전체 재측정: 베이스라인을 갱신할 때만 수행한다.
-#
-# [실행 가드] 위 비용 때문에 기본적으로 막혀 있다. 아래 두 조건을 모두 통과해야 실행된다.
-#   - 세션 수 상한: 예정 세션이 ROUTING_MAX_SESSIONS(기본 30)를 넘으면 거부한다.
-#   - 실행 승인: 대화형 터미널이면 yes 입력을 묻고, 비대화형이면 ROUTING_MEASURE_CONFIRM=yes
-#     가 없는 한 거부한다. 중단 시 종료 코드는 3 이다.
+# [비용 주의] 실제 세션 실행으로 토큰 소모 큼. (run.sh 로컬 분석 먼저 -> 부분 측정 -> 전체 갱신)
+# [실행 가드] 과도한 비용 방지를 위해 세션 수 상한 검사 및 사용자 명시적 승인 요구
 #
 # 사용: bash ~/dotfiles/contexts/prompt-architect/evals/routing/measure.sh [케이스ID ...]
 #       인자를 주면 해당 케이스만, 없으면 전체를 측정한다.
@@ -115,8 +93,7 @@ for line in open(sys.argv[1], encoding='utf-8', errors='replace'):
 print(','.join(called) if called else 'none')
 PY
 
-# 로드 순서는 라우팅 정확도와 무관하므로 비교는 항상 집합으로 한다. 문자열로 비교하면
-# 기대[k8s,observability] 대 실제[observability,k8s] 가 불일치로 잡힌다(run.sh 도 집합 비교).
+# 로드 순서 무관 집합 비교 (오탐 방지)
 canon() { tr ',' '\n' <<<"$1" | sort -u | paste -sd, -; }
 
 # -----------------------------------------------------------------------------
@@ -141,6 +118,7 @@ observe_one() {
         --max-turns 1 </dev/null
     ) >"$raw" 2>/dev/null || true
     got=$(python3 "$PARSER" "$raw" 2>/dev/null || echo none)
+    # idempotency:bypass (임시 파일에 대한 단순 반복 기록)
     printf '%s\t%s\t%s\n' "$cid" "$i" "$got" >>"$WORK/runs.$cid"
     [ "$(canon "$got")" = "$want" ] && hits=$((hits + 1))
   done

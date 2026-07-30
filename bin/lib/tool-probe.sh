@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tool-probe.sh - 검증 도구 가용성 조회 공용 라이브러리 (SSOT)
 #
-# pre-flight-check.sh 와 각 스킬의 scripts/preflight/*.sh 위임 검증기가 공유한다.
+# pre-flight-check.sh 와 각 스킬의 bin/hooks/plugins/*.sh 위임 검증기가 공유한다.
 # 예전에는 이 34줄이 두 파일에 복제돼 있었고, 주석만 다르고 실행 로직은 100% 동일했다
 # (2026-07-28 실측). 한쪽만 고치면 다른 쪽이 조용히 옛 동작을 유지하는데, 하필 이 로직의
 # 실패 모드가 "모든 검증을 건너뛰고 성공 배너를 출력하는 것"이라 드리프트를 눈으로

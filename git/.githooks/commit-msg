@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# commit-msg 훅: 시맨틱 커밋 컨벤션(feat/fix/docs/... : subject) 강제
-# core.hooksPath로 전역 등록되어 모든 로컬 저장소에 적용된다 (pre-commit과 동일한 연동 방식).
+# commit-msg 훅: 시맨틱 커밋 컨벤션 강제 (전역 훅)
 set -euo pipefail
 
 COMMIT_MSG_FILE="$1"
@@ -11,13 +10,8 @@ if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
   exit 0
 fi
 
-# 주석(#으로 시작, git status 안내 등) 및 빈 줄을 건너뛰고 첫 실제 제목 줄만 검사한다.
-#
-# `|| [ -n "$line" ]` 주의: read 는 개행으로 끝나지 않는 마지막 줄을 읽고도 1을 반환하므로,
-# 조건에 이것이 없으면 그 줄이 통째로 버려진다. 그러면 SUBJECT 가 빈 문자열로 남아 아래
-# "빈 커밋 메시지" 분기를 타고 컨벤션 검사 없이 통과한다(2026-07-28 실측: 훅을 직접 호출하면
-# 재현됨. git 은 메시지를 정규화해 개행을 붙이므로 `git commit` 경로로는 도달하지 않지만,
-# 검증 게이트가 입력 형태에 따라 조용히 무력화되는 구조를 남겨두지 않는다).
+# 첫 실제 제목 줄 추출 (주석/빈 줄 제외)
+# 개행 없는 마지막 줄 누락 방지를 위해 `|| [ -n "$line" ]` 추가
 SUBJECT=""
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
@@ -54,17 +48,14 @@ fi
 
 # Atomic Commit Analyzer
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-LINT_SCRIPT="$REPO_ROOT/contexts/scripts/semantic-commit-lint.sh"
+LINT_SCRIPT="$REPO_ROOT/bin/linters/semantic-commit-lint.sh"
 
 if [ ! -f "$LINT_SCRIPT" ]; then
-  LINT_SCRIPT="$HOME/dotfiles/contexts/scripts/semantic-commit-lint.sh"
+  LINT_SCRIPT="$HOME/dotfiles/bin/linters/semantic-commit-lint.sh"
 fi
 
 if [ -f "$LINT_SCRIPT" ]; then
-  # `mapfile -d` 를 쓰지 않는다. -d 는 bash 4.4 에서 추가된 옵션이고 mapfile 자체가 bash 4
-  # 빌트인인데, 이 훅에는 형제 훅(pre-commit)과 달리 상위 bash 재실행 가드가 없다. 전역
-  # 등록이라 macOS 기본 bash(3.2)나 구형 bash 로 실행될 수 있고, 거기서 죽으면 커밋 자체가
-  # 막힌다. 아래 read 루프는 어느 버전에서나 동작하므로 가드를 복제하는 대신 요구사항을 없앤다.
+  # macOS/구형 bash 호환성: mapfile 대신 호환성 높은 read 루프 사용 (bash 재실행 가드 불필요)
   STAGED_FILES=()
   while IFS= read -r -d '' STAGED_FILE; do
     STAGED_FILES+=("$STAGED_FILE")

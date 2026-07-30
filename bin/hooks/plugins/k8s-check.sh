@@ -37,7 +37,7 @@ cd "$REPO_ROOT" || {
 # 상대 경로가 배포 위치로 빗나간다. readlink -f 로 저장소 내 정본 위치를 먼저 확정한다.
 K8S_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
-source "$K8S_CHECK_DIR/../../../pre-flight-check/scripts/lib/tool-probe.sh"
+source "$K8S_CHECK_DIR/../../lib/tool-probe.sh"
 
 GLOBAL_IS_GIT_REPO=0
 if git rev-parse --is-inside-work-tree &>/dev/null; then

@@ -15,5 +15,6 @@ TARGET_DIR=".agent-state"
 
 mkdir -p "$TARGET_DIR"
 # Format: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
+# idempotency:bypass (로그 파일 연속 기록이므로 상태 검증 불필요)
 echo "$ISO8601 | $FILE_PATH | agent:$RULE_SOURCE | $PURPOSE | SUCCESS" >>"$TARGET_DIR/edits.log"
 echo "✅ Logged edit to $TARGET_DIR/edits.log"

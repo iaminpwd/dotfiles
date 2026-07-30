@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 # prompt-lint.sh - Dotfiles Prompt Corpus Consistency Linter
 #
-# pre-flight-check.sh/k8s-check.sh 등은 "다운스트림 프로젝트의 인프라 코드"를
-# 검증하는 스크립트라 contexts/*/scripts/preflight/ 자동 위임 대상에 놓인다.
-# 이 스크립트는 그 반대로 "dotfiles 저장소 자신의 프롬프트 원본(.md)"이 스스로
-# 일관성을 유지하는지 검증하는 것이 목적이라, 그 디렉토리 밖(contexts/dotfiles/
-# scripts/)에 두어 다른 프로젝트에서 실행되는 pre-flight-check.sh의 자동 위임에
-# 걸리지 않는다.
+# 프롬프트 원본(.md) 자가 검증용 스크립트
+# (타 프로젝트 인프라 검증용이 아니므로 preflight/ 위임 경로 밖에 배치)
 #
 # ERROR: 명확한 결함(링크 깨짐, SSOT 목록 불일치, 코드펜스 깨짐) -> 종료 코드 1
 # WARNING: 사람/AI의 추가 판단이 필요한 후보(고아 파일, 크로스 스킬 중복 후보,
@@ -52,9 +48,7 @@ check_ssot_module_lists() {
   for corefile in "${core_files[@]}"; do
     [ -z "$corefile" ] && continue
     skill_dir=$(dirname "$(dirname "$corefile")")
-    # 아래 대입들은 무매치 시 grep 이 1을 반환하고, set -euo pipefail 이 그 실패를 잡아
-    # 린터를 조용히 죽인다. 무매치는 "불일치로 보고할 정상 입력"이므로 빈 문자열로 흡수해
-    # 아래 비교 로직까지 도달시킨다 (245/275행의 || true 와 동일한 처리).
+    # grep 무매치(exit 1) 시 pipefail에 의한 스크립트 중단 방지를 위해 빈 문자열로 흡수
     own_prefix=$(basename "$corefile" | grep -oE '^[0-9]{3}' || true)
 
     declared_line=$(grep "공통 자가 비판 절차" "$corefile" || true)
@@ -79,10 +73,7 @@ check_ssot_module_lists() {
 check_reference_links() {
   log_info "--- Step: Reference Link Integrity ---"
   local match f ref
-  # 아래 grep 패턴 주의: 스킬 루트의 role.*.md(agent-handoff 역할 파일)와 scripts/tests
-  # 한 단계 하위 디렉토리(scripts/preflight/*.sh, tests/lib/*.sh)는 예전 패턴이 매칭하지
-  # 못해, 그 경로가 깨져도 검사에 걸리지 않는 사각지대였다(2026-07-28 실측: 문서에
-  # 등장하는 contexts/ 경로 64건 중 63건만 커버). 실재하는 파일 배치를 전부 포함시킨다.
+  # 하위 디렉토리(preflight, tests/lib 등) 패턴 누락으로 인한 사각지대 제거
   while IFS= read -r match; do
     [ -z "$match" ] && continue
     f="${match%%:*}"
@@ -120,33 +111,21 @@ check_orphaned_files() {
 # -----------------------------------------------------------------------------
 check_documented_clause_existence() {
   log_info "--- Step: Documented Clause Existence ---"
-  # contexts/README.md 는 룰북 조항을 코드펜스에 인용해 설계 의도를 설명한다. 그런데
-  # 조항이 룰북에서 삭제되거나 이름이 갈려도 이 인용은 그대로 남아, 문서만 보면 규칙이
-  # 살아 있는 것처럼 보인다. 실제로 커밋 393926b 가 base.AGENTS.md 9장의 자가 진화
-  # 조항 2개를 삭제했는데도 인용 4곳이 전부 통과했고, PostToolUse 훅은 소비처 없는
-  # 로그를 계속 쌓았다(2026-07-28 실측). 기존 검사들은 "파일 경로"만 대조하므로 조항
-  # 단위의 이 드리프트를 구조적으로 잡을 수 없었다.
+  # 조항 단위 드리프트 탐지: 삭제/변경된 조항이 문서(README 등)에 인용 방치되는 현상 방지
   local readme="$CONTEXTS_DIR/README.md"
   [ -f "$readme" ] || {
     log_info "[INFO] 조항 실재성 검사 건너뜀 (contexts/README.md 없음)."
     return
   }
 
-  # 조항명 추출: `- **[MUST] 조항명:**` / `- **[Trigger: ...] 조항명:**` 형태만 정의로 본다.
-  # 조항명은 영숫자로 끝나도록 잡아 뒤따르는 공백을 흡수한다. `Break-Glass (예외 승인)`
-  # 처럼 괄호 주석이 붙는 조항에서 공백이 남으면 원문과 어긋나 오탐이 된다.
-  # PCRE(grep -P)를 쓰지 않는 이유: 코퍼스의 다른 모든 검사가 -E 로 되어 있고, -P 는
-  # macOS/busybox grep 에 없어 이 스크립트에만 이식성 제약을 새로 들이게 된다.
+  # 조항명 추출: -E 정규식 사용 (macOS 이식성). 괄호 주석 공백 처리 주의.
   local names_file found_file
   names_file=$(mktemp)
   found_file=$(mktemp)
   sed -nE 's/^[[:space:]]*[-*][[:space:]]+\*\*(\[[^]]+\][[:space:]]*)?([A-Za-z][A-Za-z0-9 &'"'"'\/-]*[A-Za-z0-9])[[:space:]]*(\([^)]*\))?[[:space:]]*:\*\*.*/\2/p' \
     "$readme" | sort -u >"$names_file"
 
-  # 조항마다 grep -r 을 돌리면 코퍼스 트리를 조항 수만큼 훑는다(2026-07-28 실측: 19회
-  # 순회로 린터 전체가 0.35초에서 0.91초로 늘었다). 이 린터는 룰북 .md 를 건드리는 모든
-  # 커밋에서 실행되는 경로이므로, 패턴 파일 1개로 트리를 한 번만 훑어 "실재하는 이름 집합"을
-  # 먼저 만든 뒤 집합 비교로 판정한다.
+  # 성능 최적화: 순회 반복 대신 문서 전체에서 실재 이름 집합을 한 번만 추출하여 대조
   #
   # 전문을 변수에 모아 `printf ... | grep -q` 로 넘기는 방식은 쓰지 않는다. grep 이 첫
   # 매치에서 종료하며 stdin 을 닫고, 그 SIGPIPE 로 printf 가 141 을 반환하는데 set -o
@@ -239,8 +218,7 @@ check_code_fences() {
     }
   ' || true)
   if [ -n "$unclosed" ]; then
-    # 비인용 `for f in $unclosed` 를 쓰지 않는다. 단어 분리가 일어나 공백이 들어간 경로가
-    # 여러 건으로 쪼개져 보고된다. awk 가 파일마다 한 줄씩 내보내므로 줄 단위로 읽는다.
+    # 공백 포함 경로 오작동 방지를 위해 for 대신 while read 사용
     while IFS= read -r f; do
       [ -n "$f" ] || continue
       echo "❌ [ERROR] 코드펜스 짝이 맞지 않음: $f" >&2
@@ -255,9 +233,7 @@ check_code_fences() {
 # -----------------------------------------------------------------------------
 check_severity_tag_heuristic() {
   log_info "--- Step: Halt & Clarify vs Hard Block Severity Heuristic (Warning Only) ---"
-  # base.AGENTS.md 정의상 "보안 취약점 발견"은 Hard Block이 맞다. 아래 고위험
-  # 키워드가 포함된 중단 조건 줄인데 Halt & Clarify로 태깅되어 있으면, 실제로는
-  # Hard Block이어야 할 후보일 확률이 높으므로 사람/AI의 재검토를 요청한다.
+  # 보안 취약점 등 고위험 키워드가 포함된 경우 Hard Block 등급 상향 필요성 알림
   local risk_keywords='privileged|hostNetwork|평문|자격 증명|시크릿.*유출|credential|secret.*leak|0\.0\.0\.0/0|CVE|readOnlyRootFilesystem'
   local hits
   hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep "Halt & Clarify" || true)
@@ -280,10 +256,7 @@ check_severity_tag_heuristic() {
 # -----------------------------------------------------------------------------
 check_prefer_language_tagged_must() {
   log_info "--- Step: Preference Wording Tagged as MUST (Warning Only) ---"
-  # 050 §1.1 조항 등급 기준: 본문에 "최우선 제안"/"우선 탐색"/"가급적" 같은
-  # 선호 표현이 있으면 그 조항은 MUST 가 아니라 PREFER 다. 등급 기준이 코퍼스에
-  # 없던 시절 MUST 가 기본값처럼 부착돼 84%까지 올라갔으므로(2026-07-26 실측),
-  # 재발을 막기 위해 문서 규칙을 여기서 기계 판정으로 승격시킨다(056 §2 3단계).
+  # 본문에 선호 표현("가급적", "우선 탐색" 등) 포함 시 MUST 대신 PREFER 사용 안내
   local prefer_words='최우선으로 (제안|탐색|시도|고려)|최우선 (제안|탐색)|가급적|우선 탐색|권장합니다|권장하십시오'
   local hits
   hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep -E "$prefer_words" || true)

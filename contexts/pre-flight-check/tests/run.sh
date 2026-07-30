@@ -18,7 +18,8 @@ set -euo pipefail
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNNER="$TESTS_DIR/../scripts/compact-runner.sh"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
+RUNNER="$REPO_ROOT/bin/hooks/compact-runner.sh"
 FIXTURES="$TESTS_DIR/fixtures"
 
 TMP=$(mktemp -d)
@@ -120,14 +121,14 @@ fi
 echo "--- tool-probe.sh 공용 라이브러리 (SSOT) ---"
 
 LIB_CONSUMERS=(
-  "$TESTS_DIR/../scripts/pre-flight-check.sh"
-  "$TESTS_DIR/../../k8s/scripts/preflight/k8s-check.sh"
+  "$REPO_ROOT/bin/hooks/pre-flight-check.sh"
+  "$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
 )
 
 # 9. 라이브러리 계약: source 하면 세 함수가 정의되어야 한다. 소비자의 실행 출력으로
 #    적재 여부를 추정하면 스테이징 상태에 따라 결과가 흔들리므로(검증 대상 파일 목록에
 #    tool-probe.sh 자신이 들어오면 그 경로가 정상 출력에 섞인다) 계약을 직접 확인한다.
-LIB="$TESTS_DIR/../scripts/lib/tool-probe.sh"
+LIB="$REPO_ROOT/bin/lib/tool-probe.sh"
 code=0
 bash -c 'set -euo pipefail
 export QUIET=0
