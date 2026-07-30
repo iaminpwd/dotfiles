@@ -2,6 +2,7 @@
 # 인프라 엔지니어 로컬 환경 관리용 통합 태스크 런너
 
 set shell := ["bash", "-c"]
+export ANSIBLE_HOME := env_var('HOME') + "/.cache/ansible"
 
 # -----------------------------------------------------------------------------
 # Setup & Provisioning

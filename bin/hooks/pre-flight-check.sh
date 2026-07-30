@@ -2,6 +2,7 @@
 # pre-flight-check.sh - Modular & Fail-safe IaC/Script Validation Pipeline
 
 set -euo pipefail
+export ANSIBLE_HOME="$HOME/.cache/ansible"
 
 # Setup Quiet Mode Logging
 log_info() {
@@ -331,14 +332,13 @@ validate_ansible() {
     if has_tool ansible-lint; then
       log_info "Running ansible-lint..."
       local lint_cmd=(ansible-lint)
-      if [ -f "ansible/.ansible-lint" ]; then
-        lint_cmd+=("-c" "ansible/.ansible-lint")
-      fi
       if ! "${lint_cmd[@]}"; then
         echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
+        rm -rf .ansible
         return 1
       fi
-      log_info "[SUCCESS] Ansible validation passed."
+      rm -rf .ansible
+      log_info "✅ ansible-lint passed."
     else
       log_info "[WARNING] ansible-lint is not installed. Skipping lint validation."
     fi

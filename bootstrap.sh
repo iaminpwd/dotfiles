@@ -5,7 +5,7 @@
 # 제어권을 Justfile과 Ansible Playbook으로 넘깁니다.
 
 set -euo pipefail
-
+export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 1. OS 패키지 매니저 판별
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
