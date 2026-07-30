@@ -3,7 +3,7 @@ role: Infrastructure Diagram Generator
 priority: high
 trigger: drawio XML 파일을 생성하거나 수정할 때 적용
 references:
-  - contexts/dotfiles/references/000-core.md
+  - contexts/dotfiles/references/010-core.md
 ---
 # DrawIO XML 공통 포맷 규격
 

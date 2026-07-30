@@ -12,7 +12,7 @@ AWS 클라우드 인프라, 네트워크, 컨테이너, 서버리스, 보안 제
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
+| 프로젝트 기획 및 아키텍처 설계 | references/020-project-planning-template.md |
 | IAM 정책 / 시크릿 관리 감사 | references/020-security-compliance.md |
 | 네트워크 설계 및 멀티계정 보안 | references/025-cloud-security.md |
 | 비용 최적화 및 FinOps | references/030-finops-optimization.md |

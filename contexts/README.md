@@ -130,7 +130,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [PREFER] Split Complex Tasks: 복잡한 셋업은 단계별 넘버링(Step-by-Step)으로 분할하여 순차 실행하도록 강제. (출처: 050-prompt-engineering-standard.md)
+- [PREFER] Split Complex Tasks: 복잡한 셋업은 단계별 넘버링(Step-by-Step)으로 분할하여 순차 실행하도록 강제. (출처: 030-prompt-engineering-standard.md)
 ```
 
 #### 3.2.3. 출력 포맷 엄격화 (Output Constraints)
@@ -172,7 +172,7 @@ priority: high
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- [PREFER] Positive Action Override: 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 050-prompt-engineering-standard.md)
+- [PREFER] Positive Action Override: 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 030-prompt-engineering-standard.md)
 ```
 
 ---

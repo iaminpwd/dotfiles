@@ -6,7 +6,7 @@
 - **[MUST] Blueprint Format**: `Claude-to-Gemini.md` 작성 시 다음 4가지 핵심 헤더를 반드시 포함하십시오: `## 1. Goal`, `## 2. Architecture & Rules`, `## 3. Action Plan`, `## 4. Verification`. (누락 시 커밋 훅이 자동 차단함)
 - **[MUST] Action Plan 항목과 검증 명령의 1:1 대응**: `Action Plan` 항목마다 `Verification`에 판정 명령을 1:1로 매핑하십시오. (이유: 실행자 기계 검증 강제)
 - **[MUST] 도메인 목차 표준의 조건부 적용**: 작업 도메인에 계획서 목차 표준
-  (예: `contexts/dotfiles/references/005-project-planning-template.md`)이 **실재하는 경우에만**
+  (예: `contexts/dotfiles/references/020-project-planning-template.md`)이 **실재하는 경우에만**
   그 목차를 위 4섹션 위에 덧씌우십시오. 이 파일은 모든 도메인에 있지 않으므로, 사전에 존재 여부를
   명확히 확인한 경우에 한하여 목차를 적용하고 해당 경로를 설계도에 인용하십시오.
 - **[MUST] 경로 실재 확인 후 기재**: 설계도에 등장하는 모든 파일 경로는 발행 직전에

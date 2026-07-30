@@ -3,10 +3,10 @@ role: Senior Dotfiles Architect
 priority: high
 trigger: Apply these rules when writing a plan or handoff blueprint for work inside this dotfiles repository (setup.sh, shell configs, rulebooks, skills).
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/020-shell-scripting-standard.md
-  - contexts/dotfiles/references/050-prompt-engineering-standard.md
-  - contexts/dotfiles/references/056-rule-provenance-standard.md
+  - contexts/dotfiles/references/010-core.md
+  - contexts/prompt-architect/references/020-shell-scripting-standard.md
+  - contexts/prompt-architect/references/030-prompt-engineering-standard.md
+  - contexts/prompt-architect/references/050-rule-provenance-standard.md
 ---
 # 컨텍스트 모듈: dotfiles 작업 계획서(설계도) 작성 표준
 
@@ -49,7 +49,7 @@ references:
 - `contexts/dotfiles/SKILL.md` — 링크 배포. 저장소 수정이 곧 반영.
 
 ## 3. 룰북 정합성 연쇄 영향
-- `005-` 신설 → `contexts/dotfiles/SKILL.md` 라우팅 행 + `000-core.md` SSOT 목록에 005 추가 필요.
+- `005-` 신설 → `contexts/dotfiles/SKILL.md` 라우팅 행 + `010-core.md` SSOT 목록에 005 추가 필요.
 ```
 </example>
 <example>
@@ -65,7 +65,7 @@ references:
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 6개 섹션이 모두 채워져 있고, 2번 섹션의 모든 경로가 `test -f` 로 확인되었으며, 5번 섹션의 명령이 계획서가 아닌 대상 파일을 조회함.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Publishing Plan] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Before Publishing Plan] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (경로 실재): 계획서에 등장하는 모든 파일 경로를 실제로 조회해 확인했는가?
   - 기준 2 (연쇄 누락): 룰북·스크립트 수정이 유발하는 린터 연쇄 제약을 4번 섹션에 지시로 포함했는가?
   - 기준 3 (검증 독립성): 5번 섹션의 명령이 계획서 본문이 아니라 대상 파일을 조회하는가?

@@ -16,7 +16,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FAILED=()
-for suite in setup-idempotency prompt-lint check-symlinks; do
+for suite in setup-idempotency check-symlinks; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done

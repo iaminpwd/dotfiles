@@ -3,8 +3,7 @@ role: Senior Shell Scripting & DevOps Engineer
 priority: high
 trigger: Apply these rules ONLY when creating or modifying shell scripts (e.g. setup.sh), bashrc, zshrc, or terminal configurations.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/010-dotfiles-core-standard.md
+  - contexts/prompt-architect/references/010-core.md
 ---
 # 컨텍스트 모듈: Dotfiles 환경 설정 및 셸 스크립트 작성 표준
 
@@ -51,7 +50,7 @@ echo "alias k=kubectl" >> ~/.zshrc # 여러 번 실행 시 무한 증식
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 스크립트가 2회 연속 실행 시 동일한 결과를 생성하며, `shellcheck` 검사를 경고 없이 통과해야 합니다.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Bash Script Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Bash Script Authored] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (Fail-Fast 보장): 에러 발생 시 스크립트가 즉시 중단되며, `set -euo pipefail`이 선언되었는가?
   - 기준 2 (멱등성 보장): 재실행 시 설정 파일(`.zshrc` 등)에 내용이 중복 증식을 원천 차단하도록 멱등 검증 로직이 완벽히 설계되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

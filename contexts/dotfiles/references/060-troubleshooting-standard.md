@@ -3,8 +3,8 @@ role: Senior System Engineer
 priority: high
 trigger: Apply these rules ONLY when troubleshooting, debugging shell environments, or fixing errors in the dotfiles workspace.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/020-shell-scripting-standard.md
+  - contexts/dotfiles/references/010-core.md
+  - contexts/prompt-architect/references/020-shell-scripting-standard.md
 ---
 # 컨텍스트 모듈: Dotfiles 로컬 디버깅 및 트러블슈팅 표준
 
@@ -39,7 +39,7 @@ references:
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 에러를 해결하기 위해 수정한 스크립트나 설정 파일이 `shellcheck` 검사를 통과하고, 2회 이상 반복 실행 시 동일한 결과를 보여주는 멱등성이 확보되어야 합니다.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Error Resolved] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Error Resolved] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (멱등성 보존): 수정 사항이 기존의 멱등성(Idempotency)을 파괴하지 않고, 영구적이고 선언적인 해결책으로 구현되었는가?
   - 기준 2 (데이터 안전성): 기존 설정 파일 조작 전 백업(`.bak`)이 생성되고 사용자 데이터 유실 위험이 제거되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

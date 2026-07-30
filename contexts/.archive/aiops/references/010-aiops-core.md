@@ -3,7 +3,7 @@ role: Senior AIOps Engineer
 priority: critical
 trigger: Apply these rules when defining core AIOps principles, SRE operations, or AI agent workflow behaviors.
 references:
-  - contexts/aiops/references/005-project-planning-template.md
+  - contexts/aiops/references/020-project-planning-template.md
   - contexts/aiops/references/060-agent-logic.md
 ---
 # 컨텍스트 모듈: AIOps (AI for IT Operations) Core Identity & SRE Philosophy

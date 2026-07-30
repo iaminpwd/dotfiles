@@ -34,7 +34,7 @@
 #   - 실행 승인: 대화형 터미널이면 yes 입력을 묻고, 비대화형이면 ROUTING_MEASURE_CONFIRM=yes
 #     가 없는 한 거부한다. 중단 시 종료 코드는 3 이다.
 #
-# 사용: bash ~/dotfiles/contexts/dotfiles/evals/routing/measure.sh [케이스ID ...]
+# 사용: bash ~/dotfiles/contexts/prompt-architect/evals/routing/measure.sh [케이스ID ...]
 #       인자를 주면 해당 케이스만, 없으면 전체를 측정한다.
 #       ROUTING_REPEATS(기본 3) 반복 횟수, ROUTING_JOBS(기본 4) 동시 실행 수,
 #       ROUTING_TIMEOUT(기본 120) 케이스 1회당 한정시간,

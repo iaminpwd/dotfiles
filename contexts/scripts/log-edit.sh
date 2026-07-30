@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <file_path> <rule_source> <purpose>"
-  echo "Example: $0 src/main.py 056-rule-provenance-standard.md \"Refactor authentication\""
+  echo "Example: $0 src/main.py 050-rule-provenance-standard.md \"Refactor authentication\""
   exit 1
 fi
 

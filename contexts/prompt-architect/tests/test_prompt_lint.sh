@@ -10,7 +10,7 @@
 # 그 위에서 실행한다. 검사 대상 경로가 REPO_ROOT 기준이므로 케이스마다 git init
 # 을 해 린터가 케이스 디렉토리를 저장소 루트로 인식하게 만든다.
 #
-# 사용: bash ~/dotfiles/contexts/dotfiles/tests/prompt-lint.sh
+# 사용: bash ~/dotfiles/contexts/prompt-architect/tests/test_prompt_lint.sh
 
 set -euo pipefail
 export QUIET=0

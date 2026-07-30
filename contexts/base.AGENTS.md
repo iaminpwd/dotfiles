@@ -108,6 +108,7 @@ priority: highest
 
 ## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
 - **[Trigger: After Code Change] Provenance Logging:** 변경 후 터미널에서 `log-edit.sh` 명령어를 실행하여 수동 근거 기록.
+- **[Trigger: Ask for Code Provenance] Audit Edits Log:** 사용자가 "어떤 프롬프트/룰 때문에 이렇게 코드를 짰는가?" 등 코드 변경 사유나 출처를 질문할 경우, 답변 전 즉시 `.agent-state/edits.log` 파일을 조회하여 해당 파일의 수정 이력을 확인하고 팩트 기반으로 답변할 것.
 - **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 터미널에서 `prompt-flywheel.sh` 명령어로 룰 개정안 역제안.
 - **[MUST] Code Execution & Safety Boundaries:** 로직 검증 시 스크립트 실행을 통한 물리적 팩트 검증 필수.
 - **[MUST] Eval-Driven Testing:** 핵심 로직 개발 시 자동 검증 가능한 테스트 스크립트 작성.

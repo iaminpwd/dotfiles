@@ -3,11 +3,11 @@ role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules when writing, fixing, improving, or adapting prompts for any AI tool, regardless of target repository.
 references:
-  - contexts/dotfiles/references/000-core.md
+  - contexts/prompt-architect/references/010-core.md
 ---
 # 컨텍스트 모듈: 범용 AI 프롬프트 작성 표준 가이드
 
-본 모듈은 대상이 이 저장소든 외부 프로젝트든, AI 도구용 프롬프트를 작성/수정/최적화할 때 적용되는 범용 지침임. 이 저장소의 룰북(`contexts/*.md`) 설계 표준은 `050-prompt-engineering-standard.md`를 참조할 것.
+본 모듈은 대상이 이 저장소든 외부 프로젝트든, AI 도구용 프롬프트를 작성/수정/최적화할 때 적용되는 범용 지침임. 이 저장소의 룰북(`contexts/*.md`) 설계 표준은 `030-prompt-engineering-standard.md`를 참조할 것.
 
 ## 1. 프롬프트 의도 추출 (Intent Extraction)
 AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지 차원을 사전 추출할 것. 누락된 필수 차원은 사용자에게 질문하되, 질문 횟수를 최대 3회 이내로 통제함.
@@ -35,7 +35,7 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
 - **[MUST] 교착상태 예외 처리 설계 (Deadlock Prevention):** 특정 단계가 수행되기 전에 에이전트의 도구 사용을 조건부로 통제할 경우, 상황 분석 및 정보 조회를 위한 읽기 전용 도구(파일 조회, 검색, 디렉토리 목록 등)까지 허용하는 예외 규정을 항상 명시할 것.
 - **[MUST] 성공 기준:** 완료 상태를 이진(pass/fail) 판단이 가능한 기준으로 명시할 것.
 - **[MUST] 출력 계약:** 결과물의 형식, 길이, 완료 조건을 명시할 것.
-- **[PREFER] 프론트 로딩:** 의도, 제약조건, 수락 기준을 프롬프트 상위 30% 이내에 배치할 것. (예외: 방대한 참조 데이터(로그, 공식 문서 원문 등)를 주입하는 롱 컨텍스트 프롬프트에서는 `050-prompt-engineering-standard.md` §3 Long Context Strategy에 따라 데이터를 최상단에, 핵심 지시를 맨 아래에 배치할 것. 두 규칙은 상충이 아니라 '일반 프롬프트=프론트 로딩 / 대용량 데이터 주입형=데이터 우선' 조건 분기임.)
+- **[PREFER] 프론트 로딩:** 의도, 제약조건, 수락 기준을 프롬프트 상위 30% 이내에 배치할 것. (예외: 방대한 참조 데이터(로그, 공식 문서 원문 등)를 주입하는 롱 컨텍스트 프롬프트에서는 `030-prompt-engineering-standard.md` §3 Long Context Strategy에 따라 데이터를 최상단에, 핵심 지시를 맨 아래에 배치할 것. 두 규칙은 상충이 아니라 '일반 프롬프트=프론트 로딩 / 대용량 데이터 주입형=데이터 우선' 조건 분기임.)
 - **[PREFER] 구조 격리:** 복잡한 멀티 섹션 프롬프트는 XML 태그(`<context>`, `<task>`, `<constraints>`)로 구조화할 것.
 - **[PREFER] 그라운딩 앵커:** 팩트 기반 작업에는 `"State only what you can verify. If uncertain, say [uncertain]."` 제약을 포함할 것.
 - **[PREFER] 최적 설계 보장:** `"Only make changes directly requested. Do not add features or refactor beyond what was asked."` 제약을 포함할 것.
@@ -68,4 +68,4 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
   ```
 
 ## 3. 프롬프트 최종 검증 (Pre-Delivery Verification)
-- **[Trigger: Prompt Completed] 자가 검증:** 프롬프트 작성 완료 직후, 섹션 2의 모든 원칙이 적용되었는지 자가 검증할 것. 지시문에서 모호한 서술(`~하는 것이 좋습니다`)과 불필요한 형용사를 제거하되, 모든 조항을 최고 강도 등급으로 일괄 격상하는 대신 기존의 의도된 강도를 유지할 것. 조항 등급은 `050-prompt-engineering-standard.md` §1.1 조항 등급 기준으로 판정할 것.
+- **[Trigger: Prompt Completed] 자가 검증:** 프롬프트 작성 완료 직후, 섹션 2의 모든 원칙이 적용되었는지 자가 검증할 것. 지시문에서 모호한 서술(`~하는 것이 좋습니다`)과 불필요한 형용사를 제거하되, 모든 조항을 최고 강도 등급으로 일괄 격상하는 대신 기존의 의도된 강도를 유지할 것. 조항 등급은 `030-prompt-engineering-standard.md` §1.1 조항 등급 기준으로 판정할 것.

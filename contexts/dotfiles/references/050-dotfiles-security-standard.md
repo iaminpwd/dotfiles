@@ -3,8 +3,8 @@ role: Senior Security Engineer
 priority: high
 trigger: Apply these rules ONLY when handling sensitive credentials, SSH private keys, or running security/secret scans.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/010-dotfiles-core-standard.md
+  - contexts/dotfiles/references/010-core.md
+  - contexts/dotfiles/references/030-dotfiles-core-standard.md
 ---
 # 컨텍스트 모듈: Dotfiles 환경 보안 및 시크릿(Secret) 통제 표준
 
@@ -48,7 +48,7 @@ export GITHUB_TOKEN="ghp_xxx..." # 평문 노출 (퍼블릭 저장소 유출 위
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `trufflehog` 시크릿 스캔이 verified/unverified 합계 0건으로 통과되고, 자격 증명은 저장소 바깥의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에만 존재하여 `git status`에 나타나지 않음이 확인되어야 합니다.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Commit / File Authored] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Before Commit / File Authored] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시크릿 격리): AWS Access Key, PAT 토큰 등이 Git으로 추적되는 파일에 평문(Plaintext)으로 하드코딩되지 않았는가?
   - 기준 2 (로컬 전용 파일 분리): 민감 환경 변수가 `.zshrc.local` 등 `.gitignore` 등록 파일로 물리적으로 분리되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

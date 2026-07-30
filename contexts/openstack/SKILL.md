@@ -13,7 +13,7 @@ OpenStack 인프라, 네트워크, 컨테이너, 베어메탈, 보안 제어 시
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
+| 프로젝트 기획 및 아키텍처 설계 | references/020-project-planning-template.md |
 | Keystone RBAC / Barbican 시크릿 관리 감사 | references/020-security-compliance.md |
 | Neutron 네트워크 설계 및 멀티프로젝트/도메인 보안 | references/025-cloud-security.md |
 | Neutron SDN 백엔드(OVN/ML2) 및 라우팅 아키텍처 | references/026-networking-standard.md |

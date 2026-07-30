@@ -3,8 +3,8 @@ role: Senior Platform Toolchain Engineer
 priority: high
 trigger: Apply these rules ONLY when installing packages, managing global toolchains (mise, pipx), or modifying version dependencies.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/010-dotfiles-core-standard.md
+  - contexts/dotfiles/references/010-core.md
+  - contexts/dotfiles/references/030-dotfiles-core-standard.md
 ---
 # 컨텍스트 모듈: 시스템 환경 패키지 도구(Toolchain) 셋업 관리 표준
 
@@ -47,7 +47,7 @@ terraform = "latest" # 특정 버전 명시 필수 (미래에 멱등성 깨짐)
 - **[MUST] 검증 도구 매핑:** `mise install` 실행 후 `mise ls`를 통해 설치된 버전과 바이너리 경로를 정량적으로 검증할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Toolchain Configured] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Toolchain Configured] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (버전 고정성): 설치 도구의 버전이 `latest`가 아닌 특정 버전으로 하드코딩되어, 1년 뒤 재실행 시에도 멱등성이 유지되는가?
   - 기준 2 (SSOT 준수): 파이썬 기반 도구가 직접 `pipx install`이 아닌 `mise/.config/mise/config.toml` 내의 `pipx:` 접두사 구문을 통해 단일 진실 공급원 방식으로 선언되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

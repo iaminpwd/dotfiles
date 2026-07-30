@@ -3,8 +3,8 @@ role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules ONLY when managing the dotfiles repository, committing changes, or running global formatters.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/040-dotfiles-security-standard.md
+  - contexts/dotfiles/references/010-core.md
+  - contexts/dotfiles/references/050-dotfiles-security-standard.md
 ---
 # 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
 
@@ -51,7 +51,7 @@ git commit -m "파일 업데이트 및 버그 수정"
 - **[MUST] 완료 조건 (Done when):** 사용자가 커밋을 요청한 경우에 한해, 커밋 전 `TruffleHog` 시크릿 스캔이 통과되고 목적 단위로 분리된 시맨틱 커밋이 생성되어야 합니다. 커밋 요청이 없는 작업은 파일 수정과 검증 통과만으로 완료로 간주할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Commit] 점검 기준 (절차는 000-core.md의 공통 자가 비판 절차 참조):**
+- **[Trigger: Before Commit] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (원자성): 현재 스테이징된 변경 사항이 단일 책임 원칙에 따라 논리적으로 분리되었는가?
   - 기준 2 (시맨틱 규칙): 커밋 메시지가 `feat:`, `fix:`, `chore:` 등 시맨틱 컨벤션을 정확히 준수하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**

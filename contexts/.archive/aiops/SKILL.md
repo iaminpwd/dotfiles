@@ -14,7 +14,7 @@ aiops 관련 작업 시 발동됩니다. SRE 원칙 및 에이전트 기반 자�
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| AIOps 프로젝트 및 자동화 파이프라인 기획 | references/005-project-planning-template.md |
+| AIOps 프로젝트 및 자동화 파이프라인 기획 | references/020-project-planning-template.md |
 | 보안(SecOps), 규정 준수(Policy-as-Code) | references/020-security-compliance.md |
 | 비용 분석(FinOps), DORA 메트릭 | references/030-finops-optimization.md |
 | 엣지 케이스, 복원력, 카오스 엔지니어링 | references/040-automation-scripting.md |

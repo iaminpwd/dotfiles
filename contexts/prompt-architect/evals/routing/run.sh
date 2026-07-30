@@ -15,12 +15,12 @@
 # observed.tsv 만드는 법:
 #   같은 폴더의 measure.sh 가 자동 생성한다. 별도 CLI 설치는 필요 없고, Claude Code
 #   IDE 확장이 번들한 네이티브 바이너리를 자동 탐색해 쓴다.
-#     bash ~/dotfiles/contexts/dotfiles/evals/routing/measure.sh
+#     bash ~/dotfiles/contexts/prompt-architect/evals/routing/measure.sh
 #   기록 형식은 '<id> <TAB> <로드된 스킬 쉼표구분 또는 none>' 이다.
 #   예:  S01	aws
 #        A03	observability,k8s
 #
-# 사용: bash ~/dotfiles/contexts/dotfiles/evals/routing/run.sh
+# 사용: bash ~/dotfiles/contexts/prompt-architect/evals/routing/run.sh
 
 set -euo pipefail
 

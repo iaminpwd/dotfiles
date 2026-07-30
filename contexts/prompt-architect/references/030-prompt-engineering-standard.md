@@ -3,12 +3,11 @@ role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules when designing, refactoring, or authoring Meta-Prompts and rulebooks (contexts/*.md) for this repository.
 references:
-  - contexts/dotfiles/references/000-core.md
-  - contexts/dotfiles/references/010-dotfiles-core-standard.md
+  - contexts/prompt-architect/references/010-core.md
 ---
 # 컨텍스트 모듈: AI 프롬프트 설계(Meta-Prompting) 마스터 가이드
 
-룰북(`contexts/` 마크다운) 설계 및 리팩토링 시 적용되는 메타 프롬프팅 지침임. 범용 AI 프롬프트 작성 원칙은 `055-general-prompt-authoring-standard.md`를 참조할 것.
+룰북(`contexts/` 마크다운) 설계 및 리팩토링 시 적용되는 메타 프롬프팅 지침임. 범용 AI 프롬프트 작성 원칙은 `040-general-prompt-authoring-standard.md`를 참조할 것.
 
 ## 1. 프롬프트 모듈 구조 및 조항 등급 (Architecture & Clause Severity)
 - **[MUST] Modular Prompting:** AI 인지 부하 감소를 위해 프롬프트를 작은 모듈(마크다운)로 분할할 것.
@@ -92,7 +91,7 @@ role: [에이전트에게 부여할 구체적 역할과 전문성]
 priority: [high | medium | low]
 trigger: [본 룰북이 트리거되어야 하는 작업 상황 및 조건 예: 020-shell-scripting-standard.sh 작성 시]
 references:
-  - [참조할 다른 룰북 파일 경로 1 (예: contexts/dotfiles/references/000-core.md)]
+  - [참조할 다른 룰북 파일 경로 1 (예: contexts/dotfiles/references/010-core.md)]
   - [참조할 다른 룰북 파일 경로 2]
 ---
 # [도메인명] 설계 및 개발 표준 가이드
