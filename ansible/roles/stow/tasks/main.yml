@@ -1,0 +1,50 @@
+---
+- name: Local 전용 오버라이드 폴더 확보
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/mise"
+    state: directory
+    mode: "0755"
+
+- name: 구버전 ~/.mise.toml 심볼릭 링크 정리
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.mise.toml"
+    state: absent
+
+- name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/../"
+    file_type: directory
+    recurse: false
+    excludes:
+      - "contexts"
+      - "assets"
+      - "ansible"
+      - "bin"
+      - ".*"
+  register: stow_dirs
+
+- name: 기존 파일 백업 (stow 충돌 방지)
+  ansible.builtin.shell: |
+    set -o pipefail
+    PKG="{{ item.path | basename }}"
+    DOTFILES_DIR="{{ playbook_dir }}/.."
+    BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
+    find "$DOTFILES_DIR/$PKG" -type f -print0 | while IFS= read -r -d '' SRC_FILE; do
+      REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
+      TARGET="{{ ansible_env.HOME }}/$REL_PATH"
+      if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(readlink -f "$TARGET")" != "$(readlink -f "$SRC_FILE")" ]; then
+        mkdir -p "$(dirname "$TARGET")"
+        mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
+      fi
+    done
+  args:
+    executable: /bin/bash
+  loop: "{{ stow_dirs.files }}"
+  changed_when: false
+
+- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
+  ansible.builtin.command:
+    cmd: stow -t {{ ansible_env.HOME }} -R {{ item.path | basename }}
+    chdir: "{{ playbook_dir }}/../"
+  loop: "{{ stow_dirs.files }}"
+  changed_when: false # stow는 멱등성을 내장하므로 기본적으로 changed=false 처리

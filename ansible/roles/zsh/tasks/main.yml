@@ -1,0 +1,46 @@
+---
+- name: Oh My Zsh 저장소 클론 (unattended) # noqa: latest[git]
+  ansible.builtin.git:
+    repo: 'https://github.com/ohmyzsh/ohmyzsh.git'
+    dest: "{{ ansible_env.HOME }}/.oh-my-zsh"
+    depth: 1
+    version: HEAD
+    update: false
+
+- name: Zsh-autosuggestions 플러그인 클론 # noqa: latest[git]
+  ansible.builtin.git:
+    repo: 'https://github.com/zsh-users/zsh-autosuggestions.git'
+    dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+    depth: 1
+    version: HEAD
+    update: false
+
+- name: Zsh-syntax-highlighting 플러그인 클론 # noqa: latest[git]
+  ansible.builtin.git:
+    repo: 'https://github.com/zsh-users/zsh-syntax-highlighting.git'
+    dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+    depth: 1
+    version: HEAD
+    update: false
+
+- name: 현재 설치된 zsh 경로 확인
+  ansible.builtin.command: command -v zsh
+  register: zsh_path
+  changed_when: false
+  failed_when: false
+
+- name: 확인된 zsh 경로를 /etc/shells에 등록
+  ansible.builtin.lineinfile:
+    path: /etc/shells
+    line: "{{ zsh_path.stdout }}"
+    state: present
+  become: true
+  when: zsh_path.stdout != ""
+
+- name: 사용자의 기본 셸을 zsh로 변경
+  ansible.builtin.user:
+    name: "{{ ansible_env.USER }}"
+    shell: "{{ zsh_path.stdout }}"
+  become: true
+  when: zsh_path.stdout != ""
+  failed_when: false # 일부 환경에서 루트 권한 불필요 무시

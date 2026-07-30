@@ -1,0 +1,56 @@
+---
+- name: OS 패키지 설치 (Debian 계열)
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+      - unzip
+      - wget
+      - zsh
+      - stow
+      - tree
+      - ca-certificates
+      - gnupg
+      - jq
+      - dnsutils
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: OS 패키지 설치 (RedHat 계열)
+  ansible.builtin.dnf:
+    name:
+      - git
+      - curl
+      - unzip
+      - wget
+      - zsh
+      - stow
+      - tree
+      - ca-certificates
+      - gnupg2
+      - jq
+      - bind-utils
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: OS 패키지 설치 (macOS Homebrew)
+  community.general.homebrew:
+    name:
+      - git
+      - curl
+      - unzip
+      - wget
+      - zsh
+      - stow
+      - tree
+      - bash
+      - coreutils
+      - gnu-sed
+      - findutils
+      - grep
+      - jq
+    state: present
+  when: ansible_os_family == "Darwin"

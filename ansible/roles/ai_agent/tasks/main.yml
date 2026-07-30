@@ -1,0 +1,201 @@
+---
+- name: Gemini 글로벌 룰셋 환경 생성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.gemini/config/skills"
+    state: directory
+    recurse: true
+
+- name: Gemini 글로벌 AGENTS.md 링크 설정
+  ansible.builtin.file:
+    src: "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+    dest: "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
+    state: link
+    force: true
+
+- name: Claude 글로벌 룰셋 환경 생성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.claude/skills"
+    state: directory
+    recurse: true
+
+- name: Claude 글로벌 CLAUDE.md 링크 설정
+  ansible.builtin.file:
+    src: "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+    dest: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+    state: link
+    force: true
+
+- name: Local 에이전트 스크립트(~/.local/bin) 경로 구성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/bin"
+    state: directory
+    mode: '0755'
+
+- name: 워크스페이스 디렉토리 생성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/workspace"
+    state: directory
+    mode: '0755'
+
+- name: 에이전트 실행 스크립트 이름 충돌(Collision) 검사
+  ansible.builtin.shell: |
+    set -o pipefail
+    {
+      find "{{ playbook_dir }}/../contexts" -type f -executable -path "*/scripts/*" 2>/dev/null
+      find "{{ playbook_dir }}/../bin" -type f -executable 2>/dev/null
+    } | awk -F/ '
+    {
+        name = $NF
+        if (seen[name] != "") {
+            print "❌ [FATAL] 스크립트 이름 충돌 감지! " name " 파일이 여러 곳에 존재합니다:" > "/dev/stderr"
+            print "   1. " seen[name] > "/dev/stderr"
+            print "   2. " $0 > "/dev/stderr"
+            err = 1
+        }
+        seen[name] = $0
+    }
+    END { exit err }
+    '
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: 에이전트 실행 스크립트들을 ~/.local/bin 경로에 심볼릭 링크
+  ansible.builtin.shell: |
+    set -o pipefail
+    for script_path in $( {
+      find "{{ playbook_dir }}/../contexts" -type f -executable -path "*/scripts/*" 2>/dev/null
+      find "{{ playbook_dir }}/../bin" -type f -executable 2>/dev/null
+    } ); do
+      script_name=$(basename "$script_path")
+      ln -sfn "$script_path" "{{ ansible_env.HOME }}/.local/bin/$script_name"
+    done
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: 컨텍스트 도메인 디렉토리 목록 조회
+  ansible.builtin.find:
+    paths: "{{ playbook_dir }}/../contexts"
+    file_type: directory
+    recurse: false
+  register: ai_agent_context_domains
+
+- name: Gemini / Claude 글로벌 스킬 등록 디렉토리 생성 및 심볼릭 링크
+  ansible.builtin.shell: |
+    ENV_NAME="{{ item.path | basename }}"
+    # 제외 조건
+    if [ "$ENV_NAME" = "dotfiles" ] || [ "$ENV_NAME" = "agent-handoff" ] || [[ "$ENV_NAME" == .* ]]; then
+      exit 0
+    fi
+
+    # Gemini
+    mkdir -p "{{ ansible_env.HOME }}/.gemini/config/skills/$ENV_NAME"
+    if [ -f "{{ item.path }}/SKILL.md" ]; then
+      ln -sfn "{{ item.path }}/SKILL.md" "{{ ansible_env.HOME }}/.gemini/config/skills/$ENV_NAME/SKILL.md"
+    fi
+    for dir in references scripts examples; do
+      if [ -d "{{ item.path }}/$dir" ]; then
+        ln -sfn "{{ item.path }}/$dir" "{{ ansible_env.HOME }}/.gemini/config/skills/$ENV_NAME/$dir"
+      fi
+    done
+
+    # Claude
+    mkdir -p "{{ ansible_env.HOME }}/.claude/skills/$ENV_NAME"
+    if [ -f "{{ item.path }}/SKILL.md" ]; then
+      ln -sfn "{{ item.path }}/SKILL.md" "{{ ansible_env.HOME }}/.claude/skills/$ENV_NAME/SKILL.md"
+    fi
+    for dir in references scripts examples; do
+      if [ -d "{{ item.path }}/$dir" ]; then
+        ln -sfn "{{ item.path }}/$dir" "{{ ansible_env.HOME }}/.claude/skills/$ENV_NAME/$dir"
+      fi
+    done
+
+  loop: "{{ ai_agent_context_domains.files }}"
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Gemini 편집 이력 훅(agent-edits-hook) 병합
+  ansible.builtin.shell: |
+    set -o pipefail
+    GEMINI_HOOKS="{{ ansible_env.HOME }}/.gemini/config/hooks.json"
+    HOOK_SCRIPT="{{ playbook_dir }}/../bin/hooks/agent-edits-hook.sh"
+
+    [ -f "$GEMINI_HOOKS" ] || echo '{}' > "$GEMINI_HOOKS"
+    if jq empty "$GEMINI_HOOKS" 2>/dev/null; then
+      TMP=$(mktemp)
+      jq --arg cmd "$HOOK_SCRIPT" \
+        '. * {
+          "agent-edits-log": {
+            "PostToolUse": [
+              {
+                "matcher": "replace_file_content|write_to_file|create_file|write_file|edit_file",
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": $cmd,
+                    "timeout": 10
+                  }
+                ]
+              }
+            ]
+          }
+        }' \
+        "$GEMINI_HOOKS" > "$TMP"
+      mv "$TMP" "$GEMINI_HOOKS"
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Claude 어트리뷰션 비활성화 및 편집 이력 훅 병합
+  ansible.builtin.shell: |
+    set -o pipefail
+    CLAUDE_SETTINGS="{{ ansible_env.HOME }}/.claude/settings.json"
+    HOOK_SCRIPT="{{ playbook_dir }}/../bin/hooks/agent-edits-hook.sh"
+
+    [ -f "$CLAUDE_SETTINGS" ] || echo '{}' > "$CLAUDE_SETTINGS"
+    if jq empty "$CLAUDE_SETTINGS" 2>/dev/null; then
+      TMP=$(mktemp)
+      jq --arg cmd "$HOOK_SCRIPT" '
+        .attribution.commit = "" | .attribution.pr = ""
+        | .hooks.PostToolUse = (
+            ((.hooks.PostToolUse // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+            + [{matcher: "Edit|Write|MultiEdit|NotebookEdit", hooks: [{type: "command", command: $cmd}]}]
+          )
+      ' "$CLAUDE_SETTINGS" > "$TMP"
+      mv "$TMP" "$CLAUDE_SETTINGS"
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: 고아(Orphan) 스킬 폴더 정리
+  ansible.builtin.shell: |
+    for skills_root in "{{ ansible_env.HOME }}/.gemini/config/skills" "{{ ansible_env.HOME }}/.claude/skills"; do
+      [ -d "$skills_root" ] || continue
+      for skill_dir in "$skills_root"/*/; do
+        [ -d "$skill_dir" ] || continue
+        skill_dir="${skill_dir%/}"
+        name="$(basename "$skill_dir")"
+        [ -d "{{ playbook_dir }}/../contexts/$name" ] && continue
+        link_target="$(readlink "$skill_dir/SKILL.md" 2>/dev/null || true)"
+        if [[ "$link_target" == *"contexts/"* ]]; then
+          rm -rf "$skill_dir"
+        fi
+      done
+    done
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Dotfiles 로컬 룰셋 심볼릭 링크 생성
+  ansible.builtin.file:
+    src: "{{ playbook_dir }}/../contexts/dotfiles/SKILL.md"
+    dest: "{{ playbook_dir }}/../{{ item }}"
+    state: link
+    force: true
+  loop:
+    - AGENTS.md
+    - CLAUDE.md

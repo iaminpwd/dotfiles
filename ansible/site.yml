@@ -1,0 +1,30 @@
+---
+- name: 인프라 엔지니어 로컬 환경 셋업 (Dotfiles)
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: true
+
+  # 환경 변수를 통해 mise 등의 경로를 보장
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/share/mise/shims:{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+
+  roles:
+    - role: packages
+      tags: ['packages', 'core']
+
+    - role: docker
+      tags: ['docker']
+      when: ansible_os_family in ['Debian', 'RedHat'] # macOS는 Docker Desktop을 수동 설치 권장
+
+    - role: zsh
+      tags: ['zsh', 'shell']
+
+    - role: tflint
+      tags: ['tflint', 'terraform']
+
+    - role: stow
+      tags: ['stow', 'symlinks']
+
+    - role: ai_agent
+      tags: ['ai', 'rules']
