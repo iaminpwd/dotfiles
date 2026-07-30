@@ -14,29 +14,6 @@
         state: directory
         mode: '0755'
 
-    - name: .tflint.hcl 플러그인 설정 템플릿 생성 (현업 IaC 결정론적 빌드)
-      ansible.builtin.copy:
-        dest: "{{ role_path }}/../../../tflint/.tflint.hcl"
-        mode: '0644'
-        content: |
-          plugin "aws" {
-            enabled = true
-            version = "0.33.0"
-            source  = "github.com/terraform-linters/tflint-ruleset-aws"
-          }
-
-          plugin "azurerm" {
-            enabled = true
-            version = "0.26.0"
-            source  = "github.com/terraform-linters/tflint-ruleset-azurerm"
-          }
-
-          plugin "google" {
-            enabled = true
-            version = "0.28.0"
-            source  = "github.com/terraform-linters/tflint-ruleset-google"
-          }
-
     - name: Tflint 플러그인 초기화 및 다운로드 (--init)
       ansible.builtin.command: tflint --init --config "{{ role_path }}/../../../tflint/.tflint.hcl"
       register: tflint_init_result
