@@ -20,10 +20,8 @@
       - "assets"
       - "ansible"
       - "bin"
-      - "git"
       - "mise"
       - "tflint"
-      - "vim"
       - "roles"
       - ".*"
   register: stow_dirs
