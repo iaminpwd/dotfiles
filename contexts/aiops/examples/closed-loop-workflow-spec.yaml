@@ -1,0 +1,52 @@
+# Closed-Loop AIOps Workflow Specification Example
+apiVersion: aiops.sre.io/v1alpha1
+kind: ClosedLoopPolicy
+metadata:
+  name: dynamic-k8s-pod-remediation
+  namespace: sre-aiops
+spec:
+  # 1. 탐지 (Detection Stage): 동적 임계치 및 이종 데이터 디바운싱
+  detection:
+    sources:
+      - type: prometheus
+        query: 'sum(rate(container_cpu_usage_seconds_total{namespace="prod"}[5m])) by (pod)'
+        threshold: dynamic_confidence_interval_99
+      - type: opentelemetry_trace
+        filter: 'http.status_code >= 500'
+    debounceWindow: 60s
+    flappingPrevention: true
+
+  # 2. 진단 (Diagnosis Stage): RAG 기반 사내 런북 및 서비스 토폴로지 RCA
+  diagnosis:
+    ragEngine:
+      vectorStore: opensearch-vector
+      knowledgeBase: incident-runbooks-v1
+      hybridSearchRatio: 0.7
+    topologyRCA:
+      enabled: true
+      depthLimit: 3
+      crossValidateTelemetry: true
+
+  # 3. 대응 (Remediation Stage): 파괴적 조치 시 Human-in-the-loop 수동 승인 게이트
+  remediation:
+    actionType: RollingRestart
+    targetSelector:
+      label: app=banking-api
+    guardrails:
+      humanInTheLoop:
+        enabled: true
+        approvalChannel: "#sre-alert-approvals"
+        timeout: 10m
+        fallbackAction: EscalateToOncall
+      maxReplicasAffected: "20%"
+
+  # 4. 검증 (Verification Stage): 상태 복구 정량 측정 및 감사 로그 기록
+  verification:
+    healthCheck:
+      type: http
+      endpoint: "http://banking-api.prod/healthz"
+      expectedStatus: 200
+      maxRetry: 3
+    auditLogging:
+      ismsPCompliant: true
+      logMarker: "[AIOps-Agent-Action]"

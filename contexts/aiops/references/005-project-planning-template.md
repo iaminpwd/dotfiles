@@ -25,7 +25,9 @@ references:
 4. **비용 및 리소스 최적화 (FinOps)**: 예측 비용 및 컴퓨팅 자원의 스케일링 리미트를 명시하십시오.
 5. **멱등성 및 상태 관리 (Idempotency & State)**: 중복 실행을 막기 위한 멱등 키(Idempotency Key) 및 상태 잠금 로직을 설계하십시오.
 6. **장애 허용 및 안전망 (Resiliency & Guardrails)**: 서킷 브레이커, DLQ 연동, Human-in-the-loop(수동 승인) 등 파괴적 명령에 대한 방어 가드레일을 명시하십시오.
-7. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 확인하는 Fault Injection 및 카오스 엔지니어링 검증 방안을 포함하십시오.
+7. **Closed-Loop 자동화 설계 (Closed-Loop Automation)**: 탐지→진단→대응→검증 4단계 상태 전환 명세 및 동적 임계치 알림 노이즈 제거 방안을 수립하십시오.
+8. **금융 보안 및 비식별화 (ISMS-P & Anonymization)**: PII/금융 민감 데이터 비식별화 마스킹, 프라이빗 LLM 게이트웨이 통제 및 감사 로그 계획을 명시하십시오.
+9. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 확인하는 Fault Injection 및 카오스 엔지니어링 검증 방안을 포함하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
