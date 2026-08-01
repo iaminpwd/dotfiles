@@ -52,6 +52,7 @@ priority: highest
   1. **실행 스코프**: 검증 명령어 실행 시 전체가 아닌 '수정한 코드의 최소 단위'만 명시.
   2. **읽기 전용 우선**: 검증 시 상태를 변경하지 않는 읽기 전용 도구 최우선 사용.
   3. **변경 감지 시 역제안**: 코드 수정이 동반되는 도구는 결과 선 제시 후 `[수정 승인]` 획득 시에만 실행할 것.
+  4. **단계 구분**: 본 항목의 개별/최소 단위 검증은 `compact-runner.sh`(§6 Pre-Flight Gate) 실행 이전 단계에 적용하며, 완료 선언 전 `compact-runner.sh` 실행을 대체하지 않음.
 
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 
@@ -75,7 +76,7 @@ priority: highest
 ## 6. 자율 주행 및 안전장치 (Autonomous Operations & Safety)
 - **[MUST] Tool Availability Gate:** CLI 도구 실행 전 설치 여부 확인. 미설치 시 즉시 작업 중단(Halt & Clarify) 후 설치 요구.
 - **[MUST] Permission Boundary:** 로컬 권한 필요 시 최소 경로 권한만 요청.
-- **[MUST] Pre-Flight Gate:** 인프라 코드나 스크립트 수정 후 검증 단계에서는 항상 모든 개별 명령어를 포괄하는 `compact-runner.sh`를 단일 실행하여 통합 정량 검증을 완수할 것.
+- **[Trigger: After Infra/Script Code Change] Pre-Flight Gate:** 검증 단계 진입 시 개별 명령어(`terraform validate` 등, §4 참조) 실행 여부와 무관하게, 완료 선언 직전 최종 게이트로 `compact-runner.sh`를 단일 실행하여 통합 정량 검증을 완수할 것.
 
 - **[Trigger: `/learn` Command Executed] Prompt Architect Loading:** 사용자가 `/learn` 명령어를 통해 룰이나 스킬 수정을 요청할 경우, 제안서(`learning_proposal.md`)를 작성하기 전에 반드시 `prompt-architect` 스킬(`SKILL.md`)을 먼저 `view_file`로 읽어 들여 룰 작성 표준을 컨텍스트에 주입할 것.
 - **[Trigger: User Requests Final Output] Batch Completion Mode:** 일괄 완성 요구 시 중간 질문 생략, 단 한 번에 최종 산출물 출력.
