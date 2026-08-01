@@ -1,0 +1,19 @@
+# 020-metrics-alerting-standard.md 4절 중단 조건 재현: "Alerting Rule에 user_id/client_ip
+# 등 통제되지 않은 고유값이 레이블로 바인딩된 패턴이 감지되면 즉시 작업을 중단".
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fail-high-cardinality-label
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: SuspiciousLoginRate
+          expr: rate(login_attempts_total[5m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+            user_id: "{{ $labels.user_id }}"
+          annotations:
+            summary: 카디널리티가 통제되지 않는 레이블을 바인딩한 위반 재현
