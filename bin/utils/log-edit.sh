@@ -113,6 +113,7 @@ if [ -f "$EDITS_LOG" ] && awk -F' \\| ' -v r="$REL" '$2==r && $5!="SUCCESS" {fou
     }' "$EDITS_LOG" >"$TMP" && mv "$TMP" "$EDITS_LOG"
   echo "✅ 미확정 라인을 [$RESULT_TAG]로 보강했습니다: $EDITS_LOG"
 else
+  # idempotency:bypass chronologically append log entry
   echo "$ISO8601 | $REL | agent:$RULE_SOURCE_CLEAN | $PURPOSE_CLEAN | $RESULT_TAG" >>"$EDITS_LOG"
   echo "✅ Logged edit to $EDITS_LOG ([$RESULT_TAG])"
 fi

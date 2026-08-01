@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # bootstrap.sh
-# 🚀 인프라 엔지니어 로컬 환경 셋업 진입점 (Ansible 마이그레이션 버전)
-# 기존 750라인짜리 setup.sh를 대체하며, 핵심 도구(mise, just, ansible)만 설치 후
-# 제어권을 Justfile과 Ansible Playbook으로 넘깁니다.
+# 🚀 인프라 엔지니어 로컬 환경 셋업 진입점
+# 필수 도구(mise, just, ansible)를 준비한 후 제어권을 Justfile과 Ansible Playbook으로 위임합니다.
 
 set -euo pipefail
 export ANSIBLE_HOME="$HOME/.cache/ansible"

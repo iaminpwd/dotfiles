@@ -131,6 +131,8 @@ just test
 │   ├── site.yml               # 메인 플레이북 진입점
 │   └── roles/                 # 셋업 모듈 (packages, docker, stow, zsh, ai_agent, tflint)
 │
+├── assets/               # 아키텍처 다이어그램 및 문서용 이미지 자산
+│
 ├── bin/                  # 모듈화된 실행 스크립트 및 훅/린터
 │   ├── hooks/                 # pre-flight-check.sh, compact-runner.sh, agent-edits-hook.sh 및 plugins/
 │   ├── linters/               # semantic-commit-lint.sh, idempotency-check.sh, prompt-lint.sh 등
@@ -143,7 +145,7 @@ just test
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/, azure/, dotfiles/            # 🟢 Production 워크스페이스 룰북
-│   └── containers/, drawio-gen/, k8s/,
+│   └── aiops/, containers/, drawio-gen/, k8s/,
 │       multi-cloud/, observability/,
 │       openstack/, pre-flight-check/,
 │       prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
@@ -156,6 +158,9 @@ just test
 ├── mise/
 │   └── .config/mise/
 │       └── config.toml   # 인프라 도구 버전 선언 매니페스트 (SSOT, mise 전역 설정 위치)
+│
+├── tflint/
+│   └── .tflint.hcl       # IaC 전역 TFLint 규칙 구성
 │
 ├── vim/
 │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
