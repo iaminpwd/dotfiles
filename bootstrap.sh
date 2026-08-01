@@ -42,7 +42,13 @@ echo "=> Installing Ansible & Just via mise & pipx..."
 echo "========================================================="
 echo "=> 🚀 Running 'mise install' automatically..."
 export PATH="$HOME/.local/bin:$PATH"
-MISE_CONFIG_FILE="$SCRIPT_DIR/mise/.config/mise/config.toml"
+MISE_GLOBAL_CONFIG="$SCRIPT_DIR/mise/.config/mise/config.toml"
+mkdir -p "$HOME/.config/mise"
+# mise는 stow 관리 대상에서 제외되어 있어(ansible/roles/stow 참고) 'just setup' 실행 전에도
+# 전역 config.toml을 여기서 직접 연결한다. 기존 사용자 파일이 있으면 stow-backup.sh로 백업 후 링크.
+bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR" "$HOME"
+ln -sfn "$MISE_GLOBAL_CONFIG" "$HOME/.config/mise/config.toml"
+MISE_CONFIG_FILE="$MISE_GLOBAL_CONFIG"
 export MISE_CONFIG_FILE
 # uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
 # 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
