@@ -70,7 +70,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
 > 과거 버전 문서는 "draw.io에 OpenStack 네이티브 스텐실이 없다"고 기술했으나
 > **이는 사실이 아니었습니다.** draw.io는 `mxgraph.openstack.*` 내장 스텐실
 > 라이브러리를 제공합니다(에디터의 More Shapes → Networking → OpenStack). 다만
-> 이 라이브러리는 **테넌트 리소스 17종**만 제공하며, Keystone/Glance/Horizon/
+> 이 라이브러리는 **테넌트 리소스 18종**만 제공하며, Keystone/Glance/Horizon/
 > Neutron-Server 데몬/OVN DB 같은 **컨트롤 플레인 서비스 아이콘은 draw.io에도,
 > OpenStack 공식 브랜드 자료에도 존재하지 않습니다.**
 > 출처: jgraph/drawio 저장소 `src/main/webapp/js/diagramly/sidebar/Sidebar-OpenStack.js`
@@ -82,7 +82,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
   labelPosition=center;verticalLabelPosition=bottom;outlineConnect=0;verticalAlign=top;
   align=center;shape=mxgraph.openstack.{name};fillColor=#{COLOR};
   ```
-  `{name}` (17종 고정, 정해진 이름만 사용): `cinder_volume`, `cinder_volumeattachment`,
+  `{name}` (18종 고정, 정해진 이름만 사용): `cinder_volume`, `cinder_volumeattachment`,
   `designate_recordset`, `designate_zone`, `heat_autoscalinggroup`, `heat_resourcegroup`,
   `heat_scalingpolicy`, `neutron_floatingip`, `neutron_floatingipassociation`,
   `neutron_net`, `neutron_port`, `neutron_router`, `neutron_routerinterface`,
@@ -198,7 +198,7 @@ https://docs.openstack.org/doc-contrib-guide/diagram-guidelines/general-guidelin
 
 ## 5. 아이콘-리소스 정확성 가드레일 (Icon Fidelity)
 
-- **[MUST] 네이티브 스텐실 지정 규격 준수**: `mxgraph.openstack.*`는 실재하는 17종
+- **[MUST] 네이티브 스텐실 지정 규격 준수**: `mxgraph.openstack.*`는 실재하는 18종
   (1절)만 유효함. 그 외 이름이나 OpenStack 프로젝트 로고 URL 창작 대신 명시된 스텐실만 사용할 것.
 - **[MUST] 정확한 매핑 적용**: 실제 리소스 타입과 정확히 일치하는
   서비스에만 해당 도형을 사용하고, 매핑 테이블에 없는 서비스는 억지로 끼워

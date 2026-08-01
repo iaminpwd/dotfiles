@@ -10,7 +10,7 @@ references:
 본 모듈은 클라우드 보안 거버넌스 준수 및 Azure 자격 증명, RBAC 권한 설계 시 적용되는 핵심 보안 표준 가이드라인임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Least Privilege:** RBAC 정책 작성 시 반드시 정확한 작업(Action/DataAction) 이름과 명시적인 리소스 Scope ARN을 지정하여 최소 권한을 부여할 것. 와일드카드를 사용할 경우 반드시 대상 리소스의 특정 접두사(Prefix) 범위를 한정할 것.
+- **[MUST] Least Privilege:** RBAC 정책 작성 시 반드시 정확한 작업(Action/DataAction) 이름과 명시적인 리소스 Scope(Resource ID)를 지정하여 최소 권한을 부여할 것. 와일드카드를 사용할 경우 반드시 대상 리소스의 특정 접두사(Prefix) 범위를 한정할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

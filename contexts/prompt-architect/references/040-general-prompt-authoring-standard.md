@@ -40,7 +40,7 @@ AI 도구용 프롬프트를 작성하거나 최적화하기 전, 아래 9가지
 - **[PREFER] 그라운딩 앵커:** 팩트 기반 작업에는 `"State only what you can verify. If uncertain, say [uncertain]."` 제약을 포함할 것.
 - **[PREFER] 최적 설계 보장:** `"Only make changes directly requested. Do not add features or refactor beyond what was asked."` 제약을 포함할 것.
 - **[PREFER] 포맷 잠금:** 라벨이 달린 예시와 함께 명시적 출력 포맷 잠금(format lock)을 사용할 것.
-- **[MUST] Telegraphic Style (전보체 / 단문화):** 모든 조항은 압축된 명사형 또는 짧은 명령형(`~함`, `~할 것`, `~명시`)으로만 종결하여 작성할 것. 핵심 키워드 중심의 고밀도(High-density) 문장 구조를 채택하여 AI 어텐션(Attention)을 극대화할 것.
+- **[MUST] Telegraphic Style:** 문장 종결 스타일 규정은 030-prompt-engineering-standard.md §6의 Telegraphic Style을 참조하여 위임할 것.
 - **[MUST] 제약의 긍정적 대체 (Attention Bias Avoidance):** 제한 사항은 올바른 대체 행위로 바꿔 쓰십시오. (예: `curl 사용 제한` -> `외부 요청은 파이썬 requests 라이브러리로 수행할 것`)
 - **[MUST] 규칙의 결합도 최소화 (Loose Coupling):** 룰북 내 규칙들 간에 복잡한 다중 체인형 참조(Nested Chain Reference: A 규칙이 B 규칙을 참조하고 B가 다시 C를 참조하는 구조) 대신, 각 규칙은 독립적이고 완결된 단일 조항 형태(Loose Coupling)로 설계할 것. 각 규칙은 독립적이고 완결된 단일 조항 형태(Loose Coupling)로 설계해야 AI가 깊은 논리적 추론 연산 중 길을 잃지 않습니다.
 

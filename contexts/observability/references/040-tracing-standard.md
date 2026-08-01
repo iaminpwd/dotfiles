@@ -20,7 +20,7 @@ references:
 - **[PREFER] Sampling Rate by Traffic Tier:** 트래픽이 큰 서비스는 기본 샘플링율(예: 10%)을 강제 적용하고, 저트래픽 핵심 경로는 100% 샘플링을 유지하여 리소스 낭비를 안전하게 격리할 것.
 
 ### 2.2 Collector 아키텍처
-- **[MUST] Collector as Gateway:** 애플리케이션이 백엔드(Datadog, Grafana Tempo 등)로 직접 전송하는 대신, OpenTelemetry Collector를 게이트웨이로 경유시켜 백엔드 교체 시 애플리케이션 재배포 없이 Exporter 설정만 변경 가능하도록 하십시오.
+- **[MUST] Collector as Gateway:** 애플리케이션이 백엔드(Datadog, Grafana Tempo 등)로 직접 전송하는 대신, OpenTelemetry Collector를 게이트웨이로 경유시킬 것. 벤더 중립성 원칙 자체는 010-observability-core.md의 Vendor-Neutral Instrumentation을 참조하고, 본 조항은 트레이스 파이프라인에서 그 원칙을 구현하는 구체적 배치(Collector 게이트웨이)를 규정함.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

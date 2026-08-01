@@ -1,5 +1,6 @@
-# 050-iac-standard.md 3절 검증 게이트 재현: pre-flight-check.sh 는 terraform fmt
-# -check 를 통과하지 못하면 커밋을 차단한다. 들여쓰기만 어긋뜨린 변형이다.
+# pre-flight-check.sh의 범용 terraform fmt -check 게이트 재현(050-iac-standard.md
+# 3절이 아니라 pre-flight-check.sh 자체가 모든 클라우드 공통으로 강제하는 검사).
+# 들여쓰기만 어긋뜨린 변형이다.
 terraform {
       required_version = "~> 1.5"
   required_providers {

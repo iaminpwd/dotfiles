@@ -82,7 +82,29 @@ check_reference_links() {
       echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
       EXIT_CODE=1
     }
-  done < <(grep -rHoE 'contexts/[a-z-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | sort -u || true)
+  done < <(grep -rHoE 'contexts/[a-z0-9-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | sort -u || true)
+
+  # SKILL.md 라우팅 테이블은 절대 경로가 아니라 자신의 스킬 루트 기준 상대 경로
+  # (예: "references/020-xxx.md")를 쓴다. 위 절대 패턴 검사는 이 형태를 잡지 못하므로
+  # 스킬 루트(SKILL.md의 위치, references/*.md는 한 단계 상위) 기준으로 별도 검사한다.
+  local rline rest stripped skill_dir r
+  while IFS= read -r rline; do
+    [ -z "$rline" ] && continue
+    f="${rline%%:*}"
+    rest="${rline#*:}"
+    # 이미 위에서 절대 경로(contexts/스킬/references/...)로 검사된 매치는 제외한다.
+    stripped=$(sed -E 's#contexts/[a-z0-9-]+/references/[0-9]{3}-[a-z0-9_-]+\.md##g' <<<"$rest")
+    skill_dir=$(dirname "$f")
+    [ "$(basename "$skill_dir")" = "references" ] && skill_dir=$(dirname "$skill_dir")
+    while IFS= read -r r; do
+      [ -z "$r" ] && continue
+      [ -f "$skill_dir/$r" ] || {
+        echo "❌ [ERROR] 깨진 스킬-상대 참조 링크: $f -> $r" >&2
+        EXIT_CODE=1
+      }
+    done < <(grep -oE 'references/[0-9]{3}-[a-z0-9_-]+\.md' <<<"$stripped" || true)
+  done < <(grep -rHE 'references/[0-9]{3}-[a-z0-9_-]+\.md' "$CONTEXTS_DIR"/*/SKILL.md "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null | grep -v '/\.archive/' | sort -u || true)
+
   log_info "[INFO] 참조 링크 검사 완료."
 }
 
@@ -300,7 +322,7 @@ check_cross_skill_duplication() {
     # grep -vc는 카운트가 0일 때(해당 개념이 aws/azure에만 있을 때) 종료 코드 1을 반환하고,
     # set -euo pipefail 하에서 이 대입이 린터 전체를 아무 메시지 없이 exit 1로 중단시킨다
     # (2026-07-27 실측). 카운트 0은 정상 결과이므로 아래 미러링 검사(275행)와 동일하게 흡수한다.
-    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
+    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
     if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
       log_info "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
       echo "    ${files//$'\n'/$'\n    '}"

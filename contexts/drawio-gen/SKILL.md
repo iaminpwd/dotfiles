@@ -25,7 +25,7 @@ description: |
 | 서드파티/OSS 도구 아이콘 (클라우드 공통) | references/040-third-party-icon-library.md |
 | 가독성 (범례/제목/라벨 줄바꿈/타이포그래피) | references/050-readability-standard.md |
 | 검증 및 수락 기준 (완료 조건/검증 스크립트) | references/090-validation-standard.md |
-| 레이아웃 계산 공용 코드 (격자/스택/겹침검사) | layout_toolkit.py |
+| 레이아웃 계산 공용 코드 (격자/스택/겹침검사) | scripts/layout_toolkit.py |
 
 ## 2. 생성 프로세스 (6단계)
 
@@ -46,9 +46,9 @@ description: |
 - **[MUST] 클라우드 식별**: 코드 기반 모드에서는 IaC 코드의 provider prefix로 대상 클라우드를 판별할 것. (`aws_` = AWS, `azurerm_` = Azure, `openstack_` = OpenStack, CloudFormation = AWS, Bicep/ARM = Azure, Heat HOT `type: OS::*` = OpenStack) 설명 기반 모드에서는 사용자 발화에 등장하는 서비스 명칭으로 판별할 것. (EKS/NAT Gateway/ALB/S3 등 = AWS, AKS/VNet/App Service 등 = Azure, Nova/Neutron/Cinder/Swift/Keystone/Octavia/Magnum/Ironic/Trove/Heat 등 = OpenStack) 두 클라우드 서비스가 함께 언급되면 하이브리드 구성으로 판단하고 `multi-cloud` 스킬 룰북을 함께 참조할 것.
 - **[MUST] 설명 기반 모드의 근거 충실성**: 코드 없이 자연어 설명만으로 다이어그램을 생성할 때는 005-fidelity-anti-hallucination-standard.md §6의 규칙(명시된 요소만 반영, 미명시 세부사항은 표준 기본값 + 명시적 라벨링, 중대한 모호성은 질문)을 반드시 적용할 것.
 - **[MUST] 라벨링/컨벤션은 010 문서의 명시 규칙을 그대로 적용**: 서브넷 용도 설명(CIDR 필수 포함), 엣지 라벨 부여 기준, 다중 AZ 분산 서브라벨, 서드파티 도구 아이콘 표현, 컨테이너 헤더 높이·아이콘 기본 크기, 레이아웃 계산 원칙은 010-drawio-xml-standard.md 2~10절에 이미 규칙과 예시 문자열로 고정되어 있습니다. "이 정도 품질"을 해당 규칙을 그대로 기계적으로 적용할 것. 실행마다 결과가 달라지는 것을 방지하기 위한 것이므로 임의 재해석 없이 규칙을 준수함.
-- **[MUST] 아이콘 라이브러리 참조**: 대상 클라우드에 맞는 아이콘 스타일 라이브러리(AWS=020, Azure=030, OpenStack=035, 서드파티는 040)를 읽고 정확한 style 속성을 적용할 것. OpenStack은 테넌트 리소스 17종(`openstack_native_icon()`)에 한해 draw.io 내장 스텐실이 존재하고, 그 외 컨트롤 플레인 서비스는 035의 함수형 블록(`openstack_icon()`, 공식 색상 표준에 따라 기본 검정+절제된 강조) 규칙을 반드시 따르며 존재하지 않는 shape/로고 URL을 명시된 객체만 반영할 것.
+- **[MUST] 아이콘 라이브러리 참조**: 대상 클라우드에 맞는 아이콘 스타일 라이브러리(AWS=020, Azure=030, OpenStack=035, 서드파티는 040)를 읽고 정확한 style 속성을 적용할 것. OpenStack은 테넌트 리소스 18종(`openstack_native_icon()`)에 한해 draw.io 내장 스텐실이 존재하고, 그 외 컨트롤 플레인 서비스는 035의 함수형 블록(`openstack_icon()`, 공식 색상 표준에 따라 기본 검정+절제된 강조) 규칙을 반드시 따르며 존재하지 않는 shape/로고 URL을 명시된 객체만 반영할 것.
 - **[MUST] 가독성 요소 필수 포함(범례/제목)**: 배치가 안 겹치는 것만으로는 "읽기 쉬운" 다이어그램이 아닙니다. 050-readability-standard.md에 따라 다이어그램에 등장한 색·선 종류를 설명하는 범례(`layout_toolkit.legend()`)와 대상·범위를 알리는 제목 블록(`layout_toolkit.title()`)을 반드시 포함하고, 아이콘 라벨 자동 줄바꿈과 타이포그래피 위계(제목20/헤더13/라벨12/서브라벨10)를 적용할 것. 색·선 종류가 2가지 이상인데 범례가 없으면 완료 요건 미달로 처리할 것.
 - **[MUST] 좌표는 공용 툴킷으로 계산**: 서브넷/컨테이너/아이콘 좌표를 손으로 하나씩 대입하는 대신 `layout_toolkit.py`를 import해서 `grid`/`hstack`/`vstack`/`offset_by_header`/`subnet_box_size`로 계산할 것(015). 헤더 높이 오프셋 누락, 형제 컨테이너 높이 불일치, 콘텐츠 대비 과도한 여백은 전부 이 툴킷을 안 쓰고 좌표를 즉흥적으로 정할 때 발생한 실제 재발 버그임.
-- **[MUST] 사후 통합 검증**: XML 생성 직후, 작업을 완료 선언하기 전에 `layout_toolkit.py {파일경로}`로 ID 중복/끊어진 참조/형제 겹침/행 높이 불일치/라벨 폭 초과를 기계적으로 검증할 것(090-validation-standard.md §2~3). CLI의 종료 코드가 곧 판정임(0=통과, 1=위반). matplotlib이 설치되어 있으면 `{파일명}-preview.png`(엣지 포함 렌더링)가 함께 생성되므로, 이를 직접 열어 박스 정렬과 엣지 라우팅이 다른 서브넷을 뚫고 지나가지 않는지 육안으로도 확인한 뒤에만 완료를 선언할 것. matplotlib이 없으면 `[INFO]` 안내와 함께 미리보기만 생략되고 검증 판정은 그대로 수행되므로, 육안 확인이 필요하면 `pip install matplotlib` 후 다시 실행할 것. 서드파티 아이콘 URL은 네트워크가 가능하면 `check_icon_urls()`로 추가 확인할 것.
+- **[MUST] 사후 통합 검증**: XML 생성 직후, 작업을 완료 선언하기 전에 `python3 scripts/layout_toolkit.py {파일경로}`로 ID 중복/끊어진 참조/형제 겹침/행 높이 불일치/라벨 폭 초과를 기계적으로 검증할 것(090-validation-standard.md §2~3). CLI의 종료 코드가 곧 판정임(0=통과, 1=위반). matplotlib이 설치되어 있으면 `{파일명}-preview.png`(엣지 포함 렌더링)가 함께 생성되므로, 이를 직접 열어 박스 정렬과 엣지 라우팅이 다른 서브넷을 뚫고 지나가지 않는지 육안으로도 확인한 뒤에만 완료를 선언할 것. matplotlib이 없으면 `[INFO]` 안내와 함께 미리보기만 생략되고 검증 판정은 그대로 수행되므로, 육안 확인이 필요하면 `pip install matplotlib` 후 다시 실행할 것. 서드파티 아이콘 URL은 네트워크가 가능하면 `check_icon_urls()`로 추가 확인할 것.
 - **[MUST] 최종 산출물은 실제 `.drawio` 파일로 저장**: 생성한 XML은 반드시 확장자 `.drawio`인 실제 파일로 저장할 것. 기본 저장 위치는 다이어그램이 다루는 대상 프로젝트의 저장소 루트(예: `his-infra` 아키텍처 요청 시 `his-infra/<파일명>.drawio`)이며, 파일명은 대상과 범위를 알 수 있는 kebab-case(예: `his-infra-architecture-aws-main.drawio`)로 지정할 것. 코드 없이 순수 설명 기반 요청 등 대상 프로젝트 저장소가 불분명한 경우에만 저장 위치를 사용자에게 확인할 것.
 - **[MUST] Explicit Artifact Request**: HTML/SVG 기반 시각화 아티팩트는 사용자가 "미리보기도 보여줘", "화면에서 보고 싶다"처럼 명시적으로 요청한 경우에만 예외적으로 생성할 것. 기본 완료 보고 시에는 저장된 `.drawio` 파일의 절대 경로와 diagrams.net(app.diagrams.net)에서 여는 방법만을 안내할 것.

@@ -16,7 +16,7 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 컴퓨팅 및 스토리지 최적화
-- **[PREFER] Graviton & Spot:** 비프로덕션 환경이나 배치(Batch) 노드에는 비용이 최대 90% 저렴한 Spot Virtual Machines 사용을 우선 고려하고, 일반 컴퓨팅 워크로드에는 가성비가 높은 ARM 기반의 Ampere Altra 프로세서 도입을 제안할 것.
+- **[PREFER] Ampere Altra & Spot:** 비프로덕션 환경이나 배치(Batch) 노드에는 비용이 최대 90% 저렴한 Spot Virtual Machines 사용을 우선 고려하고, 일반 컴퓨팅 워크로드에는 가성비가 높은 ARM 기반의 Ampere Altra 프로세서 도입을 제안할 것.
 - **[MUST] Committed Use Discounts:** 트래픽이 안정적으로 예측 가능한 프로덕션 상시 가동 베이스라인 워크로드에는 Azure Reserved VM Instances 또는 Azure Savings Plan for Compute를 적용하여 온디맨드 대비 비용을 절감할 것. Spot(변동성 큰 비프로덕션/배치용)과 Reserved/Savings Plan(예측 가능한 프로덕션 베이스라인용)은 대체재가 아닌 상호 보완 전략으로 함께 적용할 것.
 - **[PREFER] Storage Tiering:** Azure Blob Storage 설계 시, 장기 보관 목적의 데이터는 수명 주기(Lifecycle) 정책을 정의하여 Hot에서 Cool/Archive 계층으로 자동 전송되도록 하십시오.
 - **[PREFER] Managed Disk Optimization:** VM 관리형 디스크 제안 시 일반적인 워크로드 기준 가성비가 우수한 `Standard SSD` 또는 `Premium SSD v2` 디스크 타입을 기본값으로 기재할 것.
@@ -40,7 +40,7 @@ references:
 <example>
 [Bad]
 - "트래픽 예측이 불가능하므로 초기부터 D16s_v5 인스턴스 10대를 상시 가동 상태로 띄우겠습니다."
-- "EBS 볼륨에 해당하는 디스크는 무조건 Premium SSD(LRS) 타입을 기본으로 가겠습니다."
+- "관리형 디스크는 무조건 Premium SSD(LRS) 타입을 기본으로 가겠습니다."
 - "가장 익숙하거나 이전 프로젝트에서 썼던 구버전(예: AKS 1.25 등)을 팩트 체크 없이 그대로 하드코딩하여 설정하겠습니다." (검색 절차 누락 및 구버전 지정으로 인한 Extended Support/LTS 요금 발생 위반)
 </example>
 </examples>

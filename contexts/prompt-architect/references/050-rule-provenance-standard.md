@@ -3,6 +3,7 @@ role: Senior Prompt Architect
 priority: high
 trigger: Apply these rules when adding, reviewing, or deleting any rule clause in this repository's rulebooks (contexts/*.md).
 references:
+  - contexts/prompt-architect/references/010-core.md
   - contexts/prompt-architect/references/030-prompt-engineering-standard.md
 ---
 # 컨텍스트 모듈: 규칙의 근거와 승격 표준 (Rule Provenance & Promotion)

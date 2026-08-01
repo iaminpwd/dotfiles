@@ -4,7 +4,7 @@ priority: high
 trigger: Apply these rules ONLY when designing LLM agent workflows, RAG systems, Vector DBs, or automated incident resolution.
 references:
   - contexts/aiops/references/010-aiops-core.md
-  - contexts/aiops/references/040-automation-scripting.md
+  - contexts/aiops/references/040-resiliency-chaos-standard.md
 ---
 # 컨텍스트 모듈: AI 에이전트 워크플로우 설계 및 RAG / Guardrails 패턴
 

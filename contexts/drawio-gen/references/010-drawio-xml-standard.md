@@ -55,7 +55,7 @@ style="swimlane;whiteSpace=wrap;html=1;fillColor=none;strokeColor={COLOR};startS
 | Auto Scaling Group 등 하위 그룹 | `30` |
 
 ### 2.2 Icon (리소스 아이콘)
-- **[MUST]** AWS: `shape=mxgraph.aws4.*` 기반, Azure: `image=img/lib/azure2/**/*.svg` 기반, OpenStack: 테넌트 리소스 17종은 draw.io 내장 `mxgraph.openstack.*` 스텐실(`openstack_native_icon()`), 컨트롤 플레인 서비스는 네이티브 아이콘이 없으므로 기본 도형(rounded/cylinder/hexagon) + 검정 기본색 + 절제된 강조색(`openstack_icon()` 헬퍼, 상세 규칙은 035 참조)
+- **[MUST]** AWS: `shape=mxgraph.aws4.*` 기반, Azure: `image=img/lib/azure2/**/*.svg` 기반, OpenStack: 테넌트 리소스 18종은 draw.io 내장 `mxgraph.openstack.*` 스텐실(`openstack_native_icon()`), 컨트롤 플레인 서비스는 네이티브 아이콘이 없으므로 기본 도형(rounded/cylinder/hexagon) + 검정 기본색 + 절제된 강조색(`openstack_icon()` 헬퍼, 상세 규칙은 035 참조)
 - **[MUST]** `parent` 속성으로 소속 Subnet/VPC에 귀속
 - **[MUST] 기본 크기**: 일반 리소스 아이콘은 `width=60;height=60;`을 기본값으로 사용할 것. ENI 등 소형 커넥터류 아이콘만 `width=40;height=40;`을 사용하고, 이 지정된 크기 규격을 엄수할 것.
 

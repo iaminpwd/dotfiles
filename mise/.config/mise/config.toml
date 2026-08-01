@@ -7,6 +7,7 @@ trufflehog = "3.95.6"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
 checkov = "3.3.1"
+"pipx:checkov" = "3.3.1"
 "pipx:yamllint" = "1.38.0"
 # ansible/ansible-lint/yamllint 등 pipx 계열 도구는 aqua 바이너리가 없어 pip 기반 설치가 불가피함.
 # 대신 uv를 설치해두면 mise pipx 백엔드가 자동으로 uvx를 사용해 설치 로그/속도가 개선됨.

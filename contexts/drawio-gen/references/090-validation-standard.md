@@ -29,10 +29,10 @@ missing = [(c.get("id"), a, c.get(a)) for c in cells for a in ("source", "target
 assert not missing, f"끊어진 참조: {missing}"
 ```
 
-- **[PREFER]** 위 스니펫을 매번 새로 타이핑하는 대신 `layout_toolkit.py`의 `validate(path)`를 호출할 것. 동일한 1~3 검증에 더해 형제 노드 간 사각형 겹침 검사(015)와 **컨테이너 색상 팔레트 준수 검사(010 §4)**까지 한 번에 수행함. 색상 검사는 swimlane 컨테이너의 `strokeColor`가 010 §4 표에 정의된 값 목록에 있는지 기계적으로 대조하며, VPC/Subnet 등에 팔레트에 없는 임의 색상(예: `#8C4FFF`)을 쓰는 것을 사람이 매번 표와 대조하지 않아도 자동으로 잡아냅니다.
+- **[PREFER]** 위 스니펫을 매번 새로 타이핑하는 대신 `scripts/layout_toolkit.py`의 `validate(path)`를 호출할 것. 동일한 1~3 검증에 더해 형제 노드 간 사각형 겹침 검사(015)와 **컨테이너 색상 팔레트 준수 검사(010 §4)**까지 한 번에 수행함. 색상 검사는 swimlane 컨테이너의 `strokeColor`가 010 §4 표에 정의된 값 목록에 있는지 기계적으로 대조하며, VPC/Subnet 등에 팔레트에 없는 임의 색상(예: `#8C4FFF`)을 쓰는 것을 사람이 매번 표와 대조하지 않아도 자동으로 잡아냅니다. native 스텐실(`mxgraph.openstack.*`) 또는 `openstack_icon()` 강조색이 감지되면 OpenStack 다이어그램으로 판별하여, 010 §4보다 우선하는 035 §0의 엄격한 3원색 컨테이너 규칙(회색 계열 불허)을 추가로 검사합니다.
 
 ```bash
-layout_toolkit.py {파일경로}
+python3 scripts/layout_toolkit.py {파일경로}
 # 종료 코드가 판정임: 0=통과, 1=위반. 미리보기 PNG 는 matplotlib 이 있을 때만 함께
 # 생성되며, 없으면 [INFO] 안내 후 검증만 수행합니다(판정에는 영향 없음).
 ```

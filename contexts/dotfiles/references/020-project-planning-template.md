@@ -24,7 +24,7 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 영향 파일 및 배포 반영 경로
-- **[MUST] 링크 배포와 복사본 배포를 구분해 기재:** 각 수정 대상이 `just setup` 에 의해 심볼릭 링크로 노출되는지, 복사본으로 생성되는지 2번 섹션에 명시할 것. 링크 대상은 저장소 수정이 곧 런타임 반영이지만, 복사본 대상(`contexts/agent-handoff/`)은 `just setup` 재실행 전까지 반영되지 않습니다. 이를 적지 않아 개정 직후 턴의 에이전트가 구버전 조항으로 동작한 사례가 있습니다.
+- **[MUST] 링크 배포와 복사본 배포를 구분해 기재:** 각 수정 대상이 `just setup` 에 의해 심볼릭 링크로 노출되는지, 복사본으로 생성되는지 `ansible/roles/ai_agent/tasks/main.yml` 을 직접 조회하여 2번 섹션에 명시할 것. 현재 이 롤은 `contexts/<스킬>/` 하위 자산(SKILL.md, references, scripts, examples)을 전부 심볼릭 링크로만 배포하므로 저장소 수정이 곧 런타임 반영이지만, 향후 복사본(`ansible.builtin.copy`) 배포 대상이 추가되면 그 경로는 `just setup` 재실행 전까지 반영되지 않습니다. 가정으로 적지 말고 매번 실제 태스크 정의를 대조하십시오.
 - **[MUST] 재배포 필요 여부를 성공 기준에 포함:** 복사본 배포 대상을 수정하는 계획이면 `just setup` 재실행과 배포본 대조(`diff`)를 5번 섹션의 검증 항목으로 반드시 넣으십시오.
 
 ### 2.2 룰북 정합성 연쇄 영향
@@ -56,7 +56,7 @@ references:
 [Bad] 배포 방식과 연쇄 영향이 빠져 실행자가 반영 실패를 감지할 수 없음
 ```markdown
 ## 2. 영향 파일
-- contexts/agent-handoff/ 아래 스킬 문서
+- contexts/aws/ 아래 스킬 문서
 - 관련 룰북 몇 개
 ```
 </example>

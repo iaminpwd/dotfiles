@@ -13,7 +13,7 @@ description: |
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 프로젝트 기획 및 아키텍처 설계 | references/020-project-planning-template.md |
+| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
 | 관측성 기본 원칙, SLI/SLO, Error Budget | references/010-observability-core.md |
 | 메트릭 설계 및 알람 (PromQL, CloudWatch, Azure Monitor) | references/020-metrics-alerting-standard.md |
 | 구조화 로깅 및 로그 파이프라인 (Loki/ELK/CloudWatch Logs) | references/030-logging-standard.md |

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 """
 drawio-gen 스킬 공용 레이아웃 툴킷.
 
@@ -227,10 +226,13 @@ class Diagram:
         if shape == "hexagon":
             raise ValueError("hexagon 은 035 §2 에서 폐기되었습니다. "
                              "브로커·큐도 rounded 를 쓰고 구분은 라벨로 하십시오.")
-        base = {
+        base_map = {
             "rounded": "rounded=1;",
             "cylinder": "shape=cylinder3;",
-        }.get(shape, "rounded=1;")
+        }
+        if shape not in base_map:
+            raise ValueError(f"'{shape}' 은 035 §2 가 허용하는 shape(rounded/cylinder) 중 하나가 아닙니다.")
+        base = base_map[shape]
         stroke = self.OPENSTACK_ACCENT.get(emphasis, "#000000")
         sw = 3 if emphasis else 2
         style = (f"{base}whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor={stroke};strokeWidth={sw};"
@@ -239,7 +241,7 @@ class Diagram:
         self.add(id_, parent, value, style, x, y, w, h)
 
     def openstack_native_icon(self, id_, parent, value, x, y, shape_name, color="3F51B5", w=IW, h=IH):
-        # draw.io 내장 mxgraph.openstack.* 스텐실(035 §1). 17종 테넌트 리소스에
+        # draw.io 내장 mxgraph.openstack.* 스텐실(035 §1). 18종 테넌트 리소스에
         # 한해서만 유효 — 존재하지 않는 shape_name을 창작하지 말 것.
         # 출처: jgraph/drawio Sidebar-OpenStack.js (조회 2026-07-23).
         valid = {"cinder_volume", "cinder_volumeattachment", "designate_recordset", "designate_zone",
@@ -248,7 +250,7 @@ class Diagram:
                  "neutron_router", "neutron_routerinterface", "neutron_securitygroup", "neutron_subnet",
                  "nova_keypair", "nova_server", "swift_container"}
         if shape_name not in valid:
-            raise ValueError(f"'{shape_name}' 은 mxgraph.openstack.* 의 17종 스텐실에 없습니다: {sorted(valid)}")
+            raise ValueError(f"'{shape_name}' 은 mxgraph.openstack.* 의 18종 스텐실에 없습니다: {sorted(valid)}")
         style = (f"aspect=fixed;sketch=0;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;"
                  f"labelPosition=center;verticalLabelPosition=bottom;outlineConnect=0;verticalAlign=top;"
                  f"align=center;shape=mxgraph.openstack.{shape_name};fillColor=#{color};"
@@ -529,6 +531,29 @@ def validate(path):
             color_violations.append((cid, m.group(1)))
             lines.append(f"[FAIL] 컨테이너 팔레트 위반 (010 §4): id={cid} strokeColor={m.group(1)} "
                          f"(허용값: {sorted(APPROVED_CONTAINER_COLORS)})")
+
+    # OpenStack 다이어그램 전용 컨테이너 색상 검사 (035 §0, 010 §4보다 우선 — 010:95).
+    # 위 010 §4 검사는 회색(#888888/#555555)을 "팀 컨벤션 예외"로 허용하지만, OpenStack
+    # 공식 표준은 "bright primary colors, such as light blue, red, or green"만 허용하여
+    # 회색 계열이 원천 불가함(openstack-basic 논리 아키텍처에서 #888888 적발 실사례).
+    # native 스텐실(mxgraph.openstack.*) 또는 openstack_icon() 강조색 사용 여부로 OpenStack
+    # 다이어그램인지 판별해, 해당 시에만 010 §4보다 더 엄격한 3원색 기준을 추가 적용한다.
+    OPENSTACK_MARKERS = ("mxgraph.openstack.", "#4A90D9", "#DA1A32", "#2E7D32")
+    is_openstack_diagram = any(
+        any(marker in c.get("style", "") for marker in OPENSTACK_MARKERS)
+        for c in cells.values()
+    )
+    if is_openstack_diagram:
+        OPENSTACK_ALLOWED_CONTAINER_COLORS = {"#000000", "#4A90D9", "#DA1A32", "#2E7D32"}
+        for cid, c in cells.items():
+            style = c.get("style", "")
+            if "swimlane" not in style:
+                continue
+            m = re.search(r"strokeColor=(#[0-9A-Fa-f]{6})", style)
+            if m and m.group(1).upper() not in OPENSTACK_ALLOWED_CONTAINER_COLORS and (cid, m.group(1)) not in color_violations:
+                color_violations.append((cid, m.group(1)))
+                lines.append(f"[FAIL] OpenStack 컨테이너 색상 위반 (035 §0, 010 §4보다 우선): id={cid} strokeColor={m.group(1)} "
+                             f"(허용값: 검정 기본 또는 밝은 원색 3종 #4A90D9/#DA1A32/#2E7D32)")
 
     # 범례(Legend) 누락 휴리스틱 (050-readability-standard.md §1) — WARN only, ok에 영향 없음.
     # 컨테이너 색이 2종 이상이거나 실선+점선 엣지가 함께 쓰였는데 '범례/Legend' 라벨 셀이

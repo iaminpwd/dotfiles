@@ -19,7 +19,7 @@ references:
 - **[MUST] Large Object:** 5GiB를 초과하는 객체는 SLO(Static Large Object) 또는 DLO로 분할 업로드할 것.
 - **[MUST] Lifecycle & Expiry:** 임시/로그성 데이터는 `X-Delete-At`/`X-Delete-After` 헤더로 자동 만료를 설정하여 용량 누수를 안전하게 격리할 것.
 - **[MUST] Encryption & Scoped Access:** 저장 암호화(Swift encryption 미들웨어 또는 백엔드 암호화)를 적용하고, 외부 공유가 필요하면 컨테이너 전체 public-read 대신 tempURL/formpost로 일시적 자격 증명을 부여할 것.
-- **[MUST] Quota:** account/container 쿼터를 설정하여 특정 테넌트의 특정 테넌트의 상한 용량을 명시적으로 설정할 것.
+- **[MUST] Quota:** account/container 쿼터를 설정하여 특정 테넌트의 상한 용량을 명시적으로 설정할 것.
 - **[PREFER] S3 Compatibility:** 애플리케이션이 S3 호환(S3-compatible) API를 요구하면 Swift S3 API 또는 Ceph RadosGW로 제공하되, EC2 credential과 버킷 정책 범위를 최소 권한으로 한정할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)

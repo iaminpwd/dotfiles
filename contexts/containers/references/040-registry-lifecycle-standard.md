@@ -22,7 +22,7 @@ references:
 
 ### 2.2 보관 주기 및 정리
 - **[PREFER] Lifecycle Policy:** 레지스트리에 미태그(untagged) 이미지 및 `dev-*`류 임시 태그가 무기한 적체되는 것을 통제하기 위해, N일 경과 또는 최근 N개 유지 기준의 자동 GC(Garbage Collection) 정책을 구성할 것.
-- **[MUST] Protect Release Tags:** GC 정책은 `v*`, `release-*` 등 프로덕션 릴리즈 태그를 예외 목록으로 명시적으로 보호하여 실수로 보호할 것.
+- **[MUST] Protect Release Tags:** GC 정책은 `v*`, `release-*` 등 프로덕션 릴리즈 태그를 예외 목록으로 명시하여 실수로 삭제되지 않도록 보호할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

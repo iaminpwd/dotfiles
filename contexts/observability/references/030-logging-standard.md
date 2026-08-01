@@ -20,7 +20,7 @@ references:
 
 ### 2.2 비용 및 보존 정책
 - **[PREFER] Retention Tiering:** 실시간 조회가 필요한 최근 로그(예: 7~14일)는 고속 조회 계층(Loki, CloudWatch Logs)에 보관하고, 장기 보관 로그는 반드시 저비용 오브젝트 스토리지(S3/Blob)로 분리하여 비용을 통제할 것.
-- **[PREFER] Sampling for High-Volume Debug Logs:** `DEBUG` 레벨 로그가 대량 발생하는 경로는 100% 수집을 격리하고, 샘플링(예: 10%) 비율을 의무 적용하여 볼륨 팽창을 유지할 것.
+- **[PREFER] Sampling for High-Volume Debug Logs:** `DEBUG` 레벨 로그가 대량 발생하는 경로는 100% 수집을 격리하고, 샘플링(예: 10%) 비율을 의무 적용하여 볼륨 팽창을 억제할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

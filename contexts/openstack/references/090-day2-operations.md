@@ -48,7 +48,7 @@ CI/CD 파이프라인, OpenStack 컨트롤플레인 수명주기, SRE 관측성 
 - **[MUST] 완료 조건 (Done when):** CI/CD 파이프라인 구문 검증이 에러 없이 패스되고, 컨트롤플레인 변경 시 사전 백업 증적과 `db-migration-plan.md`가 유효하게 작성되어야 합니다.
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Monitoring/Upgrade Configured] 점검 기준 (절차는 010-openstack-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (알람 알람 최적화): 정상적인 스파이크성 트래픽으로 인한 오탐(False Alarm) 피로를 방지하는 임계치가 적용되었는가?
+  - 기준 1 (알람 최적화): 정상적인 스파이크성 트래픽으로 인한 오탐(False Alarm) 피로를 방지하는 임계치가 적용되었는가?
   - 기준 2 (안전한 업그레이드): 컨트롤플레인 업그레이드 전 DB 백업·쿼럼 확인·Ceph 헬스 검증 절차가 결합되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - CI/CD 워크플로우 내에 OpenStack 자격 증명(패스워드/Application Credential secret)이 평문으로 직접 주입되어 배포 준비가 된 패턴이 스캔 감지되면 즉시 작업을 중단(Hard Block)하고 유출 상태를 보고할 것.

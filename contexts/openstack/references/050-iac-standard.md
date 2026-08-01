@@ -65,4 +65,4 @@ terraform {
   - 기준 2 (보안성): 보안 그룹이나 Keystone 역할이 과도하게 열려있지 않은가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `terraform plan` 결과 중 의도치 않은 영속적 리소스 삭제(Destroy)가 감지되고 복구 계획이 부재할 경우 작업을 중단하고 Halt & Clarify 상태로 진입할 것.
-  - SSH(22포트) 등 민감 포트가 `0.0.0.0/0`으로 과도하게 개방되는 보안 규칙이 감지되면 즉시 작업을 멈추고 보안 위반을 보고(Hard Block)하십시오.
+  - SSH/RDP 등 민감 포트의 `0.0.0.0/0` 과다 개방에 대한 중단 조건은 025-cloud-security.md §4를 참조하여 위임할 것.
