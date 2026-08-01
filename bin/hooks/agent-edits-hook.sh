@@ -51,6 +51,15 @@ elif [ -z "${root:-}" ] || [ ! -d "$root" ]; then
   root="$target_dir"
 fi
 [ -d "$root" ] || exit 0
+root=$(readlink -f "$root" 2>/dev/null || echo "$root")
+
+# root가 target을 실제로 포함하지 않으면(무관한 워크스페이스 cwd로 오귀속되는 경우,
+# 예: 다른 도구가 프로젝트 밖 경로를 편집했는데 워크스페이스가 열려 있는 경우)
+# 상대경로 변환이 깨져 절대경로가 그대로 새어나가므로, 파일 자체 디렉터리로 재라우팅한다.
+case "$target" in
+"$root" | "$root"/*) : ;;
+*) root="$target_dir" ;;
+esac
 
 # 파일 경로만 남기고 내용은 절대 기록하지 않는다(base.AGENTS.md 7장 민감 데이터 마스킹).
 if [ "$target" = "$root" ]; then
