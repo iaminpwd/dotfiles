@@ -34,9 +34,12 @@ check-idempotency file:
     bash bin/linters/idempotency-check.sh {{file}}
 
 # 단위 테스트 전체 실행 (contexts/ 하위 모든 스킬 자동 탐색, .archive 제외)
+# 첫 실패 스킬에서 멈추면 뒤 스킬은 시도조차 안 되어, 무관한 스킬이 동시에 깨져 있어도
+# 하나씩만 재커밋마다 드러난다(2026-08-01 실측). compact-runner.sh / run_delegated_skill_checks
+# 와 동일하게 끝까지 돌고 실패 스킬 전체를 모아 보고한다.
 test:
     @echo "=> Running Unit Tests for all skills..."
-    bash -c 'for f in contexts/*/tests/run.sh; do skill=$(basename $(dirname $(dirname $f))); echo "  -> Testing: $skill"; bash "$f" || exit 1; done'
+    bash -c 'FAILED=(); for f in contexts/*/tests/run.sh; do skill=$(basename $(dirname $(dirname $f))); echo "  -> Testing: $skill"; bash "$f" || FAILED+=("$skill"); done; if [ "${#FAILED[@]}" -gt 0 ]; then echo "실패한 스킬: ${FAILED[*]}"; exit 1; fi'
 
 # -----------------------------------------------------------------------------
 # Documentation

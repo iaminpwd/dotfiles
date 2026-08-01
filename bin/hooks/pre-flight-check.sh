@@ -701,15 +701,22 @@ run_delegated_skill_checks() {
     return 0
   fi
 
-  local skill_script
+  # 첫 실패에서 즉시 중단하면 뒤 플러그인은 실행조차 안 된다. 플러그인끼리는 각자
+  # git diff --cached를 독립적으로 재조회해 상태를 공유하지 않으므로(k8s-check.sh,
+  # observability-check.sh 등) 순서와 무관하게 끝까지 돌려도 안전하다. 같은 파일이
+  # 여러 플러그인의 대상이 될 수 있어(예: PrometheusRule YAML은 k8s-check.sh의 PromQL
+  # 문법 검사와 observability-check.sh의 알람 정책 검사 양쪽에 다 걸림), 첫 플러그인만
+  # 보고하면 두 번째 위반은 재커밋해야 발견된다(2026-08-01 실측). compact-runner.sh의
+  # 스크립트 간 판정과 동일한 관용구를 여기 플러그인 간에도 적용한다.
+  local skill_script rc failed=0
   shopt -s nullglob
   for skill_script in "$PFC_SCRIPT_DIR/plugins"/*.sh; do
-    if ! bash "$skill_script"; then
-      shopt -u nullglob
-      return 1
-    fi
+    rc=0
+    bash "$skill_script" || rc=$?
+    [ "$rc" -ne 0 ] && failed=1
   done
   shopt -u nullglob
+  [ "$failed" -eq 0 ]
 }
 
 # 13. Provenance Logging Reminder (비차단 알림)
