@@ -421,6 +421,41 @@ check_vendor_mirror_symmetry() {
   log_info "[INFO] aws/azure 미러링 대칭성 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 11. contexts/INDEX.md 최신성 검사 (Warning Only)
+# -----------------------------------------------------------------------------
+check_index_freshness() {
+  log_info "--- Step: contexts/INDEX.md Freshness (Warning Only) ---"
+  local index_file="$CONTEXTS_DIR/INDEX.md"
+  local generator="$REPO_ROOT/bin/utils/generate-context-index.sh"
+
+  # 온보딩용 색인이라 신규/실험 저장소에는 아직 없을 수 있다. 없으면 강제하지 않고
+  # 건너뛴다(check_documented_clause_existence 의 README 부재 처리와 동일한 관용구).
+  [ -f "$index_file" ] || {
+    log_info "[INFO] contexts/INDEX.md 없음 — 색인 최신성 검사 건너뜀."
+    return
+  }
+  [ -f "$generator" ] || {
+    log_info "[INFO] 색인 생성기($generator)를 찾지 못해 검사 건너뜀."
+    return
+  }
+
+  local tmp
+  tmp=$(mktemp)
+  if ! bash "$generator" >"$tmp" 2>/dev/null; then
+    log_info "[WARNING] 색인 생성기 실행 실패 — contexts/INDEX.md 최신성을 확인하지 못했습니다."
+    rm -f "$tmp"
+    return
+  fi
+
+  if ! diff -q "$index_file" "$tmp" >/dev/null 2>&1; then
+    log_info "[WARNING] contexts/INDEX.md 가 SKILL.md 라우팅 테이블과 어긋납니다:"
+    log_info "    'bash bin/utils/generate-context-index.sh > contexts/INDEX.md' 로 재생성하십시오."
+  fi
+  rm -f "$tmp"
+  log_info "[INFO] 색인 최신성 검사 완료."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -434,6 +469,7 @@ main() {
   check_prefer_language_tagged_must
   check_cross_skill_duplication
   check_vendor_mirror_symmetry
+  check_index_freshness
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then

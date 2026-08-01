@@ -265,6 +265,25 @@ reviewed: $TODAY
 EOF
 check "warn-mirror-asymmetry" 0 "조항 수 불일치" "$D"
 
+# 10b. contexts/INDEX.md 최신성: 색인이 라우팅 테이블과 어긋나면 경고해야 한다.
+#      실제 생성기(bin/utils/generate-context-index.sh)를 케이스 디렉토리에 그대로
+#      복사해 넣는다 — check_index_freshness 는 PATH 가 아니라 REPO_ROOT 기준
+#      상대 경로로 생성기를 찾으므로, 합성 코퍼스에도 물리적으로 있어야 한다.
+GENERATOR_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/bin/utils/generate-context-index.sh"
+
+D=$(new_case warn-stale-index)
+mkdir -p "$D/bin/utils"
+cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
+echo "# 낡은 색인" >"$D/contexts/INDEX.md"
+check "warn-stale-index" 0 "어긋납니다" "$D"
+
+# 10c. 위 검사의 오탐 회귀: 생성기로 방금 뽑아낸 색인은 경고 없이 통과해야 한다.
+D=$(new_case ok-fresh-index)
+mkdir -p "$D/bin/utils"
+cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
+(cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
+check_clean "ok-fresh-index (오탐 없음)" "$D"
+
 echo "--- 린터 자신의 조용한 사망 회귀 (2026-07-27 실측 버그) ---"
 
 # 11. 개념이 aws/azure 에만 있으면 grep -vc 가 0을 세고 종료 코드 1을 반환한다.

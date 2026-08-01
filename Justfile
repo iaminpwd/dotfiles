@@ -39,6 +39,15 @@ test:
     bash -c 'for f in contexts/*/tests/run.sh; do skill=$(basename $(dirname $(dirname $f))); echo "  -> Testing: $skill"; bash "$f" || exit 1; done'
 
 # -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+
+# contexts/INDEX.md 재생성 (SKILL.md 라우팅 테이블이 바뀐 뒤 실행)
+docs-index:
+    @echo "=> Regenerating contexts/INDEX.md..."
+    bash bin/utils/generate-context-index.sh > contexts/INDEX.md
+
+# -----------------------------------------------------------------------------
 # Utility
 # -----------------------------------------------------------------------------
 
