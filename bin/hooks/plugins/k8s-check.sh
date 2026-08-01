@@ -139,9 +139,8 @@ check_prometheus_rules() {
 
 # 3. Deprecated / Removed K8s API Detection
 check_deprecated_apis() {
-  # 스테이징된 yaml이 실제 K8s 매니페스트인지(kind: 존재) 먼저 걸러낸다. 이 필터가
-  # 없으면 GitHub Actions workflow 등 무관한 yaml 수정만으로도 저장소 전체 pluto
-  # 스캔이 트리거된다.
+  # 스테이징된 yaml이 실제 K8s 매니페스트인지(kind: 존재) 먼저 걸러낸다. 이 필터는
+  # 스캔을 "트리거할지"만 정할 뿐, pluto 자체의 스캔 범위(-d .)는 좁히지 못한다.
   local manifests=() f
   for f in "${GLOBAL_STAGED_YAML_FILES[@]}"; do
     [ -z "$f" ] && continue
@@ -158,10 +157,24 @@ check_deprecated_apis() {
     return 0
   fi
 
-  if ! pluto detect-files -d .; then
+  # pluto detect-files는 파일 단위 인자를 받지 못하고 -d 로 디렉토리 전체만 스캔한다.
+  # 스테이징된 매니페스트만 격리된 임시 디렉토리에 복사해 스캔 범위를 좁힌다
+  # (checkov 스캔의 tf_exec_checkov 격리와 동일한 이유: 무관한 매니페스트가 저장소
+  # 어딘가에 있으면 -d . 이 그것까지 잡아 무관한 커밋을 차단한다. 2026-08-01 실측:
+  # contexts/k8s/tests/fixtures/fail-deprecated-api.yaml 이 고정 존재하는 한, kind:
+  # 가 있는 yaml을 스테이징하는 모든 커밋이 이 무관한 픽스처 때문에 막혔다).
+  local tmpdir i=0
+  tmpdir=$(mktemp -d)
+  for f in "${manifests[@]}"; do
+    cp "$f" "$tmpdir/$((i++))-$(basename "$f")"
+  done
+
+  if ! pluto detect-files -d "$tmpdir"; then
+    rm -rf "$tmpdir"
     echo "❌ [ERROR] 삭제 예정(Deprecated/Removed) K8s API 버전이 감지되어 커밋이 중단되었습니다." >&2
     return 1
   fi
+  rm -rf "$tmpdir"
   log_info "[SUCCESS] No deprecated/removed K8s API versions detected."
 }
 
