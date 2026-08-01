@@ -22,7 +22,6 @@
       - "bin"
       - "mise"
       - "tflint"
-      - "roles"
       - ".*"
   register: stow_dirs
 

@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 1. OS 패키지 매니저 판별
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip python3-venv || true
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip python3-venv
   if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y pipx 2>/dev/null; then
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pipx 2>/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip
   fi
@@ -44,6 +44,9 @@ echo "=> 🚀 Running 'mise install' automatically..."
 export PATH="$HOME/.local/bin:$PATH"
 MISE_CONFIG_FILE="$SCRIPT_DIR/mise/.config/mise/config.toml"
 export MISE_CONFIG_FILE
+# uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
+# 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
+~/.local/bin/mise install -y uv
 ~/.local/bin/mise install -y
 
 echo "========================================================="

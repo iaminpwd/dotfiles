@@ -1,4 +1,11 @@
 ---
+- name: Docker 공식 저장소 지원 배포판 검증 (Ubuntu/Debian 외 Debian 계열 방지)
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution in ['Ubuntu', 'Debian']
+    fail_msg: "Docker 공식 apt 저장소는 Ubuntu/Debian만 지원합니다. 감지된 배포판: {{ ansible_distribution }}"
+  when: ansible_os_family == "Debian"
+
 - name: Docker 필수 패키지 설치
   ansible.builtin.apt:
     name:
@@ -18,7 +25,7 @@
 
 - name: Docker 공식 GPG 키 추가
   ansible.builtin.get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
+    url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
   become: true
@@ -36,7 +43,7 @@
   ansible.builtin.apt_repository:
     repo: >
       deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }} signed-by=/etc/apt/keyrings/docker.asc]
-      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+      https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
     state: present
   become: true
   when: ansible_os_family == "Debian"
@@ -69,14 +76,21 @@
   become: true
   when: ansible_os_family == "Debian"
 
+- name: Docker 공식 저장소 지원 배포판 검증 (RHEL 계열)
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution in ['Fedora', 'CentOS', 'RedHat', 'Rocky', 'AlmaLinux', 'OracleLinux']
+    fail_msg: "Docker 공식 yum 저장소는 Fedora/CentOS/RHEL/Rocky/AlmaLinux/OracleLinux만 지원합니다. 감지된 배포판: {{ ansible_distribution }}"
+  when: ansible_os_family == "RedHat"
+
 - name: Docker 저장소 추가 (RHEL)
   ansible.builtin.yum_repository:
     name: docker-ce-stable
     description: Docker CE Stable
-    baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+    baseurl: "https://download.docker.com/linux/{{ 'fedora' if ansible_distribution == 'Fedora' else 'centos' }}/$releasever/$basearch/stable"
     enabled: true
     gpgcheck: true
-    gpgkey: https://download.docker.com/linux/centos/gpg
+    gpgkey: "https://download.docker.com/linux/{{ 'fedora' if ansible_distribution == 'Fedora' else 'centos' }}/gpg"
   become: true
   when: ansible_os_family == "RedHat"
 
