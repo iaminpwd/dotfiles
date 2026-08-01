@@ -109,7 +109,9 @@ priority: highest
 - **[MUST] Pre-Commit Gate:** 커밋 전 모든 검증(lint 등) pass 필수.
 
 ## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
-- **[Trigger: After Code Change] Provenance Logging:** 변경 후 터미널에서 `log-edit.sh` 명령어를 실행하여 수동 근거 기록.
+- **[Trigger: After Code Change] Provenance Logging:** 변경 후 터미널에서 `log-edit.sh <file_path> <rule_source> <purpose>` 명령어를 실행하여 수동 근거 기록.
+  - **[MUST] Skill-Qualified Rule Source:** `rule_source`는 반드시 `<스킬>/<파일명>` 형식으로 명시할 것 (예: `aws/050-iac-standard.md`).
+  - **[MUST] Multiple References:** 하나의 변경이 2개 이상의 룰 파일을 근거로 한다면, `rule_source`에 콤마(`,`)로 구분해 모두 나열할 것. (예: `log-edit.sh main.tf aws/030-finops-optimization.md,aws/020-security-compliance.md "스팟 인스턴스 적용 및 IAM 최소권한 강화"`)
 - **[Trigger: Ask for Code Provenance] Audit Edits Log:** 사용자가 "어떤 프롬프트/룰 때문에 이렇게 코드를 짰는가?" 등 코드 변경 사유나 출처를 질문할 경우, 답변 전 즉시 `.agent-state/edits.log` 파일을 조회하여 해당 파일의 수정 이력을 확인하고 팩트 기반으로 답변할 것.
 - **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 터미널에서 `prompt-flywheel.sh` 명령어로 룰 개정안 역제안.
 - **[MUST] Code Execution & Safety Boundaries:** 로직 검증 시 스크립트 실행을 통한 물리적 팩트 검증 필수.
