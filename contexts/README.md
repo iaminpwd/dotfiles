@@ -241,7 +241,6 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 더 단순한 아키텍처를 능동적으로 역제안하십시오. (출처: base.AGENTS.md)
-- **[MUST] Strictly Limit Features:** 명시적으로 요청된 기능만 구현하십시오. (출처: base.AGENTS.md)
 ```
 
 ### 5.3. Artifact-Driven Communication (산출물 기반 커뮤니케이션 패턴)
@@ -258,7 +257,6 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Realistic Error Handling:** 발생 확률이 높은 명확한 에러 시나리오(예: 네트워크 타임아웃, 403 권한 오류)는 개별 로직에서 명시적으로 방어하고, 극단적인 엣지 케이스는 개별 방어 대신 공통 에러 핸들러나 미들웨어에 위임하십시오. (출처: base.AGENTS.md)
 - **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
 ```
 

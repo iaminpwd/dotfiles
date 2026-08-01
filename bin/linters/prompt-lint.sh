@@ -172,6 +172,62 @@ check_documented_clause_existence() {
 }
 
 # -----------------------------------------------------------------------------
+# 9. CORE EXCEPTION HOOK 마커 무결성 검사 (블랑켓 무효화 금지 + 룰 실재성 대조)
+# -----------------------------------------------------------------------------
+check_exception_hook_integrity() {
+  log_info "--- Step: Exception Hook Marker Integrity ---"
+  local base_agents="$CONTEXTS_DIR/base.AGENTS.md"
+  [ -f "$base_agents" ] || {
+    log_info "[INFO] 예외 마커 검사 건너뜀 (contexts/base.AGENTS.md 없음)."
+    return
+  }
+
+  # base.AGENTS.md에 실재하는 조항 이름 집합 추출 (Documented Clause Existence와 동일 패턴)
+  local names_file
+  names_file=$(mktemp)
+  sed -nE 's/^[[:space:]]*[-*][[:space:]]+\*\*(\[[^]]+\][[:space:]]*)?([A-Za-z][A-Za-z0-9 &'"'"'\/-]*[A-Za-z0-9])[[:space:]]*(\([^)]*\))?[[:space:]]*:\*\*.*/\2/p' \
+    "$base_agents" | sort -u >"$names_file"
+
+  # "전체 무효화" 류 블랑켓(범위 미특정) 선언 금지 문구
+  local blanket_pattern='전체 무효화|전면 무효화|FULL RULE OVERRIDE|모든 룰'
+  local skill_md marker_line blanket_hit block item_line item_name
+
+  while IFS= read -r skill_md; do
+    [ -f "$skill_md" ] || continue
+    grep -q "EXCEPTION APPLIED" "$skill_md" || continue
+
+    marker_line=$(grep "EXCEPTION APPLIED" "$skill_md" || true)
+    blanket_hit=$(grep -E "$blanket_pattern" <<<"$marker_line" || true)
+    if [ -n "$blanket_hit" ]; then
+      echo "❌ [ERROR] 범위를 특정하지 않은 예외 선언(블랑켓 무효화): $skill_md" >&2
+      echo "    완화 대상 룰을 base.AGENTS.md CORE EXCEPTION HOOK 포맷대로 개별 열거하십시오." >&2
+      EXIT_CODE=1
+      continue
+    fi
+
+    # 마커가 시작된 블록쿼트(연속된 '>' 라인) 안에서 근거 불릿(- **이름**)만 추출
+    block=$(awk '
+      /EXCEPTION APPLIED/ { infound=1 }
+      infound { if ($0 ~ /^>/) { print; next } else { exit } }
+    ' "$skill_md")
+
+    while IFS= read -r item_line; do
+      [ -z "$item_line" ] && continue
+      item_name=$(sed -E 's/^>[[:space:]]*-[[:space:]]+\*\*([^*]+)\*\*.*/\1/' <<<"$item_line")
+      [ -z "$item_name" ] && continue
+      grep -qxF -- "$item_name" "$names_file" || {
+        echo "❌ [ERROR] 예외 대상으로 열거된 룰이 base.AGENTS.md에 실재하지 않음: $skill_md" >&2
+        echo "    선언된 이름: '$item_name' (개명·삭제됐거나 오타일 수 있습니다)" >&2
+        EXIT_CODE=1
+      }
+    done < <(grep -E '^>[[:space:]]*-[[:space:]]+\*\*' <<<"$block" || true)
+  done < <(find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -name "SKILL.md" -print)
+
+  rm -f "$names_file"
+  log_info "[INFO] 예외 마커 무결성 검사 완료."
+}
+
+# -----------------------------------------------------------------------------
 # 4. 파일 크기 제약 (150줄) 검사
 # -----------------------------------------------------------------------------
 check_file_size() {
@@ -370,6 +426,7 @@ main() {
   check_reference_links
   check_orphaned_files
   check_documented_clause_existence
+  check_exception_hook_integrity
   check_file_size
   check_vendor_leakage
   check_code_fences

@@ -16,9 +16,7 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 버전 관리 (Git) 및 포매터 안전망
-- **[PREFER] Explicit Commit Request:** 사용자가 커밋을 명시적으로 요청한 경우에만 `git commit`을 실행할 것. 단순 코드 수정이나 검증 완료 자체는 커밋 요청이 아니므로, 지시가 없을 때는 변경 사항만 남겨두고 보고할 것.
 - **[MUST] Semantic Commits:** 사용자가 커밋을 요청한 경우, `feat:`, `fix:`, `chore:`, `docs:` 등 시맨틱 커밋을 강제할 것. **모든 커밋 메시지는 반드시 한국어로 작성할 것.** 동일한 목적(하나의 기능 추가·버그 수정·리팩토링)을 위해 여러 파일을 함께 수정했다면 하나의 커밋으로 묶고, 서로 다른 목적이 섞인 경우에만 목적별로 분리하여 개별 커밋할 것.
-- **[MUST] Safe Rebase Workflow:** 아직 원격 저장소에 Push되지 않은 로컬 커밋에 한해서만 Rebase 및 Squash 작업을 수행할 것. 이미 원격에 반영된 커밋 히스토리를 변경하는 파괴적 조작(`git push -f`)은 반드시 사용자의 명시적 승인을 받은 후에만 실행할 것.
 - **[MUST] Targeted Execution:** 포매터 실행 시 의도한 파일만 정확히 수정하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행할 것.
 
 ### 2.2 로컬 멱등성 및 환경 검증 (3D Local Verification)

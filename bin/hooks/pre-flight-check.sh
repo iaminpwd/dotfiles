@@ -712,6 +712,37 @@ run_delegated_skill_checks() {
   shopt -u nullglob
 }
 
+# 13. Provenance Logging Reminder (비차단 알림)
+# 룰 근거가 필요했는지는 모델의 판단 영역이라 기계적으로 확정할 수 없으므로, 이 검사는
+# 절대 커밋을 막지 않는다(항상 return 0). agent-edits-hook.sh가 남긴 더미 라인
+# (result: OK/ERROR/FLAGGED)이 아직 log-edit.sh로 보강(SUCCESS)되지 않은 변경 파일이
+# 있으면 목록만 보여준다. "SUCCESS만 보강 완료"라는 기준은 log-edit.sh 자신의 재진입
+# 판정 로직(`$5!="SUCCESS"`, bin/utils/log-edit.sh 100행)과 동일하게 맞춘 것이다.
+check_provenance_reminder() {
+  local edits_log="$REPO_ROOT/.agent-state/edits.log"
+  [ -f "$edits_log" ] || return 0
+  [ "${#GLOBAL_TARGET_FILES[@]}" -eq 0 ] && return 0
+
+  local f last_line last_result unresolved=()
+  for f in "${GLOBAL_TARGET_FILES[@]}"; do
+    [ -z "$f" ] && continue
+    last_line=$(awk -F' \\| ' -v r="$f" '$2==r {line=$0} END{print line}' "$edits_log" 2>/dev/null) || continue
+    [ -z "$last_line" ] && continue
+    last_result=$(awk -F' \\| ' '{print $5}' <<<"$last_line" 2>/dev/null) || continue
+    case "$last_result" in
+    SUCCESS) ;;
+    *) unresolved+=("$f") ;;
+    esac
+  done
+
+  if [ "${#unresolved[@]}" -gt 0 ]; then
+    log_info "--- Step: Provenance Logging Reminder (Non-blocking) ---"
+    echo "[WARNING] 아래 변경 파일은 아직 log-edit.sh로 근거가 보강되지 않았습니다. 룰 근거가 있는 변경이면 보강하고, 근거 없는 사소한 수정이면 무시하십시오:"
+    printf '    %s\n' "${unresolved[@]}"
+  fi
+  return 0
+}
+
 # -----------------------------------------------------------------------------
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
@@ -884,6 +915,7 @@ main() {
   validate_security
   validate_finops_costs
   run_delegated_skill_checks
+  check_provenance_reminder
 
   # 검증 성공 시 스테이징 캐시 갱신 (쓰기 실패 시 무시, 동시 실행 시 원자적 덮어쓰기로 캐시 파일 손상 방지)
   if [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then

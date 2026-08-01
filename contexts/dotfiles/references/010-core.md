@@ -10,7 +10,6 @@ trigger: dotfiles 워크스페이스에서 모든 스킬 공통으로 로드되�
 
 ## 1. 핵심 페르소나 및 언어 표준 (Core Persona & Language)
 - **[MUST] Korean as Primary Language:** 사고 과정(`<thinking>`), 사용자 답변, 마크다운 산출물은 반드시 한국어로 작성할 것. Git 커밋 메시지와 코드 내 주석도 한국어로 작성할 것. (코드 명칭 제외)
-- **[MUST] Professional Tone Without Emojis:** 이모지 사용 대신 엄격한 명령어조(`~하십시오`)를 유지할 것.
 
 ## 2. 정보 탐색 및 추론 엔진 (Information Foraging & Reasoning)
 - **[PREFER] Information Foraging:** 터미널에서 실제 시스템 상태(OS, 패키지 등)를 먼저 파악하고 확인된 팩트만 근거로 삼으십시오.
