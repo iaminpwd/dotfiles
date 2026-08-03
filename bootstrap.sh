@@ -65,7 +65,7 @@ if command -v trufflehog &>/dev/null; then
   }
 fi
 
-chmod +x "$SCRIPT_DIR/git/.githooks/pre-commit" "$SCRIPT_DIR/git/.githooks/commit-msg" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/git/.githooks/pre-commit" "$SCRIPT_DIR/git/.githooks/commit-msg" "$SCRIPT_DIR/git/.githooks/pre-push" 2>/dev/null || true
 
 cd "$SCRIPT_DIR" || exit 1
 

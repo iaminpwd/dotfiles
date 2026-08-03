@@ -74,44 +74,13 @@ fi
 # 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
-# 변경된 스킬 폴더에 한정하여 회귀 테스트 실행.
-# 성능 최적화를 위해 전체 테스트 대신 영향받는 스킬만 트리거 (공통 모듈 변경 시 전체 검증).
-CHANGED_SKILLS=()
-add_skill() {
-  local s existing
-  s=$1
-  [ -x "$REPO_ROOT/contexts/$s/tests/run.sh" ] || return 0
-  for existing in "${CHANGED_SKILLS[@]:-}"; do
-    [ "$existing" = "$s" ] && return 0
-  done
-  CHANGED_SKILLS+=("$s")
-}
-
-for FILE in "${STAGED_FILES[@]:-}"; do
-  case "$FILE" in
-  contexts/pre-flight-check/tests/lib/*)
-    # tf 픽스처 공용 라이브러리를 참조하는 주요 클라우드 스킬 테스트 트리거
-    for LIB_SKILL in aws azure openstack; do
-      add_skill "$LIB_SKILL"
-    done
-    ;;
-  contexts/pre-flight-check/scripts/*)
-    for DIR in "$REPO_ROOT"/contexts/*/tests/run.sh; do
-      [ -e "$DIR" ] || continue
-      SKILL=${DIR#"$REPO_ROOT"/contexts/}
-      add_skill "${SKILL%%/*}"
-    done
-    ;;
-  contexts/*/scripts/* | contexts/*/tests/*)
-    SKILL=${FILE#contexts/}
-    add_skill "${SKILL%%/*}"
-    ;;
-  bootstrap.sh | ansible/site.yml | bin/utils/merge-agent-hooks.sh | contexts/base.hooks.json)
-    # bootstrap.sh 와 ansible 관련 셋업 변경 시 dotfiles 스킬 검증 묶어서 실행
-    add_skill dotfiles
-    ;;
-  esac
-done
+# 이 훅 자체가 실제 git 커밋 시점에만 실행되므로, "지금이 진짜 커밋인가"의 신호로
+# 그대로 쓴다. `just test` 같은 일반 개발 루프에서는 이 변수가 꺼져 있어 infracost
+# 무료 티어 API 호출을 아낀다. 아래 PFC_TARGET(pre-flight-check.sh 본체, 지금
+# 스테이징된 실제 diff 검증)이 이 신호로 FinOps 비용 검증까지 수행한다. 스킬 회귀
+# 스위트(픽스처 기반 FinOps 테스트 포함)는 pre-push로 옮겼고, 거기서도 이 변수를
+# 동일한 이유로 별도로 켠다(2026-08-04).
+export RUN_COST_CHECK=true
 
 # AI 토큰 최적화를 위해 compact-runner.sh가 존재하면 래퍼로 사용한다.
 COMPACT_RUNNER="$REPO_ROOT/bin/hooks/compact-runner.sh"
@@ -119,15 +88,58 @@ if [ ! -x "$COMPACT_RUNNER" ]; then
   COMPACT_RUNNER="bash"
 fi
 
-if [ "${#CHANGED_SKILLS[@]}" -gt 0 ]; then
-  echo "🧪 변경된 스킬의 회귀 테스트를 실행합니다: ${CHANGED_SKILLS[*]}"
-  for SKILL in "${CHANGED_SKILLS[@]}"; do
-    if ! "$COMPACT_RUNNER" "$REPO_ROOT/contexts/$SKILL/tests/run.sh"; then
-      echo "❌ $SKILL 회귀 테스트 실패로 커밋이 차단되었습니다."
-      echo "   재현: bash $REPO_ROOT/contexts/$SKILL/tests/run.sh"
-      exit 1
-    fi
+# 스킬별 회귀 스위트(contexts/*/tests/run.sh, checkov/tflint/sam 등 무거운 외부 도구를
+# 반복 호출)는 예전엔 여기서 매 커밋마다 돌았다. 픽스처 기반이라 "지금 이 커밋의 실제
+# 변경분이 안전한가"가 아니라 "검증 로직 자체가 여전히 제대로 도는가"를 확인하는
+# 것이라, 코드가 실제로 이 머신을 떠나기 직전(push)에 한 번만 돌아도 보호 수준은
+# 그대로다. 반복 커밋 시 매번 8~9초씩 무조건 다시 도는 비용만 사라진다(2026-08-04
+# 실측: aws 스킬 커밋 1회 ~12.8초 → pre-push로 옮긴 뒤 pre-commit 쪽은 무관 파일
+# 기준 ~4초로 감소). 실제 이관 지점: git/.githooks/pre-push.
+
+# bin/ 하위(핵심 검증 파이프라인 소스)는 contexts/* 경로 패턴에 안 걸려 pre-push의
+# 스킬 회귀 스위트 트리거 대상도 아니다. 그렇다고 여기서 하드 블록하면 로컬마다 다른
+# 도구 설치 상태(yq/promtool/infracost 등) 때문에 무관한 변경까지 막히는 일이 생긴다
+# — 그건 CI가 할 일이지 로컬 훅이 할 일이 아니다. 대신 어떤 회귀 스위트를 수동으로
+# 돌려봐야 하는지만 비차단으로 안내한다(2026-08-04).
+#
+# 이 훅은 전역 core.hooksPath라 dotfiles 밖의 임의 ~/workspace 저장소에서도 실행된다.
+# bin/linters/*.sh 같은 경로는 dotfiles 자신의 구조라, 저장소 판별 없이 매칭하면
+# 외부 저장소에 우연히 같은 상대경로(예: bin/hooks/foo.sh)가 있을 때 존재하지도 않는
+# dotfiles 테스트 경로를 안내하는 오탐이 난다. dotfiles 저장소 안에서 커밋할 때만 켠다.
+if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
+  BIN_REMINDERS=()
+  for FILE in "${STAGED_FILES[@]:-}"; do
+    case "$FILE" in
+    bin/linters/db-sg-checker.sh)
+      BIN_REMINDERS+=("test-db-sg.sh")
+      ;;
+    bin/linters/idempotency-check.sh)
+      BIN_REMINDERS+=("test-idempotency.sh")
+      ;;
+    bin/hooks/compact-runner.sh)
+      BIN_REMINDERS+=("test-compact-runner.sh")
+      ;;
+    bin/lib/tool-probe.sh | bin/hooks/plugins/*.sh)
+      BIN_REMINDERS+=("test-tool-probe-ssot.sh" "test-plugin-loop.sh")
+      ;;
+    bin/hooks/pre-flight-check.sh)
+      BIN_REMINDERS+=("run.sh (전체 — pre-flight-check.sh 는 범용 로직이라 파급 범위가 넓음)")
+      ;;
+    bin/linters/*.sh | bin/hooks/*.sh | bin/lib/*.sh)
+      BIN_REMINDERS+=("run.sh (전체 — 아직 전용 서브스위트가 없는 스크립트)")
+      ;;
+    esac
   done
+  if [ "${#BIN_REMINDERS[@]}" -gt 0 ]; then
+    echo "ℹ️  bin/ 핵심 검증 로직 변경이 감지되었습니다. 아래 서브스위트를 수동으로 확인하는 것을 권장합니다(비차단):"
+    # printf에 REPO_ROOT + 리마인더 배열을 한 포맷 문자열의 두 %s로 같이 넘기면, 인자가
+    # 포맷보다 많을 때 printf가 포맷을 재순환시켜 REPO_ROOT 자리에 리마인더 값이 밀려
+    # 들어간다. 리마인더 이름을 먼저 중복 제거한 뒤 REPO_ROOT는 매 줄 루프 안에서
+    # 고정값으로만 쓴다.
+    while IFS= read -r reminder; do
+      echo "    bash $REPO_ROOT/contexts/pre-flight-check/tests/$reminder"
+    done < <(printf '%s\n' "${BIN_REMINDERS[@]}" | sort -u)
+  fi
 fi
 
 # contexts/ 하위 룰북(.md) 변경 시 프롬프트 린트를 실행하여 참조 파손 방지.
@@ -225,7 +237,8 @@ elif [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
 fi
 
 if [ -n "$PFC_TARGET" ]; then
-  export RUN_COST_CHECK=true
+  # RUN_COST_CHECK는 위(77행 부근)에서 이미 켰다. 여기서 또 export하면 값 자체는
+  # 같아도 "진실의 원천이 두 곳"이 되어 한쪽만 고치는 드리프트가 생긴다.
   "$COMPACT_RUNNER" "$PFC_TARGET" || {
     echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
     exit 1
