@@ -30,6 +30,7 @@ set -euo pipefail
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
 
 PASS_COUNT=0
@@ -116,6 +117,19 @@ print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misc
   fi
 }
 
+# pre-flight-check.sh 의 validate_docker 와 동일하게 container-hardening-gate.sh 에
+# Dockerfile 경로를 그대로 넘긴다. want_code 는 기대 종료 코드(0=통과, 1=차단)다.
+run_hardening_gate() {
+  local name=$1 want_code=$2
+  local status=0
+  bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" "$FIXTURES/$name" >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq "$want_code" ]; then
+    report "$name" 0
+  else
+    report "$name" 1 "기대 exit=$want_code / 실제 exit=$status"
+  fi
+}
+
 echo "=== containers 검증 파이프라인 회귀 테스트 ==="
 
 echo "--- hadolint (pre-flight-check.sh / 커밋 중단) ---"
@@ -130,6 +144,12 @@ echo "--- trivy misconfig (pre-flight-check.sh / 경고 전용) ---"
 if require_tool trivy; then
   run_trivy_misconfig ok-baseline.Dockerfile ""
   run_trivy_misconfig fail-root-user.Dockerfile DS-0002
+fi
+
+echo "--- container-hardening-gate.sh DS-0002 (pre-flight-check.sh / 커밋 중단, 2026-08-04 도입) ---"
+if require_tool trivy; then
+  run_hardening_gate ok-baseline.Dockerfile 0
+  run_hardening_gate fail-root-user.Dockerfile 1
 fi
 
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.

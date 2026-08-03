@@ -458,6 +458,24 @@ validate_docker() {
       log_info "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
 
+    # DS-0002(컨테이너가 root로 실행됨) 하드 블록. hadolint에는 이 룰이 없다(2026-08-04
+    # 실측: hadolint 2.12.0이 USER 누락 Dockerfile을 무관한 경고만 내고 통과시킴).
+    # validate_security()의 trivy misconfig 스캔이 같은 DS-0002를 이미 경고로는
+    # 잡고 있었지만, db-sg-checker.sh(DB 포트 0.0.0.0/0 노출)와 같은 급의 오탐 거의
+    # 없는 기초 항목이라 다른 하드 게이트들과 같은 강제력으로 맞춘다. container-
+    # hardening-gate.sh는 파일 경로를 받으면 trivy conf로 그 경로만 검사하고 이미지
+    # 스캔 분기(dive/trivy image, 릴리즈 단계 책임)는 타지 않는다.
+    local HARDENING_SCRIPT="$PFC_SCRIPT_DIR/../linters/container-hardening-gate.sh"
+    if [ -x "$HARDENING_SCRIPT" ]; then
+      local dockerfile
+      for dockerfile in "${dockerfiles[@]}"; do
+        if ! bash "$HARDENING_SCRIPT" "$dockerfile"; then
+          echo "❌ [ERROR] $dockerfile 컨테이너 하드닝 검사(DS-0002)에 실패하여 커밋이 중단되었습니다." >&2
+          return 1
+        fi
+      done
+    fi
+
     # 여기에는 예전에 syft(소스 SBOM 생성)와 grype(의존성 CVE 스캔)의 `dir:.` 소스 스캔이
     # 있었으나 제거했다. 두 도구가 보던 대상(requirements.txt/package.json/go.mod 등 의존성
     # 매니페스트)은 validate_security 의 `trivy fs --scanners vuln` 이 이미 같은 저장소를
