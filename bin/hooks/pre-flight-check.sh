@@ -139,8 +139,8 @@ validate_shell() {
   done
 
   # Idempotency Static Analysis
-  # PFC_SCRIPT_DIR 이 이미 contexts/ 안쪽(contexts/pre-flight-check/scripts)이므로 경로에
-  # contexts/ 를 다시 붙이면 <repo>/contexts/contexts/... 로 빗나간다.
+  # PFC_SCRIPT_DIR은 readlink -f로 심볼릭 링크를 완전히 해소한 경로(bin/hooks)라,
+  # 어떤 배포 경로로 호출돼도 항상 실제 원본 위치 기준으로 상대 이동한다.
   local IDEMPOTENCY_SCRIPT="$PFC_SCRIPT_DIR/../linters/idempotency-check.sh"
   if [ -f "$IDEMPOTENCY_SCRIPT" ]; then
     bash "$IDEMPOTENCY_SCRIPT" "${shell_files[@]}" || true
@@ -669,11 +669,12 @@ validate_finops_costs() {
 
       local cost_output_tmp
       cost_output_tmp=$(mktemp)
-      # 임시파일을 함수 종료 시 정리 (전역 EXIT trap 오염 방지)
-      # shellcheck disable=SC2064
-      local _cleanup_cost
-      _cleanup_cost() { rm -f "$cost_output_tmp"; }
-      trap '_cleanup_cost' RETURN
+      # trap ... RETURN 은 bash에서 함수 스코프가 아니라 프로세스 전역이라, 이 함수가
+      # 끝난 뒤에도 트랩이 남아 있다가 이후 리턴되는 다른 함수에서 발동해 이미 스코프를
+      # 벗어난 $cost_output_tmp 를 참조하며 "unbound variable" 로 죽는 실사용 버그가
+      # 있었다(2026-08-04 실측: RUN_COST_CHECK=true 실제 커밋 경로에서만 재현됨). 아래
+      # 모든 종료 경로(679~690행)가 이미 rm -f 로 수동 정리하므로 트랩 없이도 누수가
+      # 없다.
 
       # infracost breakdown을 수행하여 비용 항목 확인
       if infracost breakdown --path . >"$cost_output_tmp" 2>/dev/null; then
