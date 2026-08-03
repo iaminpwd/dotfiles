@@ -69,14 +69,21 @@ elif command -v infracost >/dev/null 2>&1; then
   #    함수 자체를 거치지 않아 못 잡았다(2026-08-04 실측: ~/workspace 외부 저장소
   #    스모크 테스트로 발견). pre-flight-check.sh 전체를 실제로 돌려서 이 함수 뒤에도
   #    파이프라인이 안 죽고 끝까지 완주하는지를 고정한다.
-  #    (fixtures-finops/ok-baseline 은 Extended Support 회피용 S3 버킷이라 checkov의
-  #    S3 하드닝 규칙(버저닝/암호화/퍼블릭 액세스 차단 등)에 걸려 validate_terraform
-  #    에서 먼저 죽는다 — validate_finops_costs까지 도달하려면 checkov도 통과하는
-  #    aws 스킬의 실측 ok-baseline을 재사용해야 한다.)
+  #    (이 테스트는 실제 인프라 정합성이 아니라 "파이프라인이 안 죽고 끝까지 도는지"만
+  #    확인하면 된다. 처음엔 checkov도 통과하는 aws 스킬의 ok-baseline[보안 그룹 등
+  #    실제 aws provider 필요]을 재사용했는데, terraform init이 매번 새 mktemp
+  #    디렉토리에서 AWS provider를 새로 받느라 ~14초가 걸렸다(2026-08-04 실측). provider
+  #    선언이 아예 없는 최소 tf 파일은 terraform init이 0.16초로 끝나고, 리소스가
+  #    없으니 checkov/tflint도 그냥 통과한다 — 같은 검증 목적을 20배 가까이 빠르게
+  #    만족시킨다.)
   E2E_REPO=$(mktemp -d)
   trap 'rm -rf "$E2E_REPO"' EXIT
   git -C "$E2E_REPO" init -q
-  cp "$REPO_ROOT/contexts/aws/tests/fixtures/ok-baseline/main.tf" "$E2E_REPO/main.tf"
+  cat >"$E2E_REPO/main.tf" <<'TF'
+terraform {
+  required_version = "~> 1.5"
+}
+TF
   git -C "$E2E_REPO" add main.tf
   CODE=0
   OUT=$( (cd "$E2E_REPO" && QUIET=0 RUN_COST_CHECK=true bash "$REPO_ROOT/bin/hooks/pre-flight-check.sh") 2>&1) || CODE=$?
