@@ -50,7 +50,7 @@ priority: highest
   1. **실행 스코프**: 검증 명령어 실행 시 전체가 아닌 '수정한 코드의 최소 단위'만 명시.
   2. **읽기 전용 우선**: 검증 시 상태를 변경하지 않는 읽기 전용 도구 최우선 사용.
   3. **변경 감지 시 역제안**: 코드 수정이 동반되는 도구는 결과 선 제시 후 `[수정 승인]` 획득 시에만 실행할 것.
-- **[Trigger: After Infra/Script Code Change] Pre-Flight Gate:** 위 개별/최소 단위 검증은 이 단계 이전에 적용하며, 완료 선언 직전 최종 게이트로 `compact-runner.sh`를 단일 실행하여 통합 정량 검증을 완수할 것 (개별 검증을 대체하지 않음).
+- **[Trigger: After Infra/Script Code Change] Pre-Flight Gate:** 위 개별/최소 단위 검증은 이 단계 이전에 적용하며, 완료 선언 직전 최종 게이트로 `run-suite.sh`를 단일 실행하여 통합 정량 검증을 완수할 것 (개별 검증을 대체하지 않음).
 
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 
@@ -97,9 +97,9 @@ priority: highest
 - **[MUST] Pre-Commit Gate:** 커밋 전 모든 검증(lint 등) pass 필수.
 
 ## 9. 팩트 검증 및 프롬프트 품질 관리 (Fact Verification & Prompt Quality Management)
-- **[Trigger: After Code Change Guided by a Specific Rule] Provenance Logging:** `contexts/` 룰북의 특정 항목을 근거로 코드를 수정했을 때만, 변경 후 터미널에서 `log-edit.sh <file_path> <rule_source> <purpose>` 명령어를 실행하여 수동 근거 기록.
+- **[Trigger: After Code Change Guided by a Specific Rule] Provenance Logging:** `contexts/` 룰북의 특정 항목을 근거로 코드를 수정했을 때만, 변경 후 터미널에서 `record-provenance.sh <file_path> <rule_source> <purpose>` 명령어를 실행하여 수동 근거 기록.
   - **[MUST] Skill-Qualified Rule Source:** `rule_source`는 반드시 `<스킬>/<파일명>` 형식으로 명시할 것 (예: `aws/050-iac-standard.md`).
-  - **[MUST] Multiple References:** 하나의 변경이 2개 이상의 룰 파일을 근거로 한다면, `rule_source`에 콤마(`,`)로 구분해 모두 나열할 것. (예: `log-edit.sh main.tf aws/030-finops-optimization.md,aws/020-security-compliance.md "스팟 인스턴스 적용 및 IAM 최소권한 강화"`)
+  - **[MUST] Multiple References:** 하나의 변경이 2개 이상의 룰 파일을 근거로 한다면, `rule_source`에 콤마(`,`)로 구분해 모두 나열할 것. (예: `record-provenance.sh main.tf aws/030-finops-optimization.md,aws/020-security-compliance.md "스팟 인스턴스 적용 및 IAM 최소권한 강화"`)
   - **[MUST] Skip on No Mapped Rule:** 오타 수정, 사용자의 직접 지시 등 특정 룰 문서에 매핑되지 않는 변경은 로깅을 생략할 것. 근거 없는 `rule_source` 기재는 금지.
 - **[Trigger: Ask for Code Provenance] Audit Edits Log:** 사용자가 "어떤 프롬프트/룰 때문에 이렇게 코드를 짰는가?" 등 코드 변경 사유나 출처를 질문할 경우, 답변 전 즉시 `.agent-state/edits.log` 파일을 조회하여 해당 파일의 수정 이력을 확인하고 팩트 기반으로 답변할 것.
-- **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 터미널에서 `prompt-flywheel.sh` 명령어로 룰 개정안 역제안.
+- **[Trigger: 연속 실패 | Fast Fail & Halt | 사용자 지적] Quality Flywheel:** 계속 실패 시 `.agent-state/edits.log` 최근 20줄을 직접 읽어 원인이 된 룰/프롬프트를 특정하고, 해당 룰북 원문을 재조회해 결함이 여전하면 구체적 개정안을 역제안.

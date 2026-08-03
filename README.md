@@ -43,7 +43,7 @@
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
-- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/compact-runner.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/pre-flight-check/tests/run.sh`의 회귀 테스트 8건이 고정합니다.
+- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/pre-flight-check/tests/run.sh`의 회귀 테스트 8건이 고정합니다.
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
 워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.
@@ -116,9 +116,12 @@ cat ~/.gemini/config/AGENTS.md | head -5
 ls ~/.gemini/config/skills/
 
 # 통합 사전 검증 및 테스트 통과 확인 (Justfile 활용)
-just check
-just test
+just check     # pre-flight-check.sh --all: 저장소 전체 파일에 shellcheck/tflint/checkov 등 정적 분석
+just test      # contexts/*/tests/run.sh 전체: 각 검사 스크립트가 ok/fail 픽스처를 올바르게 판정하는지 회귀 테스트
+just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-suite.sh로 한 번에 실행 (가장 종합적인 검증, 코드 수정 후 최종 확인용)
 ```
+
+마지막 줄에 `❌`가 하나도 없고 `-> [✓] <경로>`만 쌓여 있으면 통과입니다. 실패한 항목만 원형 로그가 그대로 남으므로 그 부분만 읽으면 됩니다.
 
 ---
 
@@ -134,10 +137,10 @@ just test
 ├── assets/               # 아키텍처 다이어그램 및 문서용 이미지 자산
 │
 ├── bin/                  # 모듈화된 실행 스크립트 및 훅/린터
-│   ├── hooks/                 # pre-flight-check.sh, compact-runner.sh, agent-edits-hook.sh 및 plugins/
-│   ├── linters/               # semantic-commit-lint.sh, idempotency-check.sh, prompt-lint.sh 등
-│   ├── utils/                 # log-edit.sh, prompt-flywheel.sh, stow-backup.sh 등
-│   └── lib/                   # tool-probe.sh 등 공용 도구 탐색 라이브러리
+│   ├── hooks/                 # pre-flight-check.sh, run-suite.sh, agent-edits-hook.sh 및 plugins/
+│   ├── linters/               # semantic-commit-lint.sh, idempotency-check.sh, prompt-lint.sh, test-coverage-check.sh 등
+│   ├── utils/                 # record-provenance.sh, stow-backup.sh 등
+│   └── lib/                   # tool-probe.sh, git-relpath.sh 등 공용 탐색/헬퍼 라이브러리
 │
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
 │   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
