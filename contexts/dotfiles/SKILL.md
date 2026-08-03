@@ -27,10 +27,15 @@ description: |
 
 ---
 
-> **[ EXCEPTION APPLIED: Caution Over Speed, Exhaustive Review, Provenance Logging ]**
-> 완화 근거: 본 스킬이 활성화된 `dotfiles` 레포지토리는 `bin/hooks/pre-flight-check.sh`·`compact-runner.sh`·시맨틱 커밋 훅 등 자동화된 안전망이 전역 룰의 수동 신중함을 상당 부분 대체하므로, 아래 3개 항목만 명시적으로 완화합니다.
+> **[ EXCEPTION APPLIED: Caution Over Speed, Exhaustive Review ]**
+> 완화 근거: 본 스킬이 활성화된 `dotfiles` 레포지토리는 `bin/hooks/pre-flight-check.sh`·`compact-runner.sh`·시맨틱 커밋 훅 등 자동화된 안전망이 전역 룰의 수동 신중함을 상당 부분 대체하므로, 아래 2개 항목만 명시적으로 완화합니다.
 > - **Caution Over Speed** (`base.AGENTS.md` 최상단): `references/010-core.md`가 Self-Healing·Break-Glass·Fast Fail & Halt 등 자체 안전장치를 별도로 정의하므로 생략.
 > - **Exhaustive Review** (`base.AGENTS.md` §5.2): `references/010-core.md` §2에서 MUST를 PREFER로 낮추되, 단순 수정 작업 예외 조건은 그대로 유지.
-> - **Provenance Logging** (`base.AGENTS.md` §9): 이 워크스페이스의 자체 Operational Gate(본 문서 §2 Recursive Reference Check + Pre-Flight Check)가 동일한 근거 추적 역할을 대체하므로 `log-edit.sh` 실행을 요구하지 않음.
 >
-> 위 3개 항목을 제외한 전역 룰(보안, Git 규율, 외과적 수정, 시크릿 관리 등)은 예외 없이 그대로 적용되며, `references/` 폴더 문서가 해당 항목들을 구체화합니다.
+> Provenance Logging(`base.AGENTS.md` §9)은 예외 대상에서 제외한다(2026-08-04 재검토: Recursive
+> Reference Check는 "룰을 읽었는가", Pre-Flight Check는 "코드가 맞는가"를 확인할 뿐 "이 변경이 왜
+> 이 룰 때문이었는지"를 기록하지 않아, 애초에 log-edit.sh와 같은 역할을 대체하지 못했다 — 근거
+> 없는 완화였다). 이 워크스페이스에서도 룰 근거가 있는 변경에는 `log-edit.sh`를 정상 실행한다.
+>
+> 위 2개 항목을 제외한 전역 룰(보안, Git 규율, 외과적 수정, 시크릿 관리, Provenance Logging 포함)은
+> 예외 없이 그대로 적용되며, `references/` 폴더 문서가 해당 항목들을 구체화합니다.
