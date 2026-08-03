@@ -10,13 +10,16 @@
 # 개별 오류 지점은 아래에서 각각 `|| exit 0` 으로 명시적 처리.
 set -uo pipefail
 
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+AEH_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$AEH_SCRIPT_DIR/../lib/git-relpath.sh"
+# shellcheck source-path=SCRIPTDIR
+source "$AEH_SCRIPT_DIR/../lib/jq-resolve.sh"
+
 # 훅 실패가 에이전트 루프를 저해하지 않도록 보장
-# jq 실행 경로 안전 확보: mise shim 실패 시 원본 바이너리(installs/jq/*)로 폴백
-JQ=$(command -v jq 2>/dev/null) || JQ=""
-if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
-  JQ=$(find "$HOME/.local/share/mise/installs/jq" -maxdepth 3 -name jq -type f 2>/dev/null | sort -V | tail -1)
-  { [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; } || exit 0
-fi
+JQ=$(resolve_jq)
+{ [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; } || exit 0
 
 payload=$(cat)
 
@@ -42,9 +45,8 @@ case "$target" in */.agent-state/edits.log) exit 0 ;; esac
 
 # 로그 디렉토리 결정: git 최상위 > 워크스페이스 > 파일 디렉토리
 # 모노레포 환경 통합 기록 및 심볼릭 링크 경로 불일치 방지를 위해 실경로(realpath) 사용
-target=$(readlink -f "$target" 2>/dev/null || echo "$target")
+IFS=$'\t' read -r target git_root < <(resolve_target_and_git_root "$target")
 target_dir=$(dirname "$target")
-git_root=$(git -C "$target_dir" rev-parse --show-toplevel 2>/dev/null) || git_root=""
 if [ -n "$git_root" ]; then
   root="$git_root"
 elif [ -z "${root:-}" ] || [ ! -d "$root" ]; then

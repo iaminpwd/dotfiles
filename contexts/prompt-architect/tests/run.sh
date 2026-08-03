@@ -9,8 +9,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FAILED=()
-# shellcheck disable=SC2043
-for suite in test_prompt_lint; do
+for suite in test_prompt_lint test-record-provenance; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done

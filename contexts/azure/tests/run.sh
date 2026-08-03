@@ -26,6 +26,8 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 라이브러리를 실제로 따라가 존재 여부까지 검증한다.
 # shellcheck source-path=SCRIPTDIR
 source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
+# shellcheck source-path=SCRIPTDIR
+source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
 
 echo "=== azure Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AZURE_10
@@ -54,17 +56,28 @@ bicep_report() {
 }
 
 if command -v bicep >/dev/null 2>&1; then
-  status=0
-  bicep build "$BICEP_FIXTURES/ok-baseline.bicep" --stdout >/dev/null 2>&1 || status=$?
-  if [ "$status" -eq 0 ]; then bicep_report "ok-baseline (유효한 Bicep 템플릿)" 0; else bicep_report "ok-baseline (유효한 Bicep 템플릿)" 1 "기대 exit=0 / 실제 exit=$status"; fi
+  # bicep build 는 .NET 런타임 기동 비용이 커서(실측: 2건 순차 3.77초) parallel-pair.sh
+  # (SSOT)로 서로 무관한 두 픽스처를 동시에 돌린다.
+  BICEP_TMPDIR=$(mktemp -d)
+  trap 'rm -rf "${BICEP_TMPDIR:-}"' EXIT
 
-  status=0
-  out=$(bicep build "$BICEP_FIXTURES/fail-unclosed-brace.bicep" --stdout 2>&1) || status=$?
-  if [ "$status" -ne 0 ] && grep -qF "BCP018" <<<"$out"; then
+  # shellcheck disable=SC2034 # parallel_pair_run 안에서 nameref로 간접 참조됨
+  CMD_OK=(bicep build "$BICEP_FIXTURES/ok-baseline.bicep" --stdout)
+  # shellcheck disable=SC2034
+  CMD_FAIL=(bicep build "$BICEP_FIXTURES/fail-unclosed-brace.bicep" --stdout)
+  ok_status=0
+  fail_status=0
+  parallel_pair_run CMD_OK CMD_FAIL ok_status fail_status "$BICEP_TMPDIR/ok" "$BICEP_TMPDIR/fail"
+
+  if [ "$ok_status" -eq 0 ]; then bicep_report "ok-baseline (유효한 Bicep 템플릿)" 0; else bicep_report "ok-baseline (유효한 Bicep 템플릿)" 1 "기대 exit=0 / 실제 exit=$ok_status"; fi
+
+  if [ "$fail_status" -ne 0 ] && grep -qF "BCP018" "$BICEP_TMPDIR/fail"; then
     bicep_report "fail-unclosed-brace (문법 오류 차단)" 0
   else
-    bicep_report "fail-unclosed-brace (문법 오류 차단)" 1 "기대 exit≠0 + BCP018 / 실제 exit=$status"
+    bicep_report "fail-unclosed-brace (문법 오류 차단)" 1 "기대 exit≠0 + BCP018 / 실제 exit=$fail_status"
   fi
+
+  rm -rf "$BICEP_TMPDIR"
 else
   bicep_report "bicep CLI" 1 "도구 미설치 — 'mise install' 후 다시 실행하십시오"
 fi

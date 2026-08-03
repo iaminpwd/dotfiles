@@ -32,6 +32,8 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
+# shellcheck source-path=SCRIPTDIR
+source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -86,21 +88,18 @@ run_hadolint() {
 
 # validate_security 의 '--severity HIGH,CRITICAL --scanners misconfig' 와 동일한
 # 심각도 필터를 적용한다. want_id 가 빈 문자열이면 HIGH 이상 탐지 0건을 기대한다.
-run_trivy_misconfig() {
-  local name=$1 want_id=${2:-}
-  local ids
-  ids=$(trivy config --quiet --severity HIGH,CRITICAL --format json "$FIXTURES/$name" 2>/dev/null |
-    python3 -c "
+PY_EXTRACT_MISCONFIG_IDS='
 import json,sys
 d=json.load(sys.stdin)
-print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misconfigurations',[])})))
-" 2>/dev/null || echo "__SCAN_ERROR__")
+print(" ".join(sorted({m["ID"] for r in d.get("Results",[]) for m in r.get("Misconfigurations",[])})))
+'
 
+judge_trivy_misconfig() {
+  local name=$1 want_id=$2 ids=$3
   if [ "$ids" = "__SCAN_ERROR__" ]; then
     report "$name" 1 "trivy config 실행 또는 결과 파싱에 실패했습니다"
     return
   fi
-
   if [ -z "$want_id" ]; then
     if [ -z "$ids" ]; then
       report "$name" 0
@@ -109,7 +108,6 @@ print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misc
     fi
     return
   fi
-
   if grep -q " $want_id " <<<" $ids "; then
     report "$name" 0
   else
@@ -117,17 +115,57 @@ print(' '.join(sorted({m['ID'] for r in d.get('Results',[]) for m in r.get('Misc
   fi
 }
 
+# trivy config 는 인터프리터 없는 Go 바이너리라 개별 호출은 빠르지만(실측 ~0.74초/건),
+# 아래 두 쌍(misconfig, hardening-gate)이 각각 2번씩 순차 호출돼 누적됐다. parallel-pair.sh
+# (SSOT)로 ok/fail 픽스처를 동시에 스캔하고, JSON 파싱(python3)만 캡처된 파일에 대해
+# wait 이후 순차로 수행한다(파싱 자체는 가벼워 병렬화 대상이 아님).
+run_trivy_misconfig_pair() {
+  local ok_name=$1 fail_name=$2 want_id=${3:-}
+  local tmpdir ok_status fail_status ok_ids fail_ids
+  tmpdir=$(mktemp -d)
+  trap 'rm -rf "${tmpdir:-}"' EXIT
+
+  # shellcheck disable=SC2034,SC2016 # nameref로 간접 참조됨 / $1은 bash -c 서브셸 안에서 확장돼야 함
+  CMD_OK=(bash -c 'trivy config --quiet --severity HIGH,CRITICAL --format json "$1" 2>/dev/null' _ "$FIXTURES/$ok_name")
+  # shellcheck disable=SC2034,SC2016
+  CMD_FAIL=(bash -c 'trivy config --quiet --severity HIGH,CRITICAL --format json "$1" 2>/dev/null' _ "$FIXTURES/$fail_name")
+  parallel_pair_run CMD_OK CMD_FAIL ok_status fail_status "$tmpdir/ok" "$tmpdir/fail"
+
+  ok_ids=$(python3 -c "$PY_EXTRACT_MISCONFIG_IDS" <"$tmpdir/ok" 2>/dev/null) || ok_ids="__SCAN_ERROR__"
+  fail_ids=$(python3 -c "$PY_EXTRACT_MISCONFIG_IDS" <"$tmpdir/fail" 2>/dev/null) || fail_ids="__SCAN_ERROR__"
+
+  judge_trivy_misconfig "$ok_name" "" "$ok_ids"
+  judge_trivy_misconfig "$fail_name" "$want_id" "$fail_ids"
+
+  rm -rf "$tmpdir"
+}
+
 # pre-flight-check.sh 의 validate_docker 와 동일하게 container-hardening-gate.sh 에
 # Dockerfile 경로를 그대로 넘긴다. want_code 는 기대 종료 코드(0=통과, 1=차단)다.
-run_hardening_gate() {
-  local name=$1 want_code=$2
-  local status=0
-  bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" "$FIXTURES/$name" >/dev/null 2>&1 || status=$?
-  if [ "$status" -eq "$want_code" ]; then
-    report "$name" 0
+run_hardening_gate_pair() {
+  local ok_name=$1 ok_want=$2 fail_name=$3 fail_want=$4
+  local tmpdir ok_status fail_status
+  tmpdir=$(mktemp -d)
+  trap 'rm -rf "${tmpdir:-}"' EXIT
+
+  # shellcheck disable=SC2034
+  CMD_OK=(bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" "$FIXTURES/$ok_name")
+  # shellcheck disable=SC2034
+  CMD_FAIL=(bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" "$FIXTURES/$fail_name")
+  parallel_pair_run CMD_OK CMD_FAIL ok_status fail_status "$tmpdir/ok" "$tmpdir/fail"
+
+  if [ "$ok_status" -eq "$ok_want" ]; then
+    report "$ok_name" 0
   else
-    report "$name" 1 "기대 exit=$want_code / 실제 exit=$status"
+    report "$ok_name" 1 "기대 exit=$ok_want / 실제 exit=$ok_status"
   fi
+  if [ "$fail_status" -eq "$fail_want" ]; then
+    report "$fail_name" 0
+  else
+    report "$fail_name" 1 "기대 exit=$fail_want / 실제 exit=$fail_status"
+  fi
+
+  rm -rf "$tmpdir"
 }
 
 echo "=== containers 검증 파이프라인 회귀 테스트 ==="
@@ -142,14 +180,12 @@ fi
 
 echo "--- trivy misconfig (pre-flight-check.sh / 경고 전용) ---"
 if require_tool trivy; then
-  run_trivy_misconfig ok-baseline.Dockerfile ""
-  run_trivy_misconfig fail-root-user.Dockerfile DS-0002
+  run_trivy_misconfig_pair ok-baseline.Dockerfile fail-root-user.Dockerfile DS-0002
 fi
 
 echo "--- container-hardening-gate.sh DS-0002 (pre-flight-check.sh / 커밋 중단, 2026-08-04 도입) ---"
 if require_tool trivy; then
-  run_hardening_gate ok-baseline.Dockerfile 0
-  run_hardening_gate fail-root-user.Dockerfile 1
+  run_hardening_gate_pair ok-baseline.Dockerfile 0 fail-root-user.Dockerfile 1
 fi
 
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.

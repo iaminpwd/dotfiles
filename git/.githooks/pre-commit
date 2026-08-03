@@ -82,10 +82,10 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 # 동일한 이유로 별도로 켠다(2026-08-04).
 export RUN_COST_CHECK=true
 
-# AI 토큰 최적화를 위해 compact-runner.sh가 존재하면 래퍼로 사용한다.
-COMPACT_RUNNER="$REPO_ROOT/bin/hooks/compact-runner.sh"
-if [ ! -x "$COMPACT_RUNNER" ]; then
-  COMPACT_RUNNER="bash"
+# AI 토큰 최적화를 위해 run-suite.sh가 존재하면 래퍼로 사용한다.
+RUN_SUITE="$REPO_ROOT/bin/hooks/run-suite.sh"
+if [ ! -x "$RUN_SUITE" ]; then
+  RUN_SUITE="bash"
 fi
 
 # 스킬별 회귀 스위트(contexts/*/tests/run.sh, checkov/tflint/sam 등 무거운 외부 도구를
@@ -116,8 +116,8 @@ if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
     bin/linters/idempotency-check.sh)
       BIN_REMINDERS+=("test-idempotency.sh")
       ;;
-    bin/hooks/compact-runner.sh)
-      BIN_REMINDERS+=("test-compact-runner.sh")
+    bin/hooks/run-suite.sh)
+      BIN_REMINDERS+=("test-run-suite.sh")
       ;;
     bin/lib/tool-probe.sh | bin/hooks/plugins/*.sh)
       BIN_REMINDERS+=("test-tool-probe-ssot.sh" "test-plugin-loop.sh")
@@ -149,7 +149,7 @@ if [ -f "$PROMPT_LINT" ]; then
     case "$FILE" in
     contexts/*.md)
       echo "📝 룰북(.md) 변경이 감지되어 프롬프트 코퍼스 린트를 실행합니다..."
-      if ! "$COMPACT_RUNNER" "$PROMPT_LINT"; then
+      if ! "$RUN_SUITE" "$PROMPT_LINT"; then
         echo "❌ 프롬프트 코퍼스 린트 실패로 커밋이 차단되었습니다."
         echo "   재현: bash $PROMPT_LINT"
         exit 1
@@ -239,7 +239,7 @@ fi
 if [ -n "$PFC_TARGET" ]; then
   # RUN_COST_CHECK는 위(77행 부근)에서 이미 켰다. 여기서 또 export하면 값 자체는
   # 같아도 "진실의 원천이 두 곳"이 되어 한쪽만 고치는 드리프트가 생긴다.
-  "$COMPACT_RUNNER" "$PFC_TARGET" || {
+  "$RUN_SUITE" "$PFC_TARGET" || {
     echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
     exit 1
   }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# compact-runner.sh
-# 범용 환경에서 토큰 절약을 위해 텍스트 출력을 컴팩트하게 변환하는 검증 래퍼 스크립트
+# run-suite.sh
+# 저장소의 모든 검증 스크립트(pre-flight-check.sh 등)를 묶어서 실행하는 러너.
+# 범용 환경에서 토큰 절약을 위해 텍스트 출력을 컴팩트하게 변환한다.
 #
 # 합격/불합격은 래핑 대상 스크립트의 "종료 코드(exit code)"로만 판정 (거짓 통과 방지)
 #
@@ -33,10 +34,13 @@ if [ "${#SCRIPTS[@]}" -eq 0 ]; then
     SCRIPTS+=("pre-flight-check.sh")
   fi
 
-  # 2. dotfiles 저장소인 경우 예외적으로 prompt-lint.sh 추가
+  # 2. dotfiles 저장소인 경우 예외적으로 prompt-lint.sh, test-coverage-check.sh 추가
   if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
     if command -v prompt-lint.sh >/dev/null 2>&1; then
       SCRIPTS+=("prompt-lint.sh")
+    fi
+    if command -v test-coverage-check.sh >/dev/null 2>&1; then
+      SCRIPTS+=("test-coverage-check.sh")
     fi
   fi
 
@@ -52,38 +56,79 @@ if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   exit 1
 fi
 
-TMP_OUT=$(mktemp)
-trap 'rm -f "$TMP_OUT"' EXIT
+WORKDIR=$(mktemp -d)
+trap 'rm -rf "$WORKDIR"' EXIT
+
+# 각 스크립트는 서로 무관한 격리된 검증(자기 mktemp 픽스처만 사용)이라 병렬 실행이
+# 안전하다. 동시성은 가용 코어 수를 기본값으로 쓰고 RUN_SUITE_JOBS로 조정 가능하다.
+# (실측: 14개 스킬 스위트를 순차 실행하면 5코어 머신에서 CPU 사용률 103~124%에
+# 그쳤다 — 사실상 코어 1개만 쓰던 것을 병렬화했다.)
+NPROC="${RUN_SUITE_JOBS:-}"
+if [ -z "$NPROC" ]; then
+  NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+fi
+
+run_script() {
+  local script="$1" out_file="$2"
+  local cmd
+  if [ -f "$script" ]; then
+    cmd=(bash "$script")
+  else
+    cmd=("$script")
+  fi
+  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
+    "${cmd[@]}" "${PFC_ARGS[@]}" >"$out_file" 2>&1
+  else
+    "${cmd[@]}" >"$out_file" 2>&1
+  fi
+}
+
+TOTAL="${#SCRIPTS[@]}"
+declare -a RCS
+
+# NPROC개씩 배치로 묶어 병렬 실행한다. 배치 안의 PID는 그 배치에서만 wait 하므로
+# (wait -n 처럼 이미 reap된 PID를 다시 기다리는 이중 대기 문제가 없다) 종료 코드
+# 캡처가 항상 정확하다.
+i=0
+while [ "$i" -lt "$TOTAL" ]; do
+  BATCH_PIDS=()
+  BATCH_IDX=()
+  end=$((i + NPROC))
+  [ "$end" -le "$TOTAL" ] || end=$TOTAL
+  for ((j = i; j < end; j++)); do
+    run_script "${SCRIPTS[$j]}" "$WORKDIR/out.$j" &
+    BATCH_PIDS+=("$!")
+    BATCH_IDX+=("$j")
+  done
+  for k in "${!BATCH_PIDS[@]}"; do
+    rc=0
+    wait "${BATCH_PIDS[$k]}" || rc=$?
+    RCS[${BATCH_IDX[$k]}]=$rc
+  done
+  i=$end
+done
 
 FAILED=()
 
-for script in "${SCRIPTS[@]}"; do
+# 병렬 실행 자체는 완료 순서가 뒤섞이지만, 보고는 항상 SCRIPTS 원래 순서대로
+# 해 출력을 결정적으로 유지한다.
+for idx in "${!SCRIPTS[@]}"; do
+  script="${SCRIPTS[$idx]}"
   # 출력 가독성을 위해 절대 경로에서 REPO_ROOT 또는 HOME 경로를 제거
   SCRIPT_NAME="${script#"$REPO_ROOT"/}"
   SCRIPT_NAME="${SCRIPT_NAME#"$HOME"/}"
-
-  rc=0
-  if [ -f "$script" ]; then
-    CMD=(bash "$script")
-  else
-    CMD=("$script")
-  fi
-
-  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
-    "${CMD[@]}" "${PFC_ARGS[@]}" >"$TMP_OUT" 2>&1 || rc=$?
-  else
-    "${CMD[@]}" >"$TMP_OUT" 2>&1 || rc=$?
-  fi
+  rc="${RCS[$idx]}"
+  out_file="$WORKDIR/out.$idx"
 
   if [ "$rc" -eq 0 ]; then
     # 통과: 경고(WARNING/도구 미설치 등)만 남기고 나머지 정상/통계 로그는 억제
-    grep -aE '^[[:space:]]*(\[WARNING\]|⚠)' "$TMP_OUT" | sed 's/^[[:space:]]*/  /' || true
+    grep -aE '^[[:space:]]*(\[WARNING\]|⚠)' "$out_file" | sed 's/^[[:space:]]*/  /' || true
     printf '  -> [✓] %s\n' "$SCRIPT_NAME"
   else
     FAILED+=("$SCRIPT_NAME")
     # 실패 시에는 압축하지 않고 원형 로그를 그대로 보존한다(디버깅 추적성 확보).
     printf '❌ [%s] exit=%s ------------------------------------------\n' "$SCRIPT_NAME" "$rc"
-    cat "$TMP_OUT"
+    cat "$out_file"
     printf -- '----------------------------------------------------------------\n'
   fi
 done

@@ -84,18 +84,36 @@ if [ "${#CHANGED_SKILLS[@]}" -eq 0 ]; then
   exit 0
 fi
 
-COMPACT_RUNNER="$REPO_ROOT/bin/hooks/compact-runner.sh"
-if [ ! -x "$COMPACT_RUNNER" ]; then
-  COMPACT_RUNNER="bash"
-fi
+RUN_SUITE="$REPO_ROOT/bin/hooks/run-suite.sh"
+
+SKILL_SUITES=()
+for SKILL in "${CHANGED_SKILLS[@]}"; do
+  SKILL_SUITES+=("$REPO_ROOT/contexts/$SKILL/tests/run.sh")
+done
 
 echo "🧪 push 되는 커밋이 건드린 스킬의 회귀 테스트를 실행합니다: ${CHANGED_SKILLS[*]}"
-for SKILL in "${CHANGED_SKILLS[@]}"; do
-  if ! "$COMPACT_RUNNER" "$REPO_ROOT/contexts/$SKILL/tests/run.sh"; then
-    echo "❌ $SKILL 회귀 테스트 실패로 push가 차단되었습니다."
-    echo "   재현: bash $REPO_ROOT/contexts/$SKILL/tests/run.sh"
+
+if [ -x "$RUN_SUITE" ]; then
+  # 스킬을 하나씩 따로 넘기면 매번 SCRIPTS 배열이 1개뿐이라 run-suite.sh의 배치 병렬
+  # 실행(2026-08-05 도입)이 발동하지 않는다. 바뀐 스킬 전부를 한 번의 호출에 같이
+  # 넘겨야 여러 스킬이 동시에 돈다(2026-08-05: 이 훅이 그동안 그 이득을 못 보고 있었음).
+  if ! "$RUN_SUITE" "${SKILL_SUITES[@]}"; then
+    echo "❌ 회귀 테스트 실패로 push가 차단되었습니다. 위 실패 목록의 스킬을 각각"
+    echo "   bash $REPO_ROOT/contexts/<스킬>/tests/run.sh 로 재현하십시오."
     exit 1
   fi
-done
+else
+  # run-suite.sh 없이도 안전하게 스킬별 순차 실행으로 폴백한다. 이 훅은 위에서 이미
+  # dotfiles 저장소로 한정했고 run-suite.sh는 이 저장소에 항상 존재하므로 정상 경로에서는
+  # 발생하지 않지만, 배치 인자를 "bash"에 그대로 넘기면 첫 스킬만 스크립트로 실행되고
+  # 나머지는 그 스크립트의 인자로 흡수돼 조용히 검증되지 않는 위험을 막기 위해 분기한다.
+  for SKILL in "${CHANGED_SKILLS[@]}"; do
+    if ! bash "$REPO_ROOT/contexts/$SKILL/tests/run.sh"; then
+      echo "❌ $SKILL 회귀 테스트 실패로 push가 차단되었습니다."
+      echo "   재현: bash $REPO_ROOT/contexts/$SKILL/tests/run.sh"
+      exit 1
+    fi
+  done
+fi
 
 exit 0

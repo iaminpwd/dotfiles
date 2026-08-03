@@ -15,6 +15,12 @@
 #
 # 이 파일은 단독 실행용이 아니다.
 
+# 호출자(aws/azure/openstack/multi-cloud tests/run.sh)의 TESTS_DIR이 아니라 이 파일
+# 자신의 실제 위치 기준으로 parallel-pair.sh를 찾는다 (호출자마다 상대경로가 다름).
+_TF_FIXTURE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source-path=SCRIPTDIR
+source "$_TF_FIXTURE_LIB_DIR/parallel-pair.sh"
+
 PASS_COUNT=0
 FAIL_COUNT=0
 
@@ -98,15 +104,6 @@ tf_run_tflint() {
 # 의 severity 가 None 이다. 따라서 --soft-fail-on LOW,MEDIUM 은 실질적으로
 # 아무것도 완화하지 않으며, 어떤 지적이든 커밋을 중단한다(2026-07-26 실측).
 # 이 러너는 스크립트의 의도가 아니라 실제 동작을 기준으로 검증한다.
-#
-# 실행부와 판정부를 나눈 이유는 tf_run_checkov_pair 의 병렬 호출에서 판정 로직을
-# 그대로 재사용하기 위함이다. 판정 기준은 분리 전과 동일하다.
-tf_exec_checkov() {
-  local dir=$1 outfile=$2
-  checkov --directory "$dir" --framework terraform --compact --quiet \
-    --soft-fail-on LOW,MEDIUM >"$outfile" 2>&1
-}
-
 tf_judge_checkov() {
   local label=$1 want_fail=$2 want_id=$3 status=$4 outfile=$5
   if [ -n "$want_id" ] && ! grep -q "$want_id" "$outfile"; then
@@ -121,24 +118,21 @@ tf_judge_checkov() {
 # 출력 파일과 종료 코드만 쓰므로 공유 상태가 없어 3.25 초로 줄어든다(2026-07-28 실측,
 # 5 코어). 검사 대상·옵션·판정 기준은 순차 실행일 때와 동일하며, 판정과 출력도 wait
 # 이후 고정된 순서로 수행해 결과 출력 순서까지 그대로 유지한다.
+# 병렬 실행 자체(백그라운드 + wait 종료 코드 회수)는 parallel-pair.sh(SSOT)에 위임한다.
 tf_run_checkov_pair() {
   local ok_dir=$1 fail_dir=$2 fail_label=$3 want_id=${4:-}
-  local tmpdir ok_pid fail_pid ok_status fail_status
+  local tmpdir ok_status fail_status
   tmpdir=$(mktemp -d)
   # 스캔 도중 인터럽트되어 아래 rm 이 실행되지 못하는 경우에 대비한다.
   # 함수 반환 후 스크립트 종료 시점에 발동할 수 있으므로 set -u 하에서도 안전하도록
   # ${tmpdir:-} 로 참조한다(pre-flight-check.sh 의 infracost 임시파일과 동일한 처리).
   trap 'rm -rf "${tmpdir:-}"' EXIT
 
-  tf_exec_checkov "$ok_dir" "$tmpdir/ok" &
-  ok_pid=$!
-  tf_exec_checkov "$fail_dir" "$tmpdir/fail" &
-  fail_pid=$!
-
-  # 위반 픽스처는 반드시 0 이 아닌 코드로 끝나므로, set -e 가 그 실패를 잡아 러너를
-  # 죽이지 않도록 wait 의 종료 코드를 && / || 로 회수한다.
-  wait "$ok_pid" && ok_status=0 || ok_status=$?
-  wait "$fail_pid" && fail_status=0 || fail_status=$?
+  # shellcheck disable=SC2034 # parallel_pair_run 안에서 nameref로 간접 참조됨
+  local -a CMD_OK=(checkov --directory "$ok_dir" --framework terraform --compact --quiet --soft-fail-on "LOW,MEDIUM")
+  # shellcheck disable=SC2034
+  local -a CMD_FAIL=(checkov --directory "$fail_dir" --framework terraform --compact --quiet --soft-fail-on "LOW,MEDIUM")
+  parallel_pair_run CMD_OK CMD_FAIL ok_status fail_status "$tmpdir/ok" "$tmpdir/fail"
 
   tf_judge_checkov ok-baseline 0 "" "$ok_status" "$tmpdir/ok"
   tf_judge_checkov "$fail_label" 1 "$want_id" "$fail_status" "$tmpdir/fail"

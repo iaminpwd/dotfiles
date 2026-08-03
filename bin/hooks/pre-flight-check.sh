@@ -4,13 +4,10 @@
 set -euo pipefail
 export ANSIBLE_HOME="$HOME/.cache/ansible"
 
-# Setup Quiet Mode Logging
-log_info() {
-  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
-  if [ "${QUIET:-1}" != "1" ]; then
-    echo "$@"
-  fi
-}
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+PFC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$PFC_SCRIPT_DIR/../lib/script-init.sh"
 
 log_info "============================================="
 log_info "=== Pre-Flight Validation Pipeline Started ==="
@@ -19,18 +16,11 @@ log_info "============================================="
 # -----------------------------------------------------------------------------
 # Common Helpers
 # -----------------------------------------------------------------------------
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+# git diff --cached의 pathspec이 CWD 기준으로 해석되어 오탐하는 것을 방지하기 위해 저장소 루트로 이동
+init_repo_root
 CACHE_FILE="$REPO_ROOT/.pre-flight-check.cache"
 
-# git diff --cached의 pathspec이 CWD 기준으로 해석되어 오탐하는 것을 방지하기 위해 저장소 루트로 이동
-cd "$REPO_ROOT" || {
-  echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
-  exit 1
-}
-
-# 도구 가용성 조회 헬퍼 로드 (심볼릭 링크 호출 호환성 보장)
-# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피
-PFC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# 도구 가용성 조회 헬퍼 로드
 # shellcheck source-path=SCRIPTDIR
 source "$PFC_SCRIPT_DIR/../lib/tool-probe.sh"
 
@@ -725,7 +715,7 @@ run_delegated_skill_checks() {
   # observability-check.sh 등) 순서와 무관하게 끝까지 돌려도 안전하다. 같은 파일이
   # 여러 플러그인의 대상이 될 수 있어(예: PrometheusRule YAML은 k8s-check.sh의 PromQL
   # 문법 검사와 observability-check.sh의 알람 정책 검사 양쪽에 다 걸림), 첫 플러그인만
-  # 보고하면 두 번째 위반은 재커밋해야 발견된다(2026-08-01 실측). compact-runner.sh의
+  # 보고하면 두 번째 위반은 재커밋해야 발견된다(2026-08-01 실측). run-suite.sh의
   # 스크립트 간 판정과 동일한 관용구를 여기 플러그인 간에도 적용한다.
   local skill_script rc failed=0
   shopt -s nullglob
@@ -741,9 +731,9 @@ run_delegated_skill_checks() {
 # 13. Provenance Logging Reminder (비차단 알림)
 # 룰 근거가 필요했는지는 모델의 판단 영역이라 기계적으로 확정할 수 없으므로, 이 검사는
 # 절대 커밋을 막지 않는다(항상 return 0). agent-edits-hook.sh가 남긴 더미 라인
-# (result: OK/ERROR/FLAGGED)이 아직 log-edit.sh로 보강(SUCCESS)되지 않은 변경 파일이
-# 있으면 목록만 보여준다. "SUCCESS만 보강 완료"라는 기준은 log-edit.sh 자신의 재진입
-# 판정 로직(`$5!="SUCCESS"`, bin/utils/log-edit.sh 100행)과 동일하게 맞춘 것이다.
+# (result: OK/ERROR/FLAGGED)이 아직 record-provenance.sh로 보강(SUCCESS)되지 않은 변경 파일이
+# 있으면 목록만 보여준다. "SUCCESS만 보강 완료"라는 기준은 record-provenance.sh 자신의 재진입
+# 판정 로직(`$5!="SUCCESS"`, bin/utils/record-provenance.sh 100행)과 동일하게 맞춘 것이다.
 check_provenance_reminder() {
   local edits_log="$REPO_ROOT/.agent-state/edits.log"
   [ -f "$edits_log" ] || return 0
@@ -763,7 +753,7 @@ check_provenance_reminder() {
 
   if [ "${#unresolved[@]}" -gt 0 ]; then
     log_info "--- Step: Provenance Logging Reminder (Non-blocking) ---"
-    echo "[WARNING] 아래 변경 파일은 아직 log-edit.sh로 근거가 보강되지 않았습니다. 룰 근거가 있는 변경이면 보강하고, 근거 없는 사소한 수정이면 무시하십시오:"
+    echo "[WARNING] 아래 변경 파일은 아직 record-provenance.sh로 근거가 보강되지 않았습니다. 룰 근거가 있는 변경이면 보강하고, 근거 없는 사소한 수정이면 무시하십시오:"
     printf '    %s\n' "${unresolved[@]}"
   fi
   return 0

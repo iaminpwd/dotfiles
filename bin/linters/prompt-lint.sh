@@ -10,19 +10,12 @@
 
 set -euo pipefail
 
-# Setup Quiet Mode Logging
-log_info() {
-  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
-  if [ "${QUIET:-1}" != "1" ]; then
-    echo "$@"
-  fi
-}
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+PROMPT_LINT_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$PROMPT_LINT_SCRIPT_DIR/../lib/script-init.sh"
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$REPO_ROOT" || {
-  echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
-  exit 1
-}
+init_repo_root
 
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 EXIT_CODE=0

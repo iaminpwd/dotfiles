@@ -7,28 +7,19 @@
 
 set -euo pipefail
 
-# Setup Quiet Mode Logging
-log_info() {
-  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
-  if [ "${QUIET:-1}" != "1" ]; then
-    echo "$@"
-  fi
-}
+# scripts/ 디렉토리는 ~/.claude/skills/observability/scripts 로 심볼릭 링크되어 배포되므로
+# BASH_SOURCE 를 그대로 쓰면 상대 경로가 배포 위치로 빗나간다(k8s-check.sh 와 동일 이유).
+OBS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$OBS_CHECK_DIR/../../lib/script-init.sh"
 
 log_info "======================================================"
 log_info "=== Observability-Specific Validation Pipeline Started ==="
 log_info "======================================================"
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$REPO_ROOT" || {
-  echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
-  exit 1
-}
+init_repo_root
 
 # 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다.
-# scripts/ 디렉토리는 ~/.claude/skills/observability/scripts 로 심볼릭 링크되어 배포되므로
-# BASH_SOURCE 를 그대로 쓰면 상대 경로가 배포 위치로 빗나간다(k8s-check.sh 와 동일 이유).
-OBS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 if [ -f "$OBS_CHECK_DIR/../../lib/tool-probe.sh" ]; then
   source "$OBS_CHECK_DIR/../../lib/tool-probe.sh"

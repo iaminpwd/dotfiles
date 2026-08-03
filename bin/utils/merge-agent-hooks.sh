@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+MAH_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$MAH_SCRIPT_DIR/../lib/jq-resolve.sh"
+
 PLAYBOOK_DIR="${1:-$HOME/dotfiles/ansible}"
 HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh")"
 
@@ -12,10 +17,7 @@ GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 mkdir -p "$(dirname "$GEMINI_HOOKS")"
 [ -f "$GEMINI_HOOKS" ] || echo '{}' >"$GEMINI_HOOKS"
 
-JQ=$(command -v jq 2>/dev/null) || JQ=""
-if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
-  JQ=$(find "$HOME/.local/share/mise/installs/jq" -maxdepth 3 -name jq -type f 2>/dev/null | sort -V | tail -1)
-fi
+JQ=$(resolve_jq)
 
 if [ -n "$JQ" ] && "$JQ" empty "$GEMINI_HOOKS" 2>/dev/null; then
   TMP=$(mktemp)

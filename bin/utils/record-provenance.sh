@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+RECORD_PROVENANCE_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$RECORD_PROVENANCE_SCRIPT_DIR/../lib/git-relpath.sh"
+
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <file_path> <rule_source>[,<rule_source>...] <purpose>"
   echo "Example (단일 참고): $0 src/main.py aws/050-iac-standard.md \"Refactor authentication\""
@@ -21,9 +26,8 @@ mkdir -p "$TARGET_DIR"
 clean() { printf '%s' "$1" | tr '\t\r\n|' '    ' | sed -e 's/^ *//' -e 's/ *$//'; }
 PURPOSE_CLEAN=$(clean "$PURPOSE")
 
-# 이 스크립트의 실경로 기준으로 dotfiles/contexts 위치를 계산 (심볼릭 링크로 호출돼도 안전)
-SELF="$(readlink -f "${BASH_SOURCE[0]}")"
-CONTEXTS_DIR="$(dirname "$(dirname "$(dirname "$SELF")")")/contexts"
+# dotfiles/contexts 위치 계산 (RECORD_PROVENANCE_SCRIPT_DIR은 이미 실경로 기준 bin/utils)
+CONTEXTS_DIR="$(dirname "$(dirname "$RECORD_PROVENANCE_SCRIPT_DIR")")/contexts"
 
 # 스킬 접두사(<skill>/파일명)가 없는 rule_source를 검증/보정한다.
 # - contexts/ 전체에서 동일 파일명이 정확히 1곳뿐이면 자동으로 <skill>/파일명 으로 보정
@@ -82,9 +86,7 @@ RULE_SOURCE_CLEAN="$RULE_SOURCE_RESOLVED"
 if [ "$FAILED" -eq 1 ]; then RESULT_TAG="FLAGGED"; else RESULT_TAG="SUCCESS"; fi
 
 # agent-edits-hook.sh(PostToolUse)가 계산하는 상대경로와 동일한 기준으로 정규화
-resolved=$(readlink -f "$FILE_PATH" 2>/dev/null || echo "$FILE_PATH")
-resolved_dir=$(dirname "$resolved")
-git_root=$(git -C "$resolved_dir" rev-parse --show-toplevel 2>/dev/null) || git_root=""
+IFS=$'\t' read -r resolved git_root < <(resolve_target_and_git_root "$FILE_PATH")
 if [ -n "$git_root" ]; then
   if [ "$resolved" = "$git_root" ]; then REL="$(basename "$resolved")"; else REL="${resolved#"$git_root"/}"; fi
 else

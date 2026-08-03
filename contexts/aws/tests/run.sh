@@ -26,6 +26,8 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 라이브러리를 실제로 따라가 존재 여부까지 검증한다.
 # shellcheck source-path=SCRIPTDIR
 source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
+# shellcheck source-path=SCRIPTDIR
+source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
 
 echo "=== aws Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24
@@ -54,17 +56,29 @@ sam_report() {
 
 if command -v sam >/dev/null 2>&1; then
   export SAM_CLI_TELEMETRY=0 AWS_DEFAULT_REGION=us-east-1
-  status=0
-  sam validate --template-file "$SAM_FIXTURES/ok-baseline.yaml" >/dev/null 2>&1 || status=$?
-  if [ "$status" -eq 0 ]; then sam_report "ok-baseline (유효한 SAM 템플릿)" 0; else sam_report "ok-baseline (유효한 SAM 템플릿)" 1 "기대 exit=0 / 실제 exit=$status"; fi
 
-  status=0
-  out=$(sam validate --template-file "$SAM_FIXTURES/fail-yaml-syntax.yaml" 2>&1) || status=$?
-  if [ "$status" -ne 0 ] && grep -qF "Failed to parse template" <<<"$out"; then
+  # sam validate 는 Python 인터프리터 기동 비용이 커서(실측: 2건 순차 3.07초) parallel-pair.sh
+  # (SSOT)로 서로 무관한 두 픽스처를 동시에 돌린다.
+  SAM_TMPDIR=$(mktemp -d)
+  trap 'rm -rf "${SAM_TMPDIR:-}"' EXIT
+
+  # shellcheck disable=SC2034 # parallel_pair_run 안에서 nameref로 간접 참조됨
+  CMD_OK=(sam validate --template-file "$SAM_FIXTURES/ok-baseline.yaml")
+  # shellcheck disable=SC2034
+  CMD_FAIL=(sam validate --template-file "$SAM_FIXTURES/fail-yaml-syntax.yaml")
+  ok_status=0
+  fail_status=0
+  parallel_pair_run CMD_OK CMD_FAIL ok_status fail_status "$SAM_TMPDIR/ok" "$SAM_TMPDIR/fail"
+
+  if [ "$ok_status" -eq 0 ]; then sam_report "ok-baseline (유효한 SAM 템플릿)" 0; else sam_report "ok-baseline (유효한 SAM 템플릿)" 1 "기대 exit=0 / 실제 exit=$ok_status"; fi
+
+  if [ "$fail_status" -ne 0 ] && grep -qF "Failed to parse template" "$SAM_TMPDIR/fail"; then
     sam_report "fail-yaml-syntax (문법 오류 차단)" 0
   else
-    sam_report "fail-yaml-syntax (문법 오류 차단)" 1 "기대 exit≠0 + 파싱 오류 문구 / 실제 exit=$status"
+    sam_report "fail-yaml-syntax (문법 오류 차단)" 1 "기대 exit≠0 + 파싱 오류 문구 / 실제 exit=$fail_status"
   fi
+
+  rm -rf "$SAM_TMPDIR"
 else
   sam_report "sam CLI" 1 "도구 미설치 — 'mise install' 후 다시 실행하십시오"
 fi

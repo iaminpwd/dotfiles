@@ -8,34 +8,24 @@
 
 set -euo pipefail
 
-# Setup Quiet Mode Logging
-log_info() {
-  # Default to QUIET=1 for AI token savings, unless explicitly set to 0
-  if [ "${QUIET:-1}" != "1" ]; then
-    echo "$@"
-  fi
-}
-
-log_info "======================================================"
-log_info "=== K8s-Specific Validation Pipeline Started ==="
-log_info "======================================================"
-
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$REPO_ROOT" || {
-  echo "[ERROR] 저장소 루트($REPO_ROOT)로 이동할 수 없습니다." >&2
-  exit 1
-}
-
-# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이 장치가
-# 이 스크립트에 없던 시절에는 promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 한 번도
-# 검사하지 않고 "Passed Successfully"를 출력했다(2026-07-27 실측: PATH에서 도구를 제거하면
-# exit 0 + 성공 배너).
-#
 # 이 스크립트는 contexts/<skill>/scripts/preflight/ 배치 규약으로만 존재하며 그 규약의
 # 주인이 pre-flight-check 스킬이므로, 라이브러리도 같은 곳에서 가져온다. scripts/ 디렉토리는
 # ~/.claude/skills/k8s/scripts 로 심볼릭 링크되어 배포되므로 BASH_SOURCE 를 그대로 쓰면
 # 상대 경로가 배포 위치로 빗나간다. readlink -f 로 저장소 내 정본 위치를 먼저 확정한다.
 K8S_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$K8S_CHECK_DIR/../../lib/script-init.sh"
+
+log_info "======================================================"
+log_info "=== K8s-Specific Validation Pipeline Started ==="
+log_info "======================================================"
+
+init_repo_root
+
+# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이 장치가
+# 이 스크립트에 없던 시절에는 promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 한 번도
+# 검사하지 않고 "Passed Successfully"를 출력했다(2026-07-27 실측: PATH에서 도구를 제거하면
+# exit 0 + 성공 배너).
 # shellcheck source-path=SCRIPTDIR
 if [ -f "$K8S_CHECK_DIR/../../lib/tool-probe.sh" ]; then
   source "$K8S_CHECK_DIR/../../lib/tool-probe.sh"
