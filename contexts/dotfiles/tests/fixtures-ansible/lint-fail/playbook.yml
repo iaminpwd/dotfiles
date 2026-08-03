@@ -1,0 +1,6 @@
+---
+- name: Sample play
+  hosts: localhost
+  tasks:
+    - ansible.builtin.debug:
+        msg: "no name on this task"

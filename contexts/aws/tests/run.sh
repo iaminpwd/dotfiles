@@ -29,3 +29,47 @@ source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
 
 echo "=== aws Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24
+
+# validate_sam(pre-flight-check.sh)은 이전까지 어떤 fixture 테스트도 없었다
+# (2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/conftest/FinOps
+# 6개가 커버리지 0%). sam CLI는 --region 없이는 템플릿 정합성과 무관한
+# "AWS Region was not found" 오류만 내므로 AWS_DEFAULT_REGION을 명시한다.
+echo
+echo "=== aws SAM 템플릿 검증 회귀 테스트 ==="
+SAM_FIXTURES="$TESTS_DIR/fixtures-sam"
+SAM_PASS=0
+SAM_FAIL=0
+
+sam_report() {
+  local name=$1 ok=$2 detail=${3:-}
+  if [ "$ok" -eq 0 ]; then
+    echo "  PASS  $name"
+    SAM_PASS=$((SAM_PASS + 1))
+  else
+    echo "  FAIL  $name"
+    [ -n "$detail" ] && echo "        $detail"
+    SAM_FAIL=$((SAM_FAIL + 1))
+  fi
+}
+
+if command -v sam >/dev/null 2>&1; then
+  export SAM_CLI_TELEMETRY=0 AWS_DEFAULT_REGION=us-east-1
+  status=0
+  sam validate --template-file "$SAM_FIXTURES/ok-baseline.yaml" >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq 0 ]; then sam_report "ok-baseline (유효한 SAM 템플릿)" 0; else sam_report "ok-baseline (유효한 SAM 템플릿)" 1 "기대 exit=0 / 실제 exit=$status"; fi
+
+  status=0
+  out=$(sam validate --template-file "$SAM_FIXTURES/fail-yaml-syntax.yaml" 2>&1) || status=$?
+  if [ "$status" -ne 0 ] && grep -qF "Failed to parse template" <<<"$out"; then
+    sam_report "fail-yaml-syntax (문법 오류 차단)" 0
+  else
+    sam_report "fail-yaml-syntax (문법 오류 차단)" 1 "기대 exit≠0 + 파싱 오류 문구 / 실제 exit=$status"
+  fi
+else
+  sam_report "sam CLI" 1 "도구 미설치 — 'mise install' 후 다시 실행하십시오"
+fi
+
+SAM_TOTAL=$((SAM_PASS + SAM_FAIL))
+echo
+echo "$SAM_PASS/$SAM_TOTAL 통과"
+[ "$SAM_FAIL" -eq 0 ] || exit 1

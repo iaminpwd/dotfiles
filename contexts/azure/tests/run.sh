@@ -29,3 +29,47 @@ source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
 
 echo "=== azure Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AZURE_10
+
+# validate_bicep(pre-flight-check.sh)은 이전까지 어떤 fixture 테스트도 없었다
+# (2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/conftest/FinOps
+# 6개가 커버리지 0%). libicu 없는 리눅스에서도 돌게 하는 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT는
+# pre-flight-check.sh의 validate_bicep과 동일하게 여기서도 켠다.
+echo
+echo "=== azure Bicep 템플릿 검증 회귀 테스트 ==="
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+BICEP_FIXTURES="$TESTS_DIR/fixtures-bicep"
+BICEP_PASS=0
+BICEP_FAIL=0
+
+bicep_report() {
+  local name=$1 ok=$2 detail=${3:-}
+  if [ "$ok" -eq 0 ]; then
+    echo "  PASS  $name"
+    BICEP_PASS=$((BICEP_PASS + 1))
+  else
+    echo "  FAIL  $name"
+    [ -n "$detail" ] && echo "        $detail"
+    BICEP_FAIL=$((BICEP_FAIL + 1))
+  fi
+}
+
+if command -v bicep >/dev/null 2>&1; then
+  status=0
+  bicep build "$BICEP_FIXTURES/ok-baseline.bicep" --stdout >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq 0 ]; then bicep_report "ok-baseline (유효한 Bicep 템플릿)" 0; else bicep_report "ok-baseline (유효한 Bicep 템플릿)" 1 "기대 exit=0 / 실제 exit=$status"; fi
+
+  status=0
+  out=$(bicep build "$BICEP_FIXTURES/fail-unclosed-brace.bicep" --stdout 2>&1) || status=$?
+  if [ "$status" -ne 0 ] && grep -qF "BCP018" <<<"$out"; then
+    bicep_report "fail-unclosed-brace (문법 오류 차단)" 0
+  else
+    bicep_report "fail-unclosed-brace (문법 오류 차단)" 1 "기대 exit≠0 + BCP018 / 실제 exit=$status"
+  fi
+else
+  bicep_report "bicep CLI" 1 "도구 미설치 — 'mise install' 후 다시 실행하십시오"
+fi
+
+BICEP_TOTAL=$((BICEP_PASS + BICEP_FAIL))
+echo
+echo "$BICEP_PASS/$BICEP_TOTAL 통과"
+[ "$BICEP_FAIL" -eq 0 ] || exit 1

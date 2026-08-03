@@ -1,0 +1,7 @@
+---
+- name: Sample play
+  hosts: localhost
+  tasks:
+    - name: Broken task
+      ansible.builtin.debug
+        msg: "hello"

@@ -1,0 +1,10 @@
+# validate-telemetry-schema.sh 중단 조건 재현: 텔레메트리 매니페스트에 평문
+# 자격 증명이 하드코딩되면 커밋을 막아야 한다.
+apiVersion: aiops.internal/v1
+kind: TelemetryCollectorConfig
+metadata:
+  name: prod-collector
+spec:
+  endpoint: https://telemetry.internal:9090
+  auth:
+    password: hunter2

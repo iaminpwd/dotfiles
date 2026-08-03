@@ -1,0 +1,9 @@
+# validate-telemetry-schema.sh 기준 통과 픽스처. 시크릿 키워드 없이 ClosedLoopPolicy
+# 마커만 포함한다.
+apiVersion: aiops.internal/v1
+kind: ClosedLoopPolicy
+metadata:
+  name: cpu-anomaly-remediation
+spec:
+  trigger: cpu_utilization_high
+  action: scale-out

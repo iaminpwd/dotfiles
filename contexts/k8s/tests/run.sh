@@ -126,6 +126,43 @@ if require_tool pluto; then
   run_pluto fail-deprecated-api.yaml 1
 fi
 
+# validate_helm/validate_conftest(pre-flight-check.sh)는 이전까지 어떤 fixture
+# 테스트도 없었다(2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/
+# conftest/FinOps 6개가 커버리지 0%). 이 둘은 다른 픽스처처럼 단일 yaml 파일이
+# 아니라 차트 디렉토리/정책 디렉토리 단위라 fixtures-helm/, fixtures-conftest/
+# 로 따로 둔다.
+echo "--- helm lint (pre-flight-check.sh) ---"
+if require_tool helm; then
+  HELM_FIXTURES="$TESTS_DIR/fixtures-helm"
+  status=0
+  helm lint "$HELM_FIXTURES/ok-chart" >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq 0 ]; then report "ok-chart (유효한 차트)" 0; else report "ok-chart (유효한 차트)" 1 "기대 exit=0 / 실제 exit=$status"; fi
+
+  status=0
+  out=$(helm lint "$HELM_FIXTURES/fail-chart" 2>&1) || status=$?
+  if [ "$status" -ne 0 ] && grep -qF "parse error" <<<"$out"; then
+    report "fail-chart (템플릿 파싱 오류 차단)" 0
+  else
+    report "fail-chart (템플릿 파싱 오류 차단)" 1 "기대 exit≠0 + parse error / 실제 exit=$status"
+  fi
+fi
+
+echo "--- conftest (pre-flight-check.sh) ---"
+if require_tool conftest; then
+  CONFTEST_FIXTURES="$TESTS_DIR/fixtures-conftest"
+  status=0
+  conftest test --policy "$CONFTEST_FIXTURES/policy" "$CONFTEST_FIXTURES/ok-pod.yaml" >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq 0 ]; then report "ok-pod (정책 위반 없음)" 0; else report "ok-pod (정책 위반 없음)" 1 "기대 exit=0 / 실제 exit=$status"; fi
+
+  status=0
+  out=$(conftest test --policy "$CONFTEST_FIXTURES/policy" "$CONFTEST_FIXTURES/fail-pod.yaml" 2>&1) || status=$?
+  if [ "$status" -ne 0 ] && grep -qF "hostNetwork must not be true" <<<"$out"; then
+    report "fail-pod (hostNetwork 정책 위반 차단)" 0
+  else
+    report "fail-pod (hostNetwork 정책 위반 차단)" 1 "기대 exit≠0 + 정책 위반 문구 / 실제 exit=$status"
+  fi
+fi
+
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.
 for path in "$FIXTURES"/*.yaml; do
   name=$(basename "$path")
