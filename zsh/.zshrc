@@ -19,8 +19,11 @@ setopt HIST_REDUCE_BLANKS       # 명령어 내의 불필요한 공백 제거 �
 setopt SHARE_HISTORY            # 여러 터미널 창 간에 히스토리 실시간 공유
 
 # --- [인프라 엔지니어 필수 설정] ---
+# bin/{hooks,utils,linters}의 실행 스크립트는 ansible ai_agent 롤이 ~/.local/bin에
+# 이미 심볼릭 링크하므로 여기서 dotfiles 하위 경로를 따로 PATH에 또 추가하지 않는다
+# (이중 노출이었음, 2026-08-05 정리). bin/lib은 소스 전용이라 원래도 실행 권한이 없어
+# ansible이 링크하지 않고, 항상 소스하는 스크립트의 상대 경로로만 불려 PATH가 필요 없다.
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/dotfiles/bin/hooks:$HOME/dotfiles/bin/utils:$HOME/dotfiles/bin/linters:$HOME/dotfiles/bin/lib:$PATH"
 
 # Ansible 캐시/찌꺼기 프로젝트 오염 방지 (XDG 호환 캐시 디렉토리로 격리)
 export ANSIBLE_HOME="$HOME/.cache/ansible"
