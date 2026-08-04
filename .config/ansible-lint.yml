@@ -6,4 +6,5 @@ exclude_paths:
   # (2026-08-04 실측: --all 모드는 물론 staged 모드 실제 커밋에서도 재현됨).
   - contexts/dotfiles/tests/fixtures-ansible/
   - contexts/aws/tests/fixtures-sam/
+  - contexts/pre-flight-check/tests/fixtures-yaml/
 offline: true
