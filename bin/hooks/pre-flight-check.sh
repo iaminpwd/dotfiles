@@ -46,6 +46,18 @@ calculate_tf_hash() {
   git ls-files --stage "${GLOBAL_TARGET_TF_FILES[@]}" 2>/dev/null | sha256sum | awk '{print $1}'
 }
 
+# validate_terraform/validate_finops_costs 양쪽에 동일한 4줄짜리 캐시 히트 조건이
+# 그대로 복붙돼 있던 것을 SSOT로 뽑아냈다. 로그 메시지는 두 함수의 문맥(Step 헤더
+# 출력 시점이 다름)에 따라 달라 호출부에 그대로 남긴다.
+# stdout: "empty"(스테이징된 .tf 없음) | "cached"(직전 성공 검증과 동일) | ""(캐시 미스)
+tf_cache_status() {
+  if [ "$GLOBAL_TF_HASH" = "empty" ]; then
+    echo "empty"
+  elif [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+    echo "cached"
+  fi
+}
+
 # -----------------------------------------------------------------------------
 # Validation Sub-modules (Isolated Functions)
 # -----------------------------------------------------------------------------
@@ -148,30 +160,33 @@ validate_terraform() {
     log_info "--- Step: Terraform Validation ---"
 
     # 스테이징 영역 캐시 확인 (staged 모드 전용. 워킹트리 모드에서는 GLOBAL_CACHE_ENABLED=0)
-    if [ "$GLOBAL_TF_HASH" = "empty" ]; then
+    case "$(tf_cache_status)" in
+    empty)
       log_info "[INFO] No staged Terraform changes detected. Skipping Terraform validation (Cache hit - empty)."
       return 0
-    elif [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+      ;;
+    cached)
       log_info "[INFO] Staged Terraform configuration is unchanged. Skipping Terraform validation (Cache hit)."
       return 0
-    fi
+      ;;
+    esac
     if ! has_tool terraform; then
       echo "[ERROR] terraform CLI is required but not installed." >&2
       return 1
     fi
 
     log_info "Running terraform fmt check..."
-    local fmt_failed=0
+    # shfmt와 동일하게 루프 밖에서 일괄 포맷 체크 (프로세스 오버헤드 절감).
+    # terraform fmt -check는 포맷이 안 맞는 파일명을 자체적으로 stdout에 출력하므로
+    # 파일별 개별 echo 없이도 어떤 파일이 문제인지 그대로 드러난다.
+    local tf_fmt_targets=()
     for tf in "${tf_files[@]}"; do
       [ -z "$tf" ] && continue
       [[ "$tf" == */tests/fixtures/* ]] && continue
-      if ! terraform fmt -check "$tf" >/dev/null; then
-        echo "❌ [ERROR] terraform fmt 포맷이 맞지 않습니다: $tf" >&2
-        fmt_failed=1
-      fi
+      tf_fmt_targets+=("$tf")
     done
-    if [ "$fmt_failed" -eq 1 ]; then
-      echo "❌ [ERROR] 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
+    if [ "${#tf_fmt_targets[@]}" -gt 0 ] && ! terraform fmt -check "${tf_fmt_targets[@]}"; then
+      echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 중단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
       return 1
     fi
 
@@ -662,15 +677,18 @@ validate_finops_costs() {
 
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     # 스테이징 영역 캐시 확인 (staged 모드 전용. 워킹트리 모드에서는 GLOBAL_CACHE_ENABLED=0)
-    if [ "$GLOBAL_TF_HASH" = "empty" ]; then
+    case "$(tf_cache_status)" in
+    empty)
       log_info "--- Step: FinOps Cost Validation (Infracost) ---"
       log_info "[INFO] No staged Terraform changes detected. Skipping cost validation (Cache hit - empty)."
       return 0
-    elif [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ -f "$CACHE_FILE" ] && [ "$GLOBAL_TF_HASH" != "non-git" ] && [ "$GLOBAL_TF_HASH" == "$(cat "$CACHE_FILE" 2>/dev/null)" ]; then
+      ;;
+    cached)
       log_info "--- Step: FinOps Cost Validation (Infracost) ---"
       log_info "[INFO] Staged Terraform configuration is unchanged. Skipping cost validation (Cache hit)."
       return 0
-    fi
+      ;;
+    esac
     if has_tool infracost; then
       log_info "--- Step: FinOps Cost Validation (Infracost) ---"
       log_info "Checking for AWS/Azure Extended Support & LTS pricing..."
