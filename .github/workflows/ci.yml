@@ -10,6 +10,8 @@ on:
     # bootstrap-smoke만 재실행해 이런 드리프트를 잡는다 (verify는 코드가 그대로면 결과도
     # 항상 같아서 스케줄로 다시 돌 이유가 없음 — 아래 verify job의 if 조건 참고).
     - cron: "0 0 * * 0"
+  # Actions 탭에서 "Run workflow" 버튼으로 스케줄을 안 기다리고 바로 돌려볼 수 있게 함.
+  workflow_dispatch:
 
 # 같은 브랜치에 연달아 push할 때 이전 실행을 취소해 Actions 시간을 절약.
 concurrency:
