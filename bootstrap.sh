@@ -157,4 +157,11 @@ fi
 echo "========================================================="
 echo "✅ Bootstrap 및 전체 환경 셋업(Ansible & mise)이 성공적으로 완료되었습니다!"
 echo "💡 변경된 환경 변수 및 쉘 환경을 적용하려면 'exec zsh' 를 실행하세요."
+# ansible docker 롤의 안내 태스크는 다른 롤들 출력에 파묻혀 놓치기 쉬우므로,
+# 실제로 눈에 띄는 스크립트 맨 마지막에 한 번 더 띄운다.
+if [ "$(uname)" = "Darwin" ]; then
+  echo "🐳 macOS는 Docker Engine을 네이티브로 설치할 수 없습니다."
+  echo "   https://www.docker.com/products/docker-desktop 에서 Docker Desktop을 직접 설치하거나,"
+  echo "   Colima/OrbStack 같은 경량 대안을 사용하십시오."
+fi
 echo "========================================================="
