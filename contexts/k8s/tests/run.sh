@@ -15,6 +15,7 @@ set -euo pipefail
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
 
 PASS_COUNT=0
@@ -124,6 +125,108 @@ echo "--- pluto (k8s-check.sh) ---"
 if require_tool pluto; then
   run_pluto ok-baseline.yaml 0
   run_pluto fail-deprecated-api.yaml 1
+fi
+
+echo "--- k8s-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
+# 위 promtool/pluto 섹션은 "판정 로직이 맞는가"만 본다. k8s-check.sh 자신의
+# 오케스트레이션(스테이징된 yaml 중 어떤 kind:가 어떤 서브체크를 트리거하는지,
+# 격리 tmpdir로 pluto 스캔 범위를 좁히는지)은 이름이 주석에만 언급될 뿐 실제로
+# bash 호출되는 테스트가 없어 test-coverage-check.sh의 경고 레이어에 걸렸다
+# (2026-08-05). aiops-check.sh/observability-check.sh와 동일한 패턴으로 격리
+# 저장소에서 실제 호출까지 검증한다.
+#
+# check_kyverno(Kyverno 네이티브 정책 테스트)는 이 저장소에 kyverno-test.yaml
+# 픽스처 자체가 없어(판정기 레벨 테스트도 기존에 없었음) 트리거 안 되는 경우만
+# 아래 no-trigger 케이스로 간접 확인한다. 별도 픽스처 도입은 이번 범위 밖이다.
+K8S_PLUGIN="$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
+if [ -x "$K8S_PLUGIN" ]; then
+  PLUGIN_TMP=$(mktemp -d)
+
+  run_plugin() {
+    local repo=$1 status=0
+    (cd "$repo" && QUIET=0 bash "$K8S_PLUGIN") >"$PLUGIN_TMP/out" 2>&1 || status=$?
+    echo "$status"
+  }
+
+  new_plugin_repo() {
+    local root=$1
+    mkdir -p "$root"
+    git -C "$root" init -q
+    git -C "$root" config user.email test@example.com
+    git -C "$root" config user.name Test
+  }
+
+  if require_tool promtool && require_tool yq; then
+    # Case 1: kind: PrometheusRule + PromQL 문법 오류 -> 커밋 차단.
+    KR1="$PLUGIN_TMP/repo1"
+    new_plugin_repo "$KR1"
+    cp "$FIXTURES/fail-promql-syntax.yaml" "$KR1/rule.yaml"
+    git -C "$KR1" add rule.yaml
+    status=$(run_plugin "$KR1")
+    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
+      report "prometheus-trigger-and-block (PromQL 문법 오류 -> 차단)" 0
+    else
+      report "prometheus-trigger-and-block (PromQL 문법 오류 -> 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    # Case 2: kind: PrometheusRule + 문법 정상 -> 통과.
+    KR2="$PLUGIN_TMP/repo2"
+    new_plugin_repo "$KR2"
+    cp "$FIXTURES/ok-prometheus-rule.yaml" "$KR2/rule.yaml"
+    git -C "$KR2" add rule.yaml
+    status=$(run_plugin "$KR2")
+    if [ "$status" -eq 0 ]; then
+      report "prometheus-trigger-and-pass (PromQL 정상 -> 통과)" 0
+    else
+      report "prometheus-trigger-and-pass (PromQL 정상 -> 통과)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+  fi
+
+  if require_tool pluto; then
+    # Case 3: 삭제된 API 버전 -> 커밋 차단(격리 tmpdir로 pluto -d 스캔 범위가
+    # 스테이징된 파일로만 좁혀지는지까지 함께 확인).
+    KR3="$PLUGIN_TMP/repo3"
+    new_plugin_repo "$KR3"
+    cp "$FIXTURES/fail-deprecated-api.yaml" "$KR3/ingress.yaml"
+    git -C "$KR3" add ingress.yaml
+    status=$(run_plugin "$KR3")
+    if [ "$status" -eq 1 ] && grep -qF "삭제 예정" "$PLUGIN_TMP/out"; then
+      report "deprecated-api-trigger-and-block (제거된 API -> 차단)" 0
+    else
+      report "deprecated-api-trigger-and-block (제거된 API -> 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    # Case 4: 정상 매니페스트(kind: 있음, 삭제된 API 아님) -> 통과.
+    KR4="$PLUGIN_TMP/repo4"
+    new_plugin_repo "$KR4"
+    cp "$FIXTURES/ok-baseline.yaml" "$KR4/deploy.yaml"
+    git -C "$KR4" add deploy.yaml
+    status=$(run_plugin "$KR4")
+    if [ "$status" -eq 0 ]; then
+      report "deprecated-api-trigger-and-pass (정상 매니페스트 -> 통과)" 0
+    else
+      report "deprecated-api-trigger-and-pass (정상 매니페스트 -> 통과)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+  fi
+
+  # Case 5: kind: 필드 자체가 없는 순수 데이터 yaml -> 어떤 서브체크도 트리거 안 됨.
+  KR5="$PLUGIN_TMP/repo5"
+  new_plugin_repo "$KR5"
+  cat >"$KR5/data.yaml" <<'EOF'
+just: some data
+without: a kind field
+EOF
+  git -C "$KR5" add data.yaml
+  status=$(run_plugin "$KR5")
+  if [ "$status" -eq 0 ]; then
+    report "no-trigger-without-kind (kind: 없는 yaml은 무동작)" 0
+  else
+    report "no-trigger-without-kind (kind: 없는 yaml은 무동작)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+  fi
+
+  rm -rf "$PLUGIN_TMP"
+else
+  report "k8s-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/k8s-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
 fi
 
 # validate_helm/validate_conftest(pre-flight-check.sh)는 이전까지 어떤 fixture
