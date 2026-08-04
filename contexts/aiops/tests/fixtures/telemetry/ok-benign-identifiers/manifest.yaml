@@ -1,0 +1,11 @@
+# validate-telemetry-schema.sh 회귀 픽스처: 시크릿 값이 아니라 필드/변수 "이름"에만
+# password/secret_key가 부분 문자열로 들어간 경우는 통과해야 한다(2026-08-05 실측
+# 오탐: password_policy/secret_key_rotation_enabled 같은 무해한 필드명 때문에 실제
+# 커밋이 차단됐다).
+kind: TelemetryCollectorConfig
+metadata:
+  name: benign-identifiers
+spec:
+  password_policy: strict
+  password_last_rotated_days: 30
+  secret_key_rotation_enabled: true

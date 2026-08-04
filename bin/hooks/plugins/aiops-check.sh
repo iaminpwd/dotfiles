@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# aiops-check.sh - AIOps Telemetry Manifest Validation Pipeline
+#
+# contexts/aiops/scripts/validate-telemetry-schema.sh(평문 시크릿 검사 + ISMS-P
+# ClosedLoopPolicy 가드레일)는 bin/hooks/plugins/*.sh 로 자동 로드되는 곳에 지금까지
+# 배선돼 있지 않았다. contexts/aiops/tests/run.sh가 자기 자신의 픽스처만 스스로
+# 검증했을 뿐, 실제 git commit 경로에서는 단 한 번도 호출되지 않은 상태였다
+# (2026-08-05 실측 발견). k8s-check.sh/observability-check.sh와 동일한 패턴으로 배선한다.
+#
+# 이 훅은 전역 core.hooksPath로 dotfiles 밖 임의 저장소에서도 실행되므로, contexts/
+# 경로가 아니라 CRD kind: 시그니처로 "텔레메트리 매니페스트인지"를 판정한다
+# (k8s-check.sh의 PrometheusRule kind: 판정과 동일 이유).
+#
+# validate-telemetry-schema.sh는 파일 목록이 아니라 디렉토리를 재귀 스캔하는
+# 인터페이스라(TARGET_DIR), 트리거된 경우 스테이징된 관련 파일만 격리 tmpdir에
+# 모아 넘긴다(pluto -d 를 위해 격리 tmpdir을 쓰는 k8s-check.sh의
+# check_deprecated_apis()와 동일한 이유: 무관한 저장소 전체를 훑으면 무관한
+# 커밋까지 차단한다).
+
+set -euo pipefail
+
+# 이 스크립트는 contexts/<skill>/scripts/preflight/ 배치 규약으로만 존재하며 그 규약의
+# 주인이 pre-flight-check 스킬이므로, 라이브러리도 같은 곳에서 가져온다(k8s-check.sh와 동일 이유).
+AIOPS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$AIOPS_CHECK_DIR/../../lib/script-init.sh"
+
+log_info "======================================================"
+log_info "=== AIOps-Specific Validation Pipeline Started ==="
+log_info "======================================================"
+
+init_repo_root
+
+VALIDATOR="$AIOPS_CHECK_DIR/../../../contexts/aiops/scripts/validate-telemetry-schema.sh"
+if [ ! -f "$VALIDATOR" ]; then
+  VALIDATOR="$REPO_ROOT/contexts/aiops/scripts/validate-telemetry-schema.sh"
+fi
+
+GLOBAL_IS_GIT_REPO=0
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  GLOBAL_IS_GIT_REPO=1
+fi
+
+# 텔레메트리 매니페스트(시크릿/ISMS-P 가드레일) 검증
+check_telemetry_manifests() {
+  local staged=() manifest_files=() scan_files=() f
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+    mapfile -d '' -t staged < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' '*.json' '*.tf' 2>/dev/null)
+  fi
+  [ "${#staged[@]}" -eq 0 ] && return 0
+
+  # 판정 트리거: yaml/yml 중 ClosedLoopPolicy/TelemetryCollectorConfig kind가 하나라도
+  # 스테이징돼야 활성화한다(무관한 저장소의 모든 yaml/tf/json 커밋마다 도는 것을 방지).
+  for f in "${staged[@]}"; do
+    [ -z "$f" ] || [ -f "$f" ] || continue
+    case "$f" in
+    *.yaml | *.yml)
+      grep -qE "^kind:[[:space:]]*(ClosedLoopPolicy|TelemetryCollectorConfig)" "$f" 2>/dev/null && manifest_files+=("$f")
+      ;;
+    esac
+  done
+  [ "${#manifest_files[@]}" -eq 0 ] && return 0
+
+  if [ ! -f "$VALIDATOR" ]; then
+    log_info "--- Step: AIOps Telemetry Manifest Validation ---"
+    log_info "[WARNING] validate-telemetry-schema.sh 를 찾을 수 없어 검증을 건너뜁니다."
+    return 0
+  fi
+
+  log_info "--- Step: AIOps Telemetry Manifest Validation ---"
+
+  # 트리거된 경우, 같은 커밋에 함께 스테이징된 yaml/yml/json/tf 전체를 대상으로 삼는다
+  # (시크릿이 kind: 매니페스트가 아니라 옆에 딸린 .tf/.json에 있을 수도 있으므로).
+  for f in "${staged[@]}"; do
+    [ -z "$f" ] || [ -f "$f" ] || continue
+    scan_files+=("$f")
+  done
+
+  local tmpdir i=0
+  tmpdir=$(mktemp -d)
+  for f in "${scan_files[@]}"; do
+    mkdir -p "$tmpdir/$((i))"
+    cp "$f" "$tmpdir/$((i++))/$(basename "$f")"
+  done
+
+  if ! bash "$VALIDATOR" "$tmpdir"; then
+    rm -rf "$tmpdir"
+    echo "❌ [ERROR] AIOps 텔레메트리 매니페스트 검증(시크릿/가드레일)에 실패하여 커밋이 중단되었습니다." >&2
+    printf '    %s\n' "${manifest_files[@]}" >&2
+    return 1
+  fi
+  rm -rf "$tmpdir"
+  log_info "[SUCCESS] AIOps telemetry manifest validation passed."
+}
+
+main() {
+  check_telemetry_manifests
+
+  log_info "======================================================"
+  log_info "=== AIOps-Specific Checks Passed Successfully ==="
+  log_info "======================================================"
+}
+
+main
