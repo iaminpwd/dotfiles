@@ -84,8 +84,10 @@ echo "========================================="
 
 # 1. Git 사용자 설정 (.gitconfig.local)
 if [ ! -f "$HOME/.gitconfig.local" ]; then
-  read -r -p "Git 사용자 이름 (예: 홍길동): " git_name
-  read -r -p "Git 이메일 주소: " git_email
+  # non-interactive(CI 등)로 stdin이 닫혀 있으면 read가 EOF로 exit 1을 반환해
+  # set -e가 스크립트 전체를 죽인다. || true로 무시하고 아래 빈 값 분기로 넘긴다.
+  read -r -p "Git 사용자 이름 (예: 홍길동): " git_name || true
+  read -r -p "Git 이메일 주소: " git_email || true
   if [ -n "$git_name" ] && [ -n "$git_email" ]; then
     cat >"$HOME/.gitconfig.local" <<EOF
 [user]
@@ -122,7 +124,7 @@ if [ -x "$HOME/.local/bin/mise" ]; then
   if ~/.local/share/mise/shims/infracost --version &>/dev/null; then
     if [ ! -f "$HOME/.config/infracost/credentials.yml" ] || ! grep -q "api_key:" "$HOME/.config/infracost/credentials.yml" 2>/dev/null; then
       echo ""
-      read -r -p "Infracost 인증을 바로 진행하시겠습니까? (y/N): " run_infracost
+      read -r -p "Infracost 인증을 바로 진행하시겠습니까? (y/N): " run_infracost || true
       if [[ "$run_infracost" =~ ^[Yy]$ ]]; then
         ~/.local/share/mise/shims/infracost auth login
       else
@@ -140,7 +142,7 @@ if [ -x "$HOME/.local/bin/mise" ]; then
   if ~/.local/share/mise/shims/gh --version &>/dev/null; then
     if ! ~/.local/share/mise/shims/gh auth status &>/dev/null; then
       echo ""
-      read -r -p "GitHub 로그인 인증을 바로 진행하시겠습니까? (브라우저 링크 방식) (y/N): " run_gh_auth
+      read -r -p "GitHub 로그인 인증을 바로 진행하시겠습니까? (브라우저 링크 방식) (y/N): " run_gh_auth || true
       if [[ "$run_gh_auth" =~ ^[Yy]$ ]]; then
         ~/.local/share/mise/shims/gh auth login
       else
