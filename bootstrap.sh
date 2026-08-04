@@ -134,6 +134,24 @@ if [ -x "$HOME/.local/bin/mise" ]; then
   fi
 fi
 
+# 4. GitHub CLI(gh) 인증 - 프라이빗 레포 git clone 시 credential helper(gh auth git-credential)가 이 인증을 사용
+if [ -x "$HOME/.local/bin/mise" ]; then
+  # gh는 mise로 설치되었을 확률이 높으므로 런타임에서 호출 가능한지 확인
+  if ~/.local/share/mise/shims/gh --version &>/dev/null; then
+    if ! ~/.local/share/mise/shims/gh auth status &>/dev/null; then
+      echo ""
+      read -r -p "GitHub 로그인 인증을 바로 진행하시겠습니까? (브라우저 링크 방식) (y/N): " run_gh_auth
+      if [[ "$run_gh_auth" =~ ^[Yy]$ ]]; then
+        ~/.local/share/mise/shims/gh auth login
+      else
+        echo "⏭️ GitHub 인증 건너뜀 (추후 'gh auth login' 으로 진행)"
+      fi
+    else
+      echo "✅ GitHub CLI 인증이 이미 완료되어 있습니다."
+    fi
+  fi
+fi
+
 echo "========================================================="
 echo "✅ Bootstrap 및 전체 환경 셋업(Ansible & mise)이 성공적으로 완료되었습니다!"
 echo "💡 변경된 환경 변수 및 쉘 환경을 적용하려면 'exec zsh' 를 실행하세요."

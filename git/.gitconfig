@@ -14,8 +14,8 @@
     ui = auto
 
 [credential]
-    # 인증 토큰 12시간 메모리 캐싱 (디스크 저장 금지)
-    helper = cache --timeout=43200
+    # GitHub CLI(gh)의 브라우저 로그인 인증을 credential helper로 사용 (bootstrap.sh가 gh 설치 및 인증을 보장)
+    helper = !gh auth git-credential
 
 [alias]
     # 단축어 모음
