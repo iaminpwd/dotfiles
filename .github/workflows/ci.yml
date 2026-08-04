@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 같은 브랜치에 연달아 push할 때 이전 실행을 취소해 Actions 시간을 절약.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 기본 GITHUB_TOKEN을 읽기 전용으로 최소권한화 (이 워크플로는 어떤 것도 쓰지 않음).
+permissions:
+  contents: read
+
+jobs:
+  # 로컬 git hook은 --no-verify로 우회 가능하므로, 이 job이 실제 우회 불가능한 검증 게이트 역할을 한다.
+  verify:
+    name: Lint & Test Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install mise
+        run: |
+          curl -fsSL https://mise.run | sh
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Cache mise-managed tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/mise
+          key: mise-${{ runner.os }}-${{ hashFiles('mise/.config/mise/config.toml') }}
+
+      # stow가 하는 mise 설정 배치를 그대로 재현 (전체 ansible 프로비저닝은 이 job에서 불필요)
+      - name: Apply repo mise tool config
+        run: |
+          mkdir -p ~/.config/mise
+          cp mise/.config/mise/config.toml ~/.config/mise/config.toml
+
+      - name: Install pinned tools (shellcheck, tflint, checkov, trufflehog, ansible-lint ...)
+        run: mise install
+
+      - name: Run full regression verification (check + test + prompt-lint)
+        run: just verify
+
+  # bootstrap.sh가 실제로 지원 OS에서 처음부터 끝까지 동작하는지 + 재실행해도 안전한지(멱등성) 검증.
+  # RHEL 계열(dnf)은 GitHub Actions에 네이티브 VM 러너가 없고, 컨테이너로 대체하면 ansible의
+  # docker 역할이 요구하는 systemd가 없어 무관한 이유로 실패하므로 이번 범위에서 제외한다.
+  bootstrap-smoke:
+    name: Bootstrap Smoke (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian
+            os: ubuntu-latest
+          - name: macos
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap (1st run)
+        run: ./bootstrap.sh < /dev/null
+
+      # exit code만으로는 "안 죽었다"만 증명될 뿐, README의 성공 검증 커맨드가 약속하는
+      # 실제 환경 상태(도구 설치, stow 심볼릭 링크, AI 룰/스킬 주입)는 별도로 확인해야 함.
+      - name: Verify environment matches README's success criteria (after 1st run)
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+
+          # mise 도구 설치 확인
+          mise which shellcheck >/dev/null
+
+          # Stow symlink 확인
+          test -L "$HOME/.zshrc"
+          test -L "$HOME/.gitconfig"
+          test -L "$HOME/.config/mise/config.toml"
+
+          # AI 글로벌 룰 주입 확인 (Gemini/Claude)
+          test -L "$HOME/.gemini/config/AGENTS.md"
+          test -L "$HOME/.claude/CLAUDE.md"
+          [ -s "$HOME/.gemini/config/AGENTS.md" ]
+
+          # 스킬 레지스트리 등록 확인
+          [ -n "$(ls -A "$HOME/.gemini/config/skills/" 2>/dev/null)" ]
+          [ -n "$(ls -A "$HOME/.claude/skills/" 2>/dev/null)" ]
+
+      - name: Bootstrap (2nd run - idempotency check)
+        run: ./bootstrap.sh < /dev/null
+
+      - name: Verify environment matches README's success criteria (after 2nd run)
+        run: |
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+
+          mise which shellcheck >/dev/null
+          test -L "$HOME/.zshrc"
+          test -L "$HOME/.gitconfig"
+          test -L "$HOME/.config/mise/config.toml"
+          test -L "$HOME/.gemini/config/AGENTS.md"
+          test -L "$HOME/.claude/CLAUDE.md"
+          [ -s "$HOME/.gemini/config/AGENTS.md" ]
+          [ -n "$(ls -A "$HOME/.gemini/config/skills/" 2>/dev/null)" ]
+          [ -n "$(ls -A "$HOME/.claude/skills/" 2>/dev/null)" ]
