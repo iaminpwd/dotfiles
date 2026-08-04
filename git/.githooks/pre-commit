@@ -123,10 +123,10 @@ if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
       BIN_REMINDERS+=("test-tool-probe-ssot.sh" "test-plugin-loop.sh")
       ;;
     bin/hooks/pre-flight-check.sh)
-      BIN_REMINDERS+=("run.sh (전체 — pre-flight-check.sh 는 범용 로직이라 파급 범위가 넓음)")
+      BIN_REMINDERS+=("run.sh  # 전체 — pre-flight-check.sh 는 범용 로직이라 파급 범위가 넓음")
       ;;
     bin/linters/*.sh | bin/hooks/*.sh | bin/lib/*.sh)
-      BIN_REMINDERS+=("run.sh (전체 — 아직 전용 서브스위트가 없는 스크립트)")
+      BIN_REMINDERS+=("run.sh  # 전체 — 아직 전용 서브스위트가 없는 스크립트")
       ;;
     esac
   done
@@ -136,6 +136,8 @@ if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
     # 포맷보다 많을 때 printf가 포맷을 재순환시켜 REPO_ROOT 자리에 리마인더 값이 밀려
     # 들어간다. 리마인더 이름을 먼저 중복 제거한 뒤 REPO_ROOT는 매 줄 루프 안에서
     # 고정값으로만 쓴다.
+    # run.sh (전체) 항목은 설명을 " # ..." 셸 주석으로 붙여, 출력되는 줄을 그대로
+    # 복붙해도 유효한 명령으로 실행되게 한다(주석 뒤 텍스트는 셸이 무시).
     while IFS= read -r reminder; do
       echo "    bash $REPO_ROOT/contexts/pre-flight-check/tests/$reminder"
     done < <(printf '%s\n' "${BIN_REMINDERS[@]}" | sort -u)
