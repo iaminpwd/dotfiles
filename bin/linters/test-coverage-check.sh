@@ -63,5 +63,55 @@ if [ "${#UNTESTED[@]}" -gt 0 ]; then
   exit 1
 fi
 
+# -----------------------------------------------------------------------------
+# Plugin 전용 강화 검사 (경고 전용, 하드 블록 아님)
+# -----------------------------------------------------------------------------
+# bin/hooks/plugins/*.sh는 위 하드 게이트("이름이 어딘가 언급됐는가")만으로는 부족하다.
+# k8s-check.sh/observability-check.sh 둘 다 이름이 회귀 테스트의 주석·echo 라벨에
+# 여러 번 등장해 하드 게이트는 통과했지만, 파일 자체를 bash로 실제 호출하는 코드는
+# 어디에도 없었다(오케스트레이션 로직 자체는 test-plugin-loop.sh가 pre-flight-check.sh를
+# 통째로 돌리며 부수적으로만 검증됨). aiops-check.sh가 정확히 그 낮은 기준을 통과한
+# 채로 실제 커밋 경로에 전혀 배선되지 않고 방치됐던 사고(2026-08-05 실측 발견)를 다시
+# 겪지 않기 위해 "실제 bash 호출 증거"까지 요구하는 검사를 추가한다.
+#
+# 기존 두 플러그인을 지금 강제로 뜯어고치게 만들지 않기 위해(요청받지 않은 범위
+# 확장 방지) 하드 블록이 아니라 경고로만 남긴다.
+PLUGINS_DIR="$BIN_DIR/hooks/plugins"
+WEAK_COVERAGE=()
+if [ -d "$PLUGINS_DIR" ]; then
+  while IFS= read -r -d '' plugin; do
+    pname="$(basename "$plugin")"
+    pname_esc="${pname//./\\.}"
+    invoked=0
+    for tdir in "${TEST_DIRS[@]}"; do
+      while IFS= read -r -d '' tfile; do
+        # 패턴 A: 직접 인라인 호출 -> bash "...<plugin>.sh"
+        if grep -qE "bash[[:space:]]+\"[^\"]*${pname_esc}\"" "$tfile" 2>/dev/null; then
+          invoked=1
+          break
+        fi
+        # 패턴 B: 변수 대입 후 bash "$VAR"/"${VAR}" 호출 (이 저장소 테스트들의 표준 관례)
+        while IFS= read -r varname; do
+          [ -n "$varname" ] || continue
+          if grep -qE "bash[[:space:]]+\"\\\$\{?${varname}\}?\"" "$tfile" 2>/dev/null; then
+            invoked=1
+            break
+          fi
+        done < <(grep -oE "^[A-Za-z_][A-Za-z0-9_]*=.*${pname_esc}\"?\$" "$tfile" 2>/dev/null | sed 's/=.*//')
+        [ "$invoked" -eq 1 ] && break
+      done < <(find "$tdir" -type f -name "*.sh" -print0 2>/dev/null)
+      [ "$invoked" -eq 1 ] && break
+    done
+    [ "$invoked" -eq 0 ] && WEAK_COVERAGE+=("bin/hooks/plugins/$pname")
+  done < <(find "$PLUGINS_DIR" -maxdepth 1 -type f -name "*.sh" -print0)
+fi
+
+if [ "${#WEAK_COVERAGE[@]}" -gt 0 ]; then
+  echo "[WARNING] 아래 플러그인은 이름이 회귀 테스트에 언급되긴 하지만(위 하드 게이트는 통과), 실제로 bash로 호출되는 테스트 증거를 찾지 못했습니다. 트리거/차단/통과 시나리오를 직접 실행해 검증하는 테스트를 추가하는 것을 권장합니다:" >&2
+  for f in "${WEAK_COVERAGE[@]}"; do
+    echo "  - $f" >&2
+  done
+fi
+
 log_info "[OK] bin/ 및 git/.githooks/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
 exit 0
