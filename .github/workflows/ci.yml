@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # 코드 변경이 없어도 bootstrap.sh가 참조하는 외부 자원(Oh My Zsh/Docker 공식 저장소,
+    # mise가 조회하는 GitHub 릴리즈 등)이 바뀌어 조용히 깨질 수 있다. 매주 일요일 00:00 UTC에
+    # bootstrap-smoke만 재실행해 이런 드리프트를 잡는다 (verify는 코드가 그대로면 결과도
+    # 항상 같아서 스케줄로 다시 돌 이유가 없음 — 아래 verify job의 if 조건 참고).
+    - cron: "0 0 * * 0"
 
 # 같은 브랜치에 연달아 push할 때 이전 실행을 취소해 Actions 시간을 절약.
 concurrency:
@@ -20,6 +26,8 @@ jobs:
     name: Lint & Test Gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # 스케줄 실행은 외부 드리프트 감지가 목적이라 bootstrap-smoke만 필요 (위 on.schedule 주석 참고).
+    if: github.event_name != 'schedule'
     # mise의 github: 백엔드(bicep 등)가 GitHub API로 릴리즈를 조회하는데, 인증 없이 부르면
     # Actions 러너 공유 IP가 익명 요청 제한(60/시간)에 바로 걸린다. Actions가 잡마다 자동
     # 발급하는 GITHUB_TOKEN을 넘겨 인증 요청(5000/시간)으로 바꿔 회피한다.
