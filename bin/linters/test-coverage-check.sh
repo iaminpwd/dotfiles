@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# test-coverage-check.sh - bin/ 검사 스크립트의 회귀 테스트 커버리지 게이트
+# test-coverage-check.sh - bin/ 및 git 훅 검사 스크립트의 회귀 테스트 커버리지 게이트
 #
 # 정적분석 도구(shellcheck/shfmt)는 문법·포맷 결함만 잡고, 검사 스크립트의 판정 로직(오탐/누락)
-# 자체가 깨져도 조용히 통과한다. 이를 막기 위해 bin/{hooks,linters,utils,lib} 하위 모든 스크립트가
-# contexts/*/tests 어딘가에서 최소 1번은 참조되는지(=회귀 테스트 대상인지)만 기계적으로 확인한다.
-# 실제 판정 로직의 정오는 각 test-*.sh 픽스처가 담당하고, 이 스크립트는 "테스트가 존재하는가"만 게이트한다.
+# 자체가 깨져도 조용히 통과한다. 이를 막기 위해 bin/{hooks,linters,utils,lib} 및 git/.githooks
+# 하위 모든 스크립트가 contexts/*/tests 어딘가에서 최소 1번은 참조되는지(=회귀 테스트 대상인지)만
+# 기계적으로 확인한다. 실제 판정 로직의 정오는 각 test-*.sh 픽스처가 담당하고, 이 스크립트는
+# "테스트가 존재하는가"만 게이트한다.
+#
+# git/.githooks/*는 이 게이트가 생기기 전까지 bin/*.sh 와 달리 커버리지 요구 대상 밖이었다.
+# 그 사각지대에서 실제로 pre-commit의 BIN_REMINDERS 재현 명령 조립 로직이 깨진 채 방치됐던
+# 사례(2026-08-05 실측 발견·수정)가 있어 스캔 범위에 포함시켰다. 훅 파일명은 git 컨벤션상
+# 확장자가 없어(pre-commit/pre-push/commit-msg) bin/처럼 "*.sh" 로 필터링할 수 없다.
 
 set -euo pipefail
 
@@ -16,6 +22,7 @@ source "$TCC_SCRIPT_DIR/../lib/script-init.sh"
 init_repo_root
 
 BIN_DIR="$REPO_ROOT/bin"
+HOOKS_DIR="$REPO_ROOT/git/.githooks"
 SELF="$(basename "${BASH_SOURCE[0]}")"
 
 # contexts/.archive 는 사용 종료된 스킬이라 커버리지 요구 대상에서 제외.
@@ -27,7 +34,7 @@ for d in "$REPO_ROOT"/contexts/*/tests; do
   TEST_DIRS+=("$d")
 done
 
-log_info "--- Step: Test Coverage Gate (bin/*.sh) ---"
+log_info "--- Step: Test Coverage Gate (bin/*.sh, git/.githooks/*) ---"
 
 UNTESTED=()
 while IFS= read -r -d '' script; do
@@ -38,7 +45,14 @@ while IFS= read -r -d '' script; do
   if ! grep -qrlF --binary-files=without-match -- "$name" "${TEST_DIRS[@]}" 2>/dev/null; then
     UNTESTED+=("${script#"$REPO_ROOT"/}")
   fi
-done < <(find "$BIN_DIR" -type f -name "*.sh" -print0 | sort -z)
+done < <(
+  {
+    find "$BIN_DIR" -type f -name "*.sh" -print0
+    # git 훅은 확장자가 없는 고정 파일명(pre-commit/pre-push/commit-msg)이라 "*.sh"로
+    # 걸러지지 않으므로 별도로 전부 스캔한다.
+    find "$HOOKS_DIR" -type f -print0 2>/dev/null
+  } | sort -z
+)
 
 if [ "${#UNTESTED[@]}" -gt 0 ]; then
   echo "[ERROR] 아래 검사 스크립트는 contexts/*/tests 어디에서도 참조되지 않아, 로직이 깨져도 아무 테스트가 잡지 못합니다:" >&2
@@ -49,5 +63,5 @@ if [ "${#UNTESTED[@]}" -gt 0 ]; then
   exit 1
 fi
 
-log_info "[OK] bin/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
+log_info "[OK] bin/ 및 git/.githooks/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
 exit 0

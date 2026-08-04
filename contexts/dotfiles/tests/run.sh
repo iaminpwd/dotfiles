@@ -15,7 +15,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FAILED=()
-for suite in check-symlinks test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-git-relpath test-jq-resolve; do
+for suite in check-symlinks test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-git-relpath test-jq-resolve test-commit-msg-hook test-pre-commit-hook test-pre-push-hook; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done
