@@ -121,3 +121,14 @@
     state: started
   become: true
   when: ansible_os_family in ["Debian", "RedHat"]
+
+# macOS는 리눅스 네이티브 데몬을 못 써서 Docker Desktop(또는 Colima/OrbStack) 같은
+# VM 기반 런타임이 별도로 필요함 - 위 apt/dnf 태스크들과 달리 자동 설치 대상이 아니므로
+# 안내만 출력한다 (README의 "macOS는 Docker Desktop 설치 안내"와 실제 동작을 일치시킴).
+- name: Docker Desktop 수동 설치 안내 (macOS)
+  ansible.builtin.debug:
+    msg: >-
+      macOS는 Docker Engine을 네이티브로 설치할 수 없습니다.
+      https://www.docker.com/products/docker-desktop 에서 Docker Desktop을
+      직접 설치하거나, Colima/OrbStack 같은 경량 대안을 사용하십시오.
+  when: ansible_os_family == "Darwin"
