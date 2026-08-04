@@ -15,7 +15,9 @@
 
     - role: docker
       tags: ['docker']
-      when: ansible_os_family in ['Debian', 'RedHat'] # macOS는 Docker Desktop을 수동 설치 권장
+      # macOS(Darwin)도 진입은 허용 - 실제 설치는 Debian/RedHat에서만 하고,
+      # Darwin에서는 롤 내부의 개별 태스크(when: Darwin)가 안내 메시지만 출력한다.
+      when: ansible_os_family in ['Debian', 'RedHat', 'Darwin']
 
     - role: zsh
       tags: ['zsh', 'shell']
