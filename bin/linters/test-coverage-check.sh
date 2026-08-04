@@ -90,14 +90,16 @@ if [ -d "$PLUGINS_DIR" ]; then
           invoked=1
           break
         fi
-        # 패턴 B: 변수 대입 후 bash "$VAR"/"${VAR}" 호출 (이 저장소 테스트들의 표준 관례)
+        # 패턴 B: 변수 대입 후 bash "$VAR"/"${VAR}" 호출 (이 저장소 테스트들의 표준 관례).
+        # 대입문이 if/for 블록 안에 들여쓰기돼 있는 경우가 실제로 있어(observability-check.sh
+        # 테스트가 require_tool yq 블록 안에 있음, 2026-08-05 실측) 줄 앞 공백을 허용해야 한다.
         while IFS= read -r varname; do
           [ -n "$varname" ] || continue
           if grep -qE "bash[[:space:]]+\"\\\$\{?${varname}\}?\"" "$tfile" 2>/dev/null; then
             invoked=1
             break
           fi
-        done < <(grep -oE "^[A-Za-z_][A-Za-z0-9_]*=.*${pname_esc}\"?\$" "$tfile" 2>/dev/null | sed 's/=.*//')
+        done < <(grep -oE "^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=.*${pname_esc}\"?\$" "$tfile" 2>/dev/null | sed -E 's/^[[:space:]]*//; s/=.*//')
         [ "$invoked" -eq 1 ] && break
       done < <(find "$tdir" -type f -name "*.sh" -print0 2>/dev/null)
       [ "$invoked" -eq 1 ] && break

@@ -117,6 +117,25 @@ else
   report "var-then-invoke-passes (변수 대입 후 bash \"\$VAR\" 호출도 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 6. 경고 레이어 통과 (패턴 B, 들여쓰기된 변수 대입): if/for 블록 안에서 대입되는 경우도
+# 잡아야 한다. observability-check.sh 테스트를 추가했을 때 대입문이 require_tool yq
+# 블록 안에 들여쓰기돼 있어 ^[A-Za-z_] 앵커가 못 잡는 실사용 버그가 있었다(2026-08-05).
+R6="$TMP/repo6"
+new_fixture_repo "$R6"
+cat >"$R6/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+if true; then
+  EXAMPLE_PLUGIN="$REPO_ROOT/bin/hooks/plugins/example-check.sh"
+  bash "$EXAMPLE_PLUGIN"
+fi
+EOF
+status=$(run_checker "$R6")
+if [ "$status" -eq 0 ] && ! grep -qF "example-check.sh" "$TMP/out"; then
+  report "indented-var-then-invoke-passes (들여쓰기된 변수 대입도 경고 없음)" 0
+else
+  report "indented-var-then-invoke-passes (들여쓰기된 변수 대입도 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
