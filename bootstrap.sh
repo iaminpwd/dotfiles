@@ -59,7 +59,7 @@ echo "=> 🚀 Running 'just setup' automatically..."
 
 if command -v trufflehog &>/dev/null; then
   echo "=> 로컬 dotfiles 디렉토리 시크릿 검증 중..."
-  trufflehog git "file://$SCRIPT_DIR" --no-update --fail || {
+  trufflehog filesystem "$SCRIPT_DIR" --no-update --fail || {
     echo "❌ [Hard Block] 시크릿 유출 의심 내역이 발견되어 즉시 작업을 중단합니다." >&2
     exit 1
   }
