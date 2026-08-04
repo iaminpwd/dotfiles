@@ -20,9 +20,19 @@ jobs:
     name: Lint & Test Gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # mise의 github: 백엔드(bicep 등)가 GitHub API로 릴리즈를 조회하는데, 인증 없이 부르면
+    # Actions 러너 공유 IP가 익명 요청 제한(60/시간)에 바로 걸린다. Actions가 잡마다 자동
+    # 발급하는 GITHUB_TOKEN을 넘겨 인증 요청(5000/시간)으로 바꿔 회피한다.
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      # persist-credentials: false — 기본값(true)이면 checkout이 .git/config에 임시 인증
+      # 토큰을 기록하는데, just verify가 도는 trufflehog가 이를 유출된 시크릿으로 오탐할 수 있다.
+      # 이 job은 이후 git push/fetch가 필요 없으므로 꺼도 안전하다.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install mise
         run: |
@@ -45,6 +55,18 @@ jobs:
       - name: Install pinned tools (shellcheck, tflint, checkov, trufflehog, ansible-lint ...)
         run: mise install
 
+      # 테스트 스위트가 zsh(-n 문법 검사)와, ai_agent 롤이 평소 ~/.local/bin에 심볼릭 링크해주는
+      # bin/**/*.sh(prompt-lint.sh 등)를 전제하므로, 이 job에서도 최소한으로 재현해준다.
+      - name: Install zsh (required by test-shell zsh -n subtest)
+        run: sudo apt-get update -qq && sudo apt-get install -y zsh
+
+      - name: Symlink agent scripts into ~/.local/bin (mirrors ansible ai_agent role)
+        run: |
+          mkdir -p ~/.local/bin
+          find ./bin ./contexts -type f -name '*.sh' \( -path '*/bin/*' -o -path '*/scripts/*' \) -perm -u+x \
+            -exec ln -sf "$(pwd)/{}" ~/.local/bin/ \;
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run full regression verification (check + test + prompt-lint)
         run: just verify
 
@@ -63,9 +85,17 @@ jobs:
             os: macos-latest
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    # verify job과 동일한 이유(mise github: 백엔드 rate limit 회피)로 GITHUB_TOKEN을 넘긴다.
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      # persist-credentials: false — 켜져 있으면 checkout이 .git/config에 임시 인증 토큰을
+      # 남기는데, bootstrap.sh가 저장소 전체를 trufflehog filesystem으로 스캔하다가
+      # 그 토큰 자체를 유출된 시크릿으로 오탐해 Hard Block으로 실패한다(실측 버그).
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Bootstrap (1st run)
         run: ./bootstrap.sh < /dev/null
