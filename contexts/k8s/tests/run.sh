@@ -17,6 +17,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
+KYVERNO_FIXTURES="$TESTS_DIR/fixtures-kyverno"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -127,6 +128,32 @@ if require_tool pluto; then
   run_pluto fail-deprecated-api.yaml 1
 fi
 
+echo "--- kyverno test (k8s-check.sh) ---"
+# kube-linter의 fail-privileged.yaml과 동일한 관심사(privileged 컨테이너 금지)를
+# Kyverno 네이티브 정책으로도 표현한 픽스처. kyverno test는 helm/conftest처럼
+# 디렉토리 단위로 동작하며, "리소스가 위반하는가"가 아니라 "선언한 기대 결과가
+# 실제 판정과 일치하는가"를 검사한다는 점이 다른 도구들과 다르다(2026-08-05
+# 실측: kyverno 1.18.2 CLI로 스키마 확정). 그래서 fail-broken-expectation은
+# 위반 리소스가 있다는 뜻이 아니라, 기대 결과 자체가 실제 판정과 어긋난다는
+# 뜻이다 — 정책이 규정과 다르게 바뀌었거나 테스트 기대값이 낡았을 때와 같은 신호다.
+if require_tool kyverno; then
+  status=0
+  kyverno test "$KYVERNO_FIXTURES/ok-baseline" >/dev/null 2>&1 || status=$?
+  if [ "$status" -eq 0 ]; then
+    report "ok-baseline (기대 결과가 실제 판정과 일치)" 0
+  else
+    report "ok-baseline (기대 결과가 실제 판정과 일치)" 1 "기대 exit=0 / 실제 exit=$status"
+  fi
+
+  status=0
+  out=$(kyverno test "$KYVERNO_FIXTURES/fail-broken-expectation" 2>&1) || status=$?
+  if [ "$status" -ne 0 ] && grep -qF "tests failed" <<<"$out"; then
+    report "fail-broken-expectation (기대 결과 불일치 검출)" 0
+  else
+    report "fail-broken-expectation (기대 결과 불일치 검출)" 1 "기대 exit≠0 + 'tests failed' 문구 / 실제 exit=$status"
+  fi
+fi
+
 echo "--- k8s-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
 # 위 promtool/pluto 섹션은 "판정 로직이 맞는가"만 본다. k8s-check.sh 자신의
 # 오케스트레이션(스테이징된 yaml 중 어떤 kind:가 어떤 서브체크를 트리거하는지,
@@ -134,10 +161,6 @@ echo "--- k8s-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
 # bash 호출되는 테스트가 없어 test-coverage-check.sh의 경고 레이어에 걸렸다
 # (2026-08-05). aiops-check.sh/observability-check.sh와 동일한 패턴으로 격리
 # 저장소에서 실제 호출까지 검증한다.
-#
-# check_kyverno(Kyverno 네이티브 정책 테스트)는 이 저장소에 kyverno-test.yaml
-# 픽스처 자체가 없어(판정기 레벨 테스트도 기존에 없었음) 트리거 안 되는 경우만
-# 아래 no-trigger 케이스로 간접 확인한다. 별도 픽스처 도입은 이번 범위 밖이다.
 K8S_PLUGIN="$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
 if [ -x "$K8S_PLUGIN" ]; then
   PLUGIN_TMP=$(mktemp -d)
@@ -222,6 +245,38 @@ EOF
     report "no-trigger-without-kind (kind: 없는 yaml은 무동작)" 0
   else
     report "no-trigger-without-kind (kind: 없는 yaml은 무동작)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+  fi
+
+  if require_tool kyverno; then
+    # Case 6: *kyverno-test.yaml 이 스테이징되면 그 디렉토리에서 kyverno test를
+    # 실제로 실행한다. check_kyverno는 파일 하나가 아니라 kyverno-test.yaml이
+    # 위치한 디렉토리 전체(policy.yaml/resources.yaml 포함)를 대상으로 하므로
+    # 세 파일을 함께 배치한다.
+    KR6="$PLUGIN_TMP/repo6"
+    new_plugin_repo "$KR6"
+    cp "$KYVERNO_FIXTURES/fail-broken-expectation/policy.yaml" "$KR6/policy.yaml"
+    cp "$KYVERNO_FIXTURES/fail-broken-expectation/resources.yaml" "$KR6/resources.yaml"
+    cp "$KYVERNO_FIXTURES/fail-broken-expectation/kyverno-test.yaml" "$KR6/kyverno-test.yaml"
+    git -C "$KR6" add policy.yaml resources.yaml kyverno-test.yaml
+    status=$(run_plugin "$KR6")
+    if [ "$status" -eq 1 ] && grep -qF "Kyverno 정책 테스트가 실패" "$PLUGIN_TMP/out"; then
+      report "kyverno-trigger-and-block (기대 결과 불일치 -> 차단)" 0
+    else
+      report "kyverno-trigger-and-block (기대 결과 불일치 -> 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    KR7="$PLUGIN_TMP/repo7"
+    new_plugin_repo "$KR7"
+    cp "$KYVERNO_FIXTURES/ok-baseline/policy.yaml" "$KR7/policy.yaml"
+    cp "$KYVERNO_FIXTURES/ok-baseline/resources.yaml" "$KR7/resources.yaml"
+    cp "$KYVERNO_FIXTURES/ok-baseline/kyverno-test.yaml" "$KR7/kyverno-test.yaml"
+    git -C "$KR7" add policy.yaml resources.yaml kyverno-test.yaml
+    status=$(run_plugin "$KR7")
+    if [ "$status" -eq 0 ]; then
+      report "kyverno-trigger-and-pass (기대 결과 일치 -> 통과)" 0
+    else
+      report "kyverno-trigger-and-pass (기대 결과 일치 -> 통과)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
   fi
 
   rm -rf "$PLUGIN_TMP"

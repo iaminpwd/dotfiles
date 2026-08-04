@@ -1,0 +1,25 @@
+# kyverno test .  기준 통과 픽스처: 기대 결과(results)가 정책의 실제 판정과 정확히
+# 일치해야 "Test Summary: N tests passed and 0 tests failed" + exit 0 이 된다.
+# 스키마는 kyverno 1.18.2 CLI로 직접 실행해 확정했다(구 스키마는
+# "deprecated schema" 경고와 함께 거부됨, 2026-08-05 실측).
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: disallow-privileged-containers-ok
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: disallow-privileged-containers
+    rule: privileged-containers-should-not-be-allowed
+    resources:
+      - fail-privileged-pod
+    kind: Pod
+    result: fail
+  - policy: disallow-privileged-containers
+    rule: privileged-containers-should-not-be-allowed
+    resources:
+      - ok-baseline-pod
+    kind: Pod
+    result: pass

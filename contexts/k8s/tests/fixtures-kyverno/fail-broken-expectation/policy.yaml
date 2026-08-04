@@ -1,0 +1,26 @@
+# kyverno-test.yaml 기준 통과 픽스처용 정책. kube-linter의 fail-privileged.yaml
+# 픽스처(070-advanced-security-standard.md)와 동일한 관심사(privileged 컨테이너
+# 금지)를 Kyverno 네이티브 정책으로 표현한다.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: privileged-containers-should-not-be-allowed
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: >-
+          Privileged mode is disallowed. The field
+          spec.containers[*].securityContext.privileged must be unset or set to `false`.
+        pattern:
+          spec:
+            containers:
+              - =(securityContext):
+                  =(privileged): "false"

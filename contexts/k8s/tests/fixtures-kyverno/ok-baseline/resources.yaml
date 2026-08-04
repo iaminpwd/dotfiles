@@ -1,0 +1,24 @@
+# fail-privileged-pod는 정책을 위반해야 하고(result: fail로 기대), ok-baseline-pod는
+# 통과해야 한다(result: pass로 기대). 이 파일 자체의 목적은 "위반 리소스가 실제로
+# 없다"가 아니라 "정책이 위반과 정상을 정확히 구분하는가"를 증명하는 것이다.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fail-privileged-pod
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27.0
+      securityContext:
+        privileged: true
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ok-baseline-pod
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27.0
+      securityContext:
+        privileged: false

@@ -1,0 +1,29 @@
+# check_kyverno(k8s-check.sh)가 실제로 커밋을 막는 조건 재현: "kyverno test" 자체가
+# 실패하는 경우다. kyverno test는 "리소스가 정책을 위반하는가"가 아니라 "선언된
+# 기대 결과(results)가 실제 판정과 일치하는가"를 검사하므로, 위반 리소스가 있다는
+# 사실만으로는 실패하지 않는다(정확히 위반을 "기대"했다면 그것도 통과다).
+#
+# 여기서는 fail-privileged-pod의 기대 결과를 의도적으로 잘못(pass) 선언해, 정책이
+# 실제로는 위반(fail)을 반환하는 것과 어긋나게 만든다 — 정책이 규정과 다르게
+# 동작하도록 누군가 고쳤거나, 테스트 기대값이 낡았을 때와 동일한 신호다.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: disallow-privileged-containers-broken-expectation
+policies:
+  - policy.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: disallow-privileged-containers
+    rule: privileged-containers-should-not-be-allowed
+    resources:
+      - fail-privileged-pod
+    kind: Pod
+    result: pass
+  - policy: disallow-privileged-containers
+    rule: privileged-containers-should-not-be-allowed
+    resources:
+      - ok-baseline-pod
+    kind: Pod
+    result: pass
