@@ -31,7 +31,7 @@
 - **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
 - **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `bin/hooks/pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
-- **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하고 `find` 탐색에서 `.git/`, `.terraform/` 등을 `-prune`으로 제외하여, 커밋 지연을 20초에서 0.5초 수준으로 단축했습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
+- **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하여 커밋 지연을 단축했습니다(직접 재현 실측: DB 캐시 미스 10.56초 → 캐시 적중 1.17초, 약 89% 단축). 파일 대상 수집은 `find` 전체 탐색이 아니라 `git diff --cached`/`git ls-files` 기반이라 `.git/`, `.terraform/` 등은 애초에 스캔 대상에 들어오지 않습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
 
 ### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
 로컬 프롬프트 아키텍처에는 Andrew Ng의 Agentic Workflow 디자인 패턴, ReAct/ToT 등의 추론 아키텍처, 그리고 벤더별 공식 가이드를 반영한 고급 프롬프트 설계가 반영되어 있습니다.
@@ -183,7 +183,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 ## 작동 논리 및 아키텍처
 
 ### bootstrap.sh & Ansible 설치 파이프라인
-![setup.sh Installation Pipeline](assets/setup-pipeline.png)
+![bootstrap.sh & Ansible Installation Pipeline](assets/setup-pipeline.png)
 
 ### GNU Stow 심볼릭 링크 구조
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
