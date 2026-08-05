@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # test-ansible.sh
 #
-# validate_ansible(pre-flight-check.sh)는 이전까지 어떤 fixture 테스트도 없었다
-# (2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/conftest/FinOps
-# 6개가 커버리지 0%). 이 저장소의 실제 ansible 사용처(ansible/site.yml, bootstrap.sh)와
-# 가장 밀접한 워크스페이스라 dotfiles에 둔다.
+# validate_ansible(pre-flight-check.sh)는 이전까지 어떤 fixture 테스트도 없었다.
+# 이 저장소의 실제 ansible 사용처(ansible/site.yml, bootstrap.sh)와 가장 밀접한
+# 워크스페이스라 dotfiles에 둔다.
 #
 # ansible-playbook --syntax-check는 파일 인자를 직접 받지만, ansible-lint는 인자
 # 없이 현재 디렉토리를 통째로 스캔한다(pre-flight-check.sh의 validate_ansible과
@@ -45,8 +44,8 @@ report() {
 
 echo "=== ansible 검증 회귀 테스트 ==="
 
-# ansible-playbook/ansible-lint 둘 다 파이썬 인터프리터 기동 비용이 있고(ansible-lint
-# 실측 ~1.8초/건, 이 스위트 소요 시간의 대부분) ok/fail 픽스처가 서로 무관하므로
+# ansible-playbook/ansible-lint 둘 다 파이썬 인터프리터 기동 비용이 크고(이 스위트
+# 소요 시간의 대부분을 ansible-lint가 차지) ok/fail 픽스처가 서로 무관하므로
 # parallel-pair.sh(SSOT)로 동시에 돌린다.
 PAIR_TMPDIR=$(mktemp -d)
 trap 'rm -rf "${PAIR_TMPDIR:-}"' EXIT

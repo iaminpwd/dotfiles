@@ -2,10 +2,8 @@
 # aiops-check.sh - AIOps Telemetry Manifest Validation Pipeline
 #
 # contexts/aiops/scripts/validate-telemetry-schema.sh(평문 시크릿 검사 + ISMS-P
-# ClosedLoopPolicy 가드레일)는 bin/hooks/plugins/*.sh 로 자동 로드되는 곳에 지금까지
-# 배선돼 있지 않았다. contexts/aiops/tests/run.sh가 자기 자신의 픽스처만 스스로
-# 검증했을 뿐, 실제 git commit 경로에서는 단 한 번도 호출되지 않은 상태였다
-# (2026-08-05 실측 발견). k8s-check.sh/observability-check.sh와 동일한 패턴으로 배선한다.
+# ClosedLoopPolicy 가드레일)를 bin/hooks/plugins/*.sh 자동 로드 경로에 배선한다
+# (k8s-check.sh/observability-check.sh와 동일한 패턴).
 #
 # 이 훅은 전역 core.hooksPath로 dotfiles 밖 임의 저장소에서도 실행되므로, contexts/
 # 경로가 아니라 CRD kind: 시그니처로 "텔레메트리 매니페스트인지"를 판정한다
@@ -13,9 +11,7 @@
 #
 # validate-telemetry-schema.sh는 파일 목록이 아니라 디렉토리를 재귀 스캔하는
 # 인터페이스라(TARGET_DIR), 트리거된 경우 스테이징된 관련 파일만 격리 tmpdir에
-# 모아 넘긴다(pluto -d 를 위해 격리 tmpdir을 쓰는 k8s-check.sh의
-# check_deprecated_apis()와 동일한 이유: 무관한 저장소 전체를 훑으면 무관한
-# 커밋까지 차단한다).
+# 모아 넘긴다(무관한 저장소 전체를 훑으면 무관한 커밋까지 차단하기 때문).
 
 set -euo pipefail
 

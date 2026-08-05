@@ -15,7 +15,12 @@ PROMPT_LINT_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$PROMPT_LINT_SCRIPT_DIR/../lib/script-init.sh"
 
-init_repo_root
+# 이 스크립트는 pre-flight-check.sh처럼 "호출 시점의 현재 저장소"를 검증하는 범용
+# 도구가 아니라 항상 자기 자신이 속한 dotfiles 저장소의 contexts/만 대상으로 하는
+# 전용 린터다. init_repo_root()(호출 CWD 기준 git rev-parse)를 쓰면 dotfiles 밖에서
+# 호출됐을 때 REPO_ROOT가 엉뚱한 곳을 가리켜 대상 자체가 사라지므로, CWD와 무관하게
+# 스크립트 자신의 물리적 위치로 REPO_ROOT를 고정한다(generate-context-index.sh와 동일 패턴).
+REPO_ROOT=$(cd "$PROMPT_LINT_SCRIPT_DIR/../.." && pwd)
 
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 EXIT_CODE=0
@@ -144,8 +149,7 @@ check_documented_clause_existence() {
   #
   # 전문을 변수에 모아 `printf ... | grep -q` 로 넘기는 방식은 쓰지 않는다. grep 이 첫
   # 매치에서 종료하며 stdin 을 닫고, 그 SIGPIPE 로 printf 가 141 을 반환하는데 set -o
-  # pipefail 이 그것을 파이프라인 결과로 채택해 "찾았는데 못 찾음"으로 뒤집힌다
-  # (2026-07-28 실측: 실재하는 조항 20건이 전부 오탐).
+  # pipefail 이 그것을 파이프라인 결과로 채택해 "찾았는데 못 찾음"으로 뒤집힌다.
   if [ -s "$names_file" ]; then
     grep -rhoFf "$names_file" --include="*.md" --exclude-dir=".archive" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
       sort -u >"$found_file" || true
@@ -165,7 +169,7 @@ check_documented_clause_existence() {
 }
 
 # -----------------------------------------------------------------------------
-# 9. CORE EXCEPTION HOOK 마커 무결성 검사 (블랑켓 무효화 금지 + 룰 실재성 대조)
+# 4. CORE EXCEPTION HOOK 마커 무결성 검사 (블랑켓 무효화 금지 + 룰 실재성 대조)
 # -----------------------------------------------------------------------------
 check_exception_hook_integrity() {
   log_info "--- Step: Exception Hook Marker Integrity ---"
@@ -221,7 +225,7 @@ check_exception_hook_integrity() {
 }
 
 # -----------------------------------------------------------------------------
-# 4. 파일 크기 제약 (150줄) 검사
+# 5. 파일 크기 제약 (150줄) 검사
 # -----------------------------------------------------------------------------
 check_file_size() {
   log_info "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
@@ -238,7 +242,7 @@ check_file_size() {
 }
 
 # -----------------------------------------------------------------------------
-# 5. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
+# 6. 크로스 클라우드/스킬 벤더 용어 오염 검사 (고정밀 패턴만)
 # -----------------------------------------------------------------------------
 check_vendor_leakage() {
   log_info "--- Step: Cross-Vendor Terminology Leakage ---"
@@ -264,7 +268,7 @@ check_vendor_leakage() {
 }
 
 # -----------------------------------------------------------------------------
-# 6. 코드펜스 짝 검사
+# 7. 코드펜스 짝 검사
 # -----------------------------------------------------------------------------
 check_code_fences() {
   log_info "--- Step: Code Fence Balance ---"
@@ -300,7 +304,7 @@ check_code_fences() {
 }
 
 # -----------------------------------------------------------------------------
-# 7. Halt & Clarify / Hard Block 등급 휴리스틱 (경고 전용)
+# 8. Halt & Clarify / Hard Block 등급 휴리스틱 (경고 전용)
 # -----------------------------------------------------------------------------
 check_severity_tag_heuristic() {
   log_info "--- Step: Halt & Clarify vs Hard Block Severity Heuristic (Warning Only) ---"
@@ -323,7 +327,7 @@ check_severity_tag_heuristic() {
 }
 
 # -----------------------------------------------------------------------------
-# 7b. MUST 로 태깅됐지만 본문이 선호를 서술하는 조항 탐지 (경고 전용)
+# 8b. MUST 로 태깅됐지만 본문이 선호를 서술하는 조항 탐지 (경고 전용)
 # -----------------------------------------------------------------------------
 check_prefer_language_tagged_must() {
   log_info "--- Step: Preference Wording Tagged as MUST (Warning Only) ---"
@@ -346,21 +350,17 @@ check_prefer_language_tagged_must() {
 }
 
 # -----------------------------------------------------------------------------
-# 8. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
+# 9. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
 # -----------------------------------------------------------------------------
 check_cross_skill_duplication() {
   log_info "--- Step: Cross-Skill Concept Duplication Candidates (Warning Only) ---"
   # aws/azure 미러링(같은 개념이 두 클라우드 스킬에 각각 존재)은 의도된 구조이므로
-  # 그 둘만 겹치는 경우는 제외하고, 그 외 스킬(k8s/aiops/containers/observability/
-  # multi-cloud)까지 걸치면 실수일 확률이 높아 경고한다.
+  # 그 둘만 겹치는 경우는 제외하고, 그 외 스킬까지 걸치면 실수일 확률이 높아 경고한다.
   # 다른 스킬로 위임하는 문장("위임"/"참조하십시오")에서 개념 이름만 언급하는 것은
-  # 실제 내용 중복이 아니므로, 그런 위임 라인은 제외하고 "실제 내용으로" 등장하는
-  # 파일만 집계한다.
-  # 감시 대상은 "개념"이어야 한다. 제품/도구 이름은 그 도구를 쓰는 모든 도메인에서
-  # 정당하게 등장하므로 중복 신호가 되지 못한다. OpenTelemetry 를 이 목록에 두었을 때
-  # 걸린 6개 파일(aiops FinOps 파이프라인, aws X-Ray 병기, azure App Insights 병기,
-  # observability 벤더중립 계측/Collector 게이트웨이)은 전부 서로 다른 도메인 조항이
-  # 도구명만 공유한 것이라 실제 중복이 아니었다(2026-07-27 검토). 개념만 남긴다.
+  # 실제 내용 중복이 아니므로 제외한다.
+  # 감시 대상은 "개념"이어야 한다. 제품/도구 이름(예: OpenTelemetry)은 그 도구를 쓰는
+  # 모든 도메인에서 정당하게 등장하므로 중복 신호가 되지 못한다 — 같은 도구를 쓸 뿐
+  # 서로 다른 도메인 조항인 경우가 실제로 있었다. 개념만 남긴다.
   local concepts=("SLI/SLO" "RED (Rate" "Error Budget" "카디널리티")
   local concept files skill_count
   for concept in "${concepts[@]}"; do
@@ -368,9 +368,8 @@ check_cross_skill_duplication() {
       grep -v "위임\|참조하십시오\|참조하고" |
       cut -d: -f1 | sort -u || true)
     [ -z "$files" ] && continue
-    # grep -vc는 카운트가 0일 때(해당 개념이 aws/azure에만 있을 때) 종료 코드 1을 반환하고,
-    # set -euo pipefail 하에서 이 대입이 린터 전체를 아무 메시지 없이 exit 1로 중단시킨다
-    # (2026-07-27 실측). 카운트 0은 정상 결과이므로 아래 미러링 검사(275행)와 동일하게 흡수한다.
+    # grep -vc는 카운트가 0일 때 종료 코드 1을 반환해 set -euo pipefail 하의 대입이
+    # 린터 전체를 조용히 죽인다. 카운트 0은 정상 결과이므로 || true로 흡수한다.
     skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
     if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
       log_info "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
@@ -386,16 +385,14 @@ check_cross_skill_duplication() {
 check_vendor_mirror_symmetry() {
   log_info "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
   # aws/azure 미러링은 9번 검사 주석대로 의도된 구조다. 다만 한쪽 벤더에만 조항을
-  # 추가하면 드리프트가 쌓이므로(2026-07-26 실측: azure 에 Vulnerability & Data
-  # Classification / Continuous Right-Sizing / Managed Observability 대응 조항 누락),
-  # 동일 번호 모듈의 조항 수를 대조해 경고한다.
+  # 추가하면 드리프트가 쌓이므로 동일 번호 모듈의 조항 수를 대조해 경고한다.
   # 조항명은 벤더 용어로 갈리므로(TGW <-> vWAN, IRSA <-> Workload Identity) 이름이
   # 아니라 개수만 비교해야 대응어 28건을 오탐하지 않는다.
   local f prefix azure_file a_count z_count
   for f in "$CONTEXTS_DIR"/aws/references/*.md; do
     [ -f "$f" ] || continue
     # || true 가 없으면 숫자 접두사 없는 .md 하나만 있어도 grep 이 1을 반환해 린터가
-    # 메시지 없이 죽고, 바로 아래 작성자 의도의 가드가 영영 도달하지 못한다(2026-07-27 실측).
+    # 메시지 없이 죽고, 바로 아래 작성자 의도의 가드가 영영 도달하지 못한다.
     prefix=$(basename "$f" | grep -oE '^[0-9]{3}' || true)
     [ -z "$prefix" ] && continue
     azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)

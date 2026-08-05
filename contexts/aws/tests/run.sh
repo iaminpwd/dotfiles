@@ -32,10 +32,8 @@ source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
 echo "=== aws Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24
 
-# validate_sam(pre-flight-check.sh)은 이전까지 어떤 fixture 테스트도 없었다
-# (2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/conftest/FinOps
-# 6개가 커버리지 0%). sam CLI는 --region 없이는 템플릿 정합성과 무관한
-# "AWS Region was not found" 오류만 내므로 AWS_DEFAULT_REGION을 명시한다.
+# sam CLI는 --region 없이는 템플릿 정합성과 무관한 "AWS Region was not found" 오류만
+# 내므로 AWS_DEFAULT_REGION을 명시한다.
 echo
 echo "=== aws SAM 템플릿 검증 회귀 테스트 ==="
 SAM_FIXTURES="$TESTS_DIR/fixtures-sam"
@@ -57,8 +55,8 @@ sam_report() {
 if command -v sam >/dev/null 2>&1; then
   export SAM_CLI_TELEMETRY=0 AWS_DEFAULT_REGION=us-east-1
 
-  # sam validate 는 Python 인터프리터 기동 비용이 커서(실측: 2건 순차 3.07초) parallel-pair.sh
-  # (SSOT)로 서로 무관한 두 픽스처를 동시에 돌린다.
+  # sam validate 는 Python 인터프리터 기동 비용이 커서 parallel-pair.sh(SSOT)로 서로
+  # 무관한 두 픽스처를 동시에 돌린다.
   SAM_TMPDIR=$(mktemp -d)
   trap 'rm -rf "${SAM_TMPDIR:-}"' EXIT
 

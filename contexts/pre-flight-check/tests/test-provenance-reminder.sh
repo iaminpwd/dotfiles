@@ -4,8 +4,7 @@
 # check_provenance_reminder(pre-flight-check.sh)는 .agent-state/edits.log 에서
 # 스테이징된 파일의 마지막 결과가 SUCCESS 가 아니면(agent-edits-hook.sh 가 남긴
 # "OK" 더미, record-provenance.sh 의 "FLAGGED", 에러 등) 커밋을 막지 않고
-# WARNING 만 남긴다 — 이전까지 어떤 fixture 테스트도 없었다(2026-08-05 실측:
-# dotfiles 컨텍스트 감사에서 발견).
+# WARNING 만 남긴다 — 이전까지 어떤 fixture 테스트도 없었다.
 #
 # 로그 포맷은 "<ISO8601> | <REL경로> | <출처> | <목적> | <결과>"이고 REL경로는
 # REPO_ROOT 기준 상대경로다(agent-edits-hook.sh/record-provenance.sh 공용). 이

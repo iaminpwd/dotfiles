@@ -35,9 +35,8 @@ check-idempotency file:
 
 # 단위 테스트 전체 실행 (contexts/ 하위 모든 스킬 자동 탐색, .archive 제외)
 # 첫 실패 스킬에서 멈추면 뒤 스킬은 시도조차 안 되어, 무관한 스킬이 동시에 깨져 있어도
-# 하나씩만 재커밋마다 드러난다(2026-08-01 실측). run-suite.sh가 이미 갖춘 병렬 실행 +
-# "실패해도 끝까지 진행 후 요약" 로직을 그대로 재사용한다 (Justfile에 순차 for 루프를
-# 중복 구현하지 않음. 2026-08-05 병렬화로 14개 스킬 기준 41초 -> 약 26초로 단축 실측).
+# 하나씩만 재커밋마다 드러난다. run-suite.sh가 이미 갖춘 병렬 실행 + "실패해도 끝까지
+# 진행 후 요약" 로직을 그대로 재사용한다(Justfile에 순차 for 루프를 중복 구현하지 않음).
 test:
     @echo "=> Running Unit Tests for all skills..."
     bash bin/hooks/run-suite.sh contexts/*/tests/run.sh

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # test-idempotency.sh
 #
-# bin/linters/idempotency-check.sh 는 항상 exit 0 이고(pre-flight-check.sh 144행
-# 부근 호출도 `|| true` 로 감쌈) 커밋을 막지 못하는 WARNING 전용이다(2026-08-03
-# 실측 커버리지 0%). 그래도 append(>>·tee -a) 주변 ±3줄 윈도우 안에서 가드
+# bin/linters/idempotency-check.sh 는 항상 exit 0 이고(호출부도 `|| true` 로 감쌈)
+# 커밋을 막지 못하는 WARNING 전용이다. 그래도 append(>>·tee -a) 주변 ±3줄 윈도우 안에서 가드
 # (grep -q, if [ 등)를 찾는 awk 로직 자체가 깨지면 경고가 조용히 안 뜨게 되므로,
 # stderr 문구 유무로 탐지 로직만 고정한다. (픽스처 주석에도 검사 대상 리터럴
 # 연산자를 쓰지 않는다 — db-sg-checker.sh 픽스처와 같은 이유로 우발적 오탐/오가드를

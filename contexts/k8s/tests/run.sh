@@ -132,10 +132,10 @@ echo "--- kyverno test (k8s-check.sh) ---"
 # kube-linter의 fail-privileged.yaml과 동일한 관심사(privileged 컨테이너 금지)를
 # Kyverno 네이티브 정책으로도 표현한 픽스처. kyverno test는 helm/conftest처럼
 # 디렉토리 단위로 동작하며, "리소스가 위반하는가"가 아니라 "선언한 기대 결과가
-# 실제 판정과 일치하는가"를 검사한다는 점이 다른 도구들과 다르다(2026-08-05
-# 실측: kyverno 1.18.2 CLI로 스키마 확정). 그래서 fail-broken-expectation은
-# 위반 리소스가 있다는 뜻이 아니라, 기대 결과 자체가 실제 판정과 어긋난다는
-# 뜻이다 — 정책이 규정과 다르게 바뀌었거나 테스트 기대값이 낡았을 때와 같은 신호다.
+# 실제 판정과 일치하는가"를 검사한다는 점이 다른 도구들과 다르다. 그래서
+# fail-broken-expectation은 위반 리소스가 있다는 뜻이 아니라, 기대 결과 자체가
+# 실제 판정과 어긋난다는 뜻이다 — 정책이 규정과 다르게 바뀌었거나 테스트
+# 기대값이 낡았을 때와 같은 신호다.
 if require_tool kyverno; then
   status=0
   kyverno test "$KYVERNO_FIXTURES/ok-baseline" >/dev/null 2>&1 || status=$?
@@ -157,10 +157,8 @@ fi
 echo "--- k8s-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
 # 위 promtool/pluto 섹션은 "판정 로직이 맞는가"만 본다. k8s-check.sh 자신의
 # 오케스트레이션(스테이징된 yaml 중 어떤 kind:가 어떤 서브체크를 트리거하는지,
-# 격리 tmpdir로 pluto 스캔 범위를 좁히는지)은 이름이 주석에만 언급될 뿐 실제로
-# bash 호출되는 테스트가 없어 test-coverage-check.sh의 경고 레이어에 걸렸다
-# (2026-08-05). aiops-check.sh/observability-check.sh와 동일한 패턴으로 격리
-# 저장소에서 실제 호출까지 검증한다.
+# 격리 tmpdir로 pluto 스캔 범위를 좁히는지)은 여기서 격리 저장소를 만들어
+# 실제 호출까지 검증한다(aiops-check.sh/observability-check.sh와 동일 패턴).
 K8S_PLUGIN="$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
 if [ -x "$K8S_PLUGIN" ]; then
   PLUGIN_TMP=$(mktemp -d)
@@ -284,10 +282,8 @@ else
   report "k8s-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/k8s-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
 fi
 
-# validate_helm/validate_conftest(pre-flight-check.sh)는 이전까지 어떤 fixture
-# 테스트도 없었다(2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/
-# conftest/FinOps 6개가 커버리지 0%). 이 둘은 다른 픽스처처럼 단일 yaml 파일이
-# 아니라 차트 디렉토리/정책 디렉토리 단위라 fixtures-helm/, fixtures-conftest/
+# validate_helm/validate_conftest(pre-flight-check.sh)는 다른 픽스처처럼 단일 yaml
+# 파일이 아니라 차트 디렉토리/정책 디렉토리 단위라 fixtures-helm/, fixtures-conftest/
 # 로 따로 둔다.
 echo "--- helm lint (pre-flight-check.sh) ---"
 if require_tool helm; then

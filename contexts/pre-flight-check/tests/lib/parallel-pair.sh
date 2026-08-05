@@ -4,9 +4,8 @@
 #
 # checkov(tf-fixture-lib.sh), sam validate(aws), bicep build(azure), trivy(containers),
 # ansible-lint(dotfiles) 다섯 곳이 "인터프리터 기동 비용이 큰 CLI를 ok/fail 픽스처
-# 두 개에 대해 순차 호출"하는 동일한 모양이었다. 처음엔 tf_run_checkov_pair 하나였는데,
-# sam/bicep을 추가하면서 같은 백그라운드+wait 코드를 그대로 복붙하다 이 라이브러리로
-# 뽑아냈다(2026-08-05).
+# 두 개에 대해 순차 호출"하는 동일한 모양이라, 같은 백그라운드+wait 코드를 반복하지
+# 않도록 이 라이브러리로 뽑아냈다.
 #
 # 판정 로직(무엇을 grep해서 pass/fail을 가릴지)은 도구마다 완전히 다르므로 여기서
 # 다루지 않는다. 이 라이브러리는 "두 명령을 동시에 돌리고 결과 파일 + 종료 코드를

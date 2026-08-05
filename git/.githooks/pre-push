@@ -7,8 +7,7 @@
 # 없고, 코드가 실제로 이 머신을 떠나는 시점(push)에 한 번만 돌아도 보호 수준은
 # 그대로다. pre-commit 쪽엔 trufflehog(시크릿 스캔)와 pre-flight-check.sh 본체
 # (지금 스테이징된 실제 diff에 대한 캐시 가능한 검증)만 남겨 반복 커밋 루프를 빠르게
-# 유지한다(2026-08-04 실측: aws 스킬 커밋 1회 ~12.8초 → pre-commit 쪽은 무관 파일
-# 기준 ~4초로 감소. 근거: contexts/pre-flight-check/tests/test-*.sh 실행 시간).
+# 유지한다.
 #
 # 사용: git push 시 자동 호출. core.hooksPath(~/.githooks → git/.githooks)로 배포됨.
 
@@ -27,7 +26,7 @@ export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 # FinOps 회귀 테스트(contexts/pre-flight-check/tests/test-finops.sh)가 infracost
 # 무료 티어를 쓰므로, 개발 루프(just test)에서는 건너뛰고 push 시점에만 실제로
 # 호출한다 — pre-commit의 RUN_COST_CHECK와 동일한 이유, 별도 프로세스라 여기서도
-# 다시 켜야 한다(2026-08-04).
+# 다시 켜야 한다.
 export RUN_COST_CHECK=true
 
 EMPTY_TREE=$(git hash-object -t tree /dev/null)
@@ -95,8 +94,8 @@ echo "🧪 push 되는 커밋이 건드린 스킬의 회귀 테스트를 실행�
 
 if [ -x "$RUN_SUITE" ]; then
   # 스킬을 하나씩 따로 넘기면 매번 SCRIPTS 배열이 1개뿐이라 run-suite.sh의 배치 병렬
-  # 실행(2026-08-05 도입)이 발동하지 않는다. 바뀐 스킬 전부를 한 번의 호출에 같이
-  # 넘겨야 여러 스킬이 동시에 돈다(2026-08-05: 이 훅이 그동안 그 이득을 못 보고 있었음).
+  # 실행이 발동하지 않는다. 바뀐 스킬 전부를 한 번의 호출에 같이 넘겨야 여러 스킬이
+  # 동시에 돈다.
   if ! "$RUN_SUITE" "${SKILL_SUITES[@]}"; then
     echo "❌ 회귀 테스트 실패로 push가 차단되었습니다. 위 실패 목록의 스킬을 각각"
     echo "   bash $REPO_ROOT/contexts/<스킬>/tests/run.sh 로 재현하십시오."

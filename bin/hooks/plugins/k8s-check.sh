@@ -22,10 +22,9 @@ log_info "======================================================"
 
 init_repo_root
 
-# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이 장치가
-# 이 스크립트에 없던 시절에는 promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 한 번도
-# 검사하지 않고 "Passed Successfully"를 출력했다(2026-07-27 실측: PATH에서 도구를 제거하면
-# exit 0 + 성공 배너).
+# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이게 없으면
+# promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 검사하지 않고도 "Passed
+# Successfully"를 출력하는 무검증 통과가 생긴다.
 # shellcheck source-path=SCRIPTDIR
 if [ -f "$K8S_CHECK_DIR/../../lib/tool-probe.sh" ]; then
   source "$K8S_CHECK_DIR/../../lib/tool-probe.sh"
@@ -148,11 +147,8 @@ check_deprecated_apis() {
   fi
 
   # pluto detect-files는 파일 단위 인자를 받지 못하고 -d 로 디렉토리 전체만 스캔한다.
-  # 스테이징된 매니페스트만 격리된 임시 디렉토리에 복사해 스캔 범위를 좁힌다
-  # (checkov 스캔의 tf_exec_checkov 격리와 동일한 이유: 무관한 매니페스트가 저장소
-  # 어딘가에 있으면 -d . 이 그것까지 잡아 무관한 커밋을 차단한다. 2026-08-01 실측:
-  # contexts/k8s/tests/fixtures/fail-deprecated-api.yaml 이 고정 존재하는 한, kind:
-  # 가 있는 yaml을 스테이징하는 모든 커밋이 이 무관한 픽스처 때문에 막혔다).
+  # 스테이징된 매니페스트만 격리된 임시 디렉토리에 복사해 스캔 범위를 좁힌다(무관한
+  # 매니페스트가 저장소 어딘가에 있으면 -d . 이 그것까지 잡아 무관한 커밋을 차단한다).
   local tmpdir i=0
   tmpdir=$(mktemp -d)
   for f in "${manifests[@]}"; do

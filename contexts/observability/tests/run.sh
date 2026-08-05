@@ -78,9 +78,8 @@ fi
 echo "--- observability-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
 # validate-alert-rules.sh를 직접 호출하는 위 섹션은 "판정 로직이 맞는가"만 본다.
 # observability-check.sh 자신의 오케스트레이션(스테이징된 yaml 중 kind: PrometheusRule만
-# 골라 트리거하는지, 무관한 kind:는 건드리지 않는지)은 이름이 주석에만 언급될 뿐 실제로
-# bash 호출되는 테스트가 없어 test-coverage-check.sh의 경고 레이어에 걸렸다
-# (2026-08-05). aiops-check.sh와 동일한 패턴으로 격리 저장소에서 실제 호출까지 검증한다.
+# 골라 트리거하는지, 무관한 kind:는 건드리지 않는지)은 여기서 격리 저장소를 만들어
+# 실제 호출까지 검증한다(aiops-check.sh와 동일 패턴).
 if require_tool yq; then
   OBS_PLUGIN="$REPO_ROOT/bin/hooks/plugins/observability-check.sh"
   if [ -x "$OBS_PLUGIN" ]; then

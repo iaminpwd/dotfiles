@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # aiops 스킬 회귀 테스트
 #
-# 기존 버전은 데모 스크립트 3개를 그냥 실행해 "크래시하지 않으면 통과"로 판정했다.
-# assert도 fixture도 없어서, FinancialDataAnonymizer의 계좌번호 마스킹 정규식을
+# 데모 스크립트를 그냥 실행해 "크래시하지 않으면 통과"로 판정하는 방식은 위험하다.
+# assert도 fixture도 없으면, FinancialDataAnonymizer의 계좌번호 마스킹 정규식을
 # 완전히 무력화해도(never-matches 패턴으로 치환) 원본 계좌번호가 로그에 그대로
-# 찍힌 채로 "All AIOps tests passed successfully"가 나왔다(2026-08-01 실측).
+# 찍힌 채로 "All AIOps tests passed successfully"가 나올 수 있다.
 #
 # 세 검증 대상을 각각 실제로 잡아낼 수 있게 다시 짰다:
 #   1. validate-telemetry-schema.sh: ok-baseline/fail-hardcoded-secret 픽스처로
@@ -59,7 +59,7 @@ else
 fi
 
 # password_policy/secret_key_rotation_enabled 처럼 시크릿 "값"이 아니라 필드 "이름"에만
-# 키워드가 부분 문자열로 들어간 경우는 통과해야 한다(2026-08-05 실측 오탐 수정 고정).
+# 키워드가 부분 문자열로 들어간 경우는 통과해야 한다(오탐 고정 회귀).
 status=0
 bash "$SKILL_ROOT/scripts/validate-telemetry-schema.sh" "$FIXTURES/ok-benign-identifiers" >/dev/null 2>&1 || status=$?
 if [ "$status" -eq 0 ]; then
@@ -69,11 +69,9 @@ else
 fi
 
 echo "--- aiops-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
-# validate-telemetry-schema.sh는 그동안 bin/hooks/plugins/*.sh 어디에도 배선되지 않아
-# 실제 git commit 경로에서는 한 번도 호출되지 않았다(자기 자신의 픽스처만 스스로
-# 검증하는 상태로 방치, 2026-08-05 실측 발견). aiops-check.sh로 배선한 뒤에는 그
-# 오케스트레이션 로직(kind: 시그니처 트리거 판정, 격리 tmpdir 구성, 동반 파일 배치
-# 스캔)까지 실제로 검증해야 위와 같은 사각지대가 다시 생기지 않는다.
+# validate-telemetry-schema.sh는 bin/hooks/plugins/*.sh로 배선된 aiops-check.sh를 통해
+# 실제 git commit 경로에서 호출된다. 그 오케스트레이션 로직(kind: 시그니처 트리거 판정,
+# 격리 tmpdir 구성, 동반 파일 배치 스캔)까지 여기서 실제로 검증한다.
 AIOPS_PLUGIN="$REPO_ROOT/bin/hooks/plugins/aiops-check.sh"
 if [ -x "$AIOPS_PLUGIN" ]; then
   PLUGIN_TMP=$(mktemp -d)
@@ -241,8 +239,7 @@ def check(name, cond, detail=""):
 
 
 # 각 케이스: 마스킹 마커가 등장하고, 원본 민감값은 결과에 남아있지 않아야 한다.
-# 2026-08-01 실측: 계좌번호 정규식을 무력화해도 이 단언이 없어 "크래시 안 함"만으로
-# 통과 처리됐다.
+# 이 단언이 없으면 계좌번호 정규식을 무력화해도 "크래시 안 함"만으로 통과 처리된다.
 cases = [
     ("RRN 마스킹", "RRN 900101-1234567 detected", "900101-1234567", "[MASKED_RRN]"),
     ("카드번호 마스킹", "Card 4111 1111 1111 1111 used", "4111 1111 1111 1111", "[MASKED_CARD_NUMBER]"),

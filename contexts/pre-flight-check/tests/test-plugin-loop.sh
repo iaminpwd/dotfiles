@@ -2,12 +2,11 @@
 # test-plugin-loop.sh
 #
 # run_delegated_skill_checks() 가 첫 플러그인 실패에서 즉시 중단하면 뒤 플러그인은
-# 실행조차 안 됐다. PrometheusRule YAML은 k8s-check.sh(PromQL 문법)와
+# 실행조차 안 된다. PrometheusRule YAML은 k8s-check.sh(PromQL 문법)와
 # observability-check.sh(알람 정책) 양쪽의 대상이라, 파일 하나가 두 플러그인을
-# 동시에 위반할 수 있다. 글롭이 알파벳 순으로 k8s-check.sh 를 먼저 도니, 예전
-# fail-fast 구조에서는 observability-check.sh 의 위반이 재커밋 전까지 드러나지
-# 않았다(2026-08-01 실측). 두 플러그인이 실제로 둘 다 끝까지 실행되고 둘 다
-# 보고하는지 고정한다.
+# 동시에 위반할 수 있다. 글롭이 알파벳 순으로 k8s-check.sh 를 먼저 도니, fail-fast
+# 구조라면 observability-check.sh 의 위반이 재커밋 전까지 드러나지 않는다. 두
+# 플러그인이 실제로 둘 다 끝까지 실행되고 둘 다 보고하는지 고정한다.
 #
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-plugin-loop.sh
 
@@ -35,7 +34,7 @@ report() {
   fi
 }
 
-echo "--- 플러그인 루프 exhaustive 판정 (2026-08-01 실측 버그) ---"
+echo "--- 플러그인 루프 exhaustive 판정 ---"
 
 if command -v yq >/dev/null 2>&1 && command -v promtool >/dev/null 2>&1; then
   PLUGIN_REPO="$TMP/plugin-loop"

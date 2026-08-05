@@ -32,9 +32,7 @@ source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
 echo "=== azure Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AZURE_10
 
-# validate_bicep(pre-flight-check.sh)은 이전까지 어떤 fixture 테스트도 없었다
-# (2026-08-01 실측: 13개 validate_* 중 SAM/Bicep/Ansible/Helm/conftest/FinOps
-# 6개가 커버리지 0%). libicu 없는 리눅스에서도 돌게 하는 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT는
+# libicu 없는 리눅스에서도 돌게 하는 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT는
 # pre-flight-check.sh의 validate_bicep과 동일하게 여기서도 켠다.
 echo
 echo "=== azure Bicep 템플릿 검증 회귀 테스트 ==="
@@ -56,8 +54,8 @@ bicep_report() {
 }
 
 if command -v bicep >/dev/null 2>&1; then
-  # bicep build 는 .NET 런타임 기동 비용이 커서(실측: 2건 순차 3.77초) parallel-pair.sh
-  # (SSOT)로 서로 무관한 두 픽스처를 동시에 돌린다.
+  # bicep build 는 .NET 런타임 기동 비용이 커서 parallel-pair.sh(SSOT)로 서로 무관한
+  # 두 픽스처를 동시에 돌린다.
   BICEP_TMPDIR=$(mktemp -d)
   trap 'rm -rf "${BICEP_TMPDIR:-}"' EXIT
 

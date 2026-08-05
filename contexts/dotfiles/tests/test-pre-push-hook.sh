@@ -40,9 +40,11 @@ trap 'rm -rf "$TMP"' EXIT
 # 픽스처 저장소 구성: basename이 "dotfiles"여야 훅이 활성화되고(line 22 가드),
 # 실제 run-suite.sh를 그대로 가져와 아래 aws 스텁만 호출시킨다.
 FIXTURE_REPO="$TMP/dotfiles"
-mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/contexts/aws/tests"
+mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" "$FIXTURE_REPO/contexts/aws/tests"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 chmod +x "$FIXTURE_REPO/bin/hooks/run-suite.sh"
+# run-suite.sh가 source하는 SSOT 라이브러리. 실제 배포 구조와 동일하게 상대 위치에 둔다.
+cp "$REPO_ROOT/bin/lib/script-init.sh" "$FIXTURE_REPO/bin/lib/script-init.sh"
 
 cat >"$FIXTURE_REPO/contexts/aws/tests/run.sh" <<'EOF'
 #!/usr/bin/env bash

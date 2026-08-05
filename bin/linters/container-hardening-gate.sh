@@ -8,6 +8,10 @@ set -euo pipefail
 CHG_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$CHG_SCRIPT_DIR/../lib/jq-resolve.sh"
+# mise shim 환경에서도 trivy/dive 가용성을 정확히 판정하기 위해 SSOT has_tool()을 재사용한다
+# (command -v 직접 호출은 tool-probe.sh가 해결하는 mise shim 미해석 케이스를 다시 놓친다).
+# shellcheck source-path=SCRIPTDIR
+source "$CHG_SCRIPT_DIR/../lib/tool-probe.sh"
 
 TARGET="${1:-}"
 
@@ -18,7 +22,7 @@ fi
 
 if [ -f "$TARGET" ]; then
   # Dockerfile 검증: DS-0002(USER 권한 누락) 탐지
-  if command -v trivy >/dev/null 2>&1; then
+  if has_tool trivy; then
     # PATH의 jq(mise shim)가 격리된 $HOME 등에서 조용히 해석되지 않는 경우를 대비해
     # jq-resolve.sh SSOT로 검증한다(agent-edits-hook.sh/merge-agent-hooks.sh와 동일 패턴).
     # 이 확인 없이 바로 jq를 호출하면, jq 부재 시 파이프라인이 127로 실패하지만 그 자리가
@@ -38,7 +42,7 @@ if [ -f "$TARGET" ]; then
   fi
 else
   # 빌드된 이미지 검증: dive 및 공급망 스캔
-  if command -v dive >/dev/null 2>&1; then
+  if has_tool dive; then
     if ! dive "$TARGET" --ci --highestWastedBytes=20MB >/dev/null 2>&1; then
       echo "[ERROR] $TARGET 이미지 레이어 낭비율이 기준을 초과했습니다 (dive 검증 실패)."
       exit 1
@@ -47,7 +51,7 @@ else
     echo "[WARNING] dive 도구가 없어 레이어 낭비 스캔을 건너뜁니다."
   fi
 
-  if command -v trivy >/dev/null 2>&1; then
+  if has_tool trivy; then
     if ! trivy image --exit-code 1 --severity CRITICAL,HIGH "$TARGET" >/dev/null 2>&1; then
       echo "[ERROR] $TARGET 이미지 취약점 스캔에 실패했습니다."
       exit 1

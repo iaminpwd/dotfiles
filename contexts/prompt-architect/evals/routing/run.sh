@@ -57,8 +57,7 @@ STOP = {
     "가이드", "자동", "생성", "분석", "적용", "사용", "위한", "모든", "공통",
     "코드", "파일", "환경", "시스템", "통합", "운영", "기반", "각종", "관련",
     # 거의 모든 description 에 등장하는 분류 명사. 변별력이 없어 신호로 쓰면
-    # 의도된 겹침까지 경고가 된다(2026-07-26 실측: 이 셋을 빼면 경고 9건 -> 6건,
-    # 남는 건 전부 실제 검토가 필요한 항목).
+    # 의도된 겹침까지 경고가 된다.
     "엔지니어링", "인프라", "클라우드",
     # description 에 "언제 이 스킬을 쓰라"는 안내 문장을 넣으면 서술어와 조사 결합형이
     # 토큰으로 잡힌다. 도메인 신호가 0이라 위 분류 명사와 같은 이유로 제외한다
@@ -91,18 +90,18 @@ for path in sorted(glob.glob(os.path.join(contexts, "*", "SKILL.md"))):
     if skill in NOT_ROUTED:
         continue
     text = open(path, encoding="utf-8").read()
-    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. 예전 패턴은 description 뒤에
-    # 또 다른 '필드:' 가 오는 것만 전제해서, reviewed: 필드가 제거되어 description 이
-    # frontmatter 의 마지막 항목이 된 순간 12개 스킬 전부 파싱에 실패했다(2026-07-28 실측).
+    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. description 뒤에 또 다른
+    # '필드:' 가 오는 것만 전제하면, description 이 frontmatter 의 마지막 항목인
+    # 스킬에서 파싱이 전부 실패한다.
     m = re.search(r"^description:(.*?)(?=^[a-z_]+:|^---\s*$)", text, re.M | re.S)
     if m:
         desc[skill] = tokens(m.group(1))
 
 # 파싱 0건은 "겹치는 용어가 없다"가 아니라 "검사를 한 건도 못 했다"이다. 그 둘을 구분하지
-# 않았던 탓에, frontmatter 에서 description 뒤 필드가 사라져 정규식이 전부 빗나가는 동안에도
-# "[INFO] 3개 이상 스킬이 공유하는 용어 없음" 이라는 초록불이 그대로 출력됐다(2026-07-28
-# 실측: 12개 중 0개 파싱). 이 분석은 CLAUDE.md 의 Paid Eval Gate 가 유료 측정의 무료
-# 대체재로 지정한 경로라, 조용히 죽으면 "토큰을 아끼려고 이쪽을 썼다"는 판단이 근거를 잃는다.
+# 않으면, frontmatter 에서 description 뒤 필드가 사라져 정규식이 전부 빗나가는 동안에도
+# "[INFO] 3개 이상 스킬이 공유하는 용어 없음" 이라는 초록불이 그대로 출력될 수 있다. 이
+# 분석은 CLAUDE.md 의 Paid Eval Gate 가 유료 측정의 무료 대체재로 지정한 경로라, 조용히
+# 죽으면 "토큰을 아끼려고 이쪽을 썼다"는 판단이 근거를 잃는다.
 if not desc:
     print("[ERROR] SKILL.md 에서 description 을 하나도 파싱하지 못했습니다.")
     print("        frontmatter 형식이 바뀌었을 수 있습니다. 현재 정규식은 description 다음에")
@@ -147,17 +146,17 @@ if pairs:
         print(f"[WARNING] {a} <-> {b} 공유 {n}건: {', '.join(common)}")
 
 # 공유 구절. 토큰 개수만 세면 "AI 에이전트"처럼 두 description 에 통째로 같은
-# 표현이 들어간 경우를 놓친다(2026-07-26: aiops/dotfiles 가 이 사유로 임계값
-# 아래에 숨었다). 연속 2어절이 그대로 겹치면 개수와 무관하게 보고한다.
+# 표현이 들어간 경우를 놓친다(임계값 아래에 숨어 신호가 사라질 수 있다). 연속
+# 2어절이 그대로 겹치면 개수와 무관하게 보고한다.
 raw = {}
 for path in sorted(glob.glob(os.path.join(contexts, "*", "SKILL.md"))):
     skill = os.path.basename(os.path.dirname(path))
     if skill in NOT_ROUTED:
         continue
     text = open(path, encoding="utf-8").read()
-    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. 예전 패턴은 description 뒤에
-    # 또 다른 '필드:' 가 오는 것만 전제해서, reviewed: 필드가 제거되어 description 이
-    # frontmatter 의 마지막 항목이 된 순간 12개 스킬 전부 파싱에 실패했다(2026-07-28 실측).
+    # 종료 경계에 frontmatter 구분자('---')를 포함시킨다. description 뒤에 또 다른
+    # '필드:' 가 오는 것만 전제하면, description 이 frontmatter 의 마지막 항목인
+    # 스킬에서 파싱이 전부 실패한다.
     m = re.search(r"^description:(.*?)(?=^[a-z_]+:|^---\s*$)", text, re.M | re.S)
     if m:
         words = [w.strip(".,()") for w in m.group(1).split()]
@@ -203,7 +202,7 @@ fi
 
 # 채점기는 오라우팅이 있으면 exit 1 을 반환한다. set -e 하에서 그대로 두면 이 지점에서
 # 스크립트가 죽어 아래 안정성 리포트가 영영 출력되지 않으므로, 종료 코드를 붙잡아 두고
-# 마지막에 그대로 반환한다(2026-07-27 실측: 안정성 섹션이 조용히 누락됨).
+# 마지막에 그대로 반환한다.
 SCORE_RC=0
 python3 - "$CASES" "$OBSERVED" <<'PY' || SCORE_RC=$?
 import sys

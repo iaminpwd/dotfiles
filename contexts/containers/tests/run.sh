@@ -115,8 +115,8 @@ judge_trivy_misconfig() {
   fi
 }
 
-# trivy config 는 인터프리터 없는 Go 바이너리라 개별 호출은 빠르지만(실측 ~0.74초/건),
-# 아래 두 쌍(misconfig, hardening-gate)이 각각 2번씩 순차 호출돼 누적됐다. parallel-pair.sh
+# trivy config 는 인터프리터 없는 Go 바이너리라 개별 호출은 빠르지만, 아래 두 쌍
+# (misconfig, hardening-gate)이 각각 2번씩 순차 호출되면 누적된다. parallel-pair.sh
 # (SSOT)로 ok/fail 픽스처를 동시에 스캔하고, JSON 파싱(python3)만 캡처된 파일에 대해
 # wait 이후 순차로 수행한다(파싱 자체는 가벼워 병렬화 대상이 아님).
 run_trivy_misconfig_pair() {
@@ -183,7 +183,7 @@ if require_tool trivy; then
   run_trivy_misconfig_pair ok-baseline.Dockerfile fail-root-user.Dockerfile DS-0002
 fi
 
-echo "--- container-hardening-gate.sh DS-0002 (pre-flight-check.sh / 커밋 중단, 2026-08-04 도입) ---"
+echo "--- container-hardening-gate.sh DS-0002 (pre-flight-check.sh / 커밋 중단) ---"
 if require_tool trivy; then
   run_hardening_gate_pair ok-baseline.Dockerfile 0 fail-root-user.Dockerfile 1
 fi

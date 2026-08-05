@@ -17,7 +17,15 @@
 
 set -euo pipefail
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+GCI_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+
+# 이 스크립트는 pre-flight-check.sh 등 "호출 시점의 현재 저장소"를 대상으로 하는 범용
+# 검증기가 아니라 항상 자기 자신이 속한 dotfiles 저장소의 contexts/만 다루는 전용
+# 도구다. script-init.sh의 init_repo_root()(호출 CWD 기준 git rev-parse)를 쓰면 dotfiles
+# 밖에서 호출됐을 때 REPO_ROOT가 엉뚱한 곳을 가리켜 결과가 조용히 비어버리므로, CWD와
+# 무관하게 스크립트 자신의 물리적 위치(bin/utils/의 두 단계 위)로 REPO_ROOT를 고정한다.
+REPO_ROOT=$(cd "$GCI_SCRIPT_DIR/../.." && pwd)
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 
 echo "# Contexts Index"

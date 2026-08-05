@@ -6,10 +6,10 @@
 # 전용 경고 레이어)을 직접 검증하는 격리 픽스처 테스트가 없었다. 정작 "테스트가
 # 없으면 잡아낸다"는 이 도구 자체가 그 규칙의 사각지대에 있었던 셈이다.
 #
-# 2026-08-05에 추가된 경고 레이어(bin/hooks/plugins/*.sh가 이름만 언급되고 실제
-# bash 호출 증거가 없으면 경고)의 두 갈래 탐지 패턴(변수 대입 후 호출 / 직접 인라인
-# 호출)이 깨지면, k8s-check.sh처럼 이름만 주석에 있는 플러그인이 다시 "정상"으로
-# 오분류될 수 있다. 격리된 가짜 저장소로 하드 게이트와 경고 레이어를 각각 고정한다.
+# 경고 레이어(bin/hooks/plugins/*.sh가 이름만 언급되고 실제 bash 호출 증거가 없으면
+# 경고)의 두 갈래 탐지 패턴(변수 대입 후 호출 / 직접 인라인 호출)이 깨지면,
+# k8s-check.sh처럼 이름만 주석에 있는 플러그인이 다시 "정상"으로 오분류될 수 있다.
+# 격리된 가짜 저장소로 하드 게이트와 경고 레이어를 각각 고정한다.
 #
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-test-coverage-check.sh
 
@@ -17,7 +17,6 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-CHECKER="$REPO_ROOT/bin/linters/test-coverage-check.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -40,16 +39,25 @@ trap 'rm -rf "$TMP"' EXIT
 # 최소 골격의 가짜 저장소를 구성한다: bin/hooks/plugins/*.sh 1개 + contexts/fake/tests/run.sh 1개.
 new_fixture_repo() {
   local root=$1
-  mkdir -p "$root/bin/hooks/plugins" "$root/git/.githooks" "$root/contexts/fake/tests"
+  mkdir -p "$root/bin/hooks/plugins" "$root/bin/linters" "$root/bin/lib" "$root/git/.githooks" "$root/contexts/fake/tests"
   git -C "$root" init -q
   echo '#!/usr/bin/env bash
 exit 0' >"$root/bin/hooks/plugins/example-check.sh"
   chmod +x "$root/bin/hooks/plugins/example-check.sh"
+  # test-coverage-check.sh는 자기 자신의 물리적 위치를 기준으로 REPO_ROOT를 고정한다
+  # (CWD 비의존). 격리 픽스처로 테스트하려면 실제 스크립트와 그 의존 라이브러리를
+  # 같은 상대 위치(bin/linters/, bin/lib/)로 함께 복사해야 한다(test-pre-push-hook.sh가
+  # run-suite.sh를 다루는 방식과 동일한 이유).
+  cp "$REPO_ROOT/bin/linters/test-coverage-check.sh" "$root/bin/linters/test-coverage-check.sh"
+  cp "$REPO_ROOT/bin/lib/script-init.sh" "$root/bin/lib/script-init.sh"
+  # 복사해 넣은 script-init.sh도 하드 게이트 대상이므로, 각 테스트 케이스의 run.sh와
+  # 별개로 이 커버리지를 항상 충족시켜 example-check.sh 판정만 순수하게 검증한다.
+  echo "# script-init.sh" >"$root/contexts/fake/tests/lib-coverage.txt"
 }
 
 run_checker() {
   local root=$1 status=0
-  (cd "$root" && QUIET=0 bash "$CHECKER") >"$TMP/out" 2>&1 || status=$?
+  (cd "$root" && QUIET=0 bash "$root/bin/linters/test-coverage-check.sh") >"$TMP/out" 2>&1 || status=$?
   echo "$status"
 }
 
@@ -118,8 +126,8 @@ else
 fi
 
 # 6. 경고 레이어 통과 (패턴 B, 들여쓰기된 변수 대입): if/for 블록 안에서 대입되는 경우도
-# 잡아야 한다. observability-check.sh 테스트를 추가했을 때 대입문이 require_tool yq
-# 블록 안에 들여쓰기돼 있어 ^[A-Za-z_] 앵커가 못 잡는 실사용 버그가 있었다(2026-08-05).
+# 잡아야 한다. 대입문이 require_tool yq 같은 블록 안에 들여쓰기돼 있으면 ^[A-Za-z_]
+# 앵커가 못 잡는 실사용 버그가 생길 수 있다.
 R6="$TMP/repo6"
 new_fixture_repo "$R6"
 cat >"$R6/contexts/fake/tests/run.sh" <<'EOF'

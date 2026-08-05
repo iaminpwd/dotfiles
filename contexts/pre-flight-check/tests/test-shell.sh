@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # test-shell.sh
 #
-# validate_shell(pre-flight-check.sh)는 이전까지 어떤 fixture 테스트도 없었다
-# (2026-08-05 실측: dotfiles 컨텍스트 감사에서 발견). shfmt/shellcheck/zsh -n 을
-# 확장자별로 분기 호출하는 로직인데, 그 판정이 맞는지도, 분기 자체가 맞는지도
-# 검증된 적이 없었다.
+# validate_shell(bin/lib/pfc-quality-checks.sh, pre-flight-check.sh가 source)는
+# 이전까지 어떤 fixture 테스트도 없었다. shfmt/shellcheck/zsh -n 을 확장자별로
+# 분기 호출하는 로직인데, 그 판정이 맞는지도, 분기 자체가 맞는지도 검증된 적이 없었다.
 #
 # 이 스위트는 두 층을 나눠서 본다.
 #   1. CLI 레벨: validate_shell 이 쓰는 것과 동일한 명령·옵션으로 각 도구를 직접
@@ -12,8 +11,8 @@
 #   2. 오케스트레이션 레벨: pre-flight-check.sh 자체를 격리 저장소에서 실제로
 #      호출해 확장자별 분기(.zsh는 zsh -n만 받고 shfmt/shellcheck/bash -n을
 #      받지 않는지, .sh 위반은 실제로 커밋을 막는지)를 확인한다. `repeat N; do`는
-#      zsh 문법으로는 유효하지만 bash -n으로는 파스 에러다(2026-08-05 실측) —
-#      이 파일이 통과한다는 것 자체가 bash 계열 도구가 적용되지 않았다는 증거다.
+#      zsh 문법으로는 유효하지만 bash -n으로는 파스 에러다 — 이 파일이 통과한다는
+#      것 자체가 bash 계열 도구가 적용되지 않았다는 증거다.
 #
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-shell.sh
 
@@ -97,10 +96,9 @@ fi
 
 echo "--- pre-flight-check.sh (bin/hooks, 커밋 시점 배선) ---"
 # 위 CLI 레벨 섹션은 "판정 로직이 맞는가"만 본다. validate_shell 자신의 오케스트레이션
-# (확장자별 분기, .zsh는 zsh -n만 받는지, .sh 위반이 실제로 커밋을 막는지)은 실제로
-# pre-flight-check.sh를 bash 호출하는 테스트가 없어 검증되지 않았다(2026-08-05).
-# k8s-check.sh/aiops-check.sh/observability-check.sh와 동일한 패턴으로 격리 저장소에서
-# 실제 호출까지 검증한다.
+# (확장자별 분기, .zsh는 zsh -n만 받는지, .sh 위반이 실제로 커밋을 막는지)은 여기서
+# pre-flight-check.sh를 실제로 bash 호출해 검증한다(k8s-check.sh/aiops-check.sh/
+# observability-check.sh와 동일한 패턴으로 격리 저장소에서 실제 호출까지 확인).
 if [ -x "$PFC" ]; then
   PLUGIN_TMP=$(mktemp -d)
 
@@ -119,7 +117,7 @@ if [ -x "$PFC" ]; then
   }
 
   # Case 1: .zsh 파일은 zsh -n만 받아야 한다. repeat 3; do ... done 은 zsh 문법으로는
-  # 유효하지만 bash -n으로는 파스 에러다(위에서 실측). 이 케이스가 통과한다는 것 자체가
+  # 유효하지만 bash -n으로는 파스 에러다(위 헤더 참고). 이 케이스가 통과한다는 것 자체가
   # bash 계열 도구(shfmt/shellcheck/bash -n)가 .zsh 파일에 적용되지 않았다는 증거다.
   if require_tool zsh; then
     SR1="$PLUGIN_TMP/repo1"

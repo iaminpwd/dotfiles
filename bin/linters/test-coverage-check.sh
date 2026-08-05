@@ -7,10 +7,8 @@
 # 기계적으로 확인한다. 실제 판정 로직의 정오는 각 test-*.sh 픽스처가 담당하고, 이 스크립트는
 # "테스트가 존재하는가"만 게이트한다.
 #
-# git/.githooks/*는 이 게이트가 생기기 전까지 bin/*.sh 와 달리 커버리지 요구 대상 밖이었다.
-# 그 사각지대에서 실제로 pre-commit의 BIN_REMINDERS 재현 명령 조립 로직이 깨진 채 방치됐던
-# 사례(2026-08-05 실측 발견·수정)가 있어 스캔 범위에 포함시켰다. 훅 파일명은 git 컨벤션상
-# 확장자가 없어(pre-commit/pre-push/commit-msg) bin/처럼 "*.sh" 로 필터링할 수 없다.
+# git/.githooks/*도 bin/*.sh와 동일하게 스캔한다. 훅 파일명은 git 컨벤션상 확장자가 없어
+# (pre-commit/pre-push/commit-msg) "*.sh"로는 걸러지지 않으므로 별도로 전부 스캔한다.
 
 set -euo pipefail
 
@@ -19,7 +17,14 @@ TCC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$TCC_SCRIPT_DIR/../lib/script-init.sh"
 
-init_repo_root
+# 이 스크립트는 pre-flight-check.sh처럼 "호출 시점의 현재 저장소"를 검증하는 범용
+# 도구가 아니라 항상 자기 자신이 속한 dotfiles 저장소만 대상으로 하는 전용 게이트다.
+# init_repo_root()의 git rev-parse --show-toplevel(호출 CWD 기준)을 쓰면 dotfiles 밖에서
+# 호출됐을 때 REPO_ROOT가 엉뚱한 곳을 가리켜 find(BIN_DIR)가 조용히 빈 결과를 내고
+# (프로세스 치환 안이라 set -e가 못 잡음) "커버리지 0건 = 통과"라는 거짓 그린라이트가
+# 뜬다. CWD와 무관하게 스크립트 자신의 물리적 위치로 REPO_ROOT를 고정한다
+# (generate-context-index.sh와 동일 패턴).
+REPO_ROOT=$(cd "$TCC_SCRIPT_DIR/../.." && pwd)
 
 BIN_DIR="$REPO_ROOT/bin"
 HOOKS_DIR="$REPO_ROOT/git/.githooks"
@@ -67,15 +72,10 @@ fi
 # Plugin 전용 강화 검사 (경고 전용, 하드 블록 아님)
 # -----------------------------------------------------------------------------
 # bin/hooks/plugins/*.sh는 위 하드 게이트("이름이 어딘가 언급됐는가")만으로는 부족하다.
-# k8s-check.sh/observability-check.sh 둘 다 이름이 회귀 테스트의 주석·echo 라벨에
-# 여러 번 등장해 하드 게이트는 통과했지만, 파일 자체를 bash로 실제 호출하는 코드는
-# 어디에도 없었다(오케스트레이션 로직 자체는 test-plugin-loop.sh가 pre-flight-check.sh를
-# 통째로 돌리며 부수적으로만 검증됨). aiops-check.sh가 정확히 그 낮은 기준을 통과한
-# 채로 실제 커밋 경로에 전혀 배선되지 않고 방치됐던 사고(2026-08-05 실측 발견)를 다시
-# 겪지 않기 위해 "실제 bash 호출 증거"까지 요구하는 검사를 추가한다.
-#
-# 기존 두 플러그인을 지금 강제로 뜯어고치게 만들지 않기 위해(요청받지 않은 범위
-# 확장 방지) 하드 블록이 아니라 경고로만 남긴다.
+# 이름이 테스트의 주석·echo 라벨에만 등장해도 하드 게이트는 통과하지만, 파일을 bash로
+# 실제 호출하는 코드는 없을 수 있다. 그런 사각지대를 잡기 위해 "실제 bash 호출 증거"까지
+# 요구하는 검사를 추가한다. 기존 플러그인을 강제로 뜯어고치게 만들지 않도록 하드
+# 블록이 아니라 경고로만 남긴다.
 PLUGINS_DIR="$BIN_DIR/hooks/plugins"
 WEAK_COVERAGE=()
 if [ -d "$PLUGINS_DIR" ]; then
@@ -91,8 +91,7 @@ if [ -d "$PLUGINS_DIR" ]; then
           break
         fi
         # 패턴 B: 변수 대입 후 bash "$VAR"/"${VAR}" 호출 (이 저장소 테스트들의 표준 관례).
-        # 대입문이 if/for 블록 안에 들여쓰기돼 있는 경우가 실제로 있어(observability-check.sh
-        # 테스트가 require_tool yq 블록 안에 있음, 2026-08-05 실측) 줄 앞 공백을 허용해야 한다.
+        # 대입문이 if/for 블록 안에 들여쓰기돼 있는 경우가 있어 줄 앞 공백을 허용한다.
         while IFS= read -r varname; do
           [ -n "$varname" ] || continue
           if grep -qE "bash[[:space:]]+\"\\\$\{?${varname}\}?\"" "$tfile" 2>/dev/null; then

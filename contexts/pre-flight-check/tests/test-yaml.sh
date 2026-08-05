@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # test-yaml.sh
 #
-# validate_yaml(pre-flight-check.sh)는 이전까지 어떤 fixture 테스트도 없었다
-# (2026-08-05 실측: dotfiles 컨텍스트 감사에서 발견).
+# validate_yaml(bin/lib/pfc-quality-checks.sh, pre-flight-check.sh가 source)는
+# 이전까지 어떤 fixture 테스트도 없었다.
 #
 # 이 스위트는 두 층을 나눠서 본다.
 #   1. CLI 레벨: validate_yaml 이 쓰는 것과 동일한 옵션(relaxed + line-length
@@ -11,8 +11,7 @@
 #      호출해 templates/ 하위 제외 로직(Helm Go 템플릿 문법 회피)이 실제로
 #      동작하는지 확인한다. 같은 깨진 내용을 templates/ 안팎에 각각 둬서,
 #      "yamllint가 이 내용을 원래 봐준다"가 아니라 "경로 때문에 건너뛴다"임을
-#      증명한다(2026-08-05 실측: templates/ 밖에 두면 동일 내용이 실제로 커밋을
-#      막는다).
+#      증명한다(templates/ 밖에 두면 동일 내용이 실제로 커밋을 막는다).
 #
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-yaml.sh
 
@@ -65,9 +64,8 @@ fi
 
 echo "--- pre-flight-check.sh (bin/hooks, 커밋 시점 배선) ---"
 # 위 CLI 레벨 섹션은 "판정 로직이 맞는가"만 본다. validate_yaml의 templates/ 제외
-# 오케스트레이션은 실제로 pre-flight-check.sh를 bash 호출하는 테스트가 없어
-# 검증되지 않았다(2026-08-05). k8s-check.sh 등과 동일한 패턴으로 격리 저장소에서
-# 실제 호출까지 검증한다.
+# 오케스트레이션은 여기서 pre-flight-check.sh를 실제로 bash 호출해 검증한다
+# (k8s-check.sh 등과 동일한 패턴으로 격리 저장소에서 실제 호출까지 확인).
 if [ -x "$PFC" ] && require_tool yamllint; then
   PLUGIN_TMP=$(mktemp -d)
 

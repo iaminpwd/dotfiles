@@ -4,9 +4,9 @@ drawio-gen 스킬 공용 레이아웃 툴킷.
 
 010-drawio-xml-standard.md §10(레이아웃 계산 원칙)을 코드로 강제하기 위한 헬퍼 모음.
 다이어그램 생성 스크립트에서 이 모듈을 import해서 쓰고, 좌표를 손으로
-하드코딩하지 마십시오. 실제 his-infra 아키텍처 다이어그램 작업(2026-07-21)에서
-겪은 버그(빈 공간 과다, 형제 컨테이너 겹침, 헤더-자식 텍스트 겹침, 계단식 정렬)를
-재발 방지하기 위해 만들어졌습니다.
+하드코딩하지 마십시오. 실제 아키텍처 다이어그램 작업에서 겪은 버그(빈 공간 과다,
+형제 컨테이너 겹침, 헤더-자식 텍스트 겹침, 계단식 정렬)를 재발 방지하기 위해
+만들어졌습니다.
 
 사용 예:
     from layout_toolkit import Diagram, grid, hstack, vstack
@@ -27,15 +27,15 @@ drawio-gen 스킬 공용 레이아웃 툴킷.
 IW, IH = 60, 60          # 표준 아이콘 크기
 IW_SMALL, IH_SMALL = 40, 40  # ENI 등 소형 커넥터 아이콘 크기
 GX, GY = 35, 70          # 아이콘 간 기본 간격 (GY는 2줄 라벨 공간 포함)
-# 사용자가 선호 스타일로 지목한 참고 다이어그램(his-infra-architecture선.drawio, 2026-07-22)의
-# 실측 간격에 맞춘 값. 과거 "빈 공간 과다" 버그(§10) 재발 방지를 위해 PAD=20/GX=30/GY=55로
-# 타이트하게 줄였다가, his-infra 재생성 결과가 "너무 빡빡해 보인다"는 피드백을 받아 중간 수준으로
-# 다시 넓혔다. 콘텐츠 기준 역산 원칙(§10 "컨테이너 크기는 콘텐츠로부터 역산")은 그대로 유지하고
-# 간격 상수만 조정한 것이므로, 이 값을 더 키우더라도 고정 캔버스 크기를 하드코딩하지는 말 것.
+# 사용자가 선호 스타일로 지목한 참고 다이어그램의 실측 간격에 맞춘 값. 과거 "빈 공간
+# 과다" 버그(§10) 재발 방지를 위해 PAD=20/GX=30/GY=55로 타이트하게 줄였다가, "너무
+# 빡빡해 보인다"는 피드백을 받아 중간 수준으로 다시 넓혔다. 콘텐츠 기준 역산 원칙
+# (§10 "컨테이너 크기는 콘텐츠로부터 역산")은 그대로 유지하고 간격 상수만 조정한
+# 것이므로, 이 값을 더 키우더라도 고정 캔버스 크기를 하드코딩하지는 말 것.
 PAD = 25                 # 컨테이너 내부 여백
 # 형제 컨테이너(서브넷/VPC 등) 사이 간격. hstack()/vstack() 이 기본값으로 쓴다.
-# 예전에는 두 함수가 30 을 하드코딩해서, 015 §3 "형제 간 간격은 고정 gap 상수로 관리"
-# 규칙을 정작 그 구현체가 지키지 않았다(2026-07-28 확인).
+# 두 함수가 이 상수 대신 30 을 하드코딩하면, 015 §3 "형제 간 간격은 고정 gap 상수로
+# 관리" 규칙을 정작 구현체가 지키지 않는 셈이 된다.
 # GX/GY 를 여기에 재사용하지 않는 이유: 그 둘은 아이콘 전용 상수이고, 특히 GY(70)는
 # 아이콘 아래 2줄 라벨 공간을 포함한 값이라 컨테이너 행 간격으로 쓰면 015 §3 이 예시로
 # 드는 수준("서브넷 간 30px, 행 간 25px")의 2배 이상으로 벌어진다.
@@ -115,10 +115,10 @@ def uniform_row(*wh_pairs):
     """행에 나란히 배치할 (width, height) 목록 → 높이를 행 최댓값으로 통일한 (width, height) 목록.
 
     row_height()는 "통일할 값"만 계산해줄 뿐 실제로 각 컨테이너에 되돌려 적용하는 것은
-    호출자 책임이었다. 실제 his-infra 재생성 작업(2026-07-22)에서 row_height()로 값만
-    구하고 정작 각 subnet의 height 인자에는 반영하지 않아 형제 박스 바닥선이 어긋나는
-    회귀가 발생했다 — "계산은 했지만 적용을 잊는" 실수를 원천 차단하기 위해, 각 컨테이너를
-    만들 때 이 함수가 반환한 (w, h)를 그대로 height 인자로 쓰도록 강제한다.
+    호출자 책임이었다. row_height()로 값만 구하고 정작 각 subnet의 height 인자에는
+    반영하지 않으면 형제 박스 바닥선이 어긋나는 회귀가 생긴다 — "계산은 했지만 적용을
+    잊는" 실수를 원천 차단하기 위해, 각 컨테이너를 만들 때 이 함수가 반환한 (w, h)를
+    그대로 height 인자로 쓰도록 강제한다.
     사용 예: (pe_w, pe_h), (pk_w, pk_h), (pm_w, pm_h) = uniform_row((pe_w, pe_h0), (pk_w, pk_h0), (pm_w, pm_h0))
     """
     h = max((hh for _, hh in wh_pairs), default=0)
@@ -215,13 +215,13 @@ class Diagram:
         #
         # [라벨 위치] aws_icon/azure_icon/openstack_native_icon 과 동일하게
         # verticalLabelPosition=bottom(라벨을 도형 "아래"에 배치)을 쓴다 — 사용자가
-        # 이 관례(아이콘 계열 공통 스타일)를 선호함을 확인(2026-07-23). 대신 기본
+        # 이 관례(아이콘 계열 공통 스타일)를 선호한다. 대신 기본
         # 크기를 60x60 → 90x70으로 키워, 도형 없는 빈 사각형 아래 여러 줄 라벨이
         # 옆/아래 요소와 겹치지 않을 여유를 확보한다. 이 크기를 쓰는 grid()/hstack()/
         # vstack() 호출의 gy(행 간격)도 라벨 줄 수에 맞게 함께 넉넉히 늘릴 것 —
         # 크기만 키우고 간격을 그대로 두면 다음 행과 다시 겹친다.
         # 도형은 rounded(기본형) / cylinder(데이터 저장소) 2종만 쓴다(035 §2).
-        # hexagon 은 2026-07-25 폐기 — 공식 표준은 도형에 의미를 부여하지 않고 라벨에
+        # hexagon 은 폐기됐다 — 공식 표준은 도형에 의미를 부여하지 않고 라벨에
         # 맡기며, 육각형=큐는 보편 관례가 아니라 범례 없이는 오독을 만든다.
         if shape == "hexagon":
             raise ValueError("hexagon 은 035 §2 에서 폐기되었습니다. "
@@ -342,11 +342,10 @@ class Diagram:
 def _abs_geom(cells, cid, _seen=None):
     """cid의 부모 체인을 따라가며 절대 좌표 (x, y, w, h)를 계산한다.
 
-    부모 체인이 순환하거나(A→B→A) mxGeometry 가 없는 셀을 만나도 죽지 않는다. 예전에는
-    두 경우 모두 RecursionError / AttributeError 로 이 함수가 크래시했고, 호출자인
-    validate() 에는 예외 처리가 없어 검증기 자체가 스택트레이스로 죽었다. 그러면 종료
-    코드가 "위반 발견"과 구분되지 않아 [FAIL] 판정을 통째로 삼킨다(2026-07-28 실측:
-    형제가 2개 이상이면 overlaps() 가 이 함수를 호출하면서 재현).
+    부모 체인이 순환하거나(A→B→A) mxGeometry 가 없는 셀을 만나면 RecursionError /
+    AttributeError 로 이 함수가 크래시할 수 있다. 호출자인 validate() 에는 예외
+    처리가 없어 검증기 자체가 스택트레이스로 죽으면, 종료 코드가 "위반 발견"과
+    구분되지 않아 [FAIL] 판정을 통째로 삼킨다.
     """
     if cid in ("0", "1", None) or cid not in cells:
         return 0.0, 0.0, 0.0, 0.0
@@ -394,8 +393,7 @@ def validate(path):
                        f"    닫히지 않은 태그나 잘못된 문자가 없는지 확인하십시오. "
                        f"XML 속성값에는 <, & 를 그대로 넣을 수 없습니다(esc() 를 쓰십시오).")
     # 중복 ID 검사는 반드시 원본 순서 목록에서 세야 한다. dict 로 먼저 접으면 중복 키가
-    # 합쳐져 090 §1 항목 2("모든 mxCell id 중복 없음")가 영구히 통과한다
-    # (2026-07-26, tests/fixtures/fail-duplicate-id.drawio 로 발견).
+    # 합쳐져 090 §1 항목 2("모든 mxCell id 중복 없음")가 영구히 통과해버린다.
     raw_cells = [c for c in root.findall(".//mxCell") if c.get("id")]
     cells = {c.get("id"): c for c in raw_cells}
     lines = []
@@ -413,9 +411,8 @@ def validate(path):
     # 엣지 끝점 미연결 검사 — drawio 에서 선을 드래그하다 도형에서 떨어지면 source/target
     # 속성 자체가 사라지고 mxGeometry 안에 sourcePoint/targetPoint 고정 좌표만 남는다.
     # 위 "끊어진 참조" 검사는 속성에 적힌 ID의 존재 여부만 보므로 속성이 아예 없는 이 경우를
-    # 통과시킨다 — openstack-basic 개념 아키텍처에서 "UI 제공" 화살표가 구분선에서 2.33px
-    # 떨어진 채 [OK] 로 보고된 실사례가 있다(2026-07-25). 눈으로는 붙어 보이지만 도형을
-    # 옮기면 화살표가 따라가지 않으므로 완료 조건에 포함한다.
+    # 통과시킨다. 눈으로는 붙어 보이지만(몇 px 차이) 도형을 옮기면 화살표가 따라가지
+    # 않으므로 완료 조건에 포함한다.
     detached = []
     for cid, c in cells.items():
         if c.get("edge") != "1":
@@ -453,10 +450,10 @@ def validate(path):
                     lines.append(f"[WARN] 형제 노드 겹침 (parent={parent}): {kids[i]} vs {kids[j]}")
 
     # 같은 행(row) 형제 컨테이너 높이 통일 검사 (§10 "형제 컨테이너는 높이를 통일")
-    # his-infra 재생성 작업(2026-07-22)에서 row_height()/uniform_row()로 통일 높이를
-    # 계산해놓고 실제 컨테이너 height 인자에는 반영하지 않아 바닥선이 어긋나는 회귀가
-    # 발생했다. 같은 parent 밑에서 y좌표(행 시작선)가 사실상 같은데 height가 다른
-    # swimlane 형제가 있으면, uniform_row() 적용을 빠뜨린 것으로 보고 경고한다.
+    # row_height()/uniform_row()로 통일 높이를 계산해놓고 실제 컨테이너 height
+    # 인자에는 반영하지 않으면 바닥선이 어긋나는 회귀가 생긴다. 같은 parent 밑에서
+    # y좌표(행 시작선)가 사실상 같은데 height가 다른 swimlane 형제가 있으면,
+    # uniform_row() 적용을 빠뜨린 것으로 보고 경고한다.
     EPS = 2.0
     for parent, kids in siblings.items():
         containers = [k for k in kids if "swimlane" in cells[k].get("style", "")]
@@ -489,8 +486,8 @@ def validate(path):
         return out
 
     # 예산(budget)은 넉넉하게 잡는다 — "Internet Gateway"/"Customer Gateway"처럼 020 문서
-    # 예시에 그대로 나오는 표준 라벨까지 매번 걸리면 경고가 무의미해진다(실측 보정, 2026-07-22).
-    # 진짜 겹침 위험이 있는 문장형 서브라벨(함수명 나열 등)만 잡히도록 여유를 크게 둔다.
+    # 예시에 그대로 나오는 표준 라벨까지 매번 걸리면 경고가 무의미해진다. 진짜 겹침
+    # 위험이 있는 문장형 서브라벨(함수명 나열 등)만 잡히도록 여유를 크게 둔다.
     for cid, c in cells.items():
         style = c.get("style", "")
         if "swimlane" in style or "whiteSpace=wrap" in style or "verticalLabelPosition=bottom" not in style:
@@ -516,8 +513,7 @@ def validate(path):
         "#888888",  # 참고용 회색 그룹핑(예: 비활성/수동관리 표시) — 팀 컨벤션 예외 허용
         # OpenStack 공식 강조색 3종 (035 §0). OpenStack 다이어그램에서 컨테이너를 구분해야
         # 할 때는 AWS 유래 색이 아니라 이쪽을 쓴다 — 공식 표준이 "bright primary colors,
-        # such as light blue, red, or green"만 허용하므로 회색 계열은 원칙적으로 부적합하다
-        # (2026-07-25, openstack-basic 논리 아키텍처에서 #888888 을 쓰다 적발된 사례).
+        # such as light blue, red, or green"만 허용하므로 회색 계열은 원칙적으로 부적합하다.
         "#4A90D9",  # light blue
         "#DA1A32",  # red
         "#2E7D32",  # green
@@ -629,10 +625,10 @@ def _register_korean_font():
 def render_preview(path, out_png):
     """컨테이너/아이콘 사각형 + 엣지(연결선, waypoint 포함)까지 그린 PNG를 저장한다.
 
-    과거에는 다이어그램 생성 스크립트마다 박스만 그리는 임시 렌더러를 매번 새로 짜서,
-    엣지 라우팅이 다른 컨테이너를 뚫고 지나가는지 등을 한 번도 육안 검증하지 못하는
-    구멍이 있었다(2026-07-22 발견). Read 도구로 이 PNG를 열어 박스 정렬뿐 아니라
-    연결선 경로까지 확인한 뒤에만 완료를 선언하십시오.
+    다이어그램 생성 스크립트마다 박스만 그리는 임시 렌더러를 매번 새로 짜면, 엣지
+    라우팅이 다른 컨테이너를 뚫고 지나가는지 등을 육안 검증하지 못하는 구멍이 생긴다.
+    Read 도구로 이 PNG를 열어 박스 정렬뿐 아니라 연결선 경로까지 확인한 뒤에만
+    완료를 선언하십시오.
     """
     import html as _html
     import logging
@@ -763,8 +759,7 @@ def check_icon_urls(path, timeout=3):
         except urllib.error.HTTPError as e:
             # HTTPError 를 아래 일반 except 에 맡기면 "죽은 링크"가 "네트워크 확인 불가"로
             # 강등되어, 문서(090 §7, 015)가 약속한 [WARN] 판정이 한 번도 나오지 않는다.
-            # 이 검사의 목적 자체가 URL 생존 확인이므로 두 경우를 반드시 갈라야 한다
-            # (2026-07-28 실측: 로컬 404 서버로 확인하니 전부 [INFO] 로 보고됨).
+            # 이 검사의 목적 자체가 URL 생존 확인이므로 두 경우를 반드시 갈라야 한다.
             lines.append(f"[WARN] 아이콘 URL 응답 이상 (status={e.code}): {url}")
         except Exception as e:
             lines.append(f"[INFO] 아이콘 URL 확인 불가(네트워크/타임아웃, FAIL 아님): {url} ({e.__class__.__name__})")
@@ -785,10 +780,10 @@ if __name__ == "__main__":
     ok, report = validate(sys.argv[1])
     print(report)
     # 미리보기는 육안 검증 보조이지 판정 근거가 아니다. matplotlib 은 이 저장소의 어떤 설치
-    # 경로(mise config.toml, bootstrap.sh/ansible)에도 선언되어 있지 않아 신규 환경에는 없는데, 예전에는
-    # 그 ImportError 가 아래 SystemExit 앞에서 그대로 터졌다. 그 결과 검증을 통과한 파일과
-    # 위반한 파일이 똑같이 exit 1 로 끝나, 090 §2~3 이 요구하는 기계 판정이 무의미해졌다
-    # (2026-07-28 실측). 렌더링 실패는 안내로 낮추고 판정은 validate() 결과로만 낸다.
+    # 경로(mise config.toml, bootstrap.sh/ansible)에도 선언되어 있지 않아 신규 환경에는 없다.
+    # 그 ImportError 가 아래 SystemExit 앞에서 그대로 터지면, 검증을 통과한 파일과 위반한
+    # 파일이 똑같이 exit 1 로 끝나 090 §2~3 이 요구하는 기계 판정이 무의미해진다. 렌더링
+    # 실패는 안내로 낮추고 판정은 validate() 결과로만 낸다.
     preview_path = sys.argv[1].rsplit(".", 1)[0] + "-preview.png"
     try:
         render_preview(sys.argv[1], preview_path)

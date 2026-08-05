@@ -2,20 +2,24 @@
 # prompt-lint.sh 회귀 테스트
 #
 # prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 11개 검사를 담고 있는데, 정작
-# 자기 자신은 검증되지 않아 두 번이나 조용히 죽었다(2026-07-27: grep 무매치가
-# set -euo pipefail 에 걸려 아무 메시지 없이 exit 1). 린터가 죽으면 코퍼스가
-# 깨끗해서 통과한 것인지 검사가 실행조차 안 된 것인지 구분할 수 없다.
+# 자기 자신은 검증되지 않으면 grep 무매치 하나가 set -euo pipefail 에 걸려 아무
+# 메시지 없이 exit 1로 죽어도 알 수 없다. 린터가 죽으면 코퍼스가 깨끗해서 통과한
+# 것인지 검사가 실행조차 안 된 것인지 구분할 수 없다.
 #
 # 각 케이스는 최소 코퍼스를 임시 디렉토리에 조립하고 실제 prompt-lint.sh 를
-# 그 위에서 실행한다. 검사 대상 경로가 REPO_ROOT 기준이므로 케이스마다 git init
-# 을 해 린터가 케이스 디렉토리를 저장소 루트로 인식하게 만든다.
+# 그 위에서 실행한다. prompt-lint.sh는 자기 자신의 물리적 위치(bin/linters/)를
+# 기준으로 REPO_ROOT를 고정하므로(CWD 비의존), 격리 픽스처로 테스트하려면 실제
+# 스크립트와 그 의존 라이브러리를 케이스 디렉토리의 동일한 상대 위치(bin/linters/,
+# bin/lib/)로 함께 복사해야 한다(test-pre-push-hook.sh가 run-suite.sh를 다루는
+# 방식과 동일한 이유).
 #
 # 사용: bash ~/dotfiles/contexts/prompt-architect/tests/test_prompt_lint.sh
 
 set -euo pipefail
 export QUIET=0
 
-LINT="prompt-lint.sh"
+REPO_ROOT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+LINT="bin/linters/prompt-lint.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -84,6 +88,13 @@ new_case() {
   local dir="$TMP/$1"
   cp -a "$BASE" "$dir"
   git -C "$dir" init -q
+  # prompt-lint.sh(및 그 의존 라이브러리 script-init.sh)를 실제 저장소와 동일한
+  # 상대 위치로 복사한다. 자기 자신의 물리적 위치를 기준으로 REPO_ROOT를 고정하는
+  # 스크립트라, PATH의 정본을 그냥 호출하면 이 케이스 디렉토리가 아니라 실제
+  # dotfiles 저장소를 대상으로 린트해버린다.
+  mkdir -p "$dir/bin/linters" "$dir/bin/lib"
+  cp "$REPO_ROOT_SRC/bin/linters/prompt-lint.sh" "$dir/bin/linters/prompt-lint.sh"
+  cp "$REPO_ROOT_SRC/bin/lib/script-init.sh" "$dir/bin/lib/script-init.sh"
   echo "$dir"
 }
 
@@ -148,8 +159,8 @@ D=$(new_case fail-broken-link)
 echo "| 없는 모듈 | contexts/demo/references/999-missing.md |" >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link" 1 "깨진 참조 링크" "$D"
 
-# 2b. 깨진 참조 링크(스킬 루트 role.*.md / scripts 하위 디렉토리). 두 배치는 예전
-#     정규식이 매칭하지 못해 경로가 깨져도 조용히 통과했다(2026-07-28 실측).
+# 2b. 깨진 참조 링크(스킬 루트 role.*.md / scripts 하위 디렉토리). 두 패턴 모두
+#     정규식이 매칭하지 못하면 경로가 깨져도 조용히 통과할 수 있어 회귀로 고정한다.
 D=$(new_case fail-broken-link-nested)
 {
   echo "| 역할 지침 | contexts/demo/role.missing.md |"
@@ -157,9 +168,8 @@ D=$(new_case fail-broken-link-nested)
 } >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link-nested (role.*.md / scripts 하위)" 1 "깨진 참조 링크" "$D"
 
-# 2c. 룰북에서 삭제된 조항을 contexts/README.md 가 계속 인용. 커밋 393926b 가
-#     base.AGENTS.md 9장의 자가 진화 조항 2개를 지웠는데도 인용 4곳이 전부 통과했던
-#     실측 사건(2026-07-28)을 고정한다.
+# 2c. 룰북에서 삭제된 조항을 contexts/README.md 가 계속 인용하면 잡아내야 한다
+#     (조항이 삭제돼도 문서의 인용이 낡은 채로 남는 회귀).
 D=$(new_case fail-documented-clause-missing)
 cat >"$D/contexts/README.md" <<'EOF'
 # 프롬프트 아키텍처 문서
@@ -172,8 +182,8 @@ EOF
 check "fail-documented-clause-missing" 1 "룰북에 없는 조항을 문서가 인용" "$D"
 
 # 2d. 위 검사의 오탐 회귀: 실재하는 조항을 인용한 README 는 통과해야 한다.
-#     구현이 `printf | grep -q` 였을 때 SIGPIPE + pipefail 로 실재 조항 20건이 전부
-#     오탐으로 뒤집혔다(2026-07-28 실측).
+#     `printf | grep -q` 형태로 구현하면 SIGPIPE + pipefail 로 실재하는 조항까지
+#     전부 오탐으로 뒤집힐 수 있다.
 D=$(new_case ok-documented-clause-present)
 cat >"$D/contexts/README.md" <<'EOF'
 # 프롬프트 아키텍처 문서
@@ -269,7 +279,7 @@ check "warn-mirror-asymmetry" 0 "조항 수 불일치" "$D"
 #      실제 생성기(bin/utils/generate-context-index.sh)를 케이스 디렉토리에 그대로
 #      복사해 넣는다 — check_index_freshness 는 PATH 가 아니라 REPO_ROOT 기준
 #      상대 경로로 생성기를 찾으므로, 합성 코퍼스에도 물리적으로 있어야 한다.
-GENERATOR_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/bin/utils/generate-context-index.sh"
+GENERATOR_SRC="$REPO_ROOT_SRC/bin/utils/generate-context-index.sh"
 
 D=$(new_case warn-stale-index)
 mkdir -p "$D/bin/utils"
@@ -284,7 +294,7 @@ cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 (cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
 check_clean "ok-fresh-index (오탐 없음)" "$D"
 
-echo "--- 린터 자신의 조용한 사망 회귀 (2026-07-27 실측 버그) ---"
+echo "--- 린터 자신의 조용한 사망 회귀 ---"
 
 # 11. 개념이 aws/azure 에만 있으면 grep -vc 가 0을 세고 종료 코드 1을 반환한다.
 #     예전에는 그 1이 set -e 에 걸려 린터가 아무 메시지 없이 죽었다.

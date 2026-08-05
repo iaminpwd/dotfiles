@@ -9,9 +9,13 @@
 
 set -euo pipefail
 
-# 이 스크립트가 실행된 현재 저장소의 루트를 찾음
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$REPO_ROOT"
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
+RS_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$RS_SCRIPT_DIR/../lib/script-init.sh"
+
+# 이 스크립트가 실행된 현재 저장소의 루트를 찾음 (script-init.sh SSOT 재사용)
+init_repo_root
 
 # 검증할 스크립트 목록 수집
 SCRIPTS=()
@@ -61,8 +65,6 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 # 각 스크립트는 서로 무관한 격리된 검증(자기 mktemp 픽스처만 사용)이라 병렬 실행이
 # 안전하다. 동시성은 가용 코어 수를 기본값으로 쓰고 RUN_SUITE_JOBS로 조정 가능하다.
-# (실측: 14개 스킬 스위트를 순차 실행하면 5코어 머신에서 CPU 사용률 103~124%에
-# 그쳤다 — 사실상 코어 1개만 쓰던 것을 병렬화했다.)
 NPROC="${RUN_SUITE_JOBS:-}"
 if [ -z "$NPROC" ]; then
   NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)

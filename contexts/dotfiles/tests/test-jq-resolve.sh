@@ -4,8 +4,8 @@
 # bin/lib/jq-resolve.sh 는 agent-edits-hook.sh(자동 훅)와 merge-agent-hooks.sh(ansible 호출)가
 # 공유하는 jq 경로 해석 SSOT다. mise shim은 $HOME 기준으로 설치 위치를 찾기 때문에,
 # HOME을 격리 디렉토리로 덮어쓰는 환경(픽스처 테스트 등)에서는 PATH의 jq가 조용히
-# 먹통이 될 수 있다(2026-08-04 test-merge-agent-hooks.sh 작성 중 실측). 이 폴백이
-# 깨지면 두 소비자가 "jq 없음"으로 오판해 조용히 no-op 하게 된다.
+# 먹통이 될 수 있다. 이 폴백이 깨지면 두 소비자가 "jq 없음"으로 오판해 조용히
+# no-op 하게 된다.
 #
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-jq-resolve.sh
 

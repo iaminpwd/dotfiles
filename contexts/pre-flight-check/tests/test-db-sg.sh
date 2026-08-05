@@ -2,8 +2,8 @@
 # test-db-sg.sh
 #
 # validate_terraform() 내부에서 실제로 커밋을 막는 하드 게이트인데(bin/linters/
-# db-sg-checker.sh, pre-flight-check.sh 225행 부근 `return 1`) fixture 가 없었다
-# (2026-08-03 실측 커버리지 0%). RS="" 문단 스캔이라 "DB 포트(3306/5432)와
+# db-sg-checker.sh, bin/lib/pfc-iac-checks.sh 의 `return 1`) fixture 가 없었다.
+# RS="" 문단 스캔이라 "DB 포트(3306/5432)와
 # 0.0.0.0 이 같은 블록(빈 줄로 안 나뉨)에 있을 때만" 걸려야 하고, 서로 다른
 # 블록에 나뉘어 있으면 걸리면 안 된다 — 이 문단 경계 판정이 깨지기 쉬운 지점이라
 # ok-baseline 에 일부러 무관한 0.0.0.0 블록(443 웹 SG)을 같이 넣어 오탐을

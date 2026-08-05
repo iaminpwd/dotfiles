@@ -2,9 +2,13 @@
 # test-tool-probe-ssot.sh
 #
 # bin/lib/tool-probe.sh 는 has_tool/record_unavailable/print_unavailable_tools
-# 세 함수를 여러 소비자(pre-flight-check.sh, k8s-check.sh)가 공유하는 SSOT다.
-# 소비자가 이 계약을 깨거나 함수를 재정의로 되살리면 도구 미설치 시 우아한 강등
-# (WARNING+skip)이 조용히 하드 블록으로 바뀔 수 있다.
+# 세 함수를 여러 소비자(pre-flight-check.sh, k8s-check.sh, container-hardening-gate.sh)가
+# 공유하는 SSOT다. 소비자가 이 계약을 깨거나 함수를 재정의로 되살리면 도구 미설치 시
+# 우아한 강등(WARNING+skip)이 조용히 하드 블록으로 바뀔 수 있다.
+#
+# container-hardening-gate.sh 는 인자(Dockerfile/이미지 경로)가 없으면 즉시 exit 1 하는
+# 계약이라 아래 2번(인자 없이 심볼릭 링크 호출) 스모크 테스트에는 넣지 않는다. 그 스크립트의
+# 실제 동작(DS-0002 판정)은 contexts/containers/tests/run.sh 가 fixture로 검증한다.
 #
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-tool-probe-ssot.sh
 
@@ -76,8 +80,14 @@ for consumer in "${LIB_CONSUMERS[@]}"; do
 done
 
 # 3. SSOT 유지: 소비자가 라이브러리 함수를 다시 정의하면 분리한 의미가 없어진다.
+#    (인자 계약 때문에 2번 스모크 테스트에서 빠진 container-hardening-gate.sh도 정적 grep인
+#    이 검사에는 안전하게 포함된다.)
+DUP_CHECK_CONSUMERS=(
+  "${LIB_CONSUMERS[@]}"
+  "$REPO_ROOT/bin/linters/container-hardening-gate.sh"
+)
 dup=0
-for consumer in "${LIB_CONSUMERS[@]}"; do
+for consumer in "${DUP_CHECK_CONSUMERS[@]}"; do
   grep -qE '^(has_tool|record_unavailable|print_unavailable_tools)\(\)' "$consumer" && dup=1
 done
 if [ "$dup" -eq 0 ]; then
