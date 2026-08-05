@@ -40,7 +40,7 @@ jobs:
       # 토큰을 기록하는데, just verify가 도는 trufflehog가 이를 유출된 시크릿으로 오탐할 수 있다.
       # 이 job은 이후 git push/fetch가 필요 없으므로 꺼도 안전하다.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -51,7 +51,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Cache mise-managed tools
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/mise
           key: mise-${{ runner.os }}-${{ hashFiles('mise/.config/mise/config.toml') }}
@@ -103,7 +103,7 @@ jobs:
       # 남기는데, bootstrap.sh가 저장소 전체를 trufflehog filesystem으로 스캔하다가
       # 그 토큰 자체를 유출된 시크릿으로 오탐해 Hard Block으로 실패한다(실측 버그).
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
