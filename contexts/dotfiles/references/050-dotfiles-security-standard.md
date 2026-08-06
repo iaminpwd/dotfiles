@@ -14,7 +14,7 @@ references:
 - **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 저장소 트리 밖의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에 분리하고, Git으로 추적되는 파일(`zsh/.zshrc`, `bootstrap.sh` 등)에는 환경 변수 참조 로직만 구현할 것.
 - **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)이 실패하면 원인을 수정한 뒤 재커밋하여 반드시 통과시키십시오.
 - **[MUST] Explicit Key Access Request:** `~/.ssh/id_rsa` 등 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 사용자에게 명시적 승인을 요청하여 취득한 후 접근할 것.
-- **[MUST] Sensitive Data Masking:** 로그, 디버그 출력, 에러 메시지는 물론 사용자와의 대화 답변과 예시 코드까지, 출력되는 모든 텍스트 영역에서 민감 데이터(토큰, 키, 패스워드)를 마스킹(`***`)하여 노출을 안전하게 격리할 것. 위 세 조항이 "어디에 저장하는가"를 통제하는 반면 이 조항은 "어디에 출력하는가"를 통제하므로, 저장소 밖으로 분리해 둔 시크릿도 대화나 로그에 인용되는 순간 유출된다는 점에서 별도 통제가 필요함. (`dotfiles` 스킬은 전역 룰을 전면 무효화하므로 base.AGENTS.md 7장은 이 저장소에서 전혀 적용되지 않습니다. 즉 이 조항은 7장을 "승계"한 것이 아니라, 전면 무효화로 생기는 공백 중 출력 마스킹 보호만큼은 반드시 필요하다고 판단하여 이 문서가 독립적으로 재선언한 것입니다. 7장의 나머지 조항(자격 증명 분리, 프라이빗 키 접근 승인, 하드코딩 시크릿 금지)은 위 Secret Isolation/Explicit Key Access Request 조항 및 2.1절 Mandatory Secret Scan이 각각 별도로 재선언하여 커버합니다.)
+(출력 마스킹은 base.AGENTS.md §7 Sensitive Data Masking이 이미 전역 적용되며 이 저장소도 예외 없이 적용 대상임. 위 두 조항은 그 §7을 dotfiles 고유 경로(`~/.ssh/id_rsa`, `~/.zshrc.local` 등)로 구체화한 것.)
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
