@@ -26,7 +26,7 @@ references:
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 네트워크 구조, Keystone 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (메타데이터 수정, 변수명 변경 등 단순 변경은 생략 가능)
 - **Step 0. Active Investigation (기존 인프라 실태 조사):** 터미널에서 연동 대상의 현재 상태(security group rule, role assignment, router 라우팅, floating IP)를 선제 조회하여 팩트를 확보할 것.
-- 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증할 것.
+- 확보한 팩트를 기반으로 다음 5가지 종속성을 검증할 것.
   1. **Network & Endpoint Topology:** Neutron 라우터 외부 게이트웨이, floating IP 매핑, 보안 그룹 양방향 룰, provider/tenant 네트워크 연결, 포트 시큐리티가 실제로 연동되었는지 검증할 것.
   2. **Keystone Dependency:** 리소스 접근 시 프로젝트/도메인 스코프와 role assignment가 정확한지, 서비스 카탈로그 엔드포인트가 유효한지 검증하고 자격 증명은 Application Credential로 바인딩할 것.
   3. **Quotas & Limits:** 프로젝트별 쿼터(instances, cores, RAM, volumes, floating IP) 한계치 도달 여부와 하이퍼바이저 잔여 용량을 검토할 것.

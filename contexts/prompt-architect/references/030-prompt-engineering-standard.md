@@ -20,7 +20,6 @@ references:
 - **[NEVER]:** 예외 없이 반드시 준수. §2 Positive Action Override에 따라 구체적인 대체 행위를 명시할 것.
 
 ## 2. 페르소나 및 어조 제어 (Tone & Persona)
-- **[MUST] Strict Command Tone:** 대상 에이전트가 이모지 없이 엔터프라이즈 군대식 명령어조를 쓰도록 룰북에 명문화할 것.
 - **[PREFER] Positive Action Override (긍정 행동 지시):** 제한형 부정 명령(`~수용해서는 안 됩니다`, `~하지 마십시오`)보다, 대체 가능한 구체적 행동(`~대신 B를 수행할 것`, `~를 능동적으로 제안할 것`) 위주의 긍정 지시어로 프롬프트를 설계할 것. AI는 "무엇을 해야 하는가"를 명시할 때 가장 정확하게 작동함.
 
 ## 3. AI 추론 및 컨텍스트 제어 (Reasoning & Context)
@@ -28,8 +27,6 @@ references:
 - **[PREFER] Reference Text:** 팩트 기반 응답 보장(Anti-Hallucination)를 위해 기준이 되는 팩트/문서 스니펫을 프롬프트 내부에 직접 주입할 것.
 - **[MUST] Context Isolation:** 룰과 데이터(로그, 코드)가 섞이지 않도록 반드시 `<example>`, `<context>` 등 XML 태그로 격리할 것.
 - **[PREFER] Few-Shot Prompting:** 추상적 설명 대신, 명확한 `Good`/`Bad` 예제 코드(Few-Shot)를 주입할 것.
-- **[PREFER] Chain-of-Thought:** 트러블슈팅 룰 설계 시 `<thinking>`을 통한 명시적 추론 단계를 강제할 것.
-- **[PREFER] CoT 예외:** 추론 네이티브 모델(GPT-5 계열 thinking 모드, DeepSeek-R1, Qwen3 thinking 등 — 구체 모델명은 시점에 따라 은퇴되므로 웹 검색으로 현행 여부 확인)에는 CoT 및 추론 스캐폴딩 대신, 짧고 깔끔한 최종 목표 지시만 직접 제공할 것.
 
 ### 메타 프롬프트 예시 주입 (Few-Shot Examples)
 <examples>

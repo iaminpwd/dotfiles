@@ -19,19 +19,17 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Grounding 팩트 검증
-- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 반드시 `<grounding_check>` 태그를 열어 분석하려는 원인과 대책이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사하십시오. 검증이 통과된 후에만 최종 보고서를 생성하십시오.
+- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인과 대책이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사하십시오. 검증이 통과된 후에만 최종 보고서를 생성하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
 <example>
 [Good]
-- 시스템적 원인 분석 (CoT):
-  `<thinking>`
+- 시스템적 원인 분석 (5 Whys):
   Why 1: 배포 중 왜 장애가 났는가? (잘못된 DB URL 설정이 프로덕션에 반영됨)
   Why 2: 왜 잘못된 설정이 병합되었는가? (IaC PR 리뷰 단계에서 검증 파이프라인(Conftest) 부재)
   결론: 엔지니어 개인의 실수가 아닌, CI/CD 파이프라인의 OPA 정책 안전망 부재가 시스템의 근본 결함.
-  `</thinking>`
-  "이번 인시던트의 근본 원인은 작업자의 실수가 아닌, CI/CD 파이프라인 단에서 잘못된 설정을 필터링하는 정책(Policy-as-Code) 자동화의 부재입니다. `post-mortem-report.md` 산출물에 향후 OPA 기반의 파이프라인 개선안(Action Items)을 명확히 제시하겠습니다."
+  → "이번 인시던트의 근본 원인은 작업자의 실수가 아닌, CI/CD 파이프라인 단에서 잘못된 설정을 필터링하는 정책(Policy-as-Code) 자동화의 부재입니다. `post-mortem-report.md` 산출물에 향후 OPA 기반의 파이프라인 개선안(Action Items)을 명확히 제시하겠습니다."
 </example>
 <example>
 [Bad]
@@ -40,7 +38,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 수집된 인시던트 팩트 로그와 타임라인이 `<grounding_check>`를 통과하여 `post-mortem-report.md`에 결함 없이 정리되고, 구체적 재발 방지 룰 코드가 보증되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 수집된 인시던트 팩트 로그와 타임라인이 Grounding 팩트 검증을 통과하여 `post-mortem-report.md`에 결함 없이 정리되고, 구체적 재발 방지 룰 코드가 보증되어야 합니다.
 - **[MUST] 검증 도구 매핑:** `git log` 및 클라우드 로그 조회 CLI(`aws logs filter-log-events`, `az monitor log-analytics query` 등)를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

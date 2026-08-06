@@ -26,7 +26,7 @@ Azure 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 모든 Azure 인프라 코드를 설계하거나 작성하기 전, 네트워크 구조, RBAC 역할, NSG, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
 - **Step 0. Active Investigation (기존 인프라 실태 조사):** 터미널에서 연동 대상 서비스들의 현재 실제 상태(NSG 룰, RBAC Role Assignment, UDR, Private Endpoint 등)를 선제 조회하여 팩트를 확보할 것.
-- 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증할 것.
+- 확보한 팩트를 기반으로 다음 5가지 종속성을 검증할 것.
   1. **Network & Endpoint Topology:** VNet/Subnet 라우팅(UDR), Network Security Group(NSG) 양방향 포트, 그리고 Azure 내부 통신을 위한 **Private Endpoint (Private Link)** 매핑 상태. 특히 Private Endpoint 설계 시, 대상 서비스가 서브넷 및 프라이빗 DNS 존에 유효하게 연동되었는지 검증할 것.
   2. **IAM/RBAC Dependency:** Azure AD(Entra ID) 기반 Role Assignment, Managed Identity 매핑 상태 및 최소 권한 원칙(PoLP) 검증. Role Assignment 작성 시 대상 Principal ID(사용자/Managed Identity)는 반드시 동적 변수로 바인딩하고 Scope의 정확성을 검증할 것.
   3. **Quotas & Limitations:** 리전별 Subscription Quotas 한계치 도달 여부 및 API Throttling 리스크를 검토할 것.

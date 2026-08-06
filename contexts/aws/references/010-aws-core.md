@@ -26,7 +26,7 @@ AWS 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임.
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 네트워크 구조, IAM 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
 - **Step 0. Active Investigation (기존 인프라 실태 조사):** 터미널에서 연동 대상 서비스들의 현재 실제 상태(Security Group 룰, IAM Policy, Route Table, VPC Endpoint 등)를 선제 조회하여 팩트를 확보할 것.
-- 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증할 것.
+- 확보한 팩트를 기반으로 다음 5가지 종속성을 검증할 것.
   1. **Network & Endpoint Topology:** VPC 라우팅(IGW/NAT), Security Group 양방향 포트, AWS 내부 통신을 위한 VPC Endpoint(Gateway 등)가 실제 라우트 테이블(Route Table)에 연동되었는지 검증할 것.
   2. **IAM Dependency:** Trust Relationship 작성 시 계정 ID는 동적 변수(`aws_caller_identity` 등)로 바인딩하고 Service Principal의 도메인 정확성을 검증할 것. Trust Relationship과 Resource Policy의 양방향 일치를 검증할 것.
   3. **Quotas & Limitations:** 리전별 서비스 할당량(Service Quotas) 한계치 도달 여부 및 API Throttling 리스크를 검토할 것.

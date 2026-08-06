@@ -23,7 +23,7 @@ references:
 <examples>
 <example>
 [Good]
-- CoT 기반 원인 분석: "Exit Code 137이 확인되었으므로 OOMKilled 가능성을 우선 조사함. `docker inspect`로 `OOMKilled: true`를 확인했고, `resources.limits.memory`가 실제 힙 사용량보다 낮게 설정되어 있었습니다."
+- 체계적 원인 분석: "Exit Code 137이 확인되었으므로 OOMKilled 가능성을 우선 조사함. `docker inspect`로 `OOMKilled: true`를 확인했고, `resources.limits.memory`가 실제 힙 사용량보다 낮게 설정되어 있었습니다."
 </example>
 <example>
 [Bad]

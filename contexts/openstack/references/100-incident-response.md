@@ -19,7 +19,7 @@ references:
 
 ### 2.1 트러블슈팅 및 장애 진단
 - **[PREFER] Deep Dive Analysis:** 단순 표면 오류 문구 수집을 넘어, 필요시 Neutron 포트/라우터 상태, Nova 스케줄러 로그, RabbitMQ 큐 적체, Galera 동기화 상태를 다각도로 수집하여 입출력 양방향 흐름을 교차 검증할 것.
-- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 반드시 `<grounding_check>` 태그를 열어 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증 통과 후에만 최종 보고서를 생성할 것.
+- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증 통과 후에만 최종 보고서를 생성할 것.
 - **[PREFER] Timeline Standardization:** 다중 팀 대응이 필요한 대형 장애는 CADF 감사 로그와 서비스 타임스탬프를 기준으로 타임라인을 표준화하여 대응 채널에 공유할 것.
 
 ### 2.2 장애 보고서 및 포스트모템 규격
@@ -53,7 +53,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 수집된 에러 로그가 `<grounding_check>` 검증을 거쳐 `troubleshooting-report.md` 및 `post-mortem-report.md`에 결함 없이 정리되고, 재발 통제 액션 아이템이 파일 링크 형태로 보증되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 수집된 에러 로그가 Grounding 팩트 검증을 거쳐 `troubleshooting-report.md` 및 `post-mortem-report.md`에 결함 없이 정리되고, 재발 통제 액션 아이템이 파일 링크 형태로 보증되어야 합니다.
 - **[MUST] 검증 도구 매핑:** `openstack server event list`, `openstack network agent list`, 서비스 로그(`journalctl`/Kolla 컨테이너 로그) 및 `ceph -s`를 활용하여 팩트 로그 상태를 기계적으로 추출할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

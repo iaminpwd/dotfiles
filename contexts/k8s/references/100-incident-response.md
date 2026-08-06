@@ -19,7 +19,7 @@ references:
 
 ### 2.1 트러블슈팅 및 장애 진단
 - **[PREFER] Deep Dive Analysis:** 단순 에러 문구 수집을 넘어 노드 자원 상태(`kubectl top node`), 커널 이벤트(`dmesg`), kube-apiserver 감사 로그 등을 다각도로 조회하여 장애 근본 원인을 교차 검증할 것.
-- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 반드시 `<grounding_check>` 태그를 열어 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증이 통과된 후에만 최종 보고서를 생성할 것.
+- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증이 통과된 후에만 최종 보고서를 생성할 것.
 
 ### 2.2 장애 보고서 및 포스트모템 규격
 - **[Trigger: User requests bug fix or error analysis] 트러블슈팅 보고서**: 에러 분석 완료 시 아래 양식으로 `troubleshooting-report.md`를 작성할 것.
@@ -43,13 +43,11 @@ references:
 <examples>
 <example>
 [Good]
-- CoT 기반의 구조화된 심층 분석:
-  `<thinking>`
+- 5 Whys 기반의 구조화된 심층 분석:
   Why 1: 파드가 왜 CrashLoopBackOff 상태인가? (OOMKilled 이벤트 반복)
   Why 2: 왜 OOM이 발생했는가? (JVM Heap Size를 컨테이너 Limit에 맞게 튜닝하지 않음)
   결론: JVM의 `-XX:MaxRAMPercentage` 옵션 누락이 근본 원인.
-  `</thinking>`
-  "파드의 반복적인 재시작(CrashLoopBackOff) 원인은 메모리 누수로 인한 OOMKilled입니다. JVM의 MaxRAMPercentage 옵션 누락을 해결하기 위해 매니페스트를 다음과 같이 수정하여 제안하겠습니다."
+  → "파드의 반복적인 재시작(CrashLoopBackOff) 원인은 메모리 누수로 인한 OOMKilled입니다. JVM의 MaxRAMPercentage 옵션 누락을 해결하기 위해 매니페스트를 다음과 같이 수정하여 제안하겠습니다."
 - 비난 없는 사후 분석(Blameless RCA):
   "작업자의 실수로 Pod이 삭제됨" -> "운영 환경의 배포 권한이 특정 관리자 계정으로 격리되지 않아 휴먼 에러가 시스템 장애로 이어질 수 있는 구조적 취약점이 있었음"
 </example>
@@ -61,7 +59,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 수집된 K8s 이벤트가 `<grounding_check>`를 통과하여 `troubleshooting-report.md`에 결함 없이 기술되고, 재발을 통제할 리소스 격리 및 가드레일 매니페스트 코드가 파일 링크 형태로 명시되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 수집된 K8s 이벤트가 Grounding 팩트 검증을 통과하여 `troubleshooting-report.md`에 결함 없이 기술되고, 재발을 통제할 리소스 격리 및 가드레일 매니페스트 코드가 파일 링크 형태로 명시되어야 합니다.
 - **[MUST] 검증 도구 매핑:** `kubectl get events --sort-by='.metadata.creationTimestamp'`를 사용하여 장애 시점 전후의 모든 클러스터 시스템 이벤트를 타임라인 순으로 자동 추출할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

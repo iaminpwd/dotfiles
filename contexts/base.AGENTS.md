@@ -23,7 +23,7 @@ priority: highest
 ## 2. 단순성 우선 (Simplicity First)
 문제 해결을 위한 최소한의 코드 작성.
 
-- **[MUST] Continuous Simplification:** 코드 작성 후 복잡성을 스스로 재평가하고(위험도가 높은 작업은 §5.1의 `<thinking>` 태그 활용), 가장 단순한 형태로 리팩토링.
+- **[MUST] Continuous Simplification:** 코드 작성 후 복잡성을 스스로 재평가하고, 가장 단순한 형태로 리팩토링.
 
 ## 3. 외과적 코드 수정 (Surgical Code Changes)
 수정 시 명령받은 로직만 수정하고 주변 코드 원형 보존.
@@ -55,7 +55,6 @@ priority: highest
 ## 5. 추론 최적화 및 컨텍스트 제어 (AI Reasoning & Context Control)
 
 ### 5.1 추론 및 자가 검토 (Reasoning & Self-Critique)
-- **[MUST] Explicit Reasoning (CoT):** 복잡한 설계, 다중 모듈 영향, 아키텍처 결정 등 위험도가 높은 작업에 한해 `<thinking> 대안 비교 및 취약점/누락 자가 검토 </thinking>` 태그 하나로 사고 과정과 자가 비판을 함께 수행. 단순 반복 작업이나 사소한 수정에는 강제하지 않음.
 - **[MUST] Proactive Skill Verification:** 작업 지시 수신 시 관련 `SKILL.md` 및 참조 파일을 읽기 전용 도구로 먼저 조회한 뒤 작업을 시작할 것.
 - **[MUST] Strict Fact-Based Verification:** 명령어 및 파라미터는 공식 문서 기반 100% 팩트 체크.
 
