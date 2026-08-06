@@ -109,10 +109,6 @@ priority: highest
 #### 3.1.3. 생각의 시간 벌어주기 (Let AI think / CoT)
 **이론:** 답을 내리기 전에 충분히 텍스트를 나불거리게 만들어(연산력 증폭), 최종 퀄리티를 상승시키는 기법.
 
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Explicit Reasoning (CoT):** 복잡한 설계 전 최상단에 `<thinking> 분석 및 대안 비교 </thinking>` 태그를 열어 논리 추론 과정을 구축하십시오. (출처: base.AGENTS.md)
-```
 
 ### 3.2. OpenAI 핵심 기법
 #### 3.2.1. 페르소나 부여 (Role Prompting)
@@ -189,7 +185,7 @@ priority: high
 **통합 워크스페이스 적용 사례:**
 ```markdown
 - **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
-- **[MUST] Safe Appending:** 파일 끝에 라인을 추가(Append)할 때, 멱등성을 보장하기 위해 `grep` 등으로 해당 라인의 존재 여부를 우선 확인하십시오. (출처: aws/references/040-automation-scripting.md)
+- **[MUST] Safe Configuration Appending:** 설정 추가 시 반드시 `grep -q "문자열"`로 중복 여부를 사전 검사할 것. (출처: prompt-architect/references/020-shell-scripting-standard.md)
 ```
 
 ### 4.2. Fail-Fast & Safety Boundary (빠른 실패와 안전선 패턴)
