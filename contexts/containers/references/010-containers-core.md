@@ -61,3 +61,4 @@ CMD ["node", "index.js"]
 - **[MUST] 중단 조건 (Halt Conditions):**
   - Dockerfile 내에 평문 비밀번호나 API 키가 `ENV`/`ARG`로 영구 레이어에 굽히는 패턴이 감지되면 즉시 작업을 중단(Hard Block)하고 BuildKit Secret Mount로 전환을 요구할 것.
   - `hadolint` CLI가 로컬에 설치되어 있지 않을 경우, 검증을 생략하는 대신 즉시 작업을 중단(Halt & Clarify)하여 설치를 요청할 것.
+  - `docker system prune -af --volumes`, `docker rm -f $(docker ps -aq)` 등 파괴적 명령이 대상 필터(컨테이너 ID, 라벨 등 명시) 검증 없이 전면 실행되는 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 안전장치 추가를 요구할 것.

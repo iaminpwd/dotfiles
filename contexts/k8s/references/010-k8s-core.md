@@ -35,7 +35,7 @@ Kubernetes 클러스터 설계 및 컨테이너 플랫폼 운영 적용 표준�
 ### 2.4 5차원 K8s 종속성 검증 (5D Integration Matrix)
 모든 Kubernetes 매니페스트나 배포 스크립트를 작성하기 전, 반드시 다음 절차를 따르십시오.
 - **Step 0. Active Investigation (기존 클러스터 실태 조사):** 코드 작성 전 터미널에서 연동 대상 리소스들의 현재 실제 상태(NetworkPolicy, RoleBinding, ConfigMap/Secret, ResourceQuota 등)를 `kubectl get`, `kubectl describe` 등으로 조회하여 팩트를 확보할 것.
-- 확보한 팩트를 기반으로 `<thinking>` 태그를 열어 다음 5가지 종속성을 검증할 것.
+- 확보한 팩트를 기반으로 다음 5가지 종속성을 검증할 것.
   1. **Network & Connectivity Topology:** Namespace 내/외부 통신을 제어하는 `NetworkPolicy` 양방향 룰, Ingress/Egress 라우팅, `Service` 포트 및 Service Mesh 엔드포인트 매핑 상태.
   2. **IAM/RBAC Dependency:** `ServiceAccount`, `Role`, `RoleBinding`의 최소 권한 원칙(PoLP) 적용 여부 및 외부 클라우드 인증(OIDC 등) 매핑 검증.
   3. **Quotas & Resource Limits:** Namespace 단위의 `ResourceQuota`, `LimitRange` 한계치 도달 여부 및 CPU/Memory Throttling (OOMKilled 등) 리스크 검토.
@@ -74,3 +74,4 @@ lifecycle:
 - **[MUST] 중단 조건 (Halt Conditions):**
   - CLI 도구(`kubectl`, `helm`, `kube-linter` 등) 실행을 지시받았으나 로컬에 미설치되었음이 확인되면, 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구할 것.
   - K8s 매니페스트 내에 `securityContext`의 `privileged: true`가 확인되거나 `hostNetwork: true` 등 심각한 보안 규정 위반이 감지되면 즉시 작업을 중단(Hard Block)하고 대안 설계를 요구할 것.
+  - `kubectl delete namespace`, `kubectl delete deployment --all` 등 파괴적 명령이 대상 필터(리소스명, 라벨 셀렉터 명시 등) 검증 없이 네임스페이스/전체 와일드카드로 실행되는 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 안전장치 추가를 요구할 것.
