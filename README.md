@@ -92,10 +92,10 @@ just setup-dryrun
 |---|---|
 | **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow, pipx 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
-| **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `mise`, `git` 설정을 홈 디렉토리(`~/`)로 symlink 구성 |
+| **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
 | **`ai_agent`** | 글로벌 룰(`base.AGENTS.md`) 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`)을 Claude Code·Antigravity `PostToolUse`에 병합 등록 |
-| **`tflint`** | IaC 전역 구성을 위한 `tflint` 설정 설치 및 초기화 |
+| **`tflint`** | IaC 전역 `tflint` 설정(`tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -109,7 +109,7 @@ exec zsh
 mise ls
 
 # Stow symlink 확인
-ls -la ~/.zshrc ~/.gitconfig ~/.config/mise/config.toml
+ls -la ~/.zshrc ~/.gitconfig ~/.vimrc ~/.tflint.hcl ~/.config/mise/config.toml
 
 # AI 글로벌 룰 및 스킬 레지스트리 등록 확인
 cat ~/.gemini/config/AGENTS.md | head -5
@@ -153,22 +153,22 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │       openstack/, pre-flight-check/,
 │       prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
 │
-├── git/
+├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
 │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
 │   ├── .githooks/              # 전역 pre-commit·commit-msg 훅 원본 (Stow로 ~/.githooks/에 symlink)
 │   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
 │
-├── mise/
+├── mise/                 # [배포: ansible stow 역할이 자동 심볼릭 링크 (단, mise install이 ansible보다 먼저 필요해 bootstrap.sh가 동일한 stow 명령을 한 번 더 앞서 실행)]
 │   └── .config/mise/
 │       └── config.toml   # 인프라 도구 버전 선언 매니페스트 (SSOT, mise 전역 설정 위치)
 │
-├── tflint/
+├── tflint/                # [배포: ansible stow 역할이 자동 심볼릭 링크]
 │   └── .tflint.hcl       # IaC 전역 TFLint 규칙 구성
 │
-├── vim/
+├── vim/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
 │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
 │
-├── zsh/
+├── zsh/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
 │   ├── .zshenv           # Zsh 환경변수 설정 (PATH 등 비대화형 세션 포함)
 │   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
 │

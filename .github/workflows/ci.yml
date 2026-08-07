@@ -122,6 +122,8 @@ jobs:
           # Stow symlink 확인
           test -L "$HOME/.zshrc"
           test -L "$HOME/.gitconfig"
+          test -L "$HOME/.vimrc"
+          test -L "$HOME/.tflint.hcl"
           test -L "$HOME/.config/mise/config.toml"
 
           # AI 글로벌 룰 주입 확인 (Gemini/Claude)
@@ -143,6 +145,8 @@ jobs:
           mise which shellcheck >/dev/null
           test -L "$HOME/.zshrc"
           test -L "$HOME/.gitconfig"
+          test -L "$HOME/.vimrc"
+          test -L "$HOME/.tflint.hcl"
           test -L "$HOME/.config/mise/config.toml"
           test -L "$HOME/.gemini/config/AGENTS.md"
           test -L "$HOME/.claude/CLAUDE.md"
