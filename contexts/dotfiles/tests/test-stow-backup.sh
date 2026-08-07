@@ -2,10 +2,14 @@
 # test-stow-backup.sh
 #
 # stow-backup.sh는 stow가 심볼릭 링크를 걸기 전, HOME에 이미 존재하는 실제 파일을 백업으로
-# 치워주는 안전장치다. "이미 심볼릭 링크인 경우 건드리지 않는다"와 "이미 우리 dotfiles를
-# 가리키는 링크면 건드리지 않는다"는 조건(_canonicalize 비교)이 깨지면, 정상적으로 연결된
-# 기존 심볼릭 링크를 불필요하게 백업 파일로 바꿔버리거나(멱등성 위반), 반대로 진짜 충돌
-# 파일을 못 옮겨 stow가 실패하게 된다.
+# 치워주는 안전장치다. "이미 stow와 동일한 상대경로 심볼릭 링크면 건드리지 않는다"는 조건이
+# 깨지면, 정상적으로 연결된 기존 심볼릭 링크를 불필요하게 백업 파일로 바꿔버리거나(멱등성
+# 위반), 반대로 진짜 충돌 파일을 못 옮겨 stow가 실패하게 된다.
+#
+# GNU Stow는 자기가 만드는 "상대경로" 심볼릭 링크만 소유로 인식하고, 절대경로 심볼릭
+# 링크는 설령 같은 파일을 가리켜도 foreign으로 보고 -R을 거부한다(실측: 이전 버전
+# bootstrap.sh가 절대경로로 ln -sfn 해두었던 mise/.config/mise/config.toml에서 재현).
+# 그래서 "이미 심볼릭 링크인가"가 아니라 "상대경로 형식인가"가 진짜 판정 기준이다.
 #
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-stow-backup.sh
 
@@ -50,18 +54,36 @@ else
   report "fail-real-conflict (실제 파일이면 백업으로 이동)" 1 "$(ls -la "$CASE1/home" 2>&1)"
 fi
 
-# 2. ok-already-linked: HOME의 파일이 이미 dotfiles 소스를 가리키는 심볼릭 링크면 건드리지 않는다.
+# 2. ok-already-linked: HOME의 파일이 이미 stow와 동일한 "상대경로" 심볼릭 링크로 dotfiles
+#    소스를 가리키면 건드리지 않는다.
 CASE2="$TMP/case2"
 mkdir -p "$CASE2/dotfiles/pkg" "$CASE2/home"
 echo "dotfiles 버전" >"$CASE2/dotfiles/pkg/.linkedrc"
-ln -s "$CASE2/dotfiles/pkg/.linkedrc" "$CASE2/home/.linkedrc"
+ln -s "../dotfiles/pkg/.linkedrc" "$CASE2/home/.linkedrc"
 
 bash "$BACKUP" "pkg" "$CASE2/dotfiles" "$CASE2/home"
 
-if [ -L "$CASE2/home/.linkedrc" ] && [ "$(readlink "$CASE2/home/.linkedrc")" = "$CASE2/dotfiles/pkg/.linkedrc" ]; then
-  report "ok-already-linked (이미 심볼릭 링크면 그대로 유지)" 0
+if [ -L "$CASE2/home/.linkedrc" ] && [ "$(readlink "$CASE2/home/.linkedrc")" = "../dotfiles/pkg/.linkedrc" ]; then
+  report "ok-already-linked (stow와 동일한 상대경로 링크면 그대로 유지)" 0
 else
-  report "ok-already-linked (이미 심볼릭 링크면 그대로 유지)" 1 "$(ls -la "$CASE2/home" 2>&1)"
+  report "ok-already-linked (stow와 동일한 상대경로 링크면 그대로 유지)" 1 "$(ls -la "$CASE2/home" 2>&1)"
+fi
+
+# 2b. fail-foreign-absolute-link: 같은 파일을 가리켜도 절대경로 심볼릭 링크는 GNU Stow가
+#     "not owned by stow"로 보고 -R을 거부하므로, stow가 자기 형식으로 다시 만들 수 있게
+#     미리 백업으로 치워야 한다.
+CASE2B="$TMP/case2b"
+mkdir -p "$CASE2B/dotfiles/pkg" "$CASE2B/home"
+echo "dotfiles 버전" >"$CASE2B/dotfiles/pkg/.absrc"
+ln -s "$CASE2B/dotfiles/pkg/.absrc" "$CASE2B/home/.absrc"
+
+bash "$BACKUP" "pkg" "$CASE2B/dotfiles" "$CASE2B/home"
+
+ABS_BACKUPS=("$CASE2B/home"/.absrc.backup.*)
+if [ ! -e "$CASE2B/home/.absrc" ] && [ -L "${ABS_BACKUPS[0]}" ]; then
+  report "fail-foreign-absolute-link (절대경로 링크는 같은 대상이어도 백업)" 0
+else
+  report "fail-foreign-absolute-link (절대경로 링크는 같은 대상이어도 백업)" 1 "$(ls -la "$CASE2B/home" 2>&1)"
 fi
 
 # 3. ok-no-conflict: HOME에 해당 경로가 아예 없으면 아무 것도 하지 않고 exit 0이어야 한다.

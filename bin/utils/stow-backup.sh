@@ -16,7 +16,18 @@ _canonicalize() {
 while IFS= read -r -d '' SRC_FILE; do
   REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
   TARGET="$HOME_DIR/$REL_PATH"
-  if [ -e "$TARGET" ] && [ ! -L "$TARGET" ] && [ "$(_canonicalize "$TARGET")" != "$(_canonicalize "$SRC_FILE")" ]; then
+  if [ -L "$TARGET" ]; then
+    # GNU Stow는 자기가 생성한 상대경로 심볼릭 링크만 "소유"로 인식한다. 절대경로
+    # 심볼릭 링크는 설령 같은 파일을 가리켜도 stow가 foreign으로 판단해 -R을 거부하므로
+    # (실측: 예전 방식으로 절대경로 링크된 mise/.config/mise/config.toml에서 재현),
+    # 형식만 다른 경우도 미리 정리해 stow가 자기 형식으로 다시 만들게 한다.
+    case "$(readlink "$TARGET")" in
+    /*)
+      mkdir -p "$(dirname "$TARGET")"
+      mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
+      ;;
+    esac
+  elif [ -e "$TARGET" ] && [ "$(_canonicalize "$TARGET")" != "$(_canonicalize "$SRC_FILE")" ]; then
     mkdir -p "$(dirname "$TARGET")"
     mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
   fi

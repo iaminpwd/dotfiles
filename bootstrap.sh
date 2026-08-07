@@ -8,18 +8,23 @@ export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 1. OS 패키지 매니저 판별
+# stow는 ansible의 packages 역할이 나중에 다시 설치하지만(멱등), mise config.toml을
+# ansible보다 먼저 링크해야 해서(아래 3단계) 여기서 미리 확보해둔다.
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip python3-venv
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow python3-venv
   if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y pipx 2>/dev/null; then
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pipx 2>/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip
   fi
 elif command -v dnf &>/dev/null; then
-  sudo dnf install -y curl git unzip pipx
+  sudo dnf install -y curl git unzip stow pipx
 elif command -v brew &>/dev/null; then
-  # macOS는 기본 내장 도구 활용, pipx 설치
+  # macOS는 기본 내장 도구 활용, pipx/stow 설치
   if ! command -v pipx &>/dev/null; then
     brew install pipx
+  fi
+  if ! command -v stow &>/dev/null; then
+    brew install stow
   fi
 else
   echo "❌ 지원하지 않는 운영체제/패키지 매니저입니다." >&2
@@ -41,14 +46,13 @@ echo "=> Installing Ansible & Just via mise & pipx..."
 echo "========================================================="
 echo "=> 🚀 Running 'mise install' automatically..."
 export PATH="$HOME/.local/bin:$PATH"
-MISE_GLOBAL_CONFIG="$SCRIPT_DIR/mise/.config/mise/config.toml"
 mkdir -p "$HOME/.config/mise"
-# mise는 stow 관리 대상에서 제외되어 있어(ansible/roles/stow 참고) 'just setup' 실행 전에도
-# 전역 config.toml을 여기서 직접 연결한다. 기존 사용자 파일이 있으면 stow-backup.sh로 백업 후 링크.
+# mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해서, 여기서 실제
+# GNU Stow로 미리 한 번 링크해둔다. 이후 ansible stow 역할이 같은 mise 패키지를
+# 다시 stow 해도(-R은 멱등) 안전하므로 mise를 stow 대상에서 뺄 필요가 없다.
+# 기존 사용자 파일이 있으면 stow-backup.sh로 백업 후 링크.
 bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR" "$HOME"
-ln -sfn "$MISE_GLOBAL_CONFIG" "$HOME/.config/mise/config.toml"
-MISE_CONFIG_FILE="$MISE_GLOBAL_CONFIG"
-export MISE_CONFIG_FILE
+(cd "$SCRIPT_DIR" && stow -t "$HOME" -R mise)
 # uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
 # 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
 ~/.local/bin/mise install -y uv

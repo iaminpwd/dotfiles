@@ -20,8 +20,6 @@
       - "assets"
       - "ansible"
       - "bin"
-      - "mise"
-      - "tflint"
       - ".*"
   register: stow_dirs
 
@@ -33,12 +31,37 @@
     label: "{{ item.path | basename }}"
   changed_when: false
 
-- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
-  ansible.builtin.command:
-    cmd: stow -t {{ ansible_env.HOME }} -R --verbose {{ item.path | basename }}
-    chdir: "{{ role_path }}/../../../"
+# stow 명령의 verbose stdout 문구("LINK:"/"UNLINK:")로 변경 여부를 판정하면 GNU Stow
+# 버전에 따라 출력 포맷이 달라질 때 조용히 changed=false 오판이 날 수 있다. 대신 stow를
+# 실행하기 전 실제 심볼릭 링크 상태(readlink)를 직접 비교해 드리프트 여부를 판정한다.
+- name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정
+  ansible.builtin.shell: |
+    set -euo pipefail
+    PKG_DIR="{{ role_path }}/../../../{{ item.path | basename }}"
+    DRIFT=0
+    while IFS= read -r -d '' SRC; do
+      REL="${SRC#"$PKG_DIR"/}"
+      TARGET="{{ ansible_env.HOME }}/$REL"
+      if [ "$(readlink -f "$TARGET" 2>/dev/null)" != "$(readlink -f "$SRC")" ]; then
+        DRIFT=1
+        break
+      fi
+    done < <(find "$PKG_DIR" -type f -print0)
+    echo "$DRIFT"
+  args:
+    executable: /bin/bash
   loop: "{{ stow_dirs.files }}"
   loop_control:
     label: "{{ item.path | basename }}"
+  register: stow_drift_check
+  changed_when: false
+
+- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
+  ansible.builtin.command:
+    cmd: stow -t {{ ansible_env.HOME }} -R --verbose {{ item.item.path | basename }}
+    chdir: "{{ role_path }}/../../../"
+  loop: "{{ stow_drift_check.results }}"
+  loop_control:
+    label: "{{ item.item.path | basename }}"
   register: stow_result
-  changed_when: "'LINK:' in stow_result.stdout or 'UNLINK:' in stow_result.stdout"
+  changed_when: "item.stdout is defined and item.stdout.strip() == '1'"
