@@ -10,7 +10,7 @@
 # 이 스위트는 라이브러리 자체의 계약(함수 제공, QUIET 분기, 저장소 루트 판정)과 소비자가
 # 인라인 복제를 되살리지 않았는지만 고정한다.
 #
-# 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-script-init.sh
+# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-script-init.sh
 
 set -euo pipefail
 

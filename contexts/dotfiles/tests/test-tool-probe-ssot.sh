@@ -10,7 +10,7 @@
 # 계약이라 아래 2번(인자 없이 심볼릭 링크 호출) 스모크 테스트에는 넣지 않는다. 그 스크립트의
 # 실제 동작(DS-0002 판정)은 contexts/containers/tests/run.sh 가 fixture로 검증한다.
 #
-# 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-tool-probe-ssot.sh
+# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-tool-probe-ssot.sh
 
 set -euo pipefail
 export QUIET=0

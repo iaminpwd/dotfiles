@@ -6,7 +6,7 @@
 # 회귀 스위트를 트리거하는지)이 깨져도 아무 것도 잡아주지 못했다. 실제 무거운 외부
 # 도구(checkov/tflint 등)를 타지 않도록, 대상 스킬의 tests/run.sh를 exit 0 스텁으로
 # 대체해 오케스트레이션 로직(범위 판정 + 실제 스텁 호출 여부)만 격리해서 검증한다.
-# run-suite.sh 자체의 정확성은 contexts/pre-flight-check/tests/test-run-suite.sh가
+# run-suite.sh 자체의 정확성은 contexts/dotfiles/tests/test-run-suite.sh가
 # 별도로 담당하므로, 이 스위트는 실제 run-suite.sh를 그대로 가져와 정상 경로(1차
 # 분기)를 그대로 태운다.
 #

@@ -9,7 +9,7 @@
 # 이 래퍼의 출력을 읽는 주체가 사람과 AI 에이전트이므로 거짓 초록불은 게이트를 통째로
 # 무력화한다. 판정 로직을 고칠 때 그 두 결함이 조용히 되살아나지 않는지 확인한다.
 #
-# 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-run-suite.sh
+# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-run-suite.sh
 
 set -euo pipefail
 export QUIET=0
@@ -17,7 +17,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 RUNNER="$REPO_ROOT/bin/hooks/run-suite.sh"
-FIXTURES="$TESTS_DIR/fixtures"
+FIXTURES="$TESTS_DIR/fixtures-run-suite"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
