@@ -98,6 +98,23 @@ else
   report "no-log-entry (기록 없는 파일 -> 무경고)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
 fi
 
+# Case 4: 파일 목록 줄도 [WARNING]로 시작해야 한다. run-suite.sh는 통과한 스크립트
+# 출력에서 [WARNING]/⚠로 시작하는 줄만 압축 없이 남기고 나머지는 버리므로(bin/hooks/run-suite.sh
+# 참조), 헤더 줄만 [WARNING]이고 파일 목록이 단순 들여쓰기면 run-suite.sh 경유 시 헤더만
+# 남고 정작 어떤 파일이 미보강인지는 압축 경로에서 통째로 사라진다(과거 실제 재현된 버그).
+PR4="$PLUGIN_TMP/repo4"
+new_repo "$PR4"
+echo "# readme" >"$PR4/README.md"
+git -C "$PR4" add README.md
+echo "2026-08-01T00:00:00+09:00 | README.md | hook:Edit | - | OK" >"$PR4/.agent-state/edits.log"
+run_pfc "$PR4" >/dev/null
+FILE_LINE=$(grep -F "README.md" "$PLUGIN_TMP/out" || true)
+if [[ "$FILE_LINE" == \[WARNING\]* ]]; then
+  report "unresolved-ok (파일 목록 줄도 [WARNING]로 시작)" 0
+else
+  report "unresolved-ok (파일 목록 줄도 [WARNING]로 시작)" 1 "line='$FILE_LINE'"
+fi
+
 rm -rf "$PLUGIN_TMP"
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

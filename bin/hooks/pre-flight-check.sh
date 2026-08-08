@@ -118,7 +118,11 @@ check_provenance_reminder() {
   if [ "${#unresolved[@]}" -gt 0 ]; then
     log_info "--- Step: Provenance Logging Reminder (Non-blocking) ---"
     echo "[WARNING] 아래 변경 파일은 아직 record-provenance.sh로 근거가 보강되지 않았습니다. 룰 근거가 있는 변경이면 보강하고, 근거 없는 사소한 수정이면 무시하십시오:"
-    printf '    %s\n' "${unresolved[@]}"
+    # run-suite.sh는 통과한 스크립트 출력에서 [WARNING]/⚠로 시작하는 줄만 압축 없이
+    # 남기고 나머지는 버린다(bin/hooks/run-suite.sh 참조). 파일 목록을 들여쓰기만 하면
+    # 그 필터에 안 걸려 헤더 줄만 남고 정작 어떤 파일이 미보강인지는 압축 경로에서
+    # 통째로 사라진다. 각 줄도 [WARNING]로 시작해 필터를 통과시킨다.
+    printf '[WARNING]     %s\n' "${unresolved[@]}"
   fi
   return 0
 }

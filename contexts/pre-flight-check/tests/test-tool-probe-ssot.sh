@@ -96,6 +96,24 @@ else
   report "소비자가 라이브러리 함수를 재정의하지 않음" 1 "복제본이 되살아났습니다"
 fi
 
+# 4. print_unavailable_tools()의 모든 출력 줄이 [WARNING]로 시작해야 한다. run-suite.sh는
+#    통과한 스크립트 출력에서 [WARNING]/⚠로 시작하는 줄만 압축 없이 남기므로(bin/hooks/
+#    run-suite.sh 참조), "===" 접두어만 쓰면 도구 미설치로 검증이 건너뛰어져도 압축 경로
+#    에서는 통째로 안 보이는 거짓 초록불이 된다(과거 실제 재현된 버그: 세 줄 다 미보존).
+code=0
+OUT=$(bash -c '
+  set -euo pipefail
+  export QUIET=0
+  source "$1"
+  UNAVAILABLE_TOOLS=("terraform")
+  print_unavailable_tools
+' _ "$LIB" 2>&1) || code=$?
+if [ "$code" -eq 0 ] && [ -n "$OUT" ] && ! grep -qvE '^\[WARNING\]' <<<"$OUT"; then
+  report "print_unavailable_tools 모든 줄이 [WARNING]로 시작" 0
+else
+  report "print_unavailable_tools 모든 줄이 [WARNING]로 시작" 1 "out=$OUT"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
