@@ -61,4 +61,39 @@ if [ -n "$JQ" ] && "$JQ" empty "$CLAUDE_SETTINGS" 2>/dev/null; then
   mv "$TMP" "$CLAUDE_SETTINGS"
 fi
 
+# 3. Claude: 실시간 사전 검증 훅(pre-flight-live-hook.sh) 병합
+# 편집 직후 그 파일 1개만 pre-flight-check.sh로 즉시 검증해, 커밋 시점 게이트
+# (git/.githooks/pre-commit) 이전의 시차를 좁힌다. NotebookEdit은 pre-flight-check가
+# 검증하는 대상이 아니라 매처에서 제외한다.
+LIVE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")"
+
+if [ -n "$JQ" ] && "$JQ" empty "$CLAUDE_SETTINGS" 2>/dev/null; then
+  TMP=$(mktemp)
+  # shellcheck disable=SC2016
+  "$JQ" --arg cmd "$LIVE_HOOK_SCRIPT" '
+    .hooks.PostToolUse = (
+        ((.hooks.PostToolUse // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+        + [{matcher: "Edit|Write|MultiEdit", hooks: [{type: "command", command: $cmd, timeout: 30}]}]
+      )
+  ' "$CLAUDE_SETTINGS" >"$TMP"
+  mv "$TMP" "$CLAUDE_SETTINGS"
+fi
+
+# 4. Claude: 완료 선언 직전 게이트 훅(pre-flight-gate-hook.sh) 병합
+# base.AGENTS.md의 Pre-Flight Gate MUST 룰(완료 선언 직전 통합 검증)을 Stop 이벤트에서
+# 기계적으로 강제한다. Edit/Write 매처가 아니라 Stop 이벤트라 matcher 없이 등록한다.
+GATE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
+
+if [ -n "$JQ" ] && "$JQ" empty "$CLAUDE_SETTINGS" 2>/dev/null; then
+  TMP=$(mktemp)
+  # shellcheck disable=SC2016
+  "$JQ" --arg cmd "$GATE_HOOK_SCRIPT" '
+    .hooks.Stop = (
+        ((.hooks.Stop // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+        + [{hooks: [{type: "command", command: $cmd, timeout: 60}]}]
+      )
+  ' "$CLAUDE_SETTINGS" >"$TMP"
+  mv "$TMP" "$CLAUDE_SETTINGS"
+fi
+
 exit 0

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# test-pre-flight-live-hook.sh
+#
+# pre-flight-live-hook.sh는 PostToolUse 훅으로 조용히 실행되고(-e 미사용, 실패해도
+# exit 0), 대상 저장소 판정·확장자 제외·성공/실패 시 JSON 출력 로직이 깨져도 아무도
+# 눈치채지 못한다. 실제 pre-flight-check.sh(무거운 외부 도구 의존)를 돌리는 대신,
+# 격리된 픽스처 저장소 루트에 성공/실패를 흉내내는 스텁을 놓아 훅 자체의 판정
+# 로직만 고정한다. 이 훅은 run-suite.sh를 거치므로(옵트인 저장소는 실제
+# $HOME/dotfiles/bin/hooks/run-suite.sh로 폴백) 성공 시에도 decision 없이
+# additionalContext에 압축된 "-> [✓]" 한 줄이 실리는지, 실패 시엔 decision:block이
+# 걸리는지를 함께 고정한다.
+#
+# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-pre-flight-live-hook.sh
+
+set -euo pipefail
+
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
+HOOK="$REPO_ROOT/bin/hooks/pre-flight-live-hook.sh"
+
+PASS_COUNT=0
+FAIL_COUNT=0
+
+report() {
+  local name=$1 ok=$2 detail=${3:-}
+  if [ "$ok" -eq 0 ]; then
+    echo "  PASS  $name"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  else
+    echo "  FAIL  $name"
+    [ -n "$detail" ] && echo "        $detail"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+}
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+FIXTURE_REPO="$TMP/fixture-repo"
+mkdir -p "$FIXTURE_REPO"
+git -C "$FIXTURE_REPO" init -q
+
+# 루트에 옵트인 pre-flight-check.sh 스텁을 두면(git/.githooks/pre-commit과 동일한
+# 옵트인 규약) dotfiles/~/workspace가 아니어도 훅이 이 저장소를 대상으로 삼는다.
+stub_pass() {
+  cat >"$FIXTURE_REPO/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$FIXTURE_REPO/pre-flight-check.sh"
+}
+stub_fail() {
+  cat >"$FIXTURE_REPO/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "STUB_VALIDATION_FAILURE: $1"
+exit 1
+EOF
+  chmod +x "$FIXTURE_REPO/pre-flight-check.sh"
+}
+
+echo "=== pre-flight-live-hook.sh 판정 로직 회귀 테스트 ==="
+
+# 1. 검증 통과(exit 0) 시 decision 없이 additionalContext에 run-suite.sh의 압축된
+#    "-> [✓]" 한 줄이 실려야 한다(차단·재응답은 없음 = decision 필드 자체가 없음).
+stub_pass
+echo "ok" >"$FIXTURE_REPO/ok.sh"
+payload1="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/ok.sh\"}}"
+out1=$(echo "$payload1" | bash "$HOOK")
+if echo "$out1" | jq -e 'has("decision") | not' >/dev/null 2>&1 &&
+  echo "$out1" | jq -e '.hookSpecificOutput.additionalContext | contains("[✓]")' >/dev/null 2>&1; then
+  report "검증 통과 (decision 없이 압축 로그만)" 0
+else
+  report "검증 통과 (decision 없이 압축 로그만)" 1 "out=$out1"
+fi
+
+# 2. 검증 실패(exit 1) 시 decision:block JSON과 스텁 출력이 additionalContext에 담겨야 한다.
+stub_fail
+echo "bad" >"$FIXTURE_REPO/bad.sh"
+payload2="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/bad.sh\"}}"
+out2=$(echo "$payload2" | bash "$HOOK")
+if echo "$out2" | jq -e '.decision == "block"' >/dev/null 2>&1 &&
+  echo "$out2" | jq -e '.reason | contains("bad.sh")' >/dev/null 2>&1 &&
+  echo "$out2" | jq -e '.hookSpecificOutput.additionalContext | contains("STUB_VALIDATION_FAILURE")' >/dev/null 2>&1; then
+  report "검증 실패 (decision:block JSON)" 0
+else
+  report "검증 실패 (decision:block JSON)" 1 "out=$out2"
+fi
+
+# 3. .tf는 스텁이 항상 실패하도록 해놔도 네트워크/빌드 의존 확장자 제외 로직으로
+#    조용히 건너뛰어야 한다(스텁조차 호출되지 않음).
+echo "resource" >"$FIXTURE_REPO/main.tf"
+payload3="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/main.tf\"}}"
+out3=$(echo "$payload3" | bash "$HOOK")
+if [ -z "$out3" ]; then
+  report ".tf 확장자 제외 (건너뜀)" 0
+else
+  report ".tf 확장자 제외 (건너뜀)" 1 "out=$out3"
+fi
+
+# 4. Antigravity 스키마(toolCall.args.TargetFile)도 동일하게 판정되어야 한다.
+payload4="{\"toolCall\":{\"name\":\"replace_file_content\",\"args\":{\"TargetFile\":\"$FIXTURE_REPO/bad.sh\"}}}"
+out4=$(echo "$payload4" | bash "$HOOK")
+if echo "$out4" | jq -e '.decision == "block"' >/dev/null 2>&1; then
+  report "antigravity-schema (TargetFile 판정)" 0
+else
+  report "antigravity-schema (TargetFile 판정)" 1 "out=$out4"
+fi
+
+# 5. 옵트인 대상이 아닌 저장소(루트에 pre-flight-check.sh 없음)는 조용히 건너뛰어야 한다.
+UNSCOPED_REPO="$TMP/unscoped-repo"
+mkdir -p "$UNSCOPED_REPO"
+git -C "$UNSCOPED_REPO" init -q
+echo "bad" >"$UNSCOPED_REPO/bad.sh"
+payload5="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$UNSCOPED_REPO/bad.sh\"}}"
+out5=$(echo "$payload5" | bash "$HOOK")
+if [ -z "$out5" ]; then
+  report "옵트인 대상 아닌 저장소 (건너뜀)" 0
+else
+  report "옵트인 대상 아닌 저장소 (건너뜀)" 1 "out=$out5"
+fi
+
+# 6. 편집 대상이 없는 조회 도구 호출은 조용히 건너뛰어야 한다.
+payload6='{"tool_name":"Read","tool_input":{}}'
+out6=$(echo "$payload6" | bash "$HOOK")
+if [ -z "$out6" ]; then
+  report "read-only 호출 (건너뜀)" 0
+else
+  report "read-only 호출 (건너뜀)" 1 "out=$out6"
+fi
+
+TOTAL=$((PASS_COUNT + FAIL_COUNT))
+echo
+echo "$PASS_COUNT/$TOTAL 통과"
+[ "$FAIL_COUNT" -eq 0 ] || exit 1

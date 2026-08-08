@@ -62,7 +62,7 @@ terraform {
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `terraform plan`이 에러 없이 출력되고, `run-suite.sh` 통합 검증(`base.AGENTS.md` §4 Pre-Flight Gate)까지 통과해야 합니다.
+- **[MUST] 완료 조건 (Done when):** `terraform plan`이 에러 없이 출력되고, `run-suite.sh` 통합 검증(완료 선언 직전 Stop 훅 `pre-flight-gate-hook.sh`가 자동 강제)까지 통과해야 합니다.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Terraform Apply] 사전 조치 및 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 먼저 실행할 것.

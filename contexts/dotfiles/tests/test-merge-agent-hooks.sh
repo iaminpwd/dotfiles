@@ -72,13 +72,29 @@ else
   report "claude (PostToolUse 매처 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
 fi
 
-# 4. 멱등성: 두 번째 실행 후에도 Claude PostToolUse 훅이 중복 누적되면 안 된다(1개 유지).
+# 4. Claude: 실시간 사전 검증 훅(pre-flight-live-hook.sh)도 PostToolUse에 추가되어야 한다.
+if jq -e '.hooks.PostToolUse[] | select(.matcher == "Edit|Write|MultiEdit") | .hooks[0].command | endswith("pre-flight-live-hook.sh")' "$CLAUDE_JSON" >/dev/null 2>&1; then
+  report "claude (pre-flight-live-hook 훅 추가)" 0
+else
+  report "claude (pre-flight-live-hook 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
+fi
+
+# 5. Claude: 완료 선언 직전 게이트 훅(pre-flight-gate-hook.sh)이 Stop에 추가되어야 한다.
+if jq -e '.hooks.Stop[] | .hooks[0].command | endswith("pre-flight-gate-hook.sh")' "$CLAUDE_JSON" >/dev/null 2>&1; then
+  report "claude (pre-flight-gate-hook 훅 추가)" 0
+else
+  report "claude (pre-flight-gate-hook 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
+fi
+
+# 6. 멱등성: 두 번째 실행 후에도 Claude PostToolUse/Stop 훅이 중복 누적되면 안 된다
+#    (PostToolUse: agent-edits-hook.sh + pre-flight-live-hook.sh 2개, Stop: 1개만 유지).
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
 COUNT=$(jq '.hooks.PostToolUse | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
-if [ "$COUNT" -eq 1 ]; then
+STOP_COUNT=$(jq '.hooks.Stop | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
+if [ "$COUNT" -eq 2 ] && [ "$STOP_COUNT" -eq 1 ]; then
   report "claude (재실행해도 훅 중복 누적 없음, 멱등성)" 0
 else
-  report "claude (재실행해도 훅 중복 누적 없음, 멱등성)" 1 "기대 1개 / 실제 ${COUNT}개: $(cat "$CLAUDE_JSON")"
+  report "claude (재실행해도 훅 중복 누적 없음, 멱등성)" 1 "기대 PostToolUse 2개/Stop 1개 / 실제 ${COUNT}개/${STOP_COUNT}개: $(cat "$CLAUDE_JSON")"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
