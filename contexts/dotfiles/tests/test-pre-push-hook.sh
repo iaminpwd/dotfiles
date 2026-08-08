@@ -40,20 +40,23 @@ trap 'rm -rf "$TMP"' EXIT
 # 픽스처 저장소 구성: basename이 "dotfiles"여야 훅이 활성화되고(line 22 가드),
 # 실제 run-suite.sh를 그대로 가져와 아래 aws 스텁만 호출시킨다.
 FIXTURE_REPO="$TMP/dotfiles"
-mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" "$FIXTURE_REPO/contexts/aws/tests"
+mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" "$FIXTURE_REPO/contexts/aws/tests" "$FIXTURE_REPO/contexts/azure/tests"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 chmod +x "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 # run-suite.sh가 source하는 SSOT 라이브러리. 실제 배포 구조와 동일하게 상대 위치에 둔다.
 cp "$REPO_ROOT/bin/lib/script-init.sh" "$FIXTURE_REPO/bin/lib/script-init.sh"
 
-cat >"$FIXTURE_REPO/contexts/aws/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
 # run-suite.sh는 성공(rc=0) 시 [WARNING] 태그 없는 일반 stdout을 압축(억제)하므로,
 # 이 스텁이 실제로 호출됐다는 증거는 run-suite.sh가 무조건 찍는 "-> [✓] <스크립트명>"
-# 압축 로그 라인으로 확인한다(아래 테스트의 grep 대상).
+# 압축 로그 라인으로 확인한다(아래 테스트의 grep 대상). aws/azure 두 스킬을 모두 심어,
+# "특정 스킬 경로만 건드리면 그 스킬만" vs "코어 로직을 건드리면 전체" 를 구분해서 검증한다.
+for SKILL_STUB in aws azure; do
+  cat >"$FIXTURE_REPO/contexts/$SKILL_STUB/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
 exit 0
 EOF
-chmod +x "$FIXTURE_REPO/contexts/aws/tests/run.sh"
+  chmod +x "$FIXTURE_REPO/contexts/$SKILL_STUB/tests/run.sh"
+done
 
 git -C "$FIXTURE_REPO" init -q
 git -C "$FIXTURE_REPO" config user.email "test@example.com"
@@ -81,10 +84,25 @@ git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "feat(aws): 배�
 NEW_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
 status=$(run_hook_with_refline "refs/heads/main $NEW_SHA refs/heads/main $BASE_SHA")
-if [ "$status" -eq 0 ] && grep -qF "aws" "$TMP/out" && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out"; then
-  report "detect-and-run-aws (aws 스킬 감지 + 스텁 실제 호출)" 0
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" && ! grep -qF "azure/tests/run.sh" "$TMP/out"; then
+  report "detect-and-run-aws (aws만 감지 + 스텁 실제 호출, azure는 미실행)" 0
 else
-  report "detect-and-run-aws (aws 스킬 감지 + 스텁 실제 호출)" 1 "exit=$status out=$(cat "$TMP/out")"
+  report "detect-and-run-aws (aws만 감지 + 스텁 실제 호출, azure는 미실행)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 1b. bin/lib/*(모든 스킬이 공유하는 코어 검증 로직) 변경은 경로 패턴이 특정 스킬 하나에
+#     매핑되지 않으므로, 존재하는 스킬 회귀 스위트 전부(aws + azure)를 대상으로 삼아야 한다.
+mkdir -p "$FIXTURE_REPO/bin/lib"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/lib/pfc-iac-checks.sh"
+git -C "$FIXTURE_REPO" add bin/lib/pfc-iac-checks.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(bin): 코어 IaC 검증 로직 수정"
+CORE_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $CORE_SHA refs/heads/main $NEW_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" && grep -qF "[✓] contexts/azure/tests/run.sh" "$TMP/out"; then
+  report "core-lib-change (bin/lib 변경 시 존재하는 스킬 전체 감지)" 0
+else
+  report "core-lib-change (bin/lib 변경 시 존재하는 스킬 전체 감지)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
 # 2. 새 브랜치 최초 push(remote_sha=0000...)도 동일하게 감지되어야 한다(EMPTY_TREE 비교 분기).
@@ -102,7 +120,7 @@ git -C "$FIXTURE_REPO" add README_UNRELATED.md
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "docs: 무관한 문서 추가"
 UNRELATED_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $NEW_SHA")
+status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $CORE_SHA")
 if [ "$status" -eq 0 ] && [ ! -s "$TMP/out" ]; then
   report "no-skill-match (무관한 변경은 회귀 스위트 미실행 + exit 0)" 0
 else
