@@ -43,16 +43,10 @@ add_skill() {
 }
 
 collect_changed_skills_from_range() {
-  local base=$1 tip=$2 FILE SKILL LIB_SKILL
+  local base=$1 tip=$2 FILE SKILL
   while IFS= read -r FILE; do
     [ -n "$FILE" ] || continue
     case "$FILE" in
-    contexts/pre-flight-check/tests/lib/*)
-      # tf 픽스처 공용 라이브러리를 참조하는 주요 클라우드 스킬 테스트 트리거
-      for LIB_SKILL in aws azure openstack; do
-        add_skill "$LIB_SKILL"
-      done
-      ;;
     contexts/*/scripts/* | contexts/*/tests/*)
       SKILL=${FILE#contexts/}
       add_skill "${SKILL%%/*}"
@@ -61,11 +55,15 @@ collect_changed_skills_from_range() {
       # bootstrap.sh 와 ansible 관련 셋업 변경 시 dotfiles 스킬 검증 묶어서 실행
       add_skill dotfiles
       ;;
-    bin/lib/* | bin/hooks/pre-flight-check.sh)
-      # 모든 스킬의 회귀 스위트가 이 공용 검증 파이프라인을 거쳐 도는데, 위 두 케이스는
-      # 경로 패턴이 "어떤 스킬 하나"에만 매핑되어 있어 스킬 전용 경로가 아닌 코어 로직
-      # 변경은 아무 패턴에도 안 걸린다. 코어가 바뀌면 영향 범위를 하나로 좁힐 수 없으니
-      # contexts/*/tests/run.sh 가 있는 스킬 전부를 대상으로 삼는다.
+    bin/lib/* | bin/hooks/pre-flight-check.sh | contexts/.shared/test-lib/*)
+      # 모든 스킬의 회귀 스위트가 이 공용 검증 파이프라인 또는 공유 테스트 라이브러리를
+      # 거쳐 도는데, 위 케이스는 경로 패턴이 "어떤 스킬 하나"에만 매핑되어 있어 스킬
+      # 전용 경로가 아닌 코어 로직·공유 라이브러리 변경은 아무 패턴에도 안 걸린다.
+      # (예전엔 contexts/pre-flight-check/tests/lib/* 전용 케이스로 aws/azure/openstack만
+      # 트리거했는데, 실제 소비자는 multi-cloud/containers/dotfiles까지라 목록이 계속
+      # 낡는 문제가 있었다. 소비자 목록을 나열하는 대신 코어 변경과 동일하게 전체를
+      # 대상으로 삼아 이 드리프트 자체를 없앤다.) contexts/*/tests/run.sh 가 있는 스킬
+      # 전부를 대상으로 삼는다.
       for CORE_SKILL_DIR in "$REPO_ROOT"/contexts/*/tests; do
         [ -d "$CORE_SKILL_DIR" ] || continue
         add_skill "$(basename "$(dirname "$CORE_SKILL_DIR")")"
