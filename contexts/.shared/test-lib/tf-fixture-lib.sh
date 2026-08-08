@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
 # Terraform 픽스처 회귀 테스트 공용 라이브러리
 #
-# aws / azure / openstack 세 스킬이 검증하는 대상은 전부 pre-flight-check.sh 의
+# aws / azure / openstack / multi-cloud 네 스킬이 검증하는 대상은 전부 pre-flight-check.sh 의
 # validate_terraform 하나이므로, 러너 로직을 각 스킬에 복제하지 않고 여기서
 # 공유한다. 복제하면 같은 러너 버그(예: set -e + grep 무매치로 조용히 죽는 버그)를
 # 스킬마다 따로 고쳐야 하는 상황을 피하기 위함이다.
 #
 #
-# 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌 tests/lib/
-# 에 둔다. scripts/ 는 Ansible 셋업 과정 가 에이전트에게 심볼릭 링크로 노출하는 디렉토리이므로
-# (Ansible 셋업 과정 의 글로벌 스킬 등록 루프), 테스트 헬퍼가 거기 있으면 런타임 배포 표면에
-# 불필요하게 포함된다.
+# 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌
+# contexts/.shared/test-lib/ 에 둔다. scripts/ 는 Ansible 셋업 과정이 에이전트에게 심볼릭
+# 링크로 노출하는 디렉토리이므로(Ansible 셋업 과정의 글로벌 스킬 등록 루프), 테스트
+# 헬퍼가 거기 있으면 런타임 배포 표면에 불필요하게 포함된다. 특정 스킬(예전엔
+# pre-flight-check) 산하에 두지 않는 이유는 aws/azure/openstack/multi-cloud/containers/
+# dotfiles 등 여러 스킬이 공유하는 자산이라, 이름과 위치만 봐도 "공유 자산"임이 드러나야
+# 하기 때문이다. 이름에 평문(`shared`) 대신 점(`.shared`)을 쓰는 이유는 `.archive`와
+# 동일하게 `ansible.builtin.find`(hidden 기본 미탐색)와 bash glob이 이 폴더를 스킬
+# 스캔·동기화 대상에서 구조적으로 자동 제외하게 하기 위함이다 — 평문 이름을 쓰면
+# `ansible/roles/ai_agent/tasks/main.yml`의 하드코딩 제외 목록에 수동으로 등록해야
+# 하고, 그 목록은 소비자가 늘어날 때 조용히 낡을 수 있다(실제로 이 저장소의
+# `git/.githooks/pre-push`에 그런 드리프트 버그가 있었다).
 #
 # 이 파일은 단독 실행용이 아니다.
 

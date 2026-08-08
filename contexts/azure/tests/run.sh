@@ -25,9 +25,9 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 깨져도 린트가 통과한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로 이제
 # 라이브러리를 실제로 따라가 존재 여부까지 검증한다.
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
+source "$TESTS_DIR/../../.shared/test-lib/tf-fixture-lib.sh"
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
+source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
 
 echo "=== azure Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AZURE_10

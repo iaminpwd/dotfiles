@@ -18,7 +18,7 @@ export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../pre-flight-check/tests/lib/tf-fixture-lib.sh"
+source "$TESTS_DIR/../../.shared/test-lib/tf-fixture-lib.sh"
 
 echo "=== multi-cloud Terraform 검증 파이프라인 회귀 테스트 ==="
 tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24

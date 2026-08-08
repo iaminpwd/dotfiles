@@ -18,7 +18,7 @@ set -euo pipefail
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES="$TESTS_DIR/fixtures-ansible"
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../pre-flight-check/tests/lib/parallel-pair.sh"
+source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
