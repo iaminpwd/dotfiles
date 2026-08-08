@@ -18,7 +18,7 @@ references:
 
 ### 2.1 Terraform 엔지니어링 표준
 - **[PREFER] Active Investigation:** 코드 작성 전 반드시 `010-azure-core.md` 절차를 참조하여 실제 Azure 리소스들의 최신 상태를 물리적으로 선제 조사하고, 그 팩트만을 근거로 코드를 작성할 것.
-- **[MUST] Policy Self-Check:** 코드 제안 전/후 `implementation_plan.md` 및 `walkthrough.md`에 정량 검증 결과와 본 가이드에 기술된 보안/IaC 규정 준수 여부를 구체적인 충족 코드의 절대 경로 파일 링크(라인 범위 포함) 또는 팩트 기반 근거와 함께 명시할 것.
+- **[MUST] Policy Self-Check:** 코드 제안 전/후 `implementation_plan.md` 및 `walkthrough.md`에 정량 검증 결과와 본 가이드에 기술된 보안/IaC 규정 준수 여부를 구체적인 충족 코드의 절대 경로 파일 링크(라인 범위 포함) 또는 팩트 기반 근거와 함께 명시할 것. 정확한 테이블 헤더/포맷은 `contexts/pre-flight-check/SKILL.md`의 "정성적 정책 자가 검증 (Policy Self-Check)" 절 템플릿을 따를 것(이 저장소 전체에서 유일하게 정의된 템플릿이므로 여기서 다시 정의하지 않음).
 - **[PREFER] vWAN:** 글로벌 확장성 확보를 위해 Azure Virtual WAN(vWAN) 기반의 중앙 집중형 라우팅을 적극 제안할 것.
 - **[MUST] State Management:** State 저장은 반드시 Azure Blob Storage Backend와 자체 임대(Lease) 기반 State Locking을 사용하여 원격으로 안전하게 구성할 것.
 - **[PREFER] Multi-Env:** 다중 환경 관리 시 Terragrunt를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입 아키텍처를 적용하는 것을 우선 제안할 것. Terragrunt를 사용하지 않는 팀에는 `terraform.workspace` 방식이나 디렉토리 분리 방식을 환경 감사 대안으로 허용할 것.
