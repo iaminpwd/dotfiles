@@ -5,10 +5,8 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # 코드 변경이 없어도 bootstrap.sh가 참조하는 외부 자원(Oh My Zsh/Docker 공식 저장소,
-    # mise가 조회하는 GitHub 릴리즈 등)이 바뀌어 조용히 깨질 수 있다. 매주 일요일 00:00 UTC에
-    # bootstrap-smoke만 재실행해 이런 드리프트를 잡는다 (verify는 코드가 그대로면 결과도
-    # 항상 같아서 스케줄로 다시 돌 이유가 없음 — 아래 verify job의 if 조건 참고).
+    # 외부 자원(Oh My Zsh, mise 릴리스 등) 드리프트 감지용 — 매주 일요일 bootstrap-smoke만 재실행
+    # (verify는 코드 불변 시 결과도 동일해 스케줄 불필요 — 아래 verify job의 if 조건 참고).
     - cron: "0 0 * * 0"
   # Actions 탭에서 "Run workflow" 버튼으로 스케줄을 안 기다리고 바로 돌려볼 수 있게 함.
   workflow_dispatch:
@@ -30,19 +28,29 @@ jobs:
     timeout-minutes: 20
     # 스케줄 실행은 외부 드리프트 감지가 목적이라 bootstrap-smoke만 필요 (위 on.schedule 주석 참고).
     if: github.event_name != 'schedule'
-    # mise의 github: 백엔드(bicep 등)가 GitHub API로 릴리즈를 조회하는데, 인증 없이 부르면
-    # Actions 러너 공유 IP가 익명 요청 제한(60/시간)에 바로 걸린다. Actions가 잡마다 자동
-    # 발급하는 GITHUB_TOKEN을 넘겨 인증 요청(5000/시간)으로 바꿔 회피한다.
+    # mise github: 백엔드(bicep 등)의 익명 API 요청 제한(60/시간) 회피용 —
+    # GITHUB_TOKEN을 넘겨 인증 요청(5000/시간)으로 바꾼다.
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      # persist-credentials: false — 기본값(true)이면 checkout이 .git/config에 임시 인증
-      # 토큰을 기록하는데, just verify가 도는 trufflehog가 이를 유출된 시크릿으로 오탐할 수 있다.
-      # 이 job은 이후 git push/fetch가 필요 없으므로 꺼도 안전하다.
+      # persist-credentials: false — 켜두면 just verify가 도는 trufflehog가 .git/config의
+      # 임시 인증 토큰을 유출 시크릿으로 오탐한다. 이후 push/fetch 없어 꺼도 안전.
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # 아래 커밋 메시지 게이트가 base..head 범위를 조회하려면 전체 히스토리 필요(기본 depth=1이면 실패).
+          fetch-depth: 0
+
+      # --no-verify로 우회된 커밋 컨벤션 위반이 main까지 들어오지 않도록 재검증(.github/scripts/lint-commit-messages.sh).
+      - name: Lint commit messages (semantic convention gate)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: bash .github/scripts/lint-commit-messages.sh
 
       - name: Install mise
         run: |
@@ -65,8 +73,8 @@ jobs:
       - name: Install pinned tools (shellcheck, tflint, checkov, trufflehog, ansible-lint ...)
         run: mise install
 
-      # 테스트 스위트가 zsh(-n 문법 검사)와, ai_agent 롤이 평소 ~/.local/bin에 심볼릭 링크해주는
-      # bin/**/*.sh(prompt-lint.sh 등)를 전제하므로, 이 job에서도 최소한으로 재현해준다.
+      # 테스트 스위트가 zsh -n 검사와 ai_agent 롤의 ~/.local/bin 심볼릭 링크(prompt-lint.sh 등)를
+      # 전제하므로 이 job에서도 최소한으로 재현한다.
       - name: Install zsh (required by test-shell zsh -n subtest)
         run: sudo apt-get update -qq && sudo apt-get install -y zsh
 
@@ -80,9 +88,9 @@ jobs:
       - name: Run full regression verification (check + test + prompt-lint)
         run: just verify
 
-  # bootstrap.sh가 실제로 지원 OS에서 처음부터 끝까지 동작하는지 + 재실행해도 안전한지(멱등성) 검증.
-  # RHEL 계열(dnf)은 GitHub Actions에 네이티브 VM 러너가 없고, 컨테이너로 대체하면 ansible의
-  # docker 역할이 요구하는 systemd가 없어 무관한 이유로 실패하므로 이번 범위에서 제외한다.
+  # bootstrap.sh가 지원 OS에서 끝까지 동작하고 재실행해도 안전한지(멱등성) 검증.
+  # RHEL(dnf)은 네이티브 러너가 없고, 컨테이너로 대체하면 ansible docker 롤의 systemd 요구를
+  # 못 채워 무관한 이유로 실패하므로 이번 범위에서 제외한다.
   bootstrap-smoke:
     name: Bootstrap Smoke (${{ matrix.name }})
     strategy:
@@ -99,18 +107,15 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      # persist-credentials: false — 켜져 있으면 checkout이 .git/config에 임시 인증 토큰을
-      # 남기는데, bootstrap.sh가 저장소 전체를 trufflehog filesystem으로 스캔하다가
-      # 그 토큰 자체를 유출된 시크릿으로 오탐해 Hard Block으로 실패한다(실측 버그).
+      # persist-credentials: false — 켜두면 bootstrap.sh의 trufflehog filesystem 스캔이
+      # .git/config의 임시 토큰을 유출 시크릿으로 오탐해 Hard Block으로 실패한다(실측 버그).
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      # macos-latest 러너 이미지가 기본으로 tap해둔 aws/tap은 dotfiles가 전혀 사용하지 않는데,
-      # Homebrew Tap Trust 정책상 untrusted 상태라 이후 모든 brew 호출(bootstrap.sh의
-      # `brew install stow`)마다 "not trusted" 경고 어노테이션이 뜬다. 쓰지도 않는 tap을
-      # 굳이 신뢰(trust)해서 신뢰 범위를 넓히는 대신, 필요 없는 tap 자체를 제거해 경고를 없앤다.
+      # macos-latest 기본 tap인 aws/tap(미사용, untrusted)이 이후 모든 brew 호출마다 경고를 띄운다.
+      # 신뢰 범위를 넓히는 대신 안 쓰는 tap 자체를 제거해 경고를 없앤다.
       - name: Untap unused pre-installed Homebrew tap (aws/tap)
         if: runner.os == 'macOS'
         run: brew untap aws/tap || true
@@ -118,46 +123,13 @@ jobs:
       - name: Bootstrap (1st run)
         run: ./bootstrap.sh < /dev/null
 
-      # exit code만으로는 "안 죽었다"만 증명될 뿐, README의 성공 검증 커맨드가 약속하는
-      # 실제 환경 상태(도구 설치, stow 심볼릭 링크, AI 룰/스킬 주입)는 별도로 확인해야 함.
+      # exit code만으론 "안 죽었다"만 증명되므로, README 성공 기준(도구/symlink/AI 룰 주입)을 별도 확인.
+      # 1st/2nd run 양쪽에서 동일 검증을 호출하므로 스크립트로 SSOT화(.github/scripts/verify-bootstrap-env.sh).
       - name: Verify environment matches README's success criteria (after 1st run)
-        run: |
-          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
-
-          # mise 도구 설치 확인
-          mise which shellcheck >/dev/null
-
-          # Stow symlink 확인
-          test -L "$HOME/.zshrc"
-          test -L "$HOME/.gitconfig"
-          test -L "$HOME/.vimrc"
-          test -L "$HOME/.tflint.hcl"
-          test -L "$HOME/.config/mise/config.toml"
-
-          # AI 글로벌 룰 주입 확인 (Gemini/Claude)
-          test -L "$HOME/.gemini/config/AGENTS.md"
-          test -L "$HOME/.claude/CLAUDE.md"
-          [ -s "$HOME/.gemini/config/AGENTS.md" ]
-
-          # 스킬 레지스트리 등록 확인
-          [ -n "$(ls -A "$HOME/.gemini/config/skills/" 2>/dev/null)" ]
-          [ -n "$(ls -A "$HOME/.claude/skills/" 2>/dev/null)" ]
+        run: bash .github/scripts/verify-bootstrap-env.sh
 
       - name: Bootstrap (2nd run - idempotency check)
         run: ./bootstrap.sh < /dev/null
 
       - name: Verify environment matches README's success criteria (after 2nd run)
-        run: |
-          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
-
-          mise which shellcheck >/dev/null
-          test -L "$HOME/.zshrc"
-          test -L "$HOME/.gitconfig"
-          test -L "$HOME/.vimrc"
-          test -L "$HOME/.tflint.hcl"
-          test -L "$HOME/.config/mise/config.toml"
-          test -L "$HOME/.gemini/config/AGENTS.md"
-          test -L "$HOME/.claude/CLAUDE.md"
-          [ -s "$HOME/.gemini/config/AGENTS.md" ]
-          [ -n "$(ls -A "$HOME/.gemini/config/skills/" 2>/dev/null)" ]
-          [ -n "$(ls -A "$HOME/.claude/skills/" 2>/dev/null)" ]
+        run: bash .github/scripts/verify-bootstrap-env.sh
