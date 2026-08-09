@@ -7,36 +7,37 @@ set -euo pipefail
 export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# 1. OS 패키지 매니저 판별
-# stow는 ansible의 packages 역할이 나중에 다시 설치하지만(멱등), mise config.toml을
-# ansible보다 먼저 링크해야 해서(아래 3단계) 여기서 미리 확보해둔다.
-if command -v apt-get &>/dev/null || command -v dnf &>/dev/null; then
-  # ansible-core 2.19부터 become(sudo) 워커 프로세스를 setsid()로 부모 TTY와 분리된
-  # 별도 세션에서 실행한다(ansible/ansible#86149, #85536 — 의도된 사양 변경이라 앞으로도
-  # 재현됨). sudo의 기본 정책(tty_tickets)은 인증 캐시를 터미널별로 분리하므로, 이 스크립트
-  # 초반에 sudo -v로 받아둔 티켓을 ansible이 나중에 재사용하지 못해 "sudo: a password is
-  # required"로 실패한다(실제 재현된 버그) — Keep-Alive로 티켓을 아무리 갱신해도 세션이
-  # 다르면 소용없다. GitHub Actions 러너 등 자동화 계정이 표준적으로 쓰는 방식과 동일하게,
-  # 이 계정에 NOPASSWD sudo를 1회 등록해 세션 경계와 무관하게 근본적으로 해결한다.
-  SUDOERS_DROPIN="/etc/sudoers.d/99-dotfiles-$(whoami)-nopasswd"
-  if ! sudo -n true 2>/dev/null; then
-    sudo -v
-    if [ ! -f "$SUDOERS_DROPIN" ]; then
-      TMP_SUDOERS=$(mktemp)
-      echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" >"$TMP_SUDOERS"
-      # visudo -c로 문법을 먼저 검증하지 않고 /etc/sudoers.d/에 바로 설치하면, 오타 하나로
-      # 시스템 전체의 sudo가 깨질 위험이 있다(하드 블록해야 하는 이유).
-      if sudo visudo -cf "$TMP_SUDOERS" >/dev/null 2>&1; then
-        sudo install -m 0440 -o root -g root "$TMP_SUDOERS" "$SUDOERS_DROPIN"
-        echo "✅ 이 계정에 sudo NOPASSWD를 등록했습니다 ($SUDOERS_DROPIN). 이후 셋업 단계는 비밀번호 프롬프트 없이 진행됩니다."
-      else
-        echo "⚠️ sudoers 드롭인 문법 검증 실패 — 자동 설정을 건너뜁니다. 'sudo visudo'로 다음 줄을 수동 등록해야 이후 ansible 단계가 통과합니다: $(whoami) ALL=(ALL) NOPASSWD: ALL" >&2
-      fi
-      rm -f "$TMP_SUDOERS"
+
+# 0. sudo 인증을 스크립트 맨 앞에서 한 번만 받고, 그 티켓을 세션 경계 너머로도
+# 공유되게 만들어 뒷단(ansible)에서 또 물어보는 일이 없게 한다.
+# ansible-core 2.19부터 become(sudo) 워커를 setsid()로 부모 TTY와 분리된 세션에서
+# 실행해(ansible/ansible#86149, #85536 — 의도된 사양 변경), sudo 기본 정책(tty_tickets)
+# 상 이 스크립트에서 받은 인증 티켓을 그 세션이 못 보고 "sudo: a password is
+# required"로 실패한다(실제 재현된 버그). 비밀번호를 캡처해 나중에 다시 넘겨주는
+# 대신(디스크/메모리 노출 구간이 생김), sudo 자체의 티켓 캐시 범위를 세션이 아니라
+# 계정 전체로 넓혀(!tty_tickets) 문제를 근본에서 없앤다 — Homebrew install.sh와
+# 동일하게 sudo -v 한 번만 받고, 그 뒤로는 순수 sudo 자체 메커니즘에 맡긴다.
+if (command -v apt-get &>/dev/null || command -v dnf &>/dev/null) && ! sudo -n true 2>/dev/null; then
+  sudo -v
+  SUDOERS_DROPIN="/etc/sudoers.d/99-dotfiles-$(whoami)-shared-timestamp"
+  if [ ! -f "$SUDOERS_DROPIN" ]; then
+    TMP_SUDOERS=$(mktemp)
+    echo "Defaults:$(whoami) !tty_tickets" >"$TMP_SUDOERS"
+    # visudo -c로 문법을 먼저 검증하지 않고 /etc/sudoers.d/에 바로 설치하면, 오타 하나로
+    # 시스템 전체의 sudo가 깨질 위험이 있다(하드 블록해야 하는 이유).
+    if sudo visudo -cf "$TMP_SUDOERS" >/dev/null 2>&1; then
+      sudo install -m 0440 -o root -g root "$TMP_SUDOERS" "$SUDOERS_DROPIN"
+      echo "✅ sudo 인증 티켓이 이 계정 전체에서 공유되도록 설정했습니다 ($SUDOERS_DROPIN)."
+    else
+      echo "⚠️ sudoers 드롭인 문법 검증 실패 — 자동 설정을 건너뜁니다. 뒤에서 Ansible 단계가 비밀번호를 다시 요구할 수 있습니다." >&2
     fi
+    rm -f "$TMP_SUDOERS"
   fi
 fi
 
+# 1. OS 패키지 매니저 판별
+# stow는 ansible의 packages 역할이 나중에 다시 설치하지만(멱등), mise config.toml을
+# ansible보다 먼저 링크해야 해서(아래 3단계) 여기서 미리 확보해둔다.
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow

@@ -10,14 +10,28 @@ export ANSIBLE_CONFIG := "ansible/ansible.cfg"
 # -----------------------------------------------------------------------------
 
 # 기본 설치 진입점 (Ansible Playbook 실행)
+# ansible-core 2.19부터 become(sudo) 워커 프로세스를 setsid()로 부모 TTY와 분리된
+# 별도 세션에서 실행한다(ansible/ansible#86149, #85536 — 의도된 사양 변경). sudo 기본
+# 정책(tty_tickets)은 티켓을 세션별로 분리하지만, bootstrap.sh 0단계에서 이 계정에
+# !tty_tickets(세션 무관 티켓 공유)를 미리 설정해두므로 sudo -n true 판정이 ansible의
+# setsid 분리 세션에도 그대로 유효하다. 그 설정이 안 된 채로(예: bootstrap.sh를 거치지
+# 않고 just setup만 단독 실행) 티켓이 없으면 --ask-become-pass로 최초 1회 직접 물어본다.
 setup:
     @echo "=> Running dotfiles setup via Ansible..."
-    ansible-playbook -i localhost, -c local ansible/site.yml
+    if sudo -n true 2>/dev/null; then \
+        ansible-playbook -i localhost, -c local ansible/site.yml; \
+    else \
+        ansible-playbook -i localhost, -c local ansible/site.yml --ask-become-pass; \
+    fi
 
-# Ansible Dry-run (실제 변경 없이 어떤 작업이 이루어질지 확인)
+# Ansible Dry-run (실제 변경 없이 어떤 작업이 이루어질지 확인) — become 관련 이유는 setup 참고
 setup-dryrun:
     @echo "=> Running Ansible Dry-run..."
-    ansible-playbook -i localhost, -c local ansible/site.yml --check
+    if sudo -n true 2>/dev/null; then \
+        ansible-playbook -i localhost, -c local ansible/site.yml --check; \
+    else \
+        ansible-playbook -i localhost, -c local ansible/site.yml --check --ask-become-pass; \
+    fi
 
 # -----------------------------------------------------------------------------
 # Validation & Testing
