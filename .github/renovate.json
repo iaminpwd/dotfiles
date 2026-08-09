@@ -1,8 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":configMigration", "abandonments:recommended"],
   "timezone": "Asia/Seoul",
   "schedule": ["before 6am on monday"],
+  "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
       "matchManagers": ["mise"],
@@ -13,6 +14,11 @@
       "matchManagers": ["custom.regex"],
       "groupName": "zsh 플러그인 버전 업데이트",
       "labels": ["dependencies", "zsh"]
+    },
+    {
+      "matchDepNames": ["oh-my-zsh"],
+      "minimumReleaseAge": "14 days",
+      "description": "oh-my-zsh는 릴리스 태그 없이 master 커밋을 그대로 추적하므로, 태그 기반 의존성과 달리 메인테이너의 사전 검증 절차가 없음. 갓 올라온 커밋이 되돌려지거나 문제로 드러날 시간을 벌기 위해 14일 숙성 기간을 둠."
     }
   ],
   "customManagers": [
