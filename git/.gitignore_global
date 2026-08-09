@@ -53,6 +53,9 @@ Thumbs.db
 *.swo
 *~
 
+# Claude Code 프로젝트 로컬 설정 (권한 캐시 등, 세션마다 각 프로젝트 루트에 생성됨)
+.claude/
+
 # AI Context Files (Prevent AI rule pollution in remote repos)
 .agents/
 .aiexclude
@@ -68,8 +71,6 @@ CLAUDE.md
 
 # Pre-flight check cache
 .pre-flight-check.cache
-
-**/.claude/settings.local.json
 
 # Agent Handoff Protocol Files (아카이브는 위 .agent-state/ 에 포함)
 Claude-to-Gemini.md
