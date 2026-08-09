@@ -12,17 +12,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ansible보다 먼저 링크해야 해서(아래 3단계) 여기서 미리 확보해둔다.
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow python3-venv
-  if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y pipx 2>/dev/null; then
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pipx 2>/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-pip
-  fi
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow
 elif command -v dnf &>/dev/null; then
-  sudo dnf install -y curl git unzip stow pipx
+  sudo dnf install -y curl git unzip stow
 elif command -v brew &>/dev/null; then
-  # macOS는 기본 내장 도구 활용, pipx/stow 설치
-  if ! command -v pipx &>/dev/null; then
-    brew install pipx
-  fi
+  # macOS는 기본 내장 도구 활용, stow만 별도 설치
   if ! command -v stow &>/dev/null; then
     brew install stow
   fi
@@ -47,10 +41,9 @@ echo "========================================================="
 echo "=> 🚀 Running 'mise install' automatically..."
 export PATH="$HOME/.local/bin:$PATH"
 mkdir -p "$HOME/.config/mise"
-# mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해서, 여기서 실제
-# GNU Stow로 미리 한 번 링크해둔다. 이후 ansible stow 역할이 같은 mise 패키지를
-# 다시 stow 해도(-R은 멱등) 안전하므로 mise를 stow 대상에서 뺄 필요가 없다.
-# 기존 사용자 파일이 있으면 stow-backup.sh로 백업 후 링크.
+# mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해 GNU Stow로 미리
+# 링크해둔다. ansible stow 역할이 나중에 같은 패키지를 다시 stow해도(-R은 멱등) 안전.
+# 기존 사용자 파일이 있으면 stow-backup.sh로 먼저 백업한다.
 bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR" "$HOME"
 (cd "$SCRIPT_DIR" && stow -t "$HOME" -R mise)
 # uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가

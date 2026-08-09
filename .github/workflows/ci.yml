@@ -109,7 +109,7 @@ jobs:
 
       # macos-latest 러너 이미지가 기본으로 tap해둔 aws/tap은 dotfiles가 전혀 사용하지 않는데,
       # Homebrew Tap Trust 정책상 untrusted 상태라 이후 모든 brew 호출(bootstrap.sh의
-      # `brew install pipx/stow`)마다 "not trusted" 경고 어노테이션이 뜬다. 쓰지도 않는 tap을
+      # `brew install stow`)마다 "not trusted" 경고 어노테이션이 뜬다. 쓰지도 않는 tap을
       # 굳이 신뢰(trust)해서 신뢰 범위를 넓히는 대신, 필요 없는 tap 자체를 제거해 경고를 없앤다.
       - name: Untap unused pre-installed Homebrew tap (aws/tap)
         if: runner.os == 'macOS'
