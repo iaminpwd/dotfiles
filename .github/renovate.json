@@ -8,6 +8,44 @@
       "matchManagers": ["mise"],
       "groupName": "mise 도구 버전 업데이트",
       "labels": ["dependencies", "mise"]
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "groupName": "zsh 플러그인 버전 업데이트",
+      "labels": ["dependencies", "zsh"]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "ansible.builtin.git으로 커밋 SHA 고정된 oh-my-zsh 본체를 master 브랜치 최신 커밋으로 추적",
+      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "matchStrings": [
+        "repo: '(?<packageName>https://github\\.com/ohmyzsh/ohmyzsh)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40})"
+      ],
+      "depNameTemplate": "oh-my-zsh",
+      "currentValueTemplate": "master",
+      "datasourceTemplate": "git-refs"
+    },
+    {
+      "customType": "regex",
+      "description": "zsh-autosuggestions 플러그인은 릴리스 태그가 존재하므로 master 커밋 대신 최신 안정 태그를 추적",
+      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "matchStrings": [
+        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-autosuggestions)\\.git'[\\s\\S]*?version: (?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "zsh-autosuggestions",
+      "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "description": "zsh-syntax-highlighting 플러그인은 릴리스 태그가 존재하므로 master 커밋 대신 최신 안정 태그를 추적",
+      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "matchStrings": [
+        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-syntax-highlighting)\\.git'[\\s\\S]*?version: (?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "zsh-syntax-highlighting",
+      "datasourceTemplate": "github-tags"
     }
   ]
 }

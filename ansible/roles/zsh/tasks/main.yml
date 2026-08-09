@@ -12,7 +12,7 @@
     repo: 'https://github.com/zsh-users/zsh-autosuggestions.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
     depth: 1
-    version: 85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
+    version: v0.7.1
     update: false
 
 - name: Zsh-syntax-highlighting 플러그인 클론
@@ -20,7 +20,7 @@
     repo: 'https://github.com/zsh-users/zsh-syntax-highlighting.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
     depth: 1
-    version: 1d85c692615a25fe2293bdd44b34c217d5d2bf04
+    version: 0.8.0
     update: false
 
 - name: 현재 설치된 zsh 경로 확인
