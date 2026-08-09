@@ -48,9 +48,8 @@ has_tool() {
 print_unavailable_tools() {
   [ "${#UNAVAILABLE_TOOLS[@]}" -gt 0 ] || return 0
   # run-suite.sh는 통과한 스크립트 출력에서 [WARNING]/⚠로 시작하는 줄만 압축 없이
-  # 남기고 나머지는 버린다(run_suite.sh 참조). 예전엔 "=== ⚠️ ..." 형식이라 세 줄
-  # 다 그 패턴에 안 걸려서, 도구 미설치로 검증이 통째로 건너뛰어져도 압축 경로에서는
-  # 완전히 안 보이는 거짓 초록불이었다. 매 줄을 [WARNING]로 시작해 그 필터를 통과시킨다.
+  # 남기고 나머지는 버린다(run_suite.sh 참조). 도구 미설치로 검증이 건너뛰어져도
+  # 압축 경로에서 묻히지 않도록, 매 줄을 [WARNING]로 시작해 그 필터를 통과시킨다.
   echo "[WARNING] 단, 아래 도구를 사용할 수 없어 해당 검증은 수행되지 않았습니다:"
   echo "[WARNING]    ${UNAVAILABLE_TOOLS[*]}"
   echo "[WARNING]    (미설치라면 'mise install -y', 설치했는데도 뜨면 ~/.config/mise/config.toml 존재 여부를 확인하십시오)"

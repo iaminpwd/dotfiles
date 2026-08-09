@@ -10,8 +10,8 @@
 # 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌
 # contexts/.shared/test-lib/ 에 둔다. scripts/ 는 Ansible 셋업 과정이 에이전트에게 심볼릭
 # 링크로 노출하는 디렉토리이므로(Ansible 셋업 과정의 글로벌 스킬 등록 루프), 테스트
-# 헬퍼가 거기 있으면 런타임 배포 표면에 불필요하게 포함된다. 특정 스킬(예전엔
-# pre-flight-check) 산하에 두지 않는 이유는 aws/azure/openstack/multi-cloud/containers/
+# 헬퍼가 거기 있으면 런타임 배포 표면에 불필요하게 포함된다. 특정 스킬 산하에 두지
+# 않는 이유는 aws/azure/openstack/multi-cloud/containers/
 # dotfiles 등 여러 스킬이 공유하는 자산이라, 이름과 위치만 봐도 "공유 자산"임이 드러나야
 # 하기 때문이다. 이름에 평문(`shared`) 대신 점(`.shared`)을 쓰는 이유는 `.archive`와
 # 동일하게 `ansible.builtin.find`(hidden 기본 미탐색)와 bash glob이 이 폴더를 스킬

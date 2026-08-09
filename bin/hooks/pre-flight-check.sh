@@ -137,8 +137,8 @@ GLOBAL_TARGET_TF_FILES=()
 GLOBAL_TARGET_YAML_FILES=()
 
 # 검증 대상은 main()에서 한 번만 수집하고, 각 검증 함수는 filter_target_files 로 자기
-# 확장자만 골라 쓴다(수집-필터링 분리). 예전에는 함수마다 git diff --cached 가 박혀 있어
-# 스테이징된 파일 외에는 어떤 방식으로도 검사할 수 없었다.
+# 확장자만 골라 쓴다(수집-필터링 분리). 이 구조 덕에 staged 외의 changed/all/explicit
+# 수집 모드도 함수 수정 없이 그대로 지원된다.
 GLOBAL_TARGET_FILES=()
 # 대상 수집 모드: staged(기본) | changed | all | explicit
 GLOBAL_TARGET_MODE="staged"

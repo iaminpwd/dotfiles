@@ -21,9 +21,8 @@ export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # source-path=SCRIPTDIR 은 shellcheck 가 아래 상대 경로를 이 스크립트의 디렉토리 기준으로
-# 찾게 한다. 예전에는 SC1091 을 disable 로 억제했는데, 그러면 경로가 오타나 파일 이동으로
-# 깨져도 린트가 통과한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로 이제
-# 라이브러리를 실제로 따라가 존재 여부까지 검증한다.
+# 찾게 한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로, 이 설정 덕에 경로 오타나
+# 파일 이동으로 인한 깨짐까지 실제로 검증된다.
 # shellcheck source-path=SCRIPTDIR
 source "$TESTS_DIR/../../.shared/test-lib/tf-fixture-lib.sh"
 

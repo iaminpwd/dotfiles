@@ -59,11 +59,8 @@ collect_changed_skills_from_range() {
       # 모든 스킬의 회귀 스위트가 이 공용 검증 파이프라인 또는 공유 테스트 라이브러리를
       # 거쳐 도는데, 위 케이스는 경로 패턴이 "어떤 스킬 하나"에만 매핑되어 있어 스킬
       # 전용 경로가 아닌 코어 로직·공유 라이브러리 변경은 아무 패턴에도 안 걸린다.
-      # (예전엔 contexts/pre-flight-check/tests/lib/* 전용 케이스로 aws/azure/openstack만
-      # 트리거했는데, 실제 소비자는 multi-cloud/containers/dotfiles까지라 목록이 계속
-      # 낡는 문제가 있었다. 소비자 목록을 나열하는 대신 코어 변경과 동일하게 전체를
-      # 대상으로 삼아 이 드리프트 자체를 없앤다.) contexts/*/tests/run.sh 가 있는 스킬
-      # 전부를 대상으로 삼는다.
+      # 소비자 목록을 나열하면 소비자가 늘어날 때 조용히 낡으므로, 코어 변경과 동일하게
+      # contexts/*/tests/run.sh 가 있는 스킬 전부를 대상으로 삼아 이 드리프트를 없앤다.
       for CORE_SKILL_DIR in "$REPO_ROOT"/contexts/*/tests; do
         [ -d "$CORE_SKILL_DIR" ] || continue
         add_skill "$(basename "$(dirname "$CORE_SKILL_DIR")")"
