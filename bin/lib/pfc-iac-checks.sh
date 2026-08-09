@@ -201,7 +201,10 @@ validate_ansible() {
     fi
     if has_tool ansible-lint; then
       log_info "Running ansible-lint..."
-      local lint_cmd=(ansible-lint)
+      # ansible-lint.yml이 ansible/ 하위(비표준 위치)에 있어 -c 없이 실행하면
+      # auto-discovery가 안 돼 exclude_paths/offline 설정이 무시된다 -> -c로 명시 지정.
+      # (참고: 과거 .config/ansible-lint.yml 위치는 auto-discovery 대상이라 -c가 불필요했음)
+      local lint_cmd=(ansible-lint -c ansible/ansible-lint.yml)
       if ! "${lint_cmd[@]}"; then
         echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         rm -rf .ansible

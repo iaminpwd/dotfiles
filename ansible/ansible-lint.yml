@@ -1,0 +1,7 @@
+exclude_paths:
+  - ansible/roles/packages/tasks/main.yml
+  # 회귀 테스트용 픽스처 경로 제외 (ansible-lint 전체 스캔 시 무관한 픽스처 위반으로 인한 커밋 방지)
+  - contexts/dotfiles/tests/fixtures-ansible/
+  - contexts/aws/tests/fixtures-sam/
+  - contexts/pre-flight-check/tests/fixtures-yaml/
+offline: true
