@@ -11,9 +11,9 @@ references:
 자동화 파이프라인 엣지 케이스 처리 및 카오스 엔지니어링 복원력 검증 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Idempotency:** DB 기반 Idempotency Key 패턴을 로직에 구현하십시오. (이유: 중복 웹훅 호출 시 상태 단일 변경 보장)
-- **[MUST] Exponential Backoff & Circuit Breaker:** 외부 API 호출 시 지수 백오프/지터 및 서킷 브레이커를 적용하십시오. (이유: 장애 대응 및 리소스 보호)
-- **[MUST] Prompt Injection Defense:** 파싱하는 외부 텍스트 입력값을 소독하고 시스템 프롬프트와 격리하십시오. (이유: 프롬프트 인젝션 차단)
+- **[MUST] Idempotency:** DB 기반 Idempotency Key 패턴을 로직에 구현하십시오.
+- **[MUST] Exponential Backoff & Circuit Breaker:** 외부 API 호출 시 지수 백오프/지터 및 서킷 브레이커를 적용하십시오.
+- **[MUST] Prompt Injection Defense:** 파싱하는 외부 텍스트 입력값을 소독하고 시스템 프롬프트와 격리하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
@@ -45,8 +45,8 @@ def process_webhook(event_id, payload):
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 테스트 커버리지 달성 및 예외/멱등성 검증 모킹 성공. (이유: 안정성 보장)
-- **[MUST] 검증 도구 매핑:** `pytest`/`jest`로 예외 캐치 및 격리를 검증하십시오. (이유: 방어 로직 검증)
+- **[MUST] 완료 조건 (Done when):** 테스트 커버리지 달성 및 예외/멱등성 검증 모킹 성공.
+- **[MUST] 검증 도구 매핑:** `pytest`/`jest`로 예외 캐치 및 격리를 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Executing Critical Actions] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**

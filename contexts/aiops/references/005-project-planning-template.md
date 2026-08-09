@@ -12,7 +12,7 @@ references:
 새로운 SRE 자동화 파이프라인 및 AI 에이전트 마스터 플랜 작성 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Use Built-in Artifact:** 내장 `implementation_plan.md` 아티팩트로 계획서를 작성하십시오. (이유: 시스템 내장 워크플로우 호환성)
+- **[MUST] Use Built-in Artifact:** 내장 `implementation_plan.md` 아티팩트로 계획서를 작성하십시오.
 - **[PREFER] Agentic RAG:** 설계 전 사내 표준(SSOT) 룰북을 조회하여 계획서에 반영하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -42,8 +42,8 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `implementation_plan.md` 규격 준수, 보안/멱등성 점검 통과, 마크다운 렌더링 정상. (이유: 기획 결함 방지)
-- **[MUST] 검증 도구 매핑:** `markdownlint`로 형식 및 가독성을 자동 검증하십시오. (이유: 문서 품질 유지)
+- **[MUST] 완료 조건 (Done when):** `implementation_plan.md` 규격 준수, 보안/멱등성 점검 통과, 마크다운 렌더링 정상.
+- **[MUST] 검증 도구 매핑:** `markdownlint`로 형식 및 가독성을 자동 검증하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**

@@ -11,7 +11,7 @@ references:
 해당 도메인 설계 및 작업 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Mitigation First:** 장애 인지 즉시 서비스 정상화(복구/롤백) 조치를 최우선으로 실행할 것. (이유: 다운타임 최소화)
+- **[MUST] Mitigation First:** 장애 인지 즉시 서비스 정상화(복구/롤백) 조치를 최우선으로 실행할 것.
 - **[MUST] Active Data Gathering:** 반드시 로컬 `az cli` 또는 Azure Monitor Log Analytics 조회 결과만을 팩트로 삼아 원인을 파악할 것.
 - **[MUST] Blameless RCA:** 휴먼 에러를 방어하지 못한 시스템적 결함(예: `prevent_destroy` 누락, RBAC 관리자 권한 남용 등)을 역추적하여 개선책을 마련할 것.
 

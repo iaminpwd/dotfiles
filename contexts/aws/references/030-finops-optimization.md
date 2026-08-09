@@ -10,7 +10,7 @@ references:
 AWS 인프라 비용 최적화(FinOps) 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Right-Sizing:** 컴퓨팅/스토리지 자원은 요구 트래픽에 맞춰 탄력적으로 사이징할 것. (이유: 자원 최적화 보장)
+- **[MUST] Right-Sizing:** 컴퓨팅/스토리지 자원은 요구 트래픽에 맞춰 탄력적으로 사이징할 것.
 - **[MUST] Anomaly Detection:** 인프라 설계 시 예기치 못한 비용을 통제하기 위해 AWS Budgets 또는 Cost Explorer 비용 이상 탐지(Anomaly Detection) 알람 설정을 필수로 반영할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

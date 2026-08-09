@@ -29,5 +29,5 @@ aiops 관련 작업 시 발동됩니다. SRE 원칙 및 에이전트 기반 자�
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 
-- **[MUST] 사전 룰북 연쇄 분석 (Recursive Reference Check)**: 라우팅 테이블의 대상 룰북과 연관 참조 문서를 중복 없이 수집하여 읽으십시오. (이유: 컨텍스트 누락 방지)
-- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성 직후 `pre-flight-check.sh` 정량 검증을 통과시키십시오. (이유: 멱등성 및 린트 검증)
+- **[MUST] 사전 룰북 연쇄 분석 (Recursive Reference Check)**: 라우팅 테이블의 대상 룰북과 연관 참조 문서를 중복 없이 수집하여 읽으십시오.
+- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성 직후 `pre-flight-check.sh` 정량 검증을 통과시키십시오.

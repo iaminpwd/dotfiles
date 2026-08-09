@@ -13,7 +13,7 @@ references:
 서버리스 및 이벤트 구동형 아키텍처 설계 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] State Isolation:** Functions는 무상태로 설계하고 데이터는 외부(Cosmos DB 등)에 분리할 것. (이유: 서버리스 확장성 보장)
+- **[MUST] State Isolation:** Functions는 무상태로 설계하고 데이터는 외부(Cosmos DB 등)에 분리할 것.
 - **[MUST] Failure Handling & Retry:** 모든 비동기 Azure Functions 호출 및 이벤트 트리거(Service Bus, Event Grid 등)에는 메시지 처리 신뢰성 확보를 위해 Dead Letter Queue (DLQ) 또는 Event Subscription의 dead_letter_endpoint를 필수 구성할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

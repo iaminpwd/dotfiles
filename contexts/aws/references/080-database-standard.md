@@ -13,7 +13,7 @@ references:
 관계형/NoSQL/인메모리 데이터베이스 설계 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] High Availability:** 프로덕션 DB에는 Multi-AZ 배포를 적용할 것. (이유: 고가용성 확보)
+- **[MUST] High Availability:** 프로덕션 DB에는 Multi-AZ 배포를 적용할 것.
 - **[MUST] Data Security:** 데이터베이스 스토리지 암호화(Encryption at Rest)를 활성화하고, 암호화 키는 AWS KMS 고객 관리형 키(CMK)를 지정할 것.
 - **[MUST] Redis Security:** Redis 클러스터 생성 시 반드시 `AUTH` 토큰 인증과 전송 중 데이터 암호화(TLS)를 동시에 활성화할 것.
 

@@ -16,8 +16,8 @@ references:
 새로운 클라우드 프로젝트 마스터 플랜 기획 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Use Built-in Artifact:** 내장 `implementation_plan.md` 아티팩트로 계획서를 작성할 것. (이유: 시스템 호환성)
-- **[MUST] Strict Structure:** 아래 10개 목차를 100% 준수할 것. (이유: 포맷팅 통일성)
+- **[MUST] Use Built-in Artifact:** 내장 `implementation_plan.md` 아티팩트로 계획서를 작성할 것.
+- **[MUST] Strict Structure:** 아래 10개 목차를 100% 준수할 것.
   1. 프로젝트 요약 (Executive Summary)
   2. 아키텍처 청사진 (Architecture Blueprint) & ADR (Architecture Decision Records)
   3. 네트워크 및 연결성 (Network & Connectivity)

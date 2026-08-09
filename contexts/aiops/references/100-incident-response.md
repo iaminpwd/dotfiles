@@ -11,10 +11,10 @@ references:
 장애 복구 후 RCA Post-Mortem 자동 작성 및 타임라인 추출 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Automated Timeline Extraction:** 장애 종료 시 로그 및 히스토리를 종합해 타임라인을 자동 추출하십시오. (이유: 팩트 기반 컨텍스트 확보)
-- **[MUST] Blameless RCA Generation:** 개인 비난을 배제하고 구조적 원인/Action Items 기반 `post-mortem-report.md`를 생성하십시오. (이유: Blameless 문화 확립)
-- **[MUST] Structured Analysis:** 분석 시 `troubleshooting-report.md`에 RCA, 증거, 해결, 방지책 순으로 작성하십시오. (이유: 문서 표준화)
-- **[MUST] Service Topology Propagation RCA:** 장애 분석 시 인프라·서비스 의존성 토폴로지 그래프를 바탕으로 장애 전파 경로를 추적 및 시각화하여 최하단 근원 원인(Root Cause)을 정확히 도출하십시오. (이유: 2차/3차 연쇄 장애 오진 방지)
+- **[MUST] Automated Timeline Extraction:** 장애 종료 시 로그 및 히스토리를 종합해 타임라인을 자동 추출하십시오.
+- **[MUST] Blameless RCA Generation:** 개인 비난을 배제하고 구조적 원인/Action Items 기반 `post-mortem-report.md`를 생성하십시오.
+- **[MUST] Structured Analysis:** 분석 시 `troubleshooting-report.md`에 RCA, 증거, 해결, 방지책 순으로 작성하십시오.
+- **[MUST] Service Topology Propagation RCA:** 장애 분석 시 인프라·서비스 의존성 토폴로지 그래프를 바탕으로 장애 전파 경로를 추적 및 시각화하여 최하단 근원 원인(Root Cause)을 정확히 도출하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

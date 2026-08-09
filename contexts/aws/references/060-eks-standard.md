@@ -13,7 +13,7 @@ references:
 EKS 클러스터 설계 및 Helm 오케스트레이션 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Least Privilege (Pod Identity/IRSA):** 파드 권한 부여 시 Pod Identity를 우선 적용하고, 교차 계정 시 IRSA를 사용할 것. (이유: 파드별 권한 격리)
+- **[MUST] Least Privilege (Pod Identity/IRSA):** 파드 권한 부여 시 Pod Identity를 우선 적용하고, 교차 계정 시 IRSA를 사용할 것.
 - **[MUST] Envelope Encryption (Prod):** 프로덕션 EKS 클러스터의 K8s Secret에는 반드시 AWS KMS와 연동한 봉투 암호화(Envelope Encryption)를 적용할 것. 개발/테스트 클러스터에는 적용을 권장하되, 프로덕션 배포 매니페스트와는 별도 파일로 분리 관리할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

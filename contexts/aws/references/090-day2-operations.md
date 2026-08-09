@@ -12,7 +12,7 @@ references:
 CI/CD 파이프라인 설계 및 Day-2 운영(DR, 가시성) 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Separation of Concerns:** CI와 CD 역할을 분리하고 100% 자동화 배포를 구현할 것. (이유: 배포 안정성)
+- **[MUST] Separation of Concerns:** CI와 CD 역할을 분리하고 100% 자동화 배포를 구현할 것.
 - **[MUST] Observability:** 인프라 설계 시 기본 모니터링(CloudWatch) 외에 마이크로서비스에 필수적인 분산 추적(OpenTelemetry, AWS X-Ray)을 포함할 것.
 - **[MUST] Rollback:** 배포 실패 시 안전한 트래픽 전환(Blue/Green, Canary)과 자동 롤백 메커니즘을 배포 파이프라인 아키텍처에 보증할 것.
 

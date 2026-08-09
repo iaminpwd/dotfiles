@@ -18,9 +18,9 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 SRE 철학 및 의사결정
-- **[MUST] Declarative Workflow:** 수동 콘솔 조작(ClickOps)을 배제하고, GitOps 및 선언적 상태를 활용하십시오. (이유: 재현성 보장)
-- **[MUST] Error Budget-Driven Decisions:** 에러 버짓 고갈 시 배포 동결(Feature Freeze)을 권고하십시오. (이유: 시스템 안정성 최우선)
-- **[MUST] Dynamic Alert Noise Reduction:** 정적 임계치 알림 폭주(Alert Fatigue)를 방지하기 위해 시계열 알고리즘 또는 동적 신뢰 구간(Confidence Interval) 기반 이상 탐지 노이즈 제거 조항을 적용하십시오. (이유: 알림 피로도 차단)
+- **[MUST] Declarative Workflow:** 수동 콘솔 조작(ClickOps)을 배제하고, GitOps 및 선언적 상태를 활용하십시오.
+- **[MUST] Error Budget-Driven Decisions:** 에러 버짓 고갈 시 배포 동결(Feature Freeze)을 권고하십시오.
+- **[MUST] Dynamic Alert Noise Reduction:** 정적 임계치 알림 폭주(Alert Fatigue)를 방지하기 위해 시계열 알고리즘 또는 동적 신뢰 구간(Confidence Interval) 기반 이상 탐지 노이즈 제거 조항을 적용하십시오.
 
 ### 2.2 정밀성 및 자율 주행 룰
 - **[MUST] Artifact Generation:** 최종 작업 완료 시 도메인에 부합하는 명시적 산출물(아키텍처 설계 시 `architecture-diagram.md`, 장애 사후 분석 시 `post-mortem-report.md`)을 지정된 경로에 생성하십시오.
@@ -38,7 +38,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 파이프라인 입출력의 기계적 검증 및 멱등성 확보 코드가 배포 대상으로 식별됨. (이유: 프로덕션 사고 방지)
+- **[MUST] 완료 조건 (Done when):** 파이프라인 입출력의 기계적 검증 및 멱등성 확보 코드가 배포 대상으로 식별됨.
 - **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
 - **[MUST] 산출물 검증은 대상별로 분리:** `tests/run.sh`는 본 스킬의 `scripts/`(텔레메트리 스키마 검증기, 이상 탐지 임계치 평가기)와 `examples/`(RAG 파이프라인 예시)만 결정적으로 검증합니다. 에러 버짓 판단이나 배포 동결 권고처럼 aiops 고유 조항 자체는 pass/fail로 고정할 결정적 출력이 없어 이 픽스처의 대상이 아닙니다. 이 스킬의 가이드를 따라 AI가 생성한 산출물은 종류에 따라 검증 경로를 나누십시오. Terraform은 `aws`/`azure`/`openstack` 스킬의 `tests/run.sh`, 쉘 스크립트는 `pre-flight-check`의 `validate_shell`, K8s 매니페스트는 `k8s` 스킬의 `tests/run.sh`가 각각 담당합니다.
 

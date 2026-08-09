@@ -11,17 +11,17 @@ references:
 AI 에이전트 의사결정 워크플로우, RAG 연동 및 수동 개입 방어 설계 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Runbook Integration:** 임의 추정을 배제하고 사내 런북을 RAG로 참조해 답변하십시오. (이유: 신뢰도 확보)
+- **[MUST] Runbook Integration:** 임의 추정을 배제하고 사내 런북을 RAG로 참조해 답변하십시오.
 - **[PREFER] Semantic Caching:** 파이프라인 앞단에 시맨틱 캐시 레이어를 배치하십시오.
-- **[MUST] Graceful Degradation:** API 장애 시 규칙 기반 백업 로직(Fallback)으로 전환되도록 설계하십시오. (이유: 단일 장애점 최소화)
-- **[MUST] Heterogeneous Telemetry Correlation:** 메트릭, 로그, 분산 트레이스(OpenTelemetry) 이종 인프라 텔레메트리 수집 파이프라인을 RAG 및 AI 에이전트 분석 로직에 결합하여 교차 검증하십시오. (이유: 단일 지표 오진 방지)
+- **[MUST] Graceful Degradation:** API 장애 시 규칙 기반 백업 로직(Fallback)으로 전환되도록 설계하십시오.
+- **[MUST] Heterogeneous Telemetry Correlation:** 메트릭, 로그, 분산 트레이스(OpenTelemetry) 이종 인프라 텔레메트리 수집 파이프라인을 RAG 및 AI 에이전트 분석 로직에 결합하여 교차 검증하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 통제력 확보 및 Human-in-the-loop
-- **[MUST] Human-in-the-loop:** 리소스 삭제/수정 등 파괴적 조치 시 관리자의 명시적 승인을 강제하는 워크플로우를 구성하십시오. (이유: 권한 남용 및 장애 차단)
-- **[MUST] Context-Aware Cross-Validation:** 단일 알람 의존을 배제하고 메트릭·로그·트레이스 교차 검증으로 RCA 정확도를 입증하십시오. (이유: 오진 방지)
-- **[MUST] Agent Action Audit Logging:** 자가 치유 조치 후 이벤트 로그에 `[AIOps-Agent-Action]` 마커를 기록하십시오. (이유: 변경 주체 감사)
+- **[MUST] Human-in-the-loop:** 리소스 삭제/수정 등 파괴적 조치 시 관리자의 명시적 승인을 강제하는 워크플로우를 구성하십시오.
+- **[MUST] Context-Aware Cross-Validation:** 단일 알람 의존을 배제하고 메트릭·로그·트레이스 교차 검증으로 RCA 정확도를 입증하십시오.
+- **[MUST] Agent Action Audit Logging:** 자가 치유 조치 후 이벤트 로그에 `[AIOps-Agent-Action]` 마커를 기록하십시오.
 
 ### 2.2 에이전트의 자율적 복구
 - **[MUST] Autonomous Self-Correction:** 파이프라인 자동화 스크립트 실행 중 에러가 검출되면, 즉각 백그라운드에서 로그를 파싱 및 자율 수정하여 최대 3회까지 재시도하십시오.

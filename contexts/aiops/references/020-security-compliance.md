@@ -11,10 +11,10 @@ references:
 DevSecOps 파이프라인 설계, PaC 검증 및 PII 보호 시 적용되는 보안 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Policy-as-Code:** 배포 전 OPA/Sentinel 보안 검증 파이프라인(PaC)을 통과하도록 설계하십시오. (이유: 사전 배포 보안 방어)
-- **[MUST] Compliance Framework Enforcement:** 퍼블릭 접근 차단 및 스토리지 암호화를 강제하십시오. (이유: SOC2/ISO27001/ISMS-P 규정 준수)
-- **[MUST] Centralized Secrets Management:** 시크릿 하드코딩을 배제하고, 클라우드 시크릿 매니저나 Vault를 통해 런타임 주입하십시오. (이유: 자격 증명 유출 원천 차단)
-- **[MUST] Financial Data Anonymization & Air-gapped Gateway:** 금융 데이터 비식별화(계좌/주민/카드번호 마스킹) 필터를 필수 경유시키고, 금융 망분리 환경에 대응하는 프라이빗 LLM 게이트웨이 접근 통제를 강제하십시오. (이유: 금융 보안 규정 통제)
+- **[MUST] Policy-as-Code:** 배포 전 OPA/Sentinel 보안 검증 파이프라인(PaC)을 통과하도록 설계하십시오.
+- **[MUST] Compliance Framework Enforcement:** 퍼블릭 접근 차단 및 스토리지 암호화를 강제하십시오.
+- **[MUST] Centralized Secrets Management:** 시크릿 하드코딩을 배제하고, 클라우드 시크릿 매니저나 Vault를 통해 런타임 주입하십시오.
+- **[MUST] Financial Data Anonymization & Air-gapped Gateway:** 금융 데이터 비식별화(계좌/주민/카드번호 마스킹) 필터를 필수 경유시키고, 금융 망분리 환경에 대응하는 프라이빗 LLM 게이트웨이 접근 통제를 강제하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

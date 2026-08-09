@@ -12,18 +12,18 @@ references:
 인프라 프로비저닝, 자동화 파이프라인 및 GitOps 배포 아키텍처 수립 시 적용되는 표준입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] State Locking & Isolation:** IaC 작성 시 원격 백엔드/Lock을 구성하고 환경(개발/운영) 상태를 물리 격리하십시오. (이유: 상태 충돌 차단)
+- **[MUST] State Locking & Isolation:** IaC 작성 시 원격 백엔드/Lock을 구성하고 환경(개발/운영) 상태를 물리 격리하십시오.
 - **[PREFER] Stateless Over Stateful:** 연산 컨테이너는 무상태 아키텍처로 설계하고 상태 관리는 관리형 서비스에 위임하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 배포 아키텍처 및 복원력
 - **[PREFER] Immutable Infrastructure:** 리소스 구성 변경 시 기존 리소스를 덮어쓰거나 직접 수정(Mutable)하는 대신, 새로운 리소스를 프로비저닝하고 트래픽을 넘긴 뒤 이전 리소스를 폐기하는 불변 인프라(Immutable) 패턴을 적용하십시오.
-- **[MUST] Asynchronous Event-Driven & DLQ:** 비동기 구간에는 DLQ 연동 백업 아키텍처를 구성하십시오. (이유: 이벤트 유실 방지)
+- **[MUST] Asynchronous Event-Driven & DLQ:** 비동기 구간에는 DLQ 연동 백업 아키텍처를 구성하십시오.
 
 ### 2.2 엔터프라이즈 명명 규칙 및 보안
-- **[MUST] Resource Naming Standard:** 리소스에 표준 명명 규칙(`<Project>-<Env>...`)을 적용하십시오. (이유: 리소스 식별 용이성)
-- **[MUST] Zero-Trust 엔드포인트 통제:** LLM 모델 엔드포인트는 프라이빗 서브넷에 배치 및 프록시를 통해 접근하십시오. (이유: 무단 통신 차단)
+- **[MUST] Resource Naming Standard:** 리소스에 표준 명명 규칙(`<Project>-<Env>...`)을 적용하십시오.
+- **[MUST] Zero-Trust 엔드포인트 통제:** LLM 모델 엔드포인트는 프라이빗 서브넷에 배치 및 프록시를 통해 접근하십시오.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>

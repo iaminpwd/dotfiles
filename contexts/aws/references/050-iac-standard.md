@@ -11,7 +11,7 @@ references:
 Terraform 및 Ansible IaC 코드 작성 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Decoupling:** Terraform(인프라)과 Ansible(OS/앱)의 역할을 엄격히 분리할 것. (이유: 관심사 분리)
+- **[MUST] Decoupling:** Terraform(인프라)과 Ansible(OS/앱)의 역할을 엄격히 분리할 것.
 - **[MUST] Declarative Configuration Management:** 멱등성(Idempotency)을 유지하기 위해 시스템 설정 시 반드시 전용 구성 관리 도구(Ansible)나 네이티브 OS 스크립트(`user_data`)를 사용할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)

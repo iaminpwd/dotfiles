@@ -10,12 +10,12 @@ references:
 AWS 자격 증명 및 IAM 권한 설계 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Least Privilege:** IAM 정책에 정확한 Action과 ARN을 지정하여 최소 권한을 부여할 것. (이유: 최소 권한 보장)
+- **[MUST] Least Privilege:** IAM 정책에 정확한 Action과 ARN을 지정하여 최소 권한을 부여할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 자격 증명 (Secrets) 관리
-- **[MUST] 시크릿 외부 연동:** 민감한 자격 증명은 `data` 블록으로 시크릿 관리 서비스에서 동적 로드할 것. (이유: 시크릿 안전 보장)
+- **[MUST] 시크릿 외부 연동:** 민감한 자격 증명은 `data` 블록으로 시크릿 관리 서비스에서 동적 로드할 것.
 - **[MUST] Sensitive Output:** Terraform Output 중 민감 정보는 `sensitive = true`를 선언할 것.
 - **[MUST] Pipeline OIDC:** CI/CD 파이프라인 구성 시 반드시 OIDC를 통한 단기 자격 증명(Short-lived credentials)을 사용할 것.
 
