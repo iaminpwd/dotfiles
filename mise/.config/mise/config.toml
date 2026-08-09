@@ -24,7 +24,7 @@ loki-logcli = "3.7.3"
 
 # IaC & Configuration Management
 terraform = "1.5.7"
-ansible = "9.5.1"
+ansible = "12.2.0"
 "pipx:ansible-lint" = "26.4.0"
 terragrunt = "1.0.8"
 tflint = "0.63.1"
