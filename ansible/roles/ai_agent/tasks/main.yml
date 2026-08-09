@@ -63,7 +63,7 @@
     label: "{{ item.path | basename }}"
   when: >
     ('/scripts/' in item.path or '/bin/' in item.path) and
-    item.mode | regex_search('[1357]')
+    item.mode is search('[1357]')
 
 - name: 컨텍스트 도메인 디렉토리 목록 조회
   ansible.builtin.find:
