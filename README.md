@@ -21,7 +21,8 @@
 
 ### 1. Zero-Trust 보안 및 격리
 - **글로벌 `.gitignore_global` 강제 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 원격 저장소로 유출되는 사고를 시스템 전역에서 원천 차단합니다.
-- **도구 완전 격리:** `mise`(런타임/CLI 도구)와 `pipx`(Python 기반 도구)를 통해 시스템 전역을 오염시키지 않고 선언적으로 버전을 관리합니다.
+- **도구 완전 격리:** `mise` 하나로 런타임/CLI 도구는 물론 Python 기반 도구(`pipx:` 백엔드, 내부적으로 `uv` 사용)까지 시스템 전역을 오염시키지 않고 선언적으로 버전을 관리합니다.
+- **버전 자동 최신화:** `Renovate`(`.github/renovate.json`)가 `mise` 도구·GitHub Actions·Ansible Galaxy 컬렉션의 뒤처진 버전을 주기적으로 스캔해 PR로 자동 제안하므로, 명시적 버전 고정이 시간이 지나며 방치되어 구버전에 고착되는 걸 막습니다.
 - **시크릿 히스토리 차단:** `HIST_IGNORE_SPACE` 설정으로 공백으로 시작하는 커맨드는 터미널 히스토리에 기록되지 않습니다.
 - **로컬 시크릿 파일 분리:** API 키와 토큰은 Git이 추적하지 않는 `~/.zshrc.local`, `~/.gitconfig.local`에만 보관하도록 아키텍처를 강제합니다.
 
@@ -92,7 +93,7 @@ just setup-dryrun
 
 | 역할 (Ansible Role) | 작업 내용 |
 |---|---|
-| **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow, pipx 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
+| **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
 | **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
@@ -203,7 +204,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 ## 포함된 도구 및 생산성 설정
 
 ### 1. `config.toml` 선언 도구 목록 (버전 고정, 40개 이상)
-시스템 전역을 오염시키지 않고 `mise`와 `pipx`를 통해 안전하게 격리 설치됩니다.
+시스템 전역을 오염시키지 않고 `mise`를 통해 안전하게 격리 설치됩니다(Python 기반 도구는 `pipx:` 백엔드가 내부적으로 `uv`를 사용).
 
 **보안 & 정책 검증**
 `trivy` · `conftest` · `cosign` · `trufflehog` · `shellcheck` · `shfmt` · `checkov` · `yamllint`
