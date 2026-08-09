@@ -22,7 +22,7 @@ bin/
 
 | 스크립트 | 역할 및 핵심 기능 | 실행 예시 |
 |---|---|---|
-| **`pre-flight-check.sh`** | 스테이징/수정된 파일 종류에 맞춰 `shellcheck`, `tflint`, `checkov`, `ansible-lint`, `hadolint`, `trivy`, `infracost` 등을 통합 실행하는 고성능 검증 훅. 변경 파일 중 `record-provenance.sh`로 근거가 아직 보강되지 않은 항목은 비차단 경고로 알림 | `bin/hooks/pre-flight-check.sh` |
+| **`pre-flight-check.sh`** | 스테이징/수정된 파일 종류에 맞춰 `shellcheck`, `tflint`, `checkov`, `ansible-lint`, `hadolint`, `trivy`, `infracost` 등을 통합 실행하는 고성능 검증 훅 | `bin/hooks/pre-flight-check.sh` |
 | **`run-suite.sh`** | AI 에이전트의 토큰 폭주를 막기 위해 통과한 검증 항목을 `-> [✓] <경로>` 한 줄로 접고 실패 시 원형 로그를 보존하는 검증 래퍼 | `bin/hooks/run-suite.sh` |
 | **`agent-edits-hook.sh`** | Claude Code 및 Antigravity가 파일을 변경할 때마다 `.agent-state/edits.log`에 편집 사유 및 목적을 기록하는 PostToolUse 훅 | (에이전트 훅 자동 호출) |
 | **`plugins/`** | 워크스페이스 전용 린터(`kyverno`, `promtool` 등)를 자동 탐색하여 위임 실행하는 동적 플러그인 디렉토리 | (내부 위임 호출) |
