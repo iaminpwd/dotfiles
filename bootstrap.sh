@@ -38,15 +38,20 @@ fi
 # 1. OS 패키지 매니저 판별
 # stow는 ansible의 packages 역할이 나중에 다시 설치하지만(멱등), mise config.toml을
 # ansible보다 먼저 링크해야 해서(아래 3단계) 여기서 미리 확보해둔다.
+# gnupg(gpg)는 아래 2단계에서 mise 설치 스크립트의 GPG 서명을 검증하는 데 필요해
+# ansible packages 롤(Docker GPG 검증용)보다 먼저 여기서 확보해둔다.
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg
 elif command -v dnf &>/dev/null; then
-  sudo dnf install -y curl git unzip stow
+  sudo dnf install -y curl git unzip stow gnupg2
 elif command -v brew &>/dev/null; then
-  # macOS는 기본 내장 도구 활용, stow만 별도 설치
+  # macOS는 기본 내장 도구 활용, stow/gnupg만 별도 설치
   if ! command -v stow &>/dev/null; then
     brew install stow
+  fi
+  if ! command -v gpg &>/dev/null; then
+    brew install gnupg
   fi
 else
   echo "❌ 지원하지 않는 운영체제/패키지 매니저입니다." >&2
@@ -54,9 +59,42 @@ else
 fi
 
 # 2. 도구 버전 관리자(mise) 설치
+# curl|sh를 그대로 실행하는 대신, mise 공식 릴리스 GPG 키로 설치 스크립트 서명을
+# 검증한 뒤 실행한다 (Docker 롤의 GPG 지문 검증과 동일한 신뢰 수준).
+# 참고: mise 문서가 안내하는 "공식 저장소" 설치(apt는 extrepo, dnf는 ppa)는 이 저장소가
+# 지원하는 배포판 기준으로 실측 확인한 결과 채택하지 않았다 — apt: Debian 공식
+# extrepo-data 큐레이션 목록(salsa.debian.org/debian/extrepo-data)에 mise 항목이
+# 존재하지 않아 `extrepo enable mise`가 실패한다. dnf: ppa:jdxcode/mise는 Launchpad
+# 기반이라 Ubuntu 26.04+ 전용이며 dnf 계열에는 애초에 해당하지 않는다. 따라서 배포판
+# 버전에 좌우되지 않고 실제로 검증 가능한 GPG 서명 스크립트 방식을 모든 OS에 공통 적용한다.
 if [ ! -x "$HOME/.local/bin/mise" ]; then
-  echo "=> Installing mise (https://mise.run)..."
-  curl -fsSL https://mise.run | sh
+  echo "=> Installing mise (GPG 서명 검증 후 설치, https://mise.jdx.dev)..."
+  MISE_GPG_HOME="$(mktemp -d)"
+  MISE_INSTALL_SCRIPT="$MISE_GPG_HOME/install.sh"
+  # https://mise.jdx.dev/installing-mise.html 에 명시된 mise 릴리스 서명 키 지문
+  MISE_GPG_KEY_FP="24853EC9F655CE80B48E6C3A8B81C9D17413A06D"
+
+  curl -fsSL https://mise.jdx.dev/gpg-key.pub | gpg --homedir "$MISE_GPG_HOME" --import -q
+  IMPORTED_FP="$(gpg --homedir "$MISE_GPG_HOME" --with-colons --fingerprint | awk -F: '/^fpr:/ {print $10; exit}')"
+  if [ "$IMPORTED_FP" != "$MISE_GPG_KEY_FP" ]; then
+    echo "❌ [Hard Block] mise GPG 키 지문이 예상 값과 다릅니다 (공급망 검증 실패)." >&2
+    echo "   예상: $MISE_GPG_KEY_FP" >&2
+    echo "   실제: $IMPORTED_FP" >&2
+    rm -rf "$MISE_GPG_HOME"
+    exit 1
+  fi
+
+  curl -fsSL https://mise.jdx.dev/install.sh.sig |
+    gpg --homedir "$MISE_GPG_HOME" --decrypt >"$MISE_INSTALL_SCRIPT" 2>"$MISE_GPG_HOME/verify.log"
+  if ! grep -q "Good signature from" "$MISE_GPG_HOME/verify.log"; then
+    echo "❌ [Hard Block] mise 설치 스크립트 GPG 서명 검증 실패." >&2
+    cat "$MISE_GPG_HOME/verify.log" >&2
+    rm -rf "$MISE_GPG_HOME"
+    exit 1
+  fi
+
+  sh "$MISE_INSTALL_SCRIPT"
+  rm -rf "$MISE_GPG_HOME"
 fi
 
 export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
