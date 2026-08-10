@@ -36,7 +36,7 @@ jobs:
       # persist-credentials: false — 켜두면 just verify가 도는 trufflehog가 .git/config의
       # 임시 인증 토큰을 유출 시크릿으로 오탐한다. 이후 push/fetch 없어 꺼도 안전.
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           # 아래 커밋 메시지 게이트가 base..head 범위를 조회하려면 전체 히스토리 필요(기본 depth=1이면 실패).
@@ -59,7 +59,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Cache mise-managed tools
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.local/share/mise
           key: mise-${{ runner.os }}-${{ hashFiles('mise/.config/mise/config.toml') }}
@@ -110,7 +110,7 @@ jobs:
       # persist-credentials: false — 켜두면 bootstrap.sh의 trufflehog filesystem 스캔이
       # .git/config의 임시 토큰을 유출 시크릿으로 오탐해 Hard Block으로 실패한다(실측 버그).
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
