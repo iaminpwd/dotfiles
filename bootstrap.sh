@@ -19,19 +19,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 동일하게 sudo -v 한 번만 받고, 그 뒤로는 순수 sudo 자체 메커니즘에 맡긴다.
 if (command -v apt-get &>/dev/null || command -v dnf &>/dev/null) && ! sudo -n true 2>/dev/null; then
   sudo -v
+
+  # Ubuntu가 기본 sudo 구현체를 sudo-rs(Rust 재구현)로 넘기는 과도기라 이 계정에서 sudo-rs가
+  # 활성화돼 있을 수 있다. sudo-rs는 -S(stdin)로 비밀번호를 받을 때도 프롬프트를
+  # "[sudo: <prompt>] Password:" 형태로 감싸는데, Ansible의 sudo become 플러그인은 자신이
+  # -p로 넘긴 고유 문자열이 줄 맨 앞에 그대로 나오길 기대해서 이 래핑을 인식 못 하고
+  # "Timed out waiting for become success or become password prompt"로 멈춘다(실제 재현된
+  # 버그, ansible/ansible#85837). classic sudo(sudo.ws)는 -S 경로에서 래핑 없이 프롬프트를
+  # 그대로 출력해 문제가 없으므로, sudo-rs가 활성 상태고 sudo.ws가 같이 설치돼 있으면
+  # (Ubuntu는 전환기 동안 둘 다 패키지로 제공) 자동으로 전환해둔다.
+  if sudo --version 2>/dev/null | grep -qi 'sudo-rs' && [ -x /usr/bin/sudo.ws ]; then
+    sudo update-alternatives --set sudo /usr/bin/sudo.ws >/dev/null
+    echo "✅ sudo-rs → classic sudo(sudo.ws)로 전환했습니다 (Ansible become 프롬프트 호환성 문제 회피, ansible/ansible#85837)."
+  fi
+
   SUDOERS_DROPIN="/etc/sudoers.d/99-dotfiles-$(whoami)-shared-timestamp"
   if [ ! -f "$SUDOERS_DROPIN" ]; then
-    TMP_SUDOERS=$(mktemp)
-    echo "Defaults:$(whoami) !tty_tickets" >"$TMP_SUDOERS"
-    # visudo -c로 문법을 먼저 검증하지 않고 /etc/sudoers.d/에 바로 설치하면, 오타 하나로
-    # 시스템 전체의 sudo가 깨질 위험이 있다(하드 블록해야 하는 이유).
-    if sudo visudo -cf "$TMP_SUDOERS" >/dev/null 2>&1; then
-      sudo install -m 0440 -o root -g root "$TMP_SUDOERS" "$SUDOERS_DROPIN"
-      echo "✅ sudo 인증 티켓이 이 계정 전체에서 공유되도록 설정했습니다 ($SUDOERS_DROPIN)."
+    if sudo --version 2>/dev/null | grep -qi 'sudo-rs'; then
+      # 위에서 classic sudo로 전환을 시도했는데도 여전히 sudo-rs라면(sudo.ws가 없는 배포판 등)
+      # tty_tickets뿐 아니라 사용자별(Defaults:user) 항목 자체를 아직 지원하지 않아
+      # (trifectatechfoundation/sudo-rs FAQ 참고) 이 드롭인을 원천적으로 설치할 수 없다.
+      # 실패가 뻔한 visudo 호출을 시도하는 대신 바로 건너뛴다 — Justfile의 setup/setup-dryrun이
+      # 이 드롭인 파일 유무를 보고 --ask-become-pass로 맨 앞에서 한 번에 물어보도록 이미
+      # 처리하므로, Ansible 단계 도중 예고 없이 끊기지는 않는다(다만 위 sudo-rs 특유의 프롬프트
+      # 래핑 버그 자체는 --ask-become-pass로도 우회되지 않으니, 가능하면 classic sudo 전환이
+      # 유일한 해결책이다).
+      echo "ℹ️ sudo-rs 환경이라 세션 간 sudo 티켓 공유는 지원되지 않습니다 — 건너뜁니다. Ansible 단계 시작 시 비밀번호를 한 번 더 입력하게 됩니다."
     else
-      echo "⚠️ sudoers 드롭인 문법 검증 실패 — 자동 설정을 건너뜁니다. 뒤에서 Ansible 단계가 비밀번호를 다시 요구할 수 있습니다." >&2
+      TMP_SUDOERS=$(mktemp)
+      echo "Defaults:$(whoami) !tty_tickets" >"$TMP_SUDOERS"
+      # visudo -c로 문법을 먼저 검증하지 않고 /etc/sudoers.d/에 바로 설치하면, 오타 하나로
+      # 시스템 전체의 sudo가 깨질 위험이 있다(하드 블록해야 하는 이유).
+      if sudo visudo -cf "$TMP_SUDOERS" >/dev/null 2>&1; then
+        sudo install -m 0440 -o root -g root "$TMP_SUDOERS" "$SUDOERS_DROPIN"
+        echo "✅ sudo 인증 티켓이 이 계정 전체에서 공유되도록 설정했습니다 ($SUDOERS_DROPIN)."
+      else
+        echo "⚠️ sudoers 드롭인 문법 검증 실패 — 자동 설정을 건너뜁니다. 뒤에서 Ansible 단계가 비밀번호를 다시 요구할 수 있습니다." >&2
+      fi
+      rm -f "$TMP_SUDOERS"
     fi
-    rm -f "$TMP_SUDOERS"
   fi
 fi
 

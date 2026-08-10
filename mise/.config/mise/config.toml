@@ -12,6 +12,9 @@ checkov = "3.3.9"
 # ansible/ansible-lint/yamllint 등 pipx 계열 도구는 aqua 바이너리가 없어 pip 기반 설치가 불가피함.
 # 대신 uv를 설치해두면 mise pipx 백엔드가 자동으로 uvx를 사용해 설치 로그/속도가 개선됨.
 uv = "0.12.3"
+# ansible은 mise 레지스트리에서 uvx=false로 고정돼 있어 uv가 있어도 uvx로 대체되지 않고
+# 반드시 실제 pipx 바이너리를 요구함. 위 uv만으로는 부족해 별도로 설치해둔다.
+pipx = "1.16.6"
 
 # Container Image Supply Chain (SBOM/Vuln/Layer Analysis)
 syft = "1.50.0"

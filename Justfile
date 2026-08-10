@@ -12,13 +12,21 @@ export ANSIBLE_CONFIG := "ansible/ansible.cfg"
 # 기본 설치 진입점 (Ansible Playbook 실행)
 # ansible-core 2.19부터 become(sudo) 워커 프로세스를 setsid()로 부모 TTY와 분리된
 # 별도 세션에서 실행한다(ansible/ansible#86149, #85536 — 의도된 사양 변경). sudo 기본
-# 정책(tty_tickets)은 티켓을 세션별로 분리하지만, bootstrap.sh 0단계에서 이 계정에
-# !tty_tickets(세션 무관 티켓 공유)를 미리 설정해두므로 sudo -n true 판정이 ansible의
-# setsid 분리 세션에도 그대로 유효하다. 그 설정이 안 된 채로(예: bootstrap.sh를 거치지
-# 않고 just setup만 단독 실행) 티켓이 없으면 --ask-become-pass로 최초 1회 직접 물어본다.
+# 정책(tty_tickets)은 티켓을 세션별로 분리하므로, bootstrap.sh 0단계가 이 계정에
+# !tty_tickets(세션 무관 티켓 공유) 드롭인을 설치해뒀을 때만 ansible의 setsid 분리
+# 세션에서도 그 티켓이 그대로 유효하다. `sudo -n true`로는 이걸 판단할 수 없다 —
+# bootstrap.sh와 같은 세션(tty)에서 도는 한 !tty_tickets 여부와 무관하게 항상 참으로
+# 나와서, 정작 필요한 setsid 분리 세션에서 티켓이 안 보이는 경우(예: GNU sudo가 아닌
+# sudo-rs — visudo-rs가 아직 !tty_tickets/사용자별 Defaults를 지원하지 않아 드롭인 설치가
+# 실패한 환경)를 걸러내지 못하고, 설치 도중 예고 없이 비밀번호를 다시 묻게 만든다.
+# 그래서 "지금 티켓이 있는가" 대신 "그 드롭인이 실제로 설치돼 있는가"를 직접 확인한다:
+# 있으면 티켓 공유가 보장되니 그대로 진행, 없으면 setsid 세션에서 반드시 막힐 것이므로
+# --ask-become-pass로 맨 처음에 한 번에 물어보고 넘어간다(중간에 끊기지 않도록).
+SUDOERS_DROPIN := "/etc/sudoers.d/99-dotfiles-" + `whoami` + "-shared-timestamp"
+
 setup:
     @echo "=> Running dotfiles setup via Ansible..."
-    if sudo -n true 2>/dev/null; then \
+    if [ -f "{{SUDOERS_DROPIN}}" ]; then \
         ansible-playbook -i localhost, -c local ansible/site.yml; \
     else \
         ansible-playbook -i localhost, -c local ansible/site.yml --ask-become-pass; \
@@ -27,7 +35,7 @@ setup:
 # Ansible Dry-run (실제 변경 없이 어떤 작업이 이루어질지 확인) — become 관련 이유는 setup 참고
 setup-dryrun:
     @echo "=> Running Ansible Dry-run..."
-    if sudo -n true 2>/dev/null; then \
+    if [ -f "{{SUDOERS_DROPIN}}" ]; then \
         ansible-playbook -i localhost, -c local ansible/site.yml --check; \
     else \
         ansible-playbook -i localhost, -c local ansible/site.yml --check --ask-become-pass; \
