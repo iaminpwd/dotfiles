@@ -1,72 +1,72 @@
 [tools]
 # Security & Policy Validation
-trivy = "0.71.0"
-conftest = "0.68.2"
-cosign = "3.1.1"
-trufflehog = "3.95.6"
+trivy = "0.73.0"
+conftest = "0.69.0"
+cosign = "3.1.3"
+trufflehog = "3.96.0"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"
-checkov = "3.3.1"
-"pipx:checkov" = "3.3.1"
+checkov = "3.3.9"
+"pipx:checkov" = "3.3.9"
 "pipx:yamllint" = "1.38.0"
 # ansible/ansible-lint/yamllint 등 pipx 계열 도구는 aqua 바이너리가 없어 pip 기반 설치가 불가피함.
 # 대신 uv를 설치해두면 mise pipx 백엔드가 자동으로 uvx를 사용해 설치 로그/속도가 개선됨.
-uv = "0.12.0"
+uv = "0.12.3"
 
 # Container Image Supply Chain (SBOM/Vuln/Layer Analysis)
-syft = "1.48.0"
-grype = "0.116.0"
+syft = "1.50.0"
+grype = "0.116.1"
 dive = "0.13.1"
 
 # Observability
-loki-logcli = "3.7.3"
+loki-logcli = "3.7.6"
 
 
 # IaC & Configuration Management
-terraform = "1.5.7"
-ansible = "12.2.0"
-"pipx:ansible-lint" = "26.4.0"
-terragrunt = "1.0.8"
-tflint = "0.63.1"
-infracost = "0.10.44"
+terraform = "1.15.8"
+ansible = "12.3.0"
+"pipx:ansible-lint" = "26.6.0"
+terragrunt = "1.1.2"
+tflint = "0.64.0"
+infracost = "0.10.45"
 terraform-docs = "0.24.0"
 
 # Cloud Services
-awscli = "2.15.30"
-azure-cli = "2.87.0"
-"pipx:aws-sam-cli" = "1.162.1"
+awscli = "2.36.19"
+azure-cli = "2.89.0"
+"pipx:aws-sam-cli" = "1.165.0"
 # bicep: Ubuntu(glibc) 호환성을 위해 github: 백엔드 사용 (aqua: 는 musl 바이너리로 깨짐)
 # macOS에서 문제 시 수정 대신 ~/.config/mise/conf.d/macos.toml 로컬 오버라이드 권장
-"github:Azure/bicep" = "0.45.15"
+"github:Azure/bicep" = "0.46.1"
 
 # Kubernetes & Containers
-kubectl = "1.30.1"
-kubectx = "0.9.5"
-k9s = "0.32.4"
-helm = "4.2.1"
+kubectl = "1.36.3"
+kubectx = "0.11.0"
+k9s = "0.51.0"
+helm = "4.2.3"
 kustomize = "5.8.1"
 kube-linter = "0.8.3"
-hadolint = "2.12.0"
+hadolint = "2.15.1"
 helm-docs = "1.14.2"
 kyverno = "1.18.2"
 pluto = "5.24.1"
-promtool = "3.13.1"
+promtool = "3.13.2"
 yq = "4.53.3"
 
 # Local Testing & Mocking
-k3d = "5.6.3"
-act = "0.2.62"
+k3d = "5.9.0"
+act = "0.2.89"
 
 # Runtimes / Programming Languages
-node = "20.12.2"
-python = "3.14.6"
-go = "1.26.4"
+node = "20.20.2"
+python = "3.14.7"
+go = "1.26.5"
 
 # CLI Utilities
 gh = "2.97.0"
-fzf = "0.73.1"
-jq = "1.8.1"
+fzf = "0.74.2"
+jq = "1.8.2"
 bat = "0.26.1"
 fd = "10.4.2"
-just = "1.57.0"
-helm-diff = "3.15.10"
+just = "1.58.0"
+helm-diff = "3.15.11"
