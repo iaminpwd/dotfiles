@@ -69,10 +69,13 @@ run_hook_allow_fail() {
 
 echo "=== pre-commit 훅 오케스트레이션 로직 회귀 테스트 ==="
 
-# 1. bin/hooks/pre-flight-check.sh 와 bin/linters/container-hardening-gate.sh 를
-#    동시에 스테이징하면, "재현 명령" 안내에 두 케이스가 모두 나오고 각 줄이 그대로
-#    실행 가능한(파싱 에러 없는) 셸 명령이어야 한다.
-mkdir -p "$FIXTURE_REPO/bin/linters"
+# 1. bin/hooks/pre-flight-check.sh, bin/linters/container-hardening-gate.sh,
+#    bin/hooks/run-suite.sh, bin/lib/tool-probe.sh 를 동시에 스테이징하면 BIN_REMINDERS의
+#    모든 case(전용 case 3개 + 캐치올 1개)가 다 걸린다. 각 재현 명령 줄이 (a) 그대로
+#    실행 가능한(파싱 에러 없는) 셸 명령이어야 하고, (b) 실제 dotfiles 저장소에 그 경로가
+#    존재해야 한다 — (b)를 놓쳐서 test-run-suite.sh/test-tool-probe-ssot.sh가
+#    contexts/pre-flight-check/tests/ 로 잘못 안내되던 버그가 실제로 있었다(고쳐짐).
+mkdir -p "$FIXTURE_REPO/bin/linters" "$FIXTURE_REPO/bin/lib"
 # 초기 커밋과 내용이 완전히 같으면 git diff --cached 에 아예 안 잡혀 이 case가
 # 검증되지 않으므로, 한 줄을 더해 실제 스테이징된 변경으로 만든다.
 cat >"$FIXTURE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
@@ -81,15 +84,19 @@ echo "[STUB] pre-flight-check.sh 스텁 실행됨 (case1)"
 exit 0
 EOF
 echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/linters/container-hardening-gate.sh"
-git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh bin/linters/container-hardening-gate.sh
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/hooks/run-suite.sh"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/lib/tool-probe.sh"
+git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh bin/linters/container-hardening-gate.sh \
+  bin/hooks/run-suite.sh bin/lib/tool-probe.sh
 
 status=$(run_hook_allow_fail)
 OUT="$(cat "$TMP/out")"
-REMINDER_LINES=$(grep -E '^\s+bash .*/tests/run\.sh' "$TMP/out" || true)
+REMINDER_LINES=$(grep -E '^\s+bash .*/tests/.*\.sh' "$TMP/out" || true)
 REMINDER_COUNT=$(printf '%s\n' "$REMINDER_LINES" | grep -c . || true)
 
-# pre-flight-check.sh 전용 case와 bin/linters/*.sh 캐치올 case 둘 다 걸려야 하므로 2줄이어야 한다.
-if [ "$status" -eq 0 ] && [ "$REMINDER_COUNT" -eq 2 ] && ! grep -qF '(' <<<"$REMINDER_LINES"; then
+# pre-flight-check.sh 전용(1) + linters/*.sh 캐치올(1) + run-suite.sh 전용(1) +
+# tool-probe.sh 전용(2, test-tool-probe-ssot.sh/test-plugin-loop.sh) = 총 5줄이어야 한다.
+if [ "$status" -eq 0 ] && [ "$REMINDER_COUNT" -eq 5 ] && ! grep -qF '(' <<<"$REMINDER_LINES"; then
   # 출력된 재현 명령 줄들을 그대로 셸에 넣어 파싱 에러(예: 괄호로 인한 syntax error)가
   # 없는지 실제로 검증한다. 스텁이 exit 0 이므로 명령 자체는 실행돼도 안전하다.
   PARSE_OK=1
@@ -102,8 +109,29 @@ if [ "$status" -eq 0 ] && [ "$REMINDER_COUNT" -eq 2 ] && ! grep -qF '(' <<<"$REM
   else
     report "reminder-valid-syntax (재현 명령에 괄호 없이 유효한 셸 문법)" 1 "$REMINDER_LINES"
   fi
+
+  # 재현 명령이 가리키는 경로가 진짜 dotfiles 저장소(REPO_ROOT, 이 테스트 스크립트
+  # 자신의 물리적 위치 기준 — FIXTURE_REPO 안이 아니라)에 실제로 존재하는지 검증한다.
+  # FIXTURE_REPO 접두사와 뒤에 붙는 " # 설명" 주석을 떼어내고 남는 상대경로로 대조한다.
+  PATH_OK=1
+  MISSING_PATHS=""
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    rel="${line#*"$FIXTURE_REPO"/}"
+    rel="${rel%%  \#*}"
+    if [ ! -e "$REPO_ROOT/$rel" ]; then
+      PATH_OK=0
+      MISSING_PATHS="$MISSING_PATHS $rel"
+    fi
+  done <<<"$REMINDER_LINES"
+  if [ "$PATH_OK" -eq 1 ]; then
+    report "reminder-path-exists (재현 명령이 가리키는 경로가 실제 저장소에 존재)" 0
+  else
+    report "reminder-path-exists (재현 명령이 가리키는 경로가 실제 저장소에 존재)" 1 "missing:$MISSING_PATHS"
+  fi
 else
   report "reminder-valid-syntax (재현 명령에 괄호 없이 유효한 셸 문법)" 1 "exit=$status out=$OUT"
+  report "reminder-path-exists (재현 명령이 가리키는 경로가 실제 저장소에 존재)" 1 "exit=$status out=$OUT"
 fi
 
 git -C "$FIXTURE_REPO" reset -q
