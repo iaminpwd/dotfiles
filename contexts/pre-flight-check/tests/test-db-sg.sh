@@ -46,6 +46,20 @@ code=0
 bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-open-cidr" >/dev/null 2>&1 || code=$?
 report "fail-open-cidr (DB 포트가 0.0.0.0/0에 노출)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
 
+# 아래 셋은 블록 단위 판정으로 바꾸면서 드러난 축들이다. 위 두 픽스처만으로는
+# "정상 egress를 오탐하는가"와 "인그레스를 여는 다른 문법을 미탐하는가"를 못 잡는다.
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/ok-egress-open" >/dev/null 2>&1 || code=$?
+report "ok-egress-open (정상 egress 0.0.0.0/0을 오탐하지 않음)" "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
+
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-dynamic-ingress" >/dev/null 2>&1 || code=$?
+report "fail-dynamic-ingress (dynamic \"ingress\" 블록의 개방 탐지)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-sg-rule-ingress" >/dev/null 2>&1 || code=$?
+report "fail-sg-rule-ingress (aws_security_group_rule type=ingress 탐지)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

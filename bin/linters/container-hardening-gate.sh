@@ -42,20 +42,33 @@ if [ -f "$TARGET" ]; then
   fi
 else
   # 빌드된 이미지 검증: dive 및 공급망 스캔
+  #
+  # 두 스캔 모두 출력을 임시 파일에 받아 두었다가 "실패했을 때만" 그대로 토해낸다.
+  # 예전엔 >/dev/null 2>&1 로 전량 억제해서, 차단됐을 때 어떤 레이어가 낭비인지 / 어떤
+  # CVE가 걸렸는지 알 방법이 전혀 없었다(게이트가 무엇을 고쳐야 하는지 못 알려주면
+  # 사용자는 우회밖에 못 한다). 통과 시 무음은 compact-runner 표준대로 유지한다.
   if has_tool dive; then
-    if ! dive "$TARGET" --ci --highestWastedBytes=20MB >/dev/null 2>&1; then
+    DIVE_OUT=$(mktemp)
+    if ! dive "$TARGET" --ci --highestWastedBytes=20MB >"$DIVE_OUT" 2>&1; then
       echo "[ERROR] $TARGET 이미지 레이어 낭비율이 기준을 초과했습니다 (dive 검증 실패)."
+      cat "$DIVE_OUT"
+      rm -f "$DIVE_OUT"
       exit 1
     fi
+    rm -f "$DIVE_OUT"
   else
     echo "[WARNING] dive 도구가 없어 레이어 낭비 스캔을 건너뜁니다."
   fi
 
   if has_tool trivy; then
-    if ! trivy image --exit-code 1 --severity CRITICAL,HIGH "$TARGET" >/dev/null 2>&1; then
+    TRIVY_OUT=$(mktemp)
+    if ! trivy image --exit-code 1 --severity CRITICAL,HIGH "$TARGET" >"$TRIVY_OUT" 2>&1; then
       echo "[ERROR] $TARGET 이미지 취약점 스캔에 실패했습니다."
+      cat "$TRIVY_OUT"
+      rm -f "$TRIVY_OUT"
       exit 1
     fi
+    rm -f "$TRIVY_OUT"
   fi
 fi
 

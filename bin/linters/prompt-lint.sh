@@ -7,6 +7,18 @@
 # ERROR: 명확한 결함(링크 깨짐, SSOT 목록 불일치, 코드펜스 깨짐) -> 종료 코드 1
 # WARNING: 사람/AI의 추가 판단이 필요한 후보(고아 파일, 크로스 스킬 중복 후보,
 #          크기 제약 초과) -> 통과는 시키되 눈에 띄게 출력
+#
+# [출력 규약] 경고는 log_info 가 아니라 echo 로, 그리고 이어지는 맥락 줄까지 매 줄을
+# "[WARNING]" 으로 시작해서 내보낸다. 두 가지 이유가 겹쳐 있다:
+#   1. log_info 는 QUIET=1(기본값)에서 억제된다. 훅·run-suite·CI 가 전부 기본값으로
+#      돌기 때문에, 경고를 log_info 로 내면 위 "눈에 띄게 출력" 약속이 실제로는
+#      어디에서도 지켜지지 않는다.
+#   2. run-suite.sh 는 통과한 스크립트의 출력에서 "[WARNING]"/"⚠" 로 시작하는 줄만
+#      남기고 나머지를 버린다. 접두사 없는 맥락 줄(파일 경로 등)만 남기면 그 줄들은
+#      run-suite 경로에서 버려지고, 직접 실행 시에는 반대로 설명 없는 경로 목록만
+#      덩그러니 출력된다(실측된 증상).
+# 같은 이유로 bin/lib/tool-probe.sh 의 print_unavailable_tools 도 매 줄에 접두사를
+# 붙인다. 새 경고를 추가할 때 이 규약을 따를 것.
 
 set -euo pipefail
 
@@ -38,7 +50,7 @@ check_ssot_module_lists() {
   mapfile -d '' -t core_files < <(grep -lZE "공통 자가 비판 절차 \(전 .+ 모듈 SSOT\)" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null || true)
 
   if [ "${#core_files[@]}" -eq 0 ]; then
-    log_info "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
+    echo "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
     return
   fi
 
@@ -120,7 +132,7 @@ check_orphaned_files() {
     for f in "${skill_dir}references"/*.md; do
       [ -f "$f" ] || continue
       fname=$(basename "$f")
-      grep -Fq "$fname" "$skill_md" || log_info "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
+      grep -Fq "$fname" "$skill_md" || echo "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
     done
   done
   log_info "[INFO] 고아 파일 검사 완료."
@@ -372,8 +384,10 @@ check_cross_skill_duplication() {
     # 린터 전체를 조용히 죽인다. 카운트 0은 정상 결과이므로 || true로 흡수한다.
     skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
     if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
-      log_info "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
-      echo "    ${files//$'\n'/$'\n    '}"
+      echo "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
+      while IFS= read -r hit_file; do
+        [ -n "$hit_file" ] && echo "[WARNING]     $hit_file"
+      done <<<"$files"
     fi
   done
   log_info "[INFO] 크로스 스킬 중복 후보 검사 완료."
@@ -397,15 +411,15 @@ check_vendor_mirror_symmetry() {
     [ -z "$prefix" ] && continue
     azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
     if [ -z "$azure_file" ]; then
-      log_info "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
+      echo "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
       continue
     fi
     a_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$f" || true)
     z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$azure_file" || true)
     if [ "$a_count" -ne "$z_count" ]; then
-      log_info "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
-      echo "    $f"
-      echo "    $azure_file"
+      echo "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
+      echo "[WARNING]     $f"
+      echo "[WARNING]     $azure_file"
     fi
   done
   log_info "[INFO] aws/azure 미러링 대칭성 검사 완료."
@@ -433,13 +447,13 @@ check_index_freshness() {
   local tmp
   tmp=$(mktemp)
   if ! bash "$generator" >"$tmp" 2>/dev/null; then
-    log_info "[WARNING] 색인 생성기 실행 실패 — contexts/INDEX.md 최신성을 확인하지 못했습니다."
+    echo "[WARNING] 색인 생성기 실행 실패 — contexts/INDEX.md 최신성을 확인하지 못했습니다."
     rm -f "$tmp"
     return
   fi
 
   if ! diff -q "$index_file" "$tmp" >/dev/null 2>&1; then
-    log_info "[WARNING] contexts/INDEX.md 가 SKILL.md 라우팅 테이블과 어긋납니다:"
+    echo "[WARNING] contexts/INDEX.md 가 SKILL.md 라우팅 테이블과 어긋납니다:"
     log_info "    'bash bin/utils/generate-context-index.sh > contexts/INDEX.md' 로 재생성하십시오."
   fi
   rm -f "$tmp"
