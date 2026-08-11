@@ -8,32 +8,26 @@ export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 0. sudo 인증을 스크립트 맨 앞에서 한 번만 받고, 그 티켓을 세션 경계 너머로도
-# 공유되게 만들어 뒷단(ansible)에서 또 물어보는 일이 없게 한다.
-# ansible-core 2.19부터 become(sudo) 워커를 setsid()로 부모 TTY와 분리된 세션에서
-# 실행해(ansible/ansible#86149, #85536 — 의도된 사양 변경), sudo 기본 정책(tty_tickets)
-# 상 이 스크립트에서 받은 인증 티켓을 그 세션이 못 보고 "sudo: a password is
-# required"로 실패한다(실제 재현된 버그). 비밀번호를 캡처해 나중에 다시 넘겨주는
-# 대신(디스크/메모리 노출 구간이 생김), sudo 자체의 티켓 캐시 범위를 세션이 아니라
-# 계정 전체로 넓혀(!tty_tickets) 문제를 근본에서 없앤다 — Homebrew install.sh와
-# 동일하게 sudo -v 한 번만 받고, 그 뒤로는 순수 sudo 자체 메커니즘에 맡긴다.
-# `! sudo -n true`로 "티켓이 이미 있는지"를 먼저 걸러내면, 이 스크립트 실행 전에 이미
-# 유효한 sudo 티켓을 갖고 있던 경우(직전에 수동으로 sudo를 쓴 경우, NOPASSWD sudoers 등)
-# 아래 sudo-rs→classic 전환과 !tty_tickets 드롭인 설치가 통째로 스킵돼버려, 정작 이 블록이
-# 막으려는 setsid 분리 세션 문제(위 주석 참고)가 뒷단 ansible 단계에서 그대로 재현된다.
-# `sudo -v`는 티켓이 이미 유효해도 프롬프트 없이 갱신만 하고 끝나는 멱등 호출이므로,
-# 티켓 유무와 무관하게 항상 진입시켜도 안전하다 — OS(패키지 매니저) 조건만으로 게이팅한다.
+# 0. sudo 인증 티켓을 스크립트 맨 앞에서 계정 전체로 공유되게 만들어(!tty_tickets)
+# 뒷단(ansible)에서 다시 묻지 않게 한다. ansible-core 2.19+가 become(sudo) 워커를
+# setsid()로 분리된 세션에서 실행하면서(ansible/ansible#86149, #85536 — 의도된 사양
+# 변경) 기본 정책(tty_tickets)상 그 세션이 이 티켓을 못 보고 "sudo: a password is
+# required"로 실패하는 실제 재현된 버그를 막는다. 비밀번호를 캡처해 재사용하는
+# 대신(노출 구간 생김) sudo 자체 캐시 범위를 넓히는 방식이며, Homebrew install.sh와
+# 동일하게 sudo -v를 한 번만 받는다. 이미 티켓이 있는지 미리 걸러내지 않는 이유:
+# 걸러내면 아래 sudo-rs 전환·드롭인 설치가 스킵돼 이 블록이 막으려는 문제가 그대로
+# 재현되는데, sudo -v는 티켓이 유효해도 프롬프트 없이 갱신만 하는 멱등 호출이라
+# 무조건 호출해도 안전하다.
 if command -v apt-get &>/dev/null || command -v dnf &>/dev/null; then
   sudo -v
 
-  # Ubuntu가 기본 sudo 구현체를 sudo-rs(Rust 재구현)로 넘기는 과도기라 이 계정에서 sudo-rs가
-  # 활성화돼 있을 수 있다. sudo-rs는 -S(stdin)로 비밀번호를 받을 때도 프롬프트를
-  # "[sudo: <prompt>] Password:" 형태로 감싸는데, Ansible의 sudo become 플러그인은 자신이
-  # -p로 넘긴 고유 문자열이 줄 맨 앞에 그대로 나오길 기대해서 이 래핑을 인식 못 하고
-  # "Timed out waiting for become success or become password prompt"로 멈춘다(실제 재현된
-  # 버그, ansible/ansible#85837). classic sudo(sudo.ws)는 -S 경로에서 래핑 없이 프롬프트를
-  # 그대로 출력해 문제가 없으므로, sudo-rs가 활성 상태고 sudo.ws가 같이 설치돼 있으면
-  # (Ubuntu는 전환기 동안 둘 다 패키지로 제공) 자동으로 전환해둔다.
+  # Ubuntu가 기본 sudo를 sudo-rs(Rust 재구현)로 넘기는 과도기라 이 계정에서 활성화돼
+  # 있을 수 있다. sudo-rs는 -S(stdin) 비밀번호 프롬프트를 "[sudo: <prompt>] Password:"로
+  # 감싸는데, Ansible sudo become 플러그인은 자신이 -p로 넘긴 문자열이 줄 맨 앞에 그대로
+  # 나오길 기대해 이를 인식 못 하고 "Timed out waiting for become success..."로 멈춘다
+  # (실제 재현된 버그, ansible/ansible#85837). classic sudo(sudo.ws)는 래핑 없이 그대로
+  # 출력하므로, sudo-rs가 활성 상태고 sudo.ws가 같이 설치돼 있으면(Ubuntu 전환기 동안
+  # 둘 다 패키지로 제공) 자동 전환해둔다.
   if sudo --version 2>/dev/null | grep -qi 'sudo-rs' && [ -x /usr/bin/sudo.ws ]; then
     sudo update-alternatives --set sudo /usr/bin/sudo.ws >/dev/null
     echo "✅ sudo-rs → classic sudo(sudo.ws)로 전환했습니다 (Ansible become 프롬프트 호환성 문제 회피, ansible/ansible#85837)."
@@ -42,14 +36,13 @@ if command -v apt-get &>/dev/null || command -v dnf &>/dev/null; then
   SUDOERS_DROPIN="/etc/sudoers.d/99-dotfiles-$(whoami)-shared-timestamp"
   if [ ! -f "$SUDOERS_DROPIN" ]; then
     if sudo --version 2>/dev/null | grep -qi 'sudo-rs'; then
-      # 위에서 classic sudo로 전환을 시도했는데도 여전히 sudo-rs라면(sudo.ws가 없는 배포판 등)
-      # tty_tickets뿐 아니라 사용자별(Defaults:user) 항목 자체를 아직 지원하지 않아
-      # (trifectatechfoundation/sudo-rs FAQ 참고) 이 드롭인을 원천적으로 설치할 수 없다.
-      # 실패가 뻔한 visudo 호출을 시도하는 대신 바로 건너뛴다 — Justfile의 setup/setup-dryrun이
-      # 이 드롭인 파일 유무를 보고 --ask-become-pass로 맨 앞에서 한 번에 물어보도록 이미
-      # 처리하므로, Ansible 단계 도중 예고 없이 끊기지는 않는다(다만 위 sudo-rs 특유의 프롬프트
-      # 래핑 버그 자체는 --ask-become-pass로도 우회되지 않으니, 가능하면 classic sudo 전환이
-      # 유일한 해결책이다).
+      # classic sudo 전환 시도 후에도 여전히 sudo-rs라면(sudo.ws가 없는 배포판 등)
+      # 사용자별(Defaults:user) 항목 자체를 아직 지원하지 않아(trifectatechfoundation/
+      # sudo-rs FAQ) 이 드롭인을 설치할 수 없으므로 실패가 뻔한 visudo 호출 없이 바로
+      # 건너뛴다. Justfile의 setup/setup-dryrun이 드롭인 파일 유무를 보고
+      # --ask-become-pass로 미리 물어보도록 처리돼 있어 Ansible 단계 도중 예고 없이
+      # 끊기진 않는다(단, 위 프롬프트 래핑 버그 자체는 --ask-become-pass로도 우회 안 돼
+      # classic sudo 전환이 유일한 해결책).
       echo "ℹ️ sudo-rs 환경이라 세션 간 sudo 티켓 공유는 지원되지 않습니다 — 건너뜁니다. Ansible 단계 시작 시 비밀번호를 한 번 더 입력하게 됩니다."
     else
       TMP_SUDOERS=$(mktemp)
@@ -93,12 +86,10 @@ fi
 # 2. 도구 버전 관리자(mise) 설치
 # curl|sh를 그대로 실행하는 대신, mise 공식 릴리스 GPG 키로 설치 스크립트 서명을
 # 검증한 뒤 실행한다 (Docker 롤의 GPG 지문 검증과 동일한 신뢰 수준).
-# 참고: mise 문서가 안내하는 "공식 저장소" 설치(apt는 extrepo, dnf는 ppa)는 이 저장소가
-# 지원하는 배포판 기준으로 실측 확인한 결과 채택하지 않았다 — apt: Debian 공식
-# extrepo-data 큐레이션 목록(salsa.debian.org/debian/extrepo-data)에 mise 항목이
-# 존재하지 않아 `extrepo enable mise`가 실패한다. dnf: ppa:jdxcode/mise는 Launchpad
-# 기반이라 Ubuntu 26.04+ 전용이며 dnf 계열에는 애초에 해당하지 않는다. 따라서 배포판
-# 버전에 좌우되지 않고 실제로 검증 가능한 GPG 서명 스크립트 방식을 모든 OS에 공통 적용한다.
+# 참고: mise 문서의 "공식 저장소" 설치(apt는 extrepo, dnf는 ppa)는 실측 결과 미채택 —
+# apt: Debian 공식 extrepo-data 큐레이션 목록에 mise 항목이 없어 `extrepo enable mise`가
+# 실패. dnf: ppa:jdxcode/mise는 Launchpad 기반이라 Ubuntu 전용이라 dnf 계열엔 해당 없음.
+# 배포판에 좌우되지 않는 GPG 서명 검증 방식을 모든 OS에 공통 적용한다.
 if [ ! -x "$HOME/.local/bin/mise" ]; then
   echo "=> Installing mise (GPG 서명 검증 후 설치, https://mise.jdx.dev)..."
   MISE_GPG_HOME="$(mktemp -d)"
@@ -142,8 +133,8 @@ mkdir -p "$HOME/.config/mise"
 # mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해 GNU Stow로 미리
 # 링크해둔다. ansible stow 역할이 나중에 같은 패키지를 다시 stow해도(-R은 멱등) 안전.
 # 기존 사용자 파일이 있으면 stow-backup.sh로 먼저 백업한다.
-bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR" "$HOME"
-(cd "$SCRIPT_DIR" && stow -t "$HOME" -R mise)
+bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR/stow" "$HOME"
+(cd "$SCRIPT_DIR/stow" && stow -t "$HOME" -R mise)
 # uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
 # 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
 ~/.local/bin/mise install -y uv
@@ -160,7 +151,7 @@ if command -v trufflehog &>/dev/null; then
   }
 fi
 
-chmod +x "$SCRIPT_DIR/git/.githooks/pre-commit" "$SCRIPT_DIR/git/.githooks/commit-msg" "$SCRIPT_DIR/git/.githooks/pre-push" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/stow/git/.githooks/pre-commit" "$SCRIPT_DIR/stow/git/.githooks/commit-msg" "$SCRIPT_DIR/stow/git/.githooks/pre-push" 2>/dev/null || true
 
 cd "$SCRIPT_DIR" || exit 1
 

@@ -27,7 +27,7 @@ source "$TCC_SCRIPT_DIR/../lib/script-init.sh"
 REPO_ROOT=$(cd "$TCC_SCRIPT_DIR/../.." && pwd)
 
 BIN_DIR="$REPO_ROOT/bin"
-HOOKS_DIR="$REPO_ROOT/git/.githooks"
+HOOKS_DIR="$REPO_ROOT/stow/git/.githooks"
 SELF="$(basename "${BASH_SOURCE[0]}")"
 
 # contexts/.archive 는 사용 종료된 스킬이라 커버리지 요구 대상에서 제외.

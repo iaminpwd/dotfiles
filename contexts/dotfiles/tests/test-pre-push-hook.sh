@@ -16,7 +16,7 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-HOOK="$REPO_ROOT/git/.githooks/pre-push"
+HOOK="$REPO_ROOT/stow/git/.githooks/pre-push"
 ZERO_SHA="0000000000000000000000000000000000000000"
 
 PASS_COUNT=0

@@ -12,7 +12,7 @@ references:
 ## 1. 핵심 설계 원칙
 - **[MUST] Bash Strict Mode:** 스크립트 최상단에 반드시 `set -euo pipefail`을 선언할 것.
 - **[MUST] Explicit Idempotency:** 스크립트 작성 시 멱등성을 보장할 것. (위반 시 `run-suite.sh`가 경고함)
-- **[MUST] Symlink Awareness (GNU Stow):** `stow` 심볼릭 링크 구조를 존중하여, 반드시 `~/dotfiles/zsh/.zshrc` 등 원본(Source) 파일만을 조작할 것.
+- **[MUST] Symlink Awareness (GNU Stow):** `stow` 심볼릭 링크 구조를 존중하여, 반드시 `~/dotfiles/stow/zsh/.zshrc` 등 원본(Source) 파일만을 조작할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 

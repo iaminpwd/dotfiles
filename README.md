@@ -44,8 +44,8 @@
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
-- **실시간 사전 검증 훅:** `bin/hooks/pre-flight-live-hook.sh`가 Claude Code `PostToolUse`(`Edit|Write|MultiEdit`)에 등록되어, AI가 파일을 편집한 직후 그 파일 1개만 대상으로 `pre-flight-check.sh`를 `run-suite.sh` 경유로 즉시 실행합니다(`--pfc-args="<파일>"`로 explicit 모드 패스스루, `contexts/*/tests/run.sh` 12개가 딸려오는 기본 전체 수집 분기는 안 탐). 최종 하드 게이트인 `git/.githooks/pre-commit`은 여전히 커밋 시점에만 발동하므로, 이 훅은 그 이전 — "AI가 코드를 짜고 완료를 선언하는 시점" — 의 시차를 좁히는 2차 방어선입니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 한 줄만 `additionalContext`로 조용히 실어(대화 메시지로는 안 보임) "통과했다"와 "훅이 애초에 안 돌았다"를 구분 가능하게 하고, 실패 시엔 `decision:block` JSON으로 AI에게 즉시 피드백을 줍니다. 훅 자신은 fail-open이라 실패해도 에이전트 루프를 막지 않습니다(최종 판정은 계속 커밋 게이트 몫). `terraform init` 등 네트워크·빌드 의존 검증이 걸리는 `.tf`/`.tfvars`/`.bicep`은 편집마다 돌면 지연이 커서 이 훅에서 제외하고, 커밋 시점 게이트에서만 검증합니다.
-- **완료 선언 직전 게이트 훅:** `bin/hooks/pre-flight-gate-hook.sh`가 Claude Code `Stop`(턴 종료 시점)에 등록되어, `base.AGENTS.md`가 명시하던 완료 선언 직전 통합 검증을 프롬프트 문구가 아니라 기계적으로 강제합니다(해당 조항은 훅으로 완전히 대체되어 삭제됨). 범위는 의도적으로 `pre-flight-check.sh --changed` + (dotfiles 저장소일 때만) `prompt-lint.sh` + `test-coverage-check.sh` 3종으로 한정합니다(`contexts/*/tests/run.sh` 12개 스킬 회귀 스위트는 여기 없음 — "검증기 자체가 여전히 맞는가"를 확인하는 것이라 매턴 재확인은 낭비이고, `git/.githooks/pre-push`가 건드린 스킬만 골라 push 시점에 이미 담당합니다. 코어 로직 `bin/lib/*`·`pre-flight-check.sh` 변경 시 전체 스킬을 트리거하는 케이스도 pre-push에 있어 사각지대가 없습니다). 이 3개는 `run-suite.sh`에 명시적 스크립트 경로로 넘겨서 돌립니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 로그(스크립트당 한 줄)만 `additionalContext`로 조용히 실어 훅이 실제로 검증을 시도했다는 증거를 남기고("통과"와 "애초에 안 돎"을 구분), 실패 시엔 `decision:block` + 압축 없는 원본 로그를 넘깁니다. 커밋되지 않은 변경이 전혀 없는 순수 대화 턴에는 아무것도 실행하지 않고, 무한 재실패 루프 방지를 위해 `stop_hook_active`가 true면 실패해도 조용히 통과시킵니다.
+- **실시간 사전 검증 훅:** `bin/hooks/pre-flight-live-hook.sh`가 Claude Code `PostToolUse`(`Edit|Write|MultiEdit`)에 등록되어, AI가 파일을 편집한 직후 그 파일 1개만 대상으로 `pre-flight-check.sh`를 `run-suite.sh` 경유로 즉시 실행합니다(`--pfc-args="<파일>"`로 explicit 모드 패스스루, `contexts/*/tests/run.sh` 12개가 딸려오는 기본 전체 수집 분기는 안 탐). 최종 하드 게이트인 `stow/git/.githooks/pre-commit`은 여전히 커밋 시점에만 발동하므로, 이 훅은 그 이전 — "AI가 코드를 짜고 완료를 선언하는 시점" — 의 시차를 좁히는 2차 방어선입니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 한 줄만 `additionalContext`로 조용히 실어(대화 메시지로는 안 보임) "통과했다"와 "훅이 애초에 안 돌았다"를 구분 가능하게 하고, 실패 시엔 `decision:block` JSON으로 AI에게 즉시 피드백을 줍니다. 훅 자신은 fail-open이라 실패해도 에이전트 루프를 막지 않습니다(최종 판정은 계속 커밋 게이트 몫). `terraform init` 등 네트워크·빌드 의존 검증이 걸리는 `.tf`/`.tfvars`/`.bicep`은 편집마다 돌면 지연이 커서 이 훅에서 제외하고, 커밋 시점 게이트에서만 검증합니다.
+- **완료 선언 직전 게이트 훅:** `bin/hooks/pre-flight-gate-hook.sh`가 Claude Code `Stop`(턴 종료 시점)에 등록되어, `base.AGENTS.md`가 명시하던 완료 선언 직전 통합 검증을 프롬프트 문구가 아니라 기계적으로 강제합니다(해당 조항은 훅으로 완전히 대체되어 삭제됨). 범위는 의도적으로 `pre-flight-check.sh --changed` + (dotfiles 저장소일 때만) `prompt-lint.sh` + `test-coverage-check.sh` 3종으로 한정합니다(`contexts/*/tests/run.sh` 12개 스킬 회귀 스위트는 여기 없음 — "검증기 자체가 여전히 맞는가"를 확인하는 것이라 매턴 재확인은 낭비이고, `stow/git/.githooks/pre-push`가 건드린 스킬만 골라 push 시점에 이미 담당합니다. 코어 로직 `bin/lib/*`·`pre-flight-check.sh` 변경 시 전체 스킬을 트리거하는 케이스도 pre-push에 있어 사각지대가 없습니다). 이 3개는 `run-suite.sh`에 명시적 스크립트 경로로 넘겨서 돌립니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 로그(스크립트당 한 줄)만 `additionalContext`로 조용히 실어 훅이 실제로 검증을 시도했다는 증거를 남기고("통과"와 "애초에 안 돎"을 구분), 실패 시엔 `decision:block` + 압축 없는 원본 로그를 넘깁니다. 커밋되지 않은 변경이 전혀 없는 순수 대화 턴에는 아무것도 실행하지 않고, 무한 재실패 루프 방지를 위해 `stop_hook_active`가 true면 실패해도 조용히 통과시킵니다.
 - **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/dotfiles/tests/test-run-suite.sh`의 회귀 테스트 8건이 고정합니다(`run-suite.sh`는 `pre-flight-check.sh` 전용이 아니라 저장소 전역 러너라 dotfiles 스킬 소속입니다).
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
@@ -98,7 +98,7 @@ just setup-dryrun
 | **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
 | **`ai_agent`** | 글로벌 룰(`base.AGENTS.md`) 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`, Claude Code·Antigravity 양쪽)과 실시간 사전 검증 훅(`bin/hooks/pre-flight-live-hook.sh`, `PostToolUse`)·완료 선언 직전 게이트 훅(`bin/hooks/pre-flight-gate-hook.sh`, `Stop`)을 Claude Code에 병합 등록 |
-| **`tflint`** | IaC 전역 `tflint` 설정(`tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
+| **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -156,24 +156,25 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │       openstack/, pre-flight-check/,
 │       prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
 │
-├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
-│   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
-│   ├── .githooks/              # 전역 pre-commit·commit-msg 훅 원본 (Stow로 ~/.githooks/에 symlink)
-│   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
-│
-├── mise/                 # [배포: ansible stow 역할이 자동 심볼릭 링크 (단, mise install이 ansible보다 먼저 필요해 bootstrap.sh가 동일한 stow 명령을 한 번 더 앞서 실행)]
-│   └── .config/mise/
-│       └── config.toml   # 인프라 도구 버전 선언 매니페스트 (SSOT, mise 전역 설정 위치)
-│
-├── tflint/                # [배포: ansible stow 역할이 자동 심볼릭 링크]
-│   └── .tflint.hcl       # IaC 전역 TFLint 규칙 구성
-│
-├── vim/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
-│   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
-│
-├── zsh/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
-│   ├── .zshenv           # Zsh 환경변수 설정 (PATH 등 비대화형 세션 포함)
-│   └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
+├── stow/                 # GNU Stow 대상 패키지 모음 (이 하위 폴더만 심볼릭 링크 대상 — 화이트리스트 방식)
+│   ├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
+│   │   ├── .gitconfig             # 글로벌 Git 설정 (alias, pull.rebase=true, hooksPath)
+│   │   ├── .githooks/              # 전역 pre-commit·commit-msg 훅 원본 (Stow로 ~/.githooks/에 symlink)
+│   │   └── .gitignore_global      # 시스템 전역 Git 무시 규칙 (tfstate, .env 등)
+│   │
+│   ├── mise/                 # [배포: ansible stow 역할이 자동 심볼릭 링크 (단, mise install이 ansible보다 먼저 필요해 bootstrap.sh가 동일한 stow 명령을 한 번 더 앞서 실행)]
+│   │   └── .config/mise/
+│   │       └── config.toml   # 인프라 도구 버전 선언 매니페스트 (SSOT, mise 전역 설정 위치)
+│   │
+│   ├── tflint/                # [배포: ansible stow 역할이 자동 심볼릭 링크]
+│   │   └── .tflint.hcl       # IaC 전역 TFLint 규칙 구성
+│   │
+│   ├── vim/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
+│   │   └── .vimrc            # Vim 설정 (클립보드 연동, YAML 2칸 탭)
+│   │
+│   └── zsh/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
+│       ├── .zshenv           # Zsh 환경변수 설정 (PATH 등 비대화형 세션 포함)
+│       └── .zshrc            # Zsh 설정 (Oh My Zsh, 단축어)
 │
 ├── bootstrap.sh          # 경량 셋업 진입점 스크립트 (set -euo pipefail)
 ├── Justfile              # 통합 태스크 런너 (just setup, just check, just test)
@@ -233,10 +234,10 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 **CLI 유틸리티**
 `fzf` · `jq` · `bat` · `fd`
 
-> 버전 고정 정보는 [`mise/.config/mise/config.toml`](mise/.config/mise/config.toml)에서 확인하십시오.
+> 버전 고정 정보는 [`stow/mise/.config/mise/config.toml`](stow/mise/.config/mise/config.toml)에서 확인하십시오.
 
 ### 2. 생산성 단축어 (Alias)
-자주 사용하는 인프라 명령어 단축 별칭(`k` -> `kubectl`, `tf` -> `terraform`, `ap` -> `ansible-playbook` 등)이 `zsh/.zshrc`와 `git/.gitconfig`에 구성되어 개발자 생산성을 극대화합니다.
+자주 사용하는 인프라 명령어 단축 별칭(`k` -> `kubectl`, `tf` -> `terraform`, `ap` -> `ansible-playbook` 등)이 `stow/zsh/.zshrc`와 `stow/git/.gitconfig`에 구성되어 개발자 생산성을 극대화합니다.
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
 API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `bootstrap.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
@@ -257,7 +258,7 @@ export OPENAI_API_KEY="sk-..."
 ## 커스터마이징 및 확장
 
 ### 도구 추가 / 버전 변경
-`mise/.config/mise/config.toml` 파일에서 버전을 수정한 후 아래 커맨드를 실행하십시오.
+`stow/mise/.config/mise/config.toml` 파일에서 버전을 수정한 후 아래 커맨드를 실행하십시오.
 ```bash
 # 사용 가능한 버전 목록 조회
 mise ls-remote terraform
@@ -270,9 +271,9 @@ mise ls
 ```
 
 ### 단축어 추가
-`zsh/.zshrc`에 alias를 추가한 후 `src`를 실행하면 즉시 적용됩니다.
+`stow/zsh/.zshrc`에 alias를 추가한 후 `src`를 실행하면 즉시 적용됩니다.
 ```bash
-echo "alias myalias='my-command'" >> ~/dotfiles/zsh/.zshrc
+echo "alias myalias='my-command'" >> ~/dotfiles/stow/zsh/.zshrc
 src
 ```
 
@@ -286,7 +287,7 @@ src
 
 ## 보류 중인 후보 도구 (미적용)
 
-지금 당장 필요하다고 확인된 게 아니라서 아직 `mise/.config/mise/config.toml`에 넣지 않은 도구들입니다. 아래 조건에 실제로 부딪히면 그때 해당 도구만 추가하십시오.
+지금 당장 필요하다고 확인된 게 아니라서 아직 `stow/mise/.config/mise/config.toml`에 넣지 않은 도구들입니다. 아래 조건에 실제로 부딪히면 그때 해당 도구만 추가하십시오.
 
 | 도구 | 역할 | 추가할 조건 |
 |---|---|---|

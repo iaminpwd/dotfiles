@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-pre-commit-hook.sh
 #
-# git/.githooks/pre-commit은 bin/*.sh 와 달리 test-coverage-check.sh 게이트 밖에 있다.
+# stow/git/.githooks/pre-commit은 bin/*.sh 와 달리 test-coverage-check.sh 게이트 밖에 있다.
 # 그 사각지대에서 BIN_REMINDERS 재현 명령 조립 로직이 깨질 수 있다: 사람이 읽을 설명
 # 문구 "run.sh (전체 — ...)"를 그대로 커맨드 문자열에 이어붙이면, 출력된 줄을 그대로
 # 복붙했을 때 괄호 때문에 셸 문법 오류가 난다. 이 스위트는 그 재현 명령이 실제로
@@ -18,7 +18,7 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-HOOK="$REPO_ROOT/git/.githooks/pre-commit"
+HOOK="$REPO_ROOT/stow/git/.githooks/pre-commit"
 
 PASS_COUNT=0
 FAIL_COUNT=0

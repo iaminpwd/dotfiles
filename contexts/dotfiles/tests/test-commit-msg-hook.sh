@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-commit-msg-hook.sh
 #
-# git/.githooks/commit-msg는 bin/ 스캔 대상이 아니라 test-coverage-check.sh 게이트
+# stow/git/.githooks/commit-msg는 bin/ 스캔 대상이 아니라 test-coverage-check.sh 게이트
 # 밖에 있었고, 실제로 로직 결함(pre-commit의 BIN_REMINDERS 괄호 버그)이 회귀 테스트
 # 없이 방치됐던 전례가 있다. Conventional Commits 정규식, merge/squash/fixup!/revert
 # 예외 통과, 빈 메시지 처리라는 핵심 판정 분기를 고정한다.
@@ -12,7 +12,7 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-HOOK="$REPO_ROOT/git/.githooks/commit-msg"
+HOOK="$REPO_ROOT/stow/git/.githooks/commit-msg"
 
 PASS_COUNT=0
 FAIL_COUNT=0

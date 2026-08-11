@@ -10,11 +10,11 @@
   block:
     - name: Tflint 저장소 디렉토리 생성
       ansible.builtin.file:
-        path: "{{ role_path }}/../../../tflint"
+        path: "{{ role_path }}/../../../stow/tflint"
         state: directory
         mode: '0755'
 
     - name: Tflint 플러그인 초기화 및 다운로드 (--init)
-      ansible.builtin.command: tflint --init --config "{{ role_path }}/../../../tflint/.tflint.hcl"
+      ansible.builtin.command: tflint --init --config "{{ role_path }}/../../../stow/tflint/.tflint.hcl"
       register: tflint_init_result
       changed_when: "'Installing' in tflint_init_result.stdout"

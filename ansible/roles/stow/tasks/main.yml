@@ -12,20 +12,14 @@
 
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
   ansible.builtin.find:
-    paths: "{{ role_path }}/../../../"
+    paths: "{{ role_path }}/../../../stow/"
     file_type: directory
     recurse: false
-    excludes:
-      - "contexts"
-      - "assets"
-      - "ansible"
-      - "bin"
-      - ".*"
   register: stow_dirs
 
 - name: 기존 파일 백업 (stow 충돌 방지)
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh" "{{ item.path | basename }}" "{{ role_path }}/../../../" "{{ ansible_env.HOME }}"
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh" "{{ item.path | basename }}" "{{ role_path }}/../../../stow/" "{{ ansible_env.HOME }}"
   loop: "{{ stow_dirs.files }}"
   loop_control:
     label: "{{ item.path | basename }}"
@@ -37,7 +31,7 @@
 - name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정
   ansible.builtin.shell: |
     set -euo pipefail
-    PKG_DIR="{{ role_path }}/../../../{{ item.path | basename }}"
+    PKG_DIR="{{ role_path }}/../../../stow/{{ item.path | basename }}"
     DRIFT=0
     while IFS= read -r -d '' SRC; do
       REL="${SRC#"$PKG_DIR"/}"
@@ -59,7 +53,7 @@
 - name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
   ansible.builtin.command:
     cmd: stow -t {{ ansible_env.HOME }} -R --verbose {{ item.item.path | basename }}
-    chdir: "{{ role_path }}/../../../"
+    chdir: "{{ role_path }}/../../../stow/"
   loop: "{{ stow_drift_check.results }}"
   loop_control:
     label: "{{ item.item.path | basename }}"

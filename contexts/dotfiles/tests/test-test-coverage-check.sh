@@ -39,7 +39,7 @@ trap 'rm -rf "$TMP"' EXIT
 # 최소 골격의 가짜 저장소를 구성한다: bin/hooks/plugins/*.sh 1개 + contexts/fake/tests/run.sh 1개.
 new_fixture_repo() {
   local root=$1
-  mkdir -p "$root/bin/hooks/plugins" "$root/bin/linters" "$root/bin/lib" "$root/git/.githooks" "$root/contexts/fake/tests"
+  mkdir -p "$root/bin/hooks/plugins" "$root/bin/linters" "$root/bin/lib" "$root/stow/git/.githooks" "$root/contexts/fake/tests"
   git -C "$root" init -q
   echo '#!/usr/bin/env bash
 exit 0' >"$root/bin/hooks/plugins/example-check.sh"

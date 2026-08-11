@@ -11,7 +11,7 @@ references:
 본 모듈은 `dotfiles` 시크릿 안전을 보장하기 위한 시크릿 통제 아키텍처에 적용됨.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 저장소 트리 밖의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에 분리하고, Git으로 추적되는 파일(`zsh/.zshrc`, `bootstrap.sh` 등)에는 환경 변수 참조 로직만 구현할 것.
+- **[MUST] Secret Isolation:** 자격 증명(패스워드, Access Key, PAT, SSH 키)은 저장소 트리 밖의 홈 디렉토리 전용 파일(`~/.zshrc.local`, `~/.gitconfig.local`)에 분리하고, Git으로 추적되는 파일(`stow/zsh/.zshrc`, `bootstrap.sh` 등)에는 환경 변수 참조 로직만 구현할 것.
 - **[MUST] Respect Git Hooks:** 보안/린트 자동화 깃 훅(git hooks)이 실패하면 원인을 수정한 뒤 재커밋하여 반드시 통과시키십시오.
 - **[MUST] Explicit Key Access Request:** `~/.ssh/id_rsa` 등 프라이빗 키 내용 열람이 필요한 경우, 반드시 사전에 사용자에게 명시적 승인을 요청하여 취득한 후 접근할 것.
 (출력 마스킹은 base.AGENTS.md §7 Sensitive Data Masking이 이미 전역 적용되며 이 저장소도 예외 없이 적용 대상임. 위 두 조항은 그 §7을 dotfiles 고유 경로(`~/.ssh/id_rsa`, `~/.zshrc.local` 등)로 구체화한 것.)
