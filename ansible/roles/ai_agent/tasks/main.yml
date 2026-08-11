@@ -5,6 +5,13 @@
     state: directory
     recurse: true
 
+# force: true는 목적지에 이미 있는 게 무엇이든 조용히 덮어쓴다. 실제 파일이 있으면
+# 미리 백업해 둔다 (bin/utils/safe-link-backup.sh 참고).
+- name: Gemini 글로벌 AGENTS.md 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
+  changed_when: false
+
 - name: Gemini 글로벌 AGENTS.md 링크 설정
   ansible.builtin.file:
     src: "{{ playbook_dir }}/../contexts/base.AGENTS.md"
@@ -17,6 +24,11 @@
     path: "{{ ansible_env.HOME }}/.claude/skills"
     state: directory
     recurse: true
+
+- name: Claude 글로벌 CLAUDE.md 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+  changed_when: false
 
 - name: Claude 글로벌 CLAUDE.md 링크 설정
   ansible.builtin.file:
@@ -51,6 +63,17 @@
     patterns: "*.sh"
     recurse: true
   register: ai_agent_scripts_find
+
+- name: 에이전트 스크립트 목적지 충돌 백업 (~/.local/bin)
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
+  loop: "{{ ai_agent_scripts_find.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: >
+    ('/scripts/' in item.path or '/bin/' in item.path) and
+    item.mode is search('[1357]')
+  changed_when: false
 
 - name: 에이전트 스크립트를 ~/.local/bin 경로에 심볼릭 링크
   ansible.builtin.file:
@@ -100,6 +123,20 @@
   loop_control:
     label: "{{ item[0].path | basename }}/{{ item[1] }}"
 
+- name: Gemini 스킬 에셋 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: >-
+      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      "{{ ansible_env.HOME }}/.gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  loop: "{{ ai_agent_skill_assets_stat.results }}"
+  loop_control:
+    label: ".gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  when: >
+    item.stat.exists and
+    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
+    not (item.item[0].path | basename).startswith('.')
+  changed_when: false
+
 - name: Gemini 글로벌 스킬 에셋 링크 설정
   ansible.builtin.file:
     src: "{{ item.item[0].path }}/{{ item.item[1] }}"
@@ -113,6 +150,20 @@
     item.stat.exists and
     item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
     not (item.item[0].path | basename).startswith('.')
+
+- name: Claude 스킬 에셋 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: >-
+      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      "{{ ansible_env.HOME }}/.claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  loop: "{{ ai_agent_skill_assets_stat.results }}"
+  loop_control:
+    label: ".claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  when: >
+    item.stat.exists and
+    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
+    not (item.item[0].path | basename).startswith('.')
+  changed_when: false
 
 - name: Claude 글로벌 스킬 에셋 링크 설정
   ansible.builtin.file:
@@ -133,23 +184,20 @@
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/merge-agent-hooks.sh" "{{ role_path }}/../../../ansible"
   changed_when: false # 멱등성은 분리된 스크립트 내부에서 방어함
 
-- name: 고아(Orphan) 스킬 폴더 스캔
-  ansible.builtin.find:
-    paths:
-      - "{{ ansible_env.HOME }}/.gemini/config/skills"
-      - "{{ ansible_env.HOME }}/.claude/skills"
-    file_type: directory
-    recurse: false
-  register: ai_agent_orphan_skill_candidates
-
-- name: 고아 스킬 폴더 삭제
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ ai_agent_orphan_skill_candidates.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  when: "item.path | basename not in (ai_agent_context_domains.files | map(attribute='path') | map('basename') | list)"
+# 폴더 전체가 심볼릭 링크로만 구성된(=이 롤이 만든) 경우에만 삭제한다. 사용자가 직접
+# 만들었거나 다른 도구로 설치해 실제 파일이 섞여 있는 폴더는 이름이 우연히 contexts/
+# 도메인 목록에 없어도 건드리지 않는다 (bin/utils/prune-orphan-skills.sh 참고).
+- name: 고아(Orphan) 스킬 폴더 정리 (소유권 검증 후 삭제)
+  ansible.builtin.command:
+    cmd: >-
+      /bin/bash "{{ role_path }}/../../../bin/utils/prune-orphan-skills.sh"
+      "{{ item }}"
+      {{ (ai_agent_context_domains.files | map(attribute='path') | map('basename') | list) | join(' ') }}
+  loop:
+    - "{{ ansible_env.HOME }}/.gemini/config/skills"
+    - "{{ ansible_env.HOME }}/.claude/skills"
+  changed_when: "'[PRUNED]' in ai_agent_prune_result.stdout"
+  register: ai_agent_prune_result
 
 - name: Dotfiles 로컬 룰셋 심볼릭 링크 생성
   ansible.builtin.file:
