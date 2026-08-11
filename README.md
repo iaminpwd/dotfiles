@@ -240,7 +240,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 자주 사용하는 인프라 명령어 단축 별칭(`k` -> `kubectl`, `tf` -> `terraform`, `ap` -> `ansible-playbook` 등)이 `stow/zsh/.zshrc`와 `stow/git/.gitconfig`에 구성되어 개발자 생산성을 극대화합니다.
 
 ### 3. 로컬 시크릿 파일 (`~/.zshrc.local`)
-API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `bootstrap.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 `.gitignore`에 의해 원격 저장소에 절대 커밋되지 않습니다.
+API 키, 토큰 등 민감 정보는 `.zshrc` 대신 `bootstrap.sh` 실행 후 자동 생성되는 `~/.zshrc.local`에 물리적으로 격리하여 보관하십시오. 이 파일은 저장소 트리 밖(홈 디렉토리)에 위치하므로 `.gitignore` 규칙에 기대지 않고 구조적으로 커밋 대상에서 벗어나며, 추적 대상인 `stow/zsh/.zshrc`는 이 파일을 `source`하기만 합니다.
 
 ```bash
 # ~/.zshrc.local 예시
