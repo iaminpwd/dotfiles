@@ -76,9 +76,19 @@ verify:
 # -----------------------------------------------------------------------------
 
 # contexts/INDEX.md 재생성 (SKILL.md 라우팅 테이블이 바뀐 뒤 실행)
+# 셸은 리다이렉트를 명령 실행보다 먼저 처리하므로 `생성기 > contexts/INDEX.md`로 쓰면
+# 생성기가 실패한 경우 INDEX.md가 빈 파일로 날아간 채 끝난다(실측 재현). 임시 파일에 먼저
+# 받아 성공했을 때만 제자리로 옮긴다.
 docs-index:
     @echo "=> Regenerating contexts/INDEX.md..."
-    bash bin/utils/generate-context-index.sh > contexts/INDEX.md
+    tmp=$(mktemp) && \
+    if bash bin/utils/generate-context-index.sh > "$tmp"; then \
+        mv "$tmp" contexts/INDEX.md; \
+    else \
+        rm -f "$tmp"; \
+        echo "❌ 색인 생성 실패 — contexts/INDEX.md를 그대로 보존했습니다." >&2; \
+        exit 1; \
+    fi
 
 # -----------------------------------------------------------------------------
 # Utility
