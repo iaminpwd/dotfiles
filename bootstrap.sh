@@ -133,8 +133,15 @@ mkdir -p "$HOME/.config/mise"
 # mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해 GNU Stow로 미리
 # 링크해둔다. ansible stow 역할이 나중에 같은 패키지를 다시 stow해도(-R은 멱등) 안전.
 # 기존 사용자 파일이 있으면 stow-backup.sh로 먼저 백업한다.
+# --no-folding 필수: 위 mkdir -p로 ~/.config/mise를 미리 만들어도 GNU Stow는 그게
+# 비어 있으면 여전히 ~/.config 전체를 하나의 심볼릭 링크로 통째 접어버린다(실측
+# 재현됨). 그러면 이후 다른 도구(gh, infracost 등)가 ~/.config/<자기이름>/에 쓰는
+# 설정이 전부 그 심볼릭 링크를 타고 이 저장소 안으로 흘러들어가 커밋 후보가 되거나
+# 저장소 정리 시 유실된다 — 실제로 사고가 난 적이 있다. --no-folding으로 mise가
+# 가진 리프 파일만 개별 심볼릭 링크하도록 강제해 ~/.config는 항상 실제 디렉토리로
+# 남긴다.
 bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR/stow" "$HOME"
-(cd "$SCRIPT_DIR/stow" && stow -t "$HOME" -R mise)
+(cd "$SCRIPT_DIR/stow" && stow -t "$HOME" -R --no-folding mise)
 # uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
 # 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
 ~/.local/bin/mise install -y uv

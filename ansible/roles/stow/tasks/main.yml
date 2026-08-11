@@ -5,10 +5,19 @@
     state: directory
     mode: "0755"
 
+- name: 구버전 ~/.mise.toml 심볼릭 링크 존재 여부 확인
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.mise.toml"
+  register: stow_legacy_mise_toml_stat
+
+# state: absent를 무조건 실행하면, 이 파일명으로 이 저장소와 무관한 실제 개인 설정을
+# 갖고 있는 사용자의 파일까지 확인 없이 지워버린다(실측: ~/.config 폴딩 사고와 같은
+# 클래스의 "공유/사용자 경로를 우리 것으로 오판" 버그). 심볼릭 링크일 때만 정리한다.
 - name: 구버전 ~/.mise.toml 심볼릭 링크 정리
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.mise.toml"
     state: absent
+  when: stow_legacy_mise_toml_stat.stat.exists and stow_legacy_mise_toml_stat.stat.islnk
 
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
   ansible.builtin.find:
@@ -50,9 +59,15 @@
   register: stow_drift_check
   changed_when: false
 
+# --no-folding 필수: 대상 디렉토리(예: ~/.config/mise)를 미리 만들어 둬도 비어 있으면
+# GNU Stow가 그 부모(~/.config)까지 통째로 하나의 심볼릭 링크로 접어버린다(실측
+# 재현됨). 그러면 이후 다른 프로그램이 ~/.config/<자기이름>/에 쓰는 실제 설정·시크릿이
+# 전부 그 링크를 타고 이 저장소 디렉토리 안으로 흘러들어간다(실측: gh/infracost 인증
+# 정보가 유출된 사고). --no-folding으로 항상 리프 파일 단위로만 링크해 부모 디렉토리는
+# 실제 디렉토리로 남긴다.
 - name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
   ansible.builtin.command:
-    cmd: stow -t {{ ansible_env.HOME }} -R --verbose {{ item.item.path | basename }}
+    cmd: stow -t {{ ansible_env.HOME }} -R --no-folding --verbose {{ item.item.path | basename }}
     chdir: "{{ role_path }}/../../../stow/"
   loop: "{{ stow_drift_check.results }}"
   loop_control:
