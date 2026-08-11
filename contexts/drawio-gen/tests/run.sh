@@ -167,4 +167,47 @@ for line in report.splitlines():
 sys.exit(1)
 PY
 
+# 아이콘 URL에 쿼리스트링이 있으면(...?v=2&size=64) style 안의 & 가 날것으로 나가
+# .drawio 파일 전체가 XML 파싱 불가가 됐다 — draw.io 가 파일을 아예 열지 못한다.
+# 생성물이 항상 유효한 XML인지, 그러면서 URL이 원형 그대로 복원되는지(과잉/이중
+# 이스케이프 없음) 양쪽을 함께 고정한다.
+echo "--- 생성 XML 이스케이프 (쿼리스트링 URL) ---"
+python3 - "$SCRIPTS_DIR" <<'PY' || FAILED=1
+import sys
+import xml.etree.ElementTree as ET
+
+sys.path.insert(0, sys.argv[1])
+from layout_toolkit import Diagram
+
+URL_A = "https://cdn.example.com/i.png?v=2&size=64"
+URL_B = "https://cdn.example.com/vm.svg?a=1&b=2"
+
+d = Diagram()
+d.thirdparty_icon("n1", "1", "Tool", 0, 0, URL_A)
+d.azure_icon("n2", "1", "VM", 100, 0, URL_B)
+d.edge("e1", "n1", "n2", "링크 & 라벨")
+
+xml = d.to_xml()
+try:
+    root = ET.fromstring(xml)
+except ET.ParseError as e:
+    print(f"  FAIL  & 포함 URL로 생성한 XML이 파싱 불가: {e}")
+    sys.exit(1)
+
+restored = set()
+for c in root.iter("mxCell"):
+    for part in (c.get("style") or "").split(";"):
+        if part.startswith("image="):
+            restored.add(part[len("image="):])
+
+missing = {URL_A, URL_B} - restored
+if missing:
+    print(f"  FAIL  URL이 원형으로 복원되지 않음(과잉/이중 이스케이프 의심): {sorted(missing)}")
+    print(f"          복원된 값: {sorted(restored)}")
+    sys.exit(1)
+
+print("  PASS  쿼리스트링 URL 포함 시에도 유효한 XML + URL 원형 보존")
+sys.exit(0)
+PY
+
 exit "$FAILED"

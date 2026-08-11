@@ -146,8 +146,12 @@ class Diagram:
         self.cells = []
 
     def add(self, id_, parent, value, style, x, y, w, h):
+        # style 도 반드시 esc 를 거쳐야 한다. thirdparty_icon()/azure_icon() 이 style 안에
+        # image=<URL> 을 그대로 끼워 넣는데, 쿼리스트링이 있는 URL(...?v=2&size=64)의 & 가
+        # 날것으로 나가면 .drawio 파일 전체가 XML 파싱 불가가 되어 draw.io 가 열지 못한다
+        # (실측 재현). id/parent 도 같은 속성 자리라 동일하게 처리한다.
         self.cells.append(
-            f'<mxCell id="{id_}" value="{esc(value)}" style="{style}" vertex="1" parent="{parent}">'
+            f'<mxCell id="{esc(id_)}" value="{esc(value)}" style="{esc(style)}" vertex="1" parent="{esc(parent)}">'
             f'<mxGeometry x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" as="geometry"/></mxCell>'
         )
 
@@ -173,8 +177,9 @@ class Diagram:
             pts = "".join(f'<mxPoint x="{px:.0f}" y="{py:.0f}"/>' for px, py in points)
             pts_xml = f'<Array as="points">{pts}</Array>'
         self.cells.append(
-            f'<mxCell id="{id_}" value="{esc(value)}" style="{style}" edge="1" parent="{parent}" '
-            f'source="{source}" target="{target}"><mxGeometry relative="1" as="geometry">{pts_xml}</mxGeometry></mxCell>'
+            # add() 와 동일하게 모든 속성값을 esc 로 통과시킨다(사유는 add() 주석 참조).
+            f'<mxCell id="{esc(id_)}" value="{esc(value)}" style="{esc(style)}" edge="1" parent="{esc(parent)}" '
+            f'source="{esc(source)}" target="{esc(target)}"><mxGeometry relative="1" as="geometry">{pts_xml}</mxGeometry></mxCell>'
         )
 
     def container(self, id_, parent, value, x, y, w, h, stroke, header, dashed=False, fill="none", font_color=None):
