@@ -1,0 +1,37 @@
+# 규칙이 2건 이상일 때 validate-alert-rules.sh 가 필드를 행 단위로 올바르게 묶는지
+# 고정하는 픽스처. 규칙 1건짜리 파일에서는 행 단위/열 단위 파싱 결과가 우연히 일치해
+# 필드 정렬 버그가 드러나지 않는다(실제로 그 사각지대로 버그가 통과한 적 있음).
+# 각 규칙의 severity/runbook_url 유무를 일부러 엇갈리게 두어, 필드가 한 칸이라도
+# 밀리면 반드시 오탐/미탐이 나도록 구성했다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: multi-rule-baseline
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: CriticalWithRunbook
+          expr: rate(http_requests_total{code=~"5.."}[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: critical 인데 runbook_url 이 있으므로 통과해야 함
+            runbook_url: https://runbooks.internal/critical-with-runbook
+        - alert: WarningWithoutRunbook
+          expr: rate(http_requests_total{code=~"4.."}[5m]) > 0.2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: critical 이 아니므로 runbook_url 이 없어도 통과해야 함
+        - alert: CriticalWithRunbookAgain
+          expr: up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: 앞 규칙의 빈 runbook_url 이 이 규칙으로 밀리면 오탐이 난다
+            runbook_url: https://runbooks.internal/critical-again

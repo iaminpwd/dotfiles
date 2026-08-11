@@ -73,6 +73,10 @@ if require_tool yq; then
   run_validator ok-baseline.yaml 0
   run_validator fail-missing-runbook.yaml 1 "runbook_url 누락"
   run_validator fail-high-cardinality-label.yaml 1 "고카디널리티 레이블 감지"
+  # 위 셋은 모두 규칙이 1건이라, 검증기가 필드를 행 단위가 아니라 열 단위로 묶어도
+  # 두 순서가 우연히 일치해 통과한다. 실제로 그 사각지대로 필드 정렬 버그가 통과한 적이
+  # 있어, 규칙 3건짜리 픽스처로 그 축을 따로 고정한다.
+  run_validator ok-multi-rule.yaml 0
 fi
 
 echo "--- observability-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
