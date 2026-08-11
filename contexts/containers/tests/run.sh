@@ -34,6 +34,9 @@ REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures"
 # shellcheck source-path=SCRIPTDIR
 source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
+# EXIT 트랩을 서로 덮어쓰지 않고 겹쳐 쓰기 위한 SSOT (exit-trap.sh 헤더 참조).
+# shellcheck source-path=SCRIPTDIR
+source "$TESTS_DIR/../../.shared/test-lib/exit-trap.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -123,7 +126,11 @@ run_trivy_misconfig_pair() {
   local ok_name=$1 fail_name=$2 want_id=${3:-}
   local tmpdir ok_status fail_status ok_ids fail_ids
   tmpdir=$(mktemp -d)
-  trap 'rm -rf "${tmpdir:-}"' EXIT
+  # `trap ... EXIT` 는 추가가 아니라 교체라, 이 스크립트의 두 pair 함수가 서로의 트랩을
+  # 덮어쓴다. push/pop 으로 감싸 직전 상태를 정확히 복원한다 (exit-trap.sh 헤더 참조).
+  # 홑따옴표가 맞다: 트랩 본문은 발동 시점에 전개돼야 한다.
+  # shellcheck disable=SC2016
+  push_exit_trap 'rm -rf "${tmpdir:-}"'
 
   # shellcheck disable=SC2034,SC2016 # nameref로 간접 참조됨 / $1은 bash -c 서브셸 안에서 확장돼야 함
   CMD_OK=(bash -c 'trivy config --quiet --severity HIGH,CRITICAL --format json "$1" 2>/dev/null' _ "$FIXTURES/$ok_name")
@@ -138,6 +145,7 @@ run_trivy_misconfig_pair() {
   judge_trivy_misconfig "$fail_name" "$want_id" "$fail_ids"
 
   rm -rf "$tmpdir"
+  pop_exit_trap
 }
 
 # pre-flight-check.sh 의 validate_docker 와 동일하게 container-hardening-gate.sh 에
@@ -146,7 +154,11 @@ run_hardening_gate_pair() {
   local ok_name=$1 ok_want=$2 fail_name=$3 fail_want=$4
   local tmpdir ok_status fail_status
   tmpdir=$(mktemp -d)
-  trap 'rm -rf "${tmpdir:-}"' EXIT
+  # `trap ... EXIT` 는 추가가 아니라 교체라, 이 스크립트의 두 pair 함수가 서로의 트랩을
+  # 덮어쓴다. push/pop 으로 감싸 직전 상태를 정확히 복원한다 (exit-trap.sh 헤더 참조).
+  # 홑따옴표가 맞다: 트랩 본문은 발동 시점에 전개돼야 한다.
+  # shellcheck disable=SC2016
+  push_exit_trap 'rm -rf "${tmpdir:-}"'
 
   # shellcheck disable=SC2034
   CMD_OK=(bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" "$FIXTURES/$ok_name")
@@ -166,6 +178,7 @@ run_hardening_gate_pair() {
   fi
 
   rm -rf "$tmpdir"
+  pop_exit_trap
 }
 
 echo "=== containers 검증 파이프라인 회귀 테스트 ==="

@@ -27,6 +27,9 @@
 _TF_FIXTURE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source-path=SCRIPTDIR
 source "$_TF_FIXTURE_LIB_DIR/parallel-pair.sh"
+# EXIT 트랩을 호출자 것을 파괴하지 않고 겹쳐 쓰기 위한 SSOT (exit-trap.sh 헤더 참조).
+# shellcheck source-path=SCRIPTDIR
+source "$_TF_FIXTURE_LIB_DIR/exit-trap.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -130,9 +133,12 @@ tf_run_checkov_pair() {
   local tmpdir ok_status fail_status
   tmpdir=$(mktemp -d)
   # 스캔 도중 인터럽트되어 아래 rm 이 실행되지 못하는 경우에 대비한다.
-  # 함수 반환 후 스크립트 종료 시점에 발동할 수 있으므로 set -u 하에서도 안전하도록
-  # ${tmpdir:-} 로 참조한다(pre-flight-check.sh 의 infracost 임시파일과 동일한 처리).
-  trap 'rm -rf "${tmpdir:-}"' EXIT
+  # `trap ... EXIT` 를 직접 걸면 호출자가 이미 걸어 둔 EXIT 트랩을 통째로 교체해 버리므로
+  # (aws/azure tests/run.sh 가 각자 SAM_TMPDIR/BICEP_TMPDIR 정리를 걸어 둔다),
+  # 반드시 push/pop 으로 감싸 원래 트랩을 복원한다 (exit-trap.sh 헤더 참조).
+  # 홑따옴표가 맞다: 트랩 본문은 지금이 아니라 발동 시점에 전개돼야 한다.
+  # shellcheck disable=SC2016
+  push_exit_trap 'rm -rf "${tmpdir:-}"'
 
   # shellcheck disable=SC2034 # parallel_pair_run 안에서 nameref로 간접 참조됨
   local -a CMD_OK=(checkov --directory "$ok_dir" --framework terraform --compact --quiet --soft-fail-on "LOW,MEDIUM")
@@ -143,11 +149,10 @@ tf_run_checkov_pair() {
   tf_judge_checkov ok-baseline 0 "" "$ok_status" "$tmpdir/ok"
   tf_judge_checkov "$fail_label" 1 "$want_id" "$fail_status" "$tmpdir/fail"
 
-  # `trap - EXIT` 로 해제하지 않는다. 라이브러리 함수가 트랩을 무조건 해제하면 호출자가
-  # 걸어 둔 EXIT 트랩까지 함께 날아간다(Ansible 셋업 과정 에서 실제로 그 형태의 잔재가 임시 디렉토리
-  # 정리를 무력화했다). 아래 rm 으로 이미 지운 뒤라 트랩이 다시 돌아도 무해하고, local
-  # 변수라 함수 반환 후에는 ${tmpdir:-} 가 빈 문자열로 평가된다.
   rm -rf "$tmpdir"
+  # 위 push_exit_trap 직전의 EXIT 트랩 상태로 정확히 되돌린다. `trap - EXIT` 로 그냥
+  # 해제하면 호출자가 걸어 둔 트랩까지 함께 날아가므로 반드시 pop 을 쓴다.
+  pop_exit_trap
 }
 
 # validate_terraform 과 동일하게 'terraform init -backend=false' 후 validate.

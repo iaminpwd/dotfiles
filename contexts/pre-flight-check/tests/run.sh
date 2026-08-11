@@ -21,7 +21,7 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FAILED=()
-for suite in test-parallel-pair test-plugin-loop test-finops test-db-sg test-idempotency test-shell test-yaml; do
+for suite in test-parallel-pair test-exit-trap test-plugin-loop test-finops test-db-sg test-idempotency test-shell test-yaml; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done
