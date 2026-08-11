@@ -17,7 +17,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 대신(디스크/메모리 노출 구간이 생김), sudo 자체의 티켓 캐시 범위를 세션이 아니라
 # 계정 전체로 넓혀(!tty_tickets) 문제를 근본에서 없앤다 — Homebrew install.sh와
 # 동일하게 sudo -v 한 번만 받고, 그 뒤로는 순수 sudo 자체 메커니즘에 맡긴다.
-if (command -v apt-get &>/dev/null || command -v dnf &>/dev/null) && ! sudo -n true 2>/dev/null; then
+# `! sudo -n true`로 "티켓이 이미 있는지"를 먼저 걸러내면, 이 스크립트 실행 전에 이미
+# 유효한 sudo 티켓을 갖고 있던 경우(직전에 수동으로 sudo를 쓴 경우, NOPASSWD sudoers 등)
+# 아래 sudo-rs→classic 전환과 !tty_tickets 드롭인 설치가 통째로 스킵돼버려, 정작 이 블록이
+# 막으려는 setsid 분리 세션 문제(위 주석 참고)가 뒷단 ansible 단계에서 그대로 재현된다.
+# `sudo -v`는 티켓이 이미 유효해도 프롬프트 없이 갱신만 하고 끝나는 멱등 호출이므로,
+# 티켓 유무와 무관하게 항상 진입시켜도 안전하다 — OS(패키지 매니저) 조건만으로 게이팅한다.
+if command -v apt-get &>/dev/null || command -v dnf &>/dev/null; then
   sudo -v
 
   # Ubuntu가 기본 sudo 구현체를 sudo-rs(Rust 재구현)로 넘기는 과도기라 이 계정에서 sudo-rs가
