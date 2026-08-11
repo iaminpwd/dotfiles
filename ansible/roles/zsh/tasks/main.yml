@@ -1,4 +1,10 @@
 ---
+# 아래 세 클론은 네트워크에 의존하는 유일한 태스크다. GitHub Actions 러너에서 앞의 두
+# 클론은 성공하고 세 번째만 "server certificate verification failed. CAfile: none" 으로
+# 죽는 일과성 TLS 실패가 실측됐다(CI run 31546834372). CA 저장소가 실제로 없었다면 앞의
+# 두 개도 같이 실패했을 것이므로 환경 결함이 아니라 순간적인 실패이고, 셋업 전체가
+# 그 한 번에 무너지지 않도록 짧은 간격의 재시도를 둔다. update: false 라 이미 받아둔
+# 저장소에 대해서는 재시도해도 no-op 이므로 멱등성에 영향이 없다.
 - name: Oh My Zsh 저장소 클론 (unattended)
   ansible.builtin.git:
     repo: 'https://github.com/ohmyzsh/ohmyzsh.git'
@@ -6,6 +12,10 @@
     depth: 1
     version: 7ea697fd8138550ddf7262456d412f0dcd1cbf84
     update: false
+  register: zsh_clone_result
+  until: zsh_clone_result is succeeded
+  retries: 3
+  delay: 5
 
 - name: Zsh-autosuggestions 플러그인 클론
   ansible.builtin.git:
@@ -14,6 +24,10 @@
     depth: 1
     version: v0.7.1
     update: false
+  register: zsh_clone_result
+  until: zsh_clone_result is succeeded
+  retries: 3
+  delay: 5
 
 - name: Zsh-syntax-highlighting 플러그인 클론
   ansible.builtin.git:
@@ -22,6 +36,10 @@
     depth: 1
     version: 0.8.0
     update: false
+  register: zsh_clone_result
+  until: zsh_clone_result is succeeded
+  retries: 3
+  delay: 5
 
 - name: 현재 설치된 zsh 경로 확인
   ansible.builtin.command: which zsh
