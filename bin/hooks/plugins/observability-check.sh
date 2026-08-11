@@ -12,6 +12,10 @@ set -euo pipefail
 OBS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$OBS_CHECK_DIR/../../lib/script-init.sh"
+# 검사 대상 수집 SSOT (k8s-check.sh 와 동일 이유 — bin/lib/plugin-targets.sh 헤더 참조).
+# shellcheck source-path=SCRIPTDIR
+source "$OBS_CHECK_DIR/../../lib/plugin-targets.sh"
+PLUGIN_TARGET_FILES=("$@")
 
 log_info "======================================================"
 log_info "=== Observability-Specific Validation Pipeline Started ==="
@@ -42,9 +46,7 @@ fi
 # Prometheus Alerting Rule 정책 검증 (PrometheusRule CRD)
 check_alert_rule_policy() {
   local staged_yaml=() rule_files=() f
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t staged_yaml < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' 2>/dev/null)
-  fi
+  mapfile -d '' -t staged_yaml < <(plugin_target_files '*.yaml' '*.yml')
   for f in "${staged_yaml[@]}"; do
     [ -z "$f" ] && continue
     [ -f "$f" ] || continue

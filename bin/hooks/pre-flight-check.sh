@@ -83,11 +83,24 @@ run_delegated_skill_checks() {
   # PrometheusRule YAML은 k8s-check.sh와 observability-check.sh 양쪽에 다 걸림), 첫
   # 플러그인만 보고하면 두 번째 위반은 재커밋해야 발견된다. run-suite.sh의 스크립트 간
   # 판정과 동일한 관용구를 여기 플러그인 간에도 적용한다.
+  # 플러그인에 이번 실행의 검사 대상을 인자로 넘긴다. 예전엔 인자 없이 호출했고 플러그인이
+  # 저마다 git diff --cached 를 하드코딩해, --all/--changed/explicit 모드에서는 실행 모드와
+  # 무관하게 항상 "스테이징된 것"만 봤다 — 즉 just verify(--all)나
+  # pre-flight-live-hook.sh(explicit)에서는 위임 검증이 통째로 비어 있으면서 초록불만 떴다
+  # (실측 재현: bin/lib/plugin-targets.sh 헤더 주석 참조).
+  #
+  # 넘기는 목록은 filter_target_files 를 거친 것이라 */tests/* 가 이미 빠져 있다. 의도적
+  # 위반을 담은 회귀 테스트 픽스처가 --all 스캔에서 잡혀 무관한 커밋을 막는 일을 방지한다.
+  # 세 플러그인이 보는 확장자의 합집합을 넘기고, 그 안에서 무엇을 볼지는 종전대로 각
+  # 플러그인이 자기 패턴으로 다시 좁힌다.
+  local plugin_targets=()
+  mapfile -d '' -t plugin_targets < <(filter_target_files '*.yaml' '*.yml' '*.json' '*.tf')
+
   local skill_script rc failed=0
   shopt -s nullglob
   for skill_script in "$PFC_SCRIPT_DIR/plugins"/*.sh; do
     rc=0
-    bash "$skill_script" || rc=$?
+    bash "$skill_script" "${plugin_targets[@]}" || rc=$?
     [ "$rc" -ne 0 ] && failed=1
   done
   shopt -u nullglob

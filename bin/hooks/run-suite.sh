@@ -49,9 +49,17 @@ if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   fi
 
   # 3. 현재 저장소 내부의 모든 tests/run.sh 추가
+  # 숨김 디렉토리(.archive, .git 등) 하위는 제외한다. 호출부인 Justfile의 `just test`는
+  # 셸 글롭(contexts/*/tests/run.sh)으로 대상을 모으는데 글롭은 dotglob 없이는 숨김
+  # 디렉토리를 건너뛰는 반면 find는 그러지 않아, 같은 저장소에서 `just test`(12개)와
+  # `just verify`/CI/pre-push(13개)가 서로 다른 집합을 돌리고 있었다. 그 차이가
+  # contexts/.archive/ — 폐기해 치워둔 스킬 — 라서, 쓰지도 않는 스킬의 회귀 테스트가
+  # CI에서만 계속 돌며 빌드를 깨뜨릴 수 있었다. 탐색 기준을 글롭 쪽 의미론에 맞춘다.
+  # -mindepth 1: 저장소 루트 자신의 이름이 점으로 시작해도(예: ~/.dotfiles) 전체가
+  # prune되지 않도록 판정 대상에서 시작점을 뺀다.
   while IFS= read -r -d '' script; do
     SCRIPTS+=("$script")
-  done < <(find "$REPO_ROOT" -name "run.sh" -path "*/tests/run.sh" -print0 2>/dev/null | sort -z || true)
+  done < <(find "$REPO_ROOT" -mindepth 1 -type d -name '.*' -prune -o -name "run.sh" -path "*/tests/run.sh" -print0 2>/dev/null | sort -z || true)
 fi
 
 # 대상 스크립트가 없으면 무검증 통과 방지를 위해 명시적으로 경고 후 중단(exit 1)

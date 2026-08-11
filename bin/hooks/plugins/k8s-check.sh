@@ -15,6 +15,11 @@ set -euo pipefail
 K8S_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$K8S_CHECK_DIR/../../lib/script-init.sh"
+# 검사 대상 수집 SSOT. pre-flight-check.sh 가 넘긴 대상 목록이 있으면 그걸 쓰고,
+# 인자 없이 직접 호출되면(회귀 테스트·수동 실행) 스테이징 기준으로 폴백한다.
+# shellcheck source-path=SCRIPTDIR
+source "$K8S_CHECK_DIR/../../lib/plugin-targets.sh"
+PLUGIN_TARGET_FILES=("$@")
 
 log_info "======================================================"
 log_info "=== K8s-Specific Validation Pipeline Started ==="
@@ -47,9 +52,7 @@ GLOBAL_STAGED_YAML_FILES=()
 # 1. Kyverno Native Policy Test
 check_kyverno() {
   local test_files=()
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t test_files < <(git diff --cached --name-only -z --diff-filter=ACM -- '*kyverno-test.yaml' 2>/dev/null)
-  fi
+  mapfile -d '' -t test_files < <(plugin_target_files '*kyverno-test.yaml')
   if [ "${#test_files[@]}" -eq 0 ] || [ -z "${test_files[0]}" ]; then
     return 0
   fi
@@ -168,9 +171,7 @@ check_deprecated_apis() {
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
 main() {
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t GLOBAL_STAGED_YAML_FILES < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' 2>/dev/null)
-  fi
+  mapfile -d '' -t GLOBAL_STAGED_YAML_FILES < <(plugin_target_files '*.yaml' '*.yml')
 
   check_kyverno
   check_prometheus_rules

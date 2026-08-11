@@ -20,6 +20,17 @@ set -euo pipefail
 AIOPS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$AIOPS_CHECK_DIR/../../lib/script-init.sh"
+# 검사 대상 수집 SSOT (k8s-check.sh 와 동일 이유 — bin/lib/plugin-targets.sh 헤더 참조).
+# shellcheck source-path=SCRIPTDIR
+source "$AIOPS_CHECK_DIR/../../lib/plugin-targets.sh"
+PLUGIN_TARGET_FILES=("$@")
+# 나머지 두 플러그인과 동일하게 도구 가용성 요약 배너를 남기기 위해 tool-probe.sh 를 로드한다.
+# 이 플러그인은 has_tool 을 직접 쓰지 않지만, 위임 대상인 validate-telemetry-schema.sh 가
+# 도구 부재로 검증을 건너뛰었을 때 print_unavailable_tools 가 그 사실을 드러낼 수 있어야 한다.
+# shellcheck source-path=SCRIPTDIR
+if [ -f "$AIOPS_CHECK_DIR/../../lib/tool-probe.sh" ]; then
+  source "$AIOPS_CHECK_DIR/../../lib/tool-probe.sh"
+fi
 
 log_info "======================================================"
 log_info "=== AIOps-Specific Validation Pipeline Started ==="
@@ -40,9 +51,7 @@ fi
 # 텔레메트리 매니페스트(시크릿/ISMS-P 가드레일) 검증
 check_telemetry_manifests() {
   local staged=() manifest_files=() scan_files=() f
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
-    mapfile -d '' -t staged < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.yaml' '*.yml' '*.json' '*.tf' 2>/dev/null)
-  fi
+  mapfile -d '' -t staged < <(plugin_target_files '*.yaml' '*.yml' '*.json' '*.tf')
   [ "${#staged[@]}" -eq 0 ] && return 0
 
   # 판정 트리거: yaml/yml 중 ClosedLoopPolicy/TelemetryCollectorConfig kind가 하나라도
@@ -96,6 +105,10 @@ main() {
 
   log_info "======================================================"
   log_info "=== AIOps-Specific Checks Passed Successfully ==="
+  # tool-probe.sh 를 로드하지 못한 환경(구버전 배포본 등)에서도 죽지 않도록 존재 확인 후 호출.
+  if declare -F print_unavailable_tools >/dev/null; then
+    print_unavailable_tools
+  fi
   log_info "======================================================"
 }
 

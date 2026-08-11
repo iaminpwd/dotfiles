@@ -78,7 +78,14 @@ validate_terraform() {
       # tflint가 잡지 못하는 보안 오구성(Security Misconfiguration) 검사
       # OSS checkov는 심각도 필터가 미지원되어, 하나라도 지적 시 커밋이 중단됨
       log_info "Running checkov (Terraform security misconfiguration scan)..."
-      if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM --skip-path contexts/aws/tests/fixtures --skip-path contexts/azure/tests/fixtures --skip-path contexts/openstack/tests/fixtures --skip-path contexts/k8s/tests/fixtures; then
+      # --skip-path: 의도적 위반을 담은 회귀 테스트 픽스처 제외. 예전엔 dotfiles 전용
+      # 경로 4개(contexts/<스킬>/tests/fixtures)를 하나씩 나열했는데, 이 검증기는 전역
+      # 훅으로 임의 저장소에서 도는 범용 코드라 남의 저장소엔 맞지 않는 데다,
+      # fixtures-conftest / fixtures-sam 처럼 접미사가 붙은 실제 픽스처 디렉토리
+      # (전체 21개 중 12개)는 어디에도 안 걸려 그대로 스캔되고 있었다. checkov의
+      # --skip-path는 부분 일치라 이 한 패턴이 중첩 경로와 접미사형을 모두 덮는다
+      # (실측: contexts/aws/tests/fixtures, contexts/k8s/tests/fixtures-conftest 둘 다 제외).
+      if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM --skip-path 'tests/fixtures'; then
         echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
@@ -204,13 +211,30 @@ validate_ansible() {
       # ansible-lint.yml이 ansible/ 하위(비표준 위치)에 있어 -c 없이 실행하면
       # auto-discovery가 안 돼 exclude_paths/offline 설정이 무시된다 -> -c로 명시 지정.
       # (참고: 과거 .config/ansible-lint.yml 위치는 auto-discovery 대상이라 -c가 불필요했음)
+      # ansible-lint는 실행 중 CWD에 .ansible/ 캐시를 만들어 두고 스스로 치우지 않는다.
+      # 그렇다고 무조건 rm -rf 하면 안 된다: 이 검증기는 전역 core.hooksPath 훅을 통해
+      # ~/workspace 하위의 임의 저장소에서도 도는데, .ansible/ 은 우리 전용 경로가 아니라
+      # `ansible-galaxy collection install -p .ansible` 로 프로젝트 로컬 컬렉션을 두는
+      # 실제 관례가 있는 경로다. 소유권 검증 없이 지우면 사용자 데이터를 확인 없이
+      # 날린다 — prune-orphan-skills.sh(전부 심볼릭 링크일 때만 삭제)와
+      # stow-backup.sh(실제 디렉토리는 절대 미접촉)가 방어하는 "공유 경로를 우리 것으로
+      # 오판"과 정확히 같은 클래스의 버그다. 실행 전부터 있었다면 우리가 만든 게 아니므로
+      # 그대로 보존하고, 우리가 만들었을 때만 치운다.
+      local ansible_cache_owned=0
+      [ -e ".ansible" ] || ansible_cache_owned=1
+
       local lint_cmd=(ansible-lint -c ansible/ansible-lint.yml)
-      if ! "${lint_cmd[@]}"; then
-        echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
+      local lint_rc=0
+      "${lint_cmd[@]}" || lint_rc=$?
+
+      if [ "$ansible_cache_owned" -eq 1 ]; then
         rm -rf .ansible
+      fi
+
+      if [ "$lint_rc" -ne 0 ]; then
+        echo "❌ [ERROR] ansible-lint 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
         return 1
       fi
-      rm -rf .ansible
       log_info "✅ ansible-lint passed."
     else
       log_info "[WARNING] ansible-lint is not installed. Skipping lint validation."

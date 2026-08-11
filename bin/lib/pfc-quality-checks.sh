@@ -264,13 +264,20 @@ validate_security() {
     log_info "[SUCCESS] Trivy secret scan passed."
 
     # 2. 취약점/오구성(vuln/misconfig) 경고 (커밋 중단 안함)
-    # --skip-dirs: 의도적 위반을 담은 회귀 테스트 픽스처를 제외하여 노이즈 방지
+    # --skip-dirs: 의도적 위반을 담은 회귀 테스트 픽스처를 제외하여 노이즈 방지.
+    # 끝의 * 필수 — 실제 픽스처 디렉토리 21개 중 12개가 fixtures-sam / fixtures-shell /
+    # fixtures-conftest 처럼 접미사형이라, 예전 패턴('**/tests/fixtures')은 정확히
+    # 'fixtures' 인 9개만 걸러내고 나머지는 그대로 스캔해 노이즈를 냈다.
+    #
+    # 위 1번 시크릿 스캔에는 의도적으로 --skip-dirs를 걸지 않는다. 그쪽은 하드 블록이라
+    # 제외 범위를 넓히면 픽스처 디렉토리에 실수로 들어간 진짜 자격 증명을 놓치게 된다
+    # (노이즈 감소보다 유출 차단이 우선).
     log_info "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
     local tmp_vuln
     tmp_vuln=$(mktemp)
     # Trivy --exit-code 0 시 출력 파싱으로 취약점 존재 여부 및 실행 실패 판별
     if trivy fs -q "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
-      --skip-dirs '**/tests/fixtures' . >"$tmp_vuln" 2>&1; then
+      --skip-dirs '**/tests/fixtures*' . >"$tmp_vuln" 2>&1; then
       # 결과 테이블에 취약점이 있는지 확인 (Total: 0 이 아닌 경우)
       # Trivy 출력에 ANSI 색상 코드가 포함되어 있을 수 있으므로 제거 후 검사
       local clean_out
