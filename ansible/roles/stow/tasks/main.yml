@@ -58,6 +58,12 @@
     label: "{{ item.path | basename }}"
   register: stow_drift_check
   changed_when: false
+  # 상태를 전혀 바꾸지 않는 읽기 전용 판정이라 --check(dry-run)에서도 그대로 실행한다.
+  # command/shell 모듈은 check 모드에서 기본적으로 건너뛰는데, 그러면 이 판정이 스킵되고
+  # stow_drift_check.results 가 비어 아래 stow 태스크까지 통째로 스킵돼, `just setup-dryrun`
+  # 이 stow 롤에 대해 아무것도 판정하지 않은 채 "변경 없음"처럼 보였다
+  # (실측: --tags stow --check → ok=4 skipped=4).
+  check_mode: false
 
 # --no-folding 필수: 대상 디렉토리(예: ~/.config/mise)를 미리 만들어 둬도 비어 있으면
 # GNU Stow가 그 부모(~/.config)까지 통째로 하나의 심볼릭 링크로 접어버린다(실측
@@ -72,5 +78,19 @@
   loop: "{{ stow_drift_check.results }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
-  register: stow_result
   changed_when: "item.stdout is defined and item.stdout.strip() == '1'"
+
+# 위 stow 태스크는 실제로 상태를 바꾸므로 check 모드에서는 계속 스킵된다. 그러면 dry-run
+# 사용자가 "무엇이 재링크될 예정인가"를 알 수 없으므로, 위 드리프트 판정 결과를 근거로
+# 대상 패키지 목록만 따로 출력한다.
+- name: 재링크 예정 stow 패키지 안내 (dry-run 전용)
+  ansible.builtin.debug:
+    msg: >-
+      {{
+        (stow_drift_check.results
+          | selectattr('stdout', 'defined')
+          | selectattr('stdout', 'search', '1')
+          | map(attribute='item.path') | map('basename') | list)
+        or ['(드리프트 없음 — 재링크 대상 없음)']
+      }}
+  when: ansible_check_mode
