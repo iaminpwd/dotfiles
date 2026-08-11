@@ -10,7 +10,7 @@ plugins=(git kubectl terraform zsh-autosuggestions zsh-syntax-highlighting)
 # HIST_STAMPS: oh-my-zsh.sh 로드 이전 선언 필수 (history.zsh 로드 시점 확정)
 HIST_STAMPS="yyyy-mm-dd"        # 히스토리에 날짜/시간 기록
 
-source $ZSH/oh-my-zsh.sh
+source "$ZSH/oh-my-zsh.sh"
 
 # --- [ZSH History Settings (Pro)] ---
 setopt HIST_IGNORE_ALL_DUPS     # 중복된 명령어는 히스토리에 한 번만 기록
@@ -61,7 +61,9 @@ alias kw='watch kubectl'
 
 # 2.5. Docker & Helm 관련
 alias d='docker'
-alias dc='docker-compose'
+# ansible docker 롤이 설치하는 건 docker-compose-plugin(v2, `docker compose` 서브커맨드)이다.
+# v1 단독 바이너리(docker-compose)는 이 저장소 어디서도 설치하지 않아 항상 command not found였다.
+alias dc='docker compose'
 alias h='helm'
 
 # 3. Terraform 관련
