@@ -244,6 +244,12 @@ cases = [
     ("RRN 마스킹", "RRN 900101-1234567 detected", "900101-1234567", "[MASKED_RRN]"),
     ("카드번호 마스킹", "Card 4111 1111 1111 1111 used", "4111 1111 1111 1111", "[MASKED_CARD_NUMBER]"),
     ("계좌번호 마스킹", "account 123-45-67890 error", "123-45-67890", "[MASKED_ACCOUNT_NUMBER]"),
+    # 아래 셋은 실제로 유출되던 축이다. 위 세 케이스는 각 패턴이 대표 표기 하나씩만
+    # 다루는지 볼 뿐이라, 구분자가 바뀌거나 카테고리가 통째로 빠진 경우를 못 잡았다.
+    # 이 클래스를 통과한 텍스트만 프라이빗 LLM 게이트웨이로 나가므로 누락은 곧 유출이다.
+    ("카드번호 마스킹(점 구분자)", "Card 1234.5678.9012.3456 used", "1234.5678.9012.3456", "[MASKED_CARD_NUMBER]"),
+    ("RRN 마스킹(외국인 등록번호 5-8)", "RRN 900101-5234567 detected", "900101-5234567", "[MASKED_RRN]"),
+    ("이메일 마스킹", "user hong@bank.co.kr failed login", "hong@bank.co.kr", "[MASKED_EMAIL]"),
 ]
 for name, raw, sensitive, marker in cases:
     out = sanitize(raw)
@@ -252,6 +258,11 @@ for name, raw, sensitive, marker in cases:
 # 과잉 마스킹 회귀: PII가 없는 평범한 텍스트는 그대로 통과해야 한다.
 plain = "Connection timed out with no PII here."
 check("PII 없는 텍스트는 원형 보존", sanitize(plain) == plain, f"sanitize({plain!r}) -> {sanitize(plain)!r}")
+
+# 구분자를 넓히면(점 추가) 버전 문자열·타임스탬프처럼 점과 숫자가 섞인 평범한 로그를
+# 카드번호로 오탐하기 쉬우므로, 그 축도 같이 고정한다.
+noisy = "v1.2.3 at 2026-08-12 07:32:09 latency=245ms host=web-01"
+check("숫자·점이 섞인 평범한 로그는 원형 보존", sanitize(noisy) == noisy, f"sanitize({noisy!r}) -> {sanitize(noisy)!r}")
 
 sys.exit(1 if failures else 0)
 PY
