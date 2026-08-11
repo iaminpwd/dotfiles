@@ -70,7 +70,11 @@
 
 - name: 사용자를 docker 그룹에 추가 (Debian)
   ansible.builtin.user:
-    name: "{{ ansible_env.USER }}"
+    # ansible_env.USER는 셸 환경변수 USER가 export 안 된 환경(컨테이너 docker exec,
+    # PAM 로그인 세션 없는 su 등)에서 키 자체가 없어 fatal error를 낸다(실제 재현됨:
+    # "object of type 'dict' has no attribute 'USER'"). ansible_user_id는 OS 사용자
+    # 정보에서 직접 오는 내장 팩트라 이런 환경 의존성이 없다.
+    name: "{{ ansible_user_id }}"
     groups: docker
     append: true
   become: true
@@ -108,7 +112,8 @@
 
 - name: 사용자를 docker 그룹에 추가 (RHEL)
   ansible.builtin.user:
-    name: "{{ ansible_env.USER }}"
+    # ansible_env.USER 대신 ansible_user_id를 쓰는 이유는 위 Debian 태스크 주석 참고.
+    name: "{{ ansible_user_id }}"
     groups: docker
     append: true
   become: true

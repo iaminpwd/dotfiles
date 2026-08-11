@@ -39,7 +39,10 @@
 
 - name: 사용자의 기본 셸을 zsh로 변경
   ansible.builtin.user:
-    name: "{{ ansible_env.USER }}"
+    # ansible_env.USER는 셸 환경변수 USER가 export 안 된 환경(컨테이너 docker exec,
+    # PAM 로그인 세션 없는 su 등)에서 키 자체가 없어 fatal error를 낸다(실제 재현됨,
+    # ansible/roles/docker/tasks/main.yml 주석 참고). ansible_user_id로 대체.
+    name: "{{ ansible_user_id }}"
     shell: "{{ zsh_path.stdout }}"
   become: true
   when:
