@@ -48,7 +48,8 @@ check_telemetry_manifests() {
   # 판정 트리거: yaml/yml 중 ClosedLoopPolicy/TelemetryCollectorConfig kind가 하나라도
   # 스테이징돼야 활성화한다(무관한 저장소의 모든 yaml/tf/json 커밋마다 도는 것을 방지).
   for f in "${staged[@]}"; do
-    [ -z "$f" ] || [ -f "$f" ] || continue
+    [ -z "$f" ] && continue
+    [ -f "$f" ] || continue
     case "$f" in
     *.yaml | *.yml)
       grep -qE "^kind:[[:space:]]*(ClosedLoopPolicy|TelemetryCollectorConfig)" "$f" 2>/dev/null && manifest_files+=("$f")
@@ -68,7 +69,8 @@ check_telemetry_manifests() {
   # 트리거된 경우, 같은 커밋에 함께 스테이징된 yaml/yml/json/tf 전체를 대상으로 삼는다
   # (시크릿이 kind: 매니페스트가 아니라 옆에 딸린 .tf/.json에 있을 수도 있으므로).
   for f in "${staged[@]}"; do
-    [ -z "$f" ] || [ -f "$f" ] || continue
+    [ -z "$f" ] && continue
+    [ -f "$f" ] || continue
     scan_files+=("$f")
   done
 
