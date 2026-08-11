@@ -50,6 +50,9 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
+          # force-push 로 히스토리가 재작성되면 BEFORE_SHA 가 저장소에서 사라져 범위 계산이
+          # 불가능해진다. 그때 쓸 폴백으로 이번 푸시에 포함된 커밋 id 목록을 넘긴다.
+          PUSHED_SHAS: ${{ join(github.event.commits.*.id, ' ') }}
         run: bash .github/scripts/lint-commit-messages.sh
 
       - name: Install mise
