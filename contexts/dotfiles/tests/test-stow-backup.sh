@@ -86,6 +86,40 @@ else
   report "fail-foreign-absolute-link (절대경로 링크는 같은 대상이어도 백업)" 1 "$(ls -la "$CASE2B/home" 2>&1)"
 fi
 
+# 2c. fail-stale-relative-link: 패키지 디렉토리가 옮겨져(예: zsh/ -> stow/zsh/) 상대경로
+#     링크가 끊어진 경우도, "상대경로면 무조건 stow 소유로 본다"는 예전 로직으론 놓치고
+#     GNU Stow가 "not owned by stow"로 -R을 거부한다(실측: stow/ 이관 직후 재현).
+CASE2C="$TMP/case2c"
+mkdir -p "$CASE2C/dotfiles/pkg" "$CASE2C/home"
+echo "dotfiles 버전" >"$CASE2C/dotfiles/pkg/.movedrc"
+ln -s "../old-location/pkg/.movedrc" "$CASE2C/home/.movedrc"
+
+bash "$BACKUP" "pkg" "$CASE2C/dotfiles" "$CASE2C/home"
+
+STALE_BACKUPS=("$CASE2C/home"/.movedrc.backup.*)
+if [ ! -e "$CASE2C/home/.movedrc" ] && [ -L "${STALE_BACKUPS[0]}" ]; then
+  report "fail-stale-relative-link (패키지 이동으로 끊어진 상대경로 링크는 백업)" 0
+else
+  report "fail-stale-relative-link (패키지 이동으로 끊어진 상대경로 링크는 백업)" 1 "$(ls -la "$CASE2C/home" 2>&1)"
+fi
+
+# 2d. fail-stale-relative-dirlink: GNU Stow는 ~/.githooks처럼 대상 디렉토리가 없으면
+#     통째로 심볼릭 링크한다(tree-folding). 파일 단위로만 순회하면 이 디렉토리 링크
+#     자체를 만나지 못해 정리가 안 됐다(실측: git/.githooks -> stow/git/.githooks 재현).
+CASE2D="$TMP/case2d"
+mkdir -p "$CASE2D/dotfiles/pkg/.hooksdir" "$CASE2D/home"
+echo "dotfiles 버전" >"$CASE2D/dotfiles/pkg/.hooksdir/pre-commit"
+ln -s "../old-location/pkg/.hooksdir" "$CASE2D/home/.hooksdir"
+
+bash "$BACKUP" "pkg" "$CASE2D/dotfiles" "$CASE2D/home"
+
+DIR_BACKUPS=("$CASE2D/home"/.hooksdir.backup.*)
+if [ ! -e "$CASE2D/home/.hooksdir" ] && [ -L "${DIR_BACKUPS[0]}" ]; then
+  report "fail-stale-relative-dirlink (패키지 이동으로 끊어진 디렉토리 링크는 백업)" 0
+else
+  report "fail-stale-relative-dirlink (패키지 이동으로 끊어진 디렉토리 링크는 백업)" 1 "$(ls -la "$CASE2D/home" 2>&1)"
+fi
+
 # 3. ok-no-conflict: HOME에 해당 경로가 아예 없으면 아무 것도 하지 않고 exit 0이어야 한다.
 CASE3="$TMP/case3"
 mkdir -p "$CASE3/dotfiles/pkg" "$CASE3/home"
