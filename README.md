@@ -41,7 +41,7 @@
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
 - **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`) 양쪽에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
-- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, azure)을 스스로 호출합니다.
+- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
 - **실시간 사전 검증 훅:** `bin/hooks/pre-flight-live-hook.sh`가 Claude Code `PostToolUse`(`Edit|Write|MultiEdit`)에 등록되어, AI가 파일을 편집한 직후 그 파일 1개만 대상으로 `pre-flight-check.sh`를 `run-suite.sh` 경유로 즉시 실행합니다(`--pfc-args="<파일>"`로 explicit 모드 패스스루, `contexts/*/tests/run.sh` 12개가 딸려오는 기본 전체 수집 분기는 안 탐). 최종 하드 게이트인 `stow/git/.githooks/pre-commit`은 여전히 커밋 시점에만 발동하므로, 이 훅은 그 이전 — "AI가 코드를 짜고 완료를 선언하는 시점" — 의 시차를 좁히는 2차 방어선입니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 한 줄만 `additionalContext`로 조용히 실어(대화 메시지로는 안 보임) "통과했다"와 "훅이 애초에 안 돌았다"를 구분 가능하게 하고, 실패 시엔 `decision:block` JSON으로 AI에게 즉시 피드백을 줍니다. 훅 자신은 fail-open이라 실패해도 에이전트 루프를 막지 않습니다(최종 판정은 계속 커밋 게이트 몫). `terraform init` 등 네트워크·빌드 의존 검증이 걸리는 `.tf`/`.tfvars`/`.bicep`은 편집마다 돌면 지연이 커서 이 훅에서 제외하고, 커밋 시점 게이트에서만 검증합니다.
@@ -56,10 +56,11 @@
 | 워크스페이스 | 모듈 수 | 주요 커버리지 |
 |---|---|---|
 | **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
-| **Azure** (`azure/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), AKS, Serverless, Database, Day2 운영 및 사고 대응 |
 | **Dotfiles** (`dotfiles/`) | 10개 (`000`~`060`) | 인지 엔진, 계획서·핸드오프 설계도 작성 표준, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 규칙 근거·승격 표준, 트러블슈팅 |
 
-> K8s, Multi-Cloud, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
+> K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
+>
+> Azure · Multi-Cloud · OpenStack 워크스페이스는 현재 사용하지 않아 `contexts/.archive/`로 보관했습니다. 룰북 자체는 그대로 남아 있으므로 다시 쓰게 되면 `contexts/` 아래로 되돌리기만 하면 됩니다(스킬 스캔·글로벌 등록·테스트 탐색이 모두 폴더 위치만 보고 자동으로 다시 잡습니다).
 
 ---
 
@@ -150,13 +151,12 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
-│   ├── aws/, azure/, dotfiles/            # 🟢 Production 워크스페이스 룰북
+│   ├── aws/, dotfiles/                    # 🟢 Production 워크스페이스 룰북
 │   ├── aiops/, containers/, drawio-gen/, k8s/,
-│   │   multi-cloud/, observability/,
-│   │   openstack/, pre-flight-check/,
+│   │   observability/, pre-flight-check/,
 │   │   prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
 │   ├── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
-│   └── .archive/              # 사용 종료된 스킬 보관소
+│   └── .archive/              # 사용 종료된 스킬 보관소 (azure/, multi-cloud/, openstack/, agent-handoff/)
 │                              # ↑ 두 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob과
 │                              #   ansible.builtin.find가 기본적으로 숨김 항목을 건너뛰므로, 스킬
 │                              #   스캔·글로벌 등록·테스트 탐색 대상에서 구조적으로 자동 제외된다

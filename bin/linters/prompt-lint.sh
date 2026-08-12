@@ -37,6 +37,25 @@ REPO_ROOT=$(cd "$PROMPT_LINT_SCRIPT_DIR/../.." && pwd)
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 EXIT_CODE=0
 
+# 벤더 미러링 쌍: 같은 개념이 각 벤더 스킬에 "의도적으로" 각각 존재하는 관계.
+# check_vendor_mirror_symmetry(조항 수 대조)와 check_cross_skill_duplication(중복 후보
+# 탐지)이 둘 다 이 전제를 쓰는데, 예전엔 양쪽이 'aws|azure'를 각자 하드코딩하고 있었다.
+# 한쪽을 .archive 로 보관하면 미러링 관계 자체가 사라지므로, 실제로 활성인 스킬만 남겨
+# 두 검사가 같은 사실을 보게 한다(한쪽만 고치면 낡는 SSOT 위반을 제거).
+MIRROR_PAIR=()
+for _mirror_skill in aws azure; do
+  [ -d "$CONTEXTS_DIR/$_mirror_skill/references" ] && MIRROR_PAIR+=("$_mirror_skill")
+done
+unset _mirror_skill
+# 정규식 조각. 쌍이 성립하지 않으면(활성 스킬이 2개 미만) 미러링 예외는 적용하지 않는다.
+MIRROR_ALT=""
+if [ "${#MIRROR_PAIR[@]}" -ge 2 ]; then
+  MIRROR_ALT=$(
+    IFS='|'
+    echo "${MIRROR_PAIR[*]}"
+  )
+fi
+
 log_info "======================================================"
 log_info "=== Prompt Corpus Lint Started ==="
 log_info "======================================================"
@@ -54,7 +73,7 @@ check_ssot_module_lists() {
     return
   fi
 
-  local corefile skill_dir declared_line declared actual own_prefix
+  local corefile skill_dir declared_line declared actual own_prefix ref_md ref_names
   for corefile in "${core_files[@]}"; do
     [ -z "$corefile" ] && continue
     skill_dir=$(dirname "$(dirname "$corefile")")
@@ -64,7 +83,17 @@ check_ssot_module_lists() {
     declared_line=$(grep "공통 자가 비판 절차" "$corefile" || true)
     declared=$(grep -oE '\([0-9]{3}(, [0-9]{3})*\)' <<<"$declared_line" | tr -d '()' | tr -d ' ' | tr ',' '\n' | sort -u || true)
 
-    actual=$(find "$skill_dir/references" -path "*/.archive/*" -prune -o -maxdepth 1 -name "*.md" -printf '%f\n' 2>/dev/null |
+    # find -printf 는 GNU 전용이라 macOS(BSD find)에서는 아무것도 출력하지 못한다.
+    # 그런데 2>/dev/null 로 그 에러가 묻혀 actual 이 빈 값이 되고, 결국 declared 와
+    # 어긋나 "SSOT 모듈 목록 불일치"라는 없는 결함을 신고하며 커밋을 막는다.
+    # references/ 바로 아래만 보므로(기존 -maxdepth 1 과 동등) 셸 글롭으로 대체한다.
+    # 참고: 기존의 -path "*/.archive/*" -prune 은 깊이 1에서는 매치될 수 없어 무의미했다.
+    ref_names=()
+    for ref_md in "$skill_dir"/references/*.md; do
+      [ -f "$ref_md" ] || continue
+      ref_names+=("${ref_md##*/}")
+    done
+    actual=$(printf '%s\n' "${ref_names[@]:-}" |
       grep -oE '^[0-9]{3}' | grep -v "^${own_prefix}$" | sort -u || true)
 
     if [ "$declared" != "$actual" ]; then
@@ -374,7 +403,17 @@ check_cross_skill_duplication() {
   # 모든 도메인에서 정당하게 등장하므로 중복 신호가 되지 못한다 — 같은 도구를 쓸 뿐
   # 서로 다른 도메인 조항인 경우가 실제로 있었다. 개념만 남긴다.
   local concepts=("SLI/SLO" "RED (Rate" "Error Budget" "카디널리티")
-  local concept files skill_count
+  local concept files skill_count mirror_re mirror_note
+  # 미러링 쌍이 성립할 때만 그 둘을 집계에서 빼고, 문구에도 그 사실을 밝힌다. 쌍이
+  # 깨졌으면(한쪽이 .archive) 예외 없이 모든 스킬을 세고 문구에서도 미러링을 언급하지
+  # 않는다 — 없는 관계를 근거로 보고하면 읽는 사람이 사실과 다른 구조를 전제하게 된다.
+  if [ -n "$MIRROR_ALT" ]; then
+    mirror_re="^($MIRROR_ALT)$"
+    mirror_note="${MIRROR_PAIR[0]}/${MIRROR_PAIR[1]} 미러링 범위를 넘어 "
+  else
+    mirror_re='^$'
+    mirror_note=""
+  fi
   for concept in "${concepts[@]}"; do
     files=$(grep -E "$concept" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null |
       grep -v "위임\|참조하십시오\|참조하고" |
@@ -382,9 +421,10 @@ check_cross_skill_duplication() {
     [ -z "$files" ] && continue
     # grep -vc는 카운트가 0일 때 종료 코드 1을 반환해 set -euo pipefail 하의 대입이
     # 린터 전체를 조용히 죽인다. 카운트 0은 정상 결과이므로 || true로 흡수한다.
-    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "^(aws|azure)$" || true)
-    if [ "$skill_count" -ge 2 ] || { [ "$skill_count" -ge 1 ] && grep -qE "$CONTEXTS_DIR/(aws|azure)/" <<<"$files"; }; then
-      echo "[WARNING] '$concept' 개념이 aws/azure 미러링 범위를 넘어 여러 스킬에 실질적으로 등장 (중복 검토 필요):"
+    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "$mirror_re" || true)
+    if [ "$skill_count" -ge 2 ] ||
+      { [ "$skill_count" -ge 1 ] && [ -n "$MIRROR_ALT" ] && grep -qE "$CONTEXTS_DIR/($MIRROR_ALT)/" <<<"$files"; }; then
+      echo "[WARNING] '$concept' 개념이 ${mirror_note}여러 스킬에 실질적으로 등장 (중복 검토 필요):"
       while IFS= read -r hit_file; do
         [ -n "$hit_file" ] && echo "[WARNING]     $hit_file"
       done <<<"$files"
@@ -398,31 +438,42 @@ check_cross_skill_duplication() {
 # -----------------------------------------------------------------------------
 check_vendor_mirror_symmetry() {
   log_info "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
+  # 미러링 쌍이 다 활성 상태일 때만 의미가 있는 검사다(MIRROR_PAIR 정의부 주석 참조).
+  # 한쪽을 .archive로 보관하면 그쪽 references 디렉토리가 사라지는데, 아래 find 가 없는
+  # 경로를 받으면 0이 아닌 코드로 끝나고 pipefail+set -e 가 이 린터 전체를 아무 메시지
+  # 없이 죽인다(실측: azure 보관 직후 prompt-lint 가 exit 1 로 조용히 중단 — 커밋
+  # 게이트가 "검사 실패"로 막히는데 이유가 출력되지 않았다). 쌍이 없으면 건너뛴다.
+  if [ "${#MIRROR_PAIR[@]}" -lt 2 ]; then
+    log_info "[INFO] 미러링 쌍(aws/azure) 중 한쪽이 활성 스킬이 아니어서 대칭성 검사를 건너뜁니다."
+    return 0
+  fi
   # aws/azure 미러링은 9번 검사 주석대로 의도된 구조다. 다만 한쪽 벤더에만 조항을
   # 추가하면 드리프트가 쌓이므로 동일 번호 모듈의 조항 수를 대조해 경고한다.
   # 조항명은 벤더 용어로 갈리므로(TGW <-> vWAN, IRSA <-> Workload Identity) 이름이
   # 아니라 개수만 비교해야 대응어 28건을 오탐하지 않는다.
-  local f prefix azure_file a_count z_count
-  for f in "$CONTEXTS_DIR"/aws/references/*.md; do
+  # 벤더 이름은 MIRROR_PAIR 에서 받아 쓴다(하드코딩 제거 — 정의부가 SSOT).
+  local lhs="${MIRROR_PAIR[0]}" rhs="${MIRROR_PAIR[1]}"
+  local f prefix rhs_file a_count z_count
+  for f in "$CONTEXTS_DIR/$lhs/references"/*.md; do
     [ -f "$f" ] || continue
     # || true 가 없으면 숫자 접두사 없는 .md 하나만 있어도 grep 이 1을 반환해 린터가
     # 메시지 없이 죽고, 바로 아래 작성자 의도의 가드가 영영 도달하지 못한다.
     prefix=$(basename "$f" | grep -oE '^[0-9]{3}' || true)
     [ -z "$prefix" ] && continue
-    azure_file=$(find "$CONTEXTS_DIR/azure/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
-    if [ -z "$azure_file" ]; then
-      echo "[WARNING] aws/azure 미러링 누락: azure 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
+    rhs_file=$(find "$CONTEXTS_DIR/$rhs/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
+    if [ -z "$rhs_file" ]; then
+      echo "[WARNING] $lhs/$rhs 미러링 누락: $rhs 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
       continue
     fi
     a_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$f" || true)
-    z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$azure_file" || true)
+    z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$rhs_file" || true)
     if [ "$a_count" -ne "$z_count" ]; then
-      echo "[WARNING] aws/azure 조항 수 불일치 (${prefix}): aws ${a_count}건 / azure ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
+      echo "[WARNING] $lhs/$rhs 조항 수 불일치 (${prefix}): $lhs ${a_count}건 / $rhs ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
       echo "[WARNING]     $f"
-      echo "[WARNING]     $azure_file"
+      echo "[WARNING]     $rhs_file"
     fi
   done
-  log_info "[INFO] aws/azure 미러링 대칭성 검사 완료."
+  log_info "[INFO] $lhs/$rhs 미러링 대칭성 검사 완료."
 }
 
 # -----------------------------------------------------------------------------

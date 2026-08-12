@@ -328,6 +328,71 @@ reviewed: $TODAY
 EOF
 check "ok-aws-ref-without-numeric-prefix (완주)" 0 "Prompt Corpus Lint Passed" "$D"
 
+# 13. 미러링 짝(azure)이 .archive 로 보관되어 사라진 경우. 예전에는 없는 디렉토리를 받은
+#     find 가 0이 아닌 코드로 끝나고 pipefail+set -e 가 린터를 아무 메시지 없이 죽였다
+#     (실측: azure 보관 직후 prompt-lint 가 exit 1 로 조용히 중단 — 커밋 게이트가 이유
+#     없이 막혔다). 한쪽이 비활성이면 그 검사만 건너뛰고 완주해야 한다.
+D=$(new_case ok-mirror-pair-archived)
+mkdir -p "$D/contexts/aws/references" "$D/contexts/.archive/azure/references"
+cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
+---
+role: AWS Core
+reviewed: $TODAY
+---
+# 9. AWS 코어
+
+- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
+EOF
+cat >"$D/contexts/.archive/azure/references/010-azure-core.md" <<EOF
+---
+role: Azure Core
+reviewed: $TODAY
+---
+# 9. Azure 코어
+
+- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
+EOF
+check "ok-mirror-pair-archived (짝이 보관돼도 완주)" 0 "Prompt Corpus Lint Passed" "$D"
+
+# 14. 미러링 쌍이 깨진 상태에서 개념이 "한 스킬에만" 있으면 경고가 없어야 한다.
+#     쌍이 없을 때 제외 정규식을 잘못 만들면 단일 스킬 등장까지 중복으로 오탐한다.
+D=$(new_case ok-single-skill-concept-without-mirror)
+mkdir -p "$D/contexts/aws/references"
+cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
+---
+role: AWS Core
+reviewed: $TODAY
+---
+# 9. AWS 코어
+
+- **[MUST] Observability:** SLI/SLO 를 정의하십시오.
+EOF
+check_clean "ok-single-skill-concept-without-mirror (단일 등장은 무경고)" "$D"
+
+# 15. 반대편: 쌍이 깨진 상태에서 개념이 두 스킬에 걸치면 여전히 경고해야 하고, 그때
+#     문구가 없는 미러링 관계를 근거로 대지 않아야 한다(사실과 다른 구조 전제 방지).
+D=$(new_case warn-two-skill-concept-without-mirror)
+mkdir -p "$D/contexts/aws/references" "$D/contexts/k8s/references"
+for v in aws k8s; do
+  cat >"$D/contexts/$v/references/010-$v-core.md" <<EOF
+---
+role: ${v} Core
+reviewed: $TODAY
+---
+# 9. ${v} 코어
+
+- **[MUST] Observability:** SLI/SLO 를 정의하십시오.
+EOF
+done
+check "warn-two-skill-concept-without-mirror (교차 등장은 경고)" 0 "여러 스킬에 실질적으로 등장" "$D"
+OUT_NO_MIRROR=$( (cd "$D" && bash "$LINT") 2>&1 || true)
+if grep -qF "미러링 범위를 넘어" <<<"$OUT_NO_MIRROR"; then
+  report "warn-two-skill-concept-without-mirror (문구에 미러링 언급 없음)" 1 \
+    "쌍이 깨졌는데 미러링을 근거로 든 문구가 남아 있습니다"
+else
+  report "warn-two-skill-concept-without-mirror (문구에 미러링 언급 없음)" 0
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
