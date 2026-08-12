@@ -1,0 +1,8 @@
+# 규칙이 0건인 것은 정상이다(구조는 올바름). 위 두 실패 케이스를 잡으려다
+# 이 정상 케이스까지 막으면 오탐이 되므로 함께 고정한다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: empty-groups
+spec:
+  groups: []

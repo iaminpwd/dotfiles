@@ -4,4 +4,9 @@ exclude_paths:
   - contexts/dotfiles/tests/fixtures-ansible/
   - contexts/aws/tests/fixtures-sam/
   - contexts/pre-flight-check/tests/fixtures-yaml/
+  # PrometheusRule 정책 검증기(validate-alert-rules.sh)의 픽스처. 파싱 실패를 통과로
+  # 흘리지 않는지 고정하려면 "문법이 깨진 YAML" 픽스처가 반드시 있어야 하는데,
+  # ansible-lint 는 pre-flight-check 의 */tests/* 제외 규칙과 무관하게 저장소 전체를
+  # 스캔하는 유일한 린터라 그 픽스처를 load-failure 로 잡는다.
+  - contexts/observability/tests/fixtures/
 offline: true

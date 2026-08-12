@@ -60,13 +60,40 @@ done
 #     행 단위가 아니라 열 단위(alert 전체 -> severity 전체 -> ...)로 나와, 규칙이 2건
 #     이상일 때 필드가 전부 어긋난다. 규칙 1건짜리 파일에서는 두 순서가 우연히 일치해
 #     증상이 안 드러나므로 반드시 다중 규칙 픽스처로 검증할 것.
-RULE_FIELDS=()
-mapfile -t RULE_FIELDS < <(
-  yq eval -r "[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[]" "$FILE" 2>/dev/null
-) || {
-  echo "[FAIL] $FILE — .spec.groups[].rules[] 파싱에 실패했습니다 (PrometheusRule 구조가 아님)" >&2
+# [주의] 아래를 `mapfile -t ARR < <(yq ...) || { 실패처리 }` 로 쓰면 안 된다. mapfile 은
+# 프로세스 치환의 종료 코드를 전파하지 않고, 입력이 비면 빈 배열을 만든 뒤 그냥 0을
+# 반환한다(실측: `mapfile -t A < <(false); echo $?` -> 0). 그래서 그 형태에서는 실패
+# 처리 분기가 영영 도달하지 못하고, 파싱이 깨진 파일이 "규칙 0건 = 위반 0건"으로 흘러
+# [OK] 로 통과했다(실측: spec.groups 를 groupz 로 오타 낸 PrometheusRule 에서 runbook_url
+# 없는 critical 알람이 exit 0 으로 통과). 종료 코드를 독립적으로 받는 형태로 바꾼다.
+
+# 1) 구조 판정. yq 는 실패 유형마다 신호가 달라 rc 만으로는 부족하다:
+#      정상            -> rc=0, .spec.groups 가 !!seq
+#      키 오타(groupz) -> rc=0, .spec.groups 가 !!null   <- rc 만 보면 못 잡는다
+#      YAML 깨짐       -> rc=1
+#      groups: []      -> rc=0, !!seq (규칙 0건은 정상이므로 통과시켜야 한다)
+#    따라서 "시퀀스인가"까지 확인해야 네 경우가 모두 구분된다.
+#    (명령 치환은 mapfile 과 달리 종료 코드를 그대로 전파하므로 || 처리가 유효하다.)
+GROUPS_TYPE=$(yq eval -r '.spec.groups | type' "$FILE" 2>/dev/null) || {
+  echo "[FAIL] $FILE — YAML 파싱에 실패했습니다 (문법 오류)" >&2
   exit 1
 }
+if [ "$GROUPS_TYPE" != "!!seq" ]; then
+  echo "[FAIL] $FILE — .spec.groups 가 시퀀스가 아닙니다 (현재: $GROUPS_TYPE)." >&2
+  echo "        PrometheusRule 구조가 맞는지, spec.groups 키에 오타가 없는지 확인하십시오." >&2
+  exit 1
+fi
+
+# 2) 필드 추출. 규칙 수에 비례하던 yq 스폰을 없앤다는 위 최적화 취지는 그대로다
+#    (규칙 50건 기준 251회 -> 파일당 고정 2회).
+RULE_FIELDS=()
+YQ_OUT=$(mktemp)
+trap 'rm -f "$YQ_OUT"' EXIT
+if ! yq eval -r "[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[]" "$FILE" >"$YQ_OUT" 2>/dev/null; then
+  echo "[FAIL] $FILE — .spec.groups[].rules[] 추출에 실패했습니다" >&2
+  exit 1
+fi
+mapfile -t RULE_FIELDS <"$YQ_OUT"
 
 # 규칙 1건당 고정 필드 수: alert/severity/runbook_url + 검사 대상 레이블 개수
 FIELDS_PER_RULE=$((3 + ${#DENYLISTED_LABEL_KEYS[@]}))

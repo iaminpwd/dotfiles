@@ -1,0 +1,5 @@
+# YAML 문법이 깨진 PrometheusRule. 파싱 실패를 통과로 흘리면 안 된다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+spec:
+  groups: [unclosed

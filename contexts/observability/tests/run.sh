@@ -77,6 +77,15 @@ if require_tool yq; then
   # 두 순서가 우연히 일치해 통과한다. 실제로 그 사각지대로 필드 정렬 버그가 통과한 적이
   # 있어, 규칙 3건짜리 픽스처로 그 축을 따로 고정한다.
   run_validator ok-multi-rule.yaml 0
+
+  # 파싱·구조 실패를 "규칙 0건 = 위반 없음"으로 흘리면 하드 게이트가 조용히 무력화된다.
+  # 예전 구현은 `mapfile ... < <(yq ...) || { 실패처리 }` 형태였는데, mapfile 이 프로세스
+  # 치환의 종료 코드를 전파하지 않아 그 실패 분기가 도달 불가능했다(실측: 아래 두 픽스처가
+  # 모두 [OK] exit 0 으로 통과). 세 축을 함께 고정한다 — 오타/문법오류는 차단하되,
+  # 규칙이 0건인 정상 파일은 오탐 없이 통과해야 한다.
+  run_validator fail-typo-groups-key.yaml 1 "시퀀스가 아닙니다"
+  run_validator fail-broken-yaml.yaml 1 "YAML 파싱에 실패"
+  run_validator ok-empty-groups.yaml 0
 fi
 
 echo "--- observability-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"

@@ -1,0 +1,14 @@
+# spec.groups 키 오타(groupz). yq 는 rc=0 을 돌려주므로 종료 코드만 보면 잡히지 않고,
+# 규칙이 0건으로 읽혀 아래 critical 알람의 runbook_url 누락이 통째로 미검사된다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: typo-groups-key
+spec:
+  groupz:
+    - name: example
+      rules:
+        - alert: MissedByTypo
+          expr: up == 0
+          labels:
+            severity: critical
