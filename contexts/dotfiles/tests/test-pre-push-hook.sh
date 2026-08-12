@@ -40,7 +40,8 @@ trap 'rm -rf "$TMP"' EXIT
 # 픽스처 저장소 구성: basename이 "dotfiles"여야 훅이 활성화되고(line 22 가드),
 # 실제 run-suite.sh를 그대로 가져와 아래 aws 스텁만 호출시킨다.
 FIXTURE_REPO="$TMP/dotfiles"
-mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" "$FIXTURE_REPO/contexts/aws/tests" "$FIXTURE_REPO/contexts/azure/tests"
+mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" \
+  "$FIXTURE_REPO/contexts/aws/tests" "$FIXTURE_REPO/contexts/azure/tests" "$FIXTURE_REPO/contexts/dotfiles/tests"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 chmod +x "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 # run-suite.sh가 source하는 SSOT 라이브러리. 실제 배포 구조와 동일하게 상대 위치에 둔다.
@@ -50,7 +51,9 @@ cp "$REPO_ROOT/bin/lib/script-init.sh" "$FIXTURE_REPO/bin/lib/script-init.sh"
 # 이 스텁이 실제로 호출됐다는 증거는 run-suite.sh가 무조건 찍는 "-> [✓] <스크립트명>"
 # 압축 로그 라인으로 확인한다(아래 테스트의 grep 대상). aws/azure 두 스킬을 모두 심어,
 # "특정 스킬 경로만 건드리면 그 스킬만" vs "코어 로직을 건드리면 전체" 를 구분해서 검증한다.
-for SKILL_STUB in aws azure; do
+# dotfiles 스텁도 함께 심는다: bin/linters, git 훅 본체, ansible 롤처럼 "코어도 아니고
+# 특정 스킬 경로도 아닌" 변경이 dotfiles 스위트로 라우팅되는지(아래 1c) 확인하기 위함이다.
+for SKILL_STUB in aws azure dotfiles; do
   cat >"$FIXTURE_REPO/contexts/$SKILL_STUB/tests/run.sh" <<'EOF'
 #!/usr/bin/env bash
 exit 0
@@ -105,6 +108,41 @@ else
   report "core-lib-change (bin/lib 변경 시 존재하는 스킬 전체 감지)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 1c. bin/linters/* 는 위 코어 패턴(bin/lib, pre-flight-check.sh)에도, 스킬 전용 경로에도
+#     안 걸린다. 그런데 이런 파일들(bin/linters/*, bin/utils/*, bin/hooks/run-suite.sh,
+#     stow/git/.githooks/*, ansible/roles/*)은 전부 contexts/dotfiles/tests 에 전용 회귀
+#     테스트가 있고 test-coverage-check.sh 가 그 존재를 하드 게이트로 강제한다. 그런데도
+#     트리거 패턴에서 빠져 있어서, 고쳐도 push 시 아무 테스트가 돌지 않았다 — 커버리지는
+#     강제하면서 실행은 안 하는 상태였다. dotfiles 스위트로 라우팅되는지 고정한다.
+mkdir -p "$FIXTURE_REPO/bin/linters"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/linters/prompt-lint.sh"
+git -C "$FIXTURE_REPO" add bin/linters/prompt-lint.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(bin): 린터 판정 로직 수정"
+LINTER_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $LINTER_SHA refs/heads/main $CORE_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out" &&
+  ! grep -qF "aws/tests/run.sh" "$TMP/out"; then
+  report "linter-change (bin/linters 변경 시 dotfiles 스위트만 트리거)" 0
+else
+  report "linter-change (bin/linters 변경 시 dotfiles 스위트만 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 1d. git 훅 본체(stow/git/.githooks/*) 변경도 동일하게 dotfiles 스위트를 태워야 한다
+#     (test-pre-commit-hook.sh / test-commit-msg-hook.sh / 이 파일 자신이 그 커버리지다).
+mkdir -p "$FIXTURE_REPO/stow/git/.githooks"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/stow/git/.githooks/pre-commit"
+git -C "$FIXTURE_REPO" add stow/git/.githooks/pre-commit
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(git): 커밋 훅 수정"
+HOOKFILE_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $HOOKFILE_SHA refs/heads/main $LINTER_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out"; then
+  report "githook-change (git 훅 본체 변경 시 dotfiles 스위트 트리거)" 0
+else
+  report "githook-change (git 훅 본체 변경 시 dotfiles 스위트 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 2. 새 브랜치 최초 push(remote_sha=0000...)도 동일하게 감지되어야 한다(EMPTY_TREE 비교 분기).
 status=$(run_hook_with_refline "refs/heads/feature $NEW_SHA refs/heads/feature $ZERO_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out"; then
@@ -120,7 +158,9 @@ git -C "$FIXTURE_REPO" add README_UNRELATED.md
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "docs: 무관한 문서 추가"
 UNRELATED_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $CORE_SHA")
+# 비교 기준은 직전 커밋(HOOKFILE_SHA)이어야 한다. 더 앞을 기준으로 잡으면 그 사이의
+# 1c/1d 커밋까지 범위에 들어와 "무관한 변경만" 이라는 전제가 깨진다.
+status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $HOOKFILE_SHA")
 if [ "$status" -eq 0 ] && [ ! -s "$TMP/out" ]; then
   report "no-skill-match (무관한 변경은 회귀 스위트 미실행 + exit 0)" 0
 else

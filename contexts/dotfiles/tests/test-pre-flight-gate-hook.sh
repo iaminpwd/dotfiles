@@ -145,6 +145,34 @@ else
   report "옵트인 저장소 (pre-flight-check만 대상, prompt-lint 미실행)" 1 "out=$out6"
 fi
 
+# --- 픽스처 2b: 경로에 공백이 있는 저장소 ---
+# 훅은 jq @tsv 한 줄을 read 로 나눠 cwd/stop_hook_active 를 얻는다. IFS 를 탭으로 지정하지
+# 않으면 기본 IFS(공백 포함)가 경로를 잘라, cwd 가 "/tmp/xxx/with" 처럼 앞부분만 남고
+# 뒷조각이 stop_hook_active 로 들어간다. 그러면 뒤의 git -C "$cwd" 가 실패해 fail-open 으로
+# 조용히 빠지고, 경로에 공백이 있는 프로젝트에서는 이 게이트가 통째로 안 도는데도
+# 아무 표시가 없다(실측 재현). 훅이 실제로 검증을 수행했는지를 출력으로 확인한다.
+SPACED_ROOT="$TMP/with space"
+SPACED_REPO="$SPACED_ROOT/dotfiles"
+mkdir -p "$SPACED_ROOT"
+git_init_clean "$SPACED_REPO"
+mkdir -p "$SPACED_REPO/bin/hooks" "$SPACED_REPO/bin/lib"
+cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$SPACED_REPO/bin/hooks/run-suite.sh"
+chmod +x "$SPACED_REPO/bin/hooks/run-suite.sh"
+cp "$REPO_ROOT/bin/lib/script-init.sh" "$SPACED_REPO/bin/lib/script-init.sh"
+stub "$SPACED_REPO/bin/hooks/pre-flight-check.sh" 0 "SPACED_PFC_OK"
+stub "$SPACED_REPO/bin/linters/prompt-lint.sh" 0 "SPACED_LINT_OK"
+stub "$SPACED_REPO/bin/linters/test-coverage-check.sh" 0 "SPACED_COVERAGE_OK"
+git -C "$SPACED_REPO" add -A
+git -C "$SPACED_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 스텁 편입"
+echo "dirty" >>"$SPACED_REPO/README.md"
+
+out_spaced=$(payload "$SPACED_REPO" | bash "$HOOK")
+if echo "$out_spaced" | jq -e '.hookSpecificOutput.additionalContext | contains("pre-flight-check.sh")' >/dev/null 2>&1; then
+  report "공백 포함 경로 (cwd 가 잘리지 않고 게이트가 실제로 수행됨)" 0
+else
+  report "공백 포함 경로 (cwd 가 잘리지 않고 게이트가 실제로 수행됨)" 1 "out=$out_spaced"
+fi
+
 # --- 픽스처 3: 스코프 밖 저장소 (pre-flight-check.sh 어디에도 없음) ---
 UNSCOPED_REPO="$TMP/unscoped-repo"
 git_init_clean "$UNSCOPED_REPO"

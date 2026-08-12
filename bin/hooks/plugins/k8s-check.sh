@@ -179,7 +179,12 @@ main() {
 
   log_info "======================================================"
   log_info "=== K8s-Specific Checks Passed Successfully ==="
-  print_unavailable_tools
+  # tool-probe.sh 로드는 위에서 조건부라, 못 찾은 환경(구버전 배포본 등)에서 무가드로
+  # 호출하면 set -e 가 여기서 스크립트를 죽여 "검증 실패"로 오보고된다.
+  # aiops-check.sh 와 동일하게 존재 확인 후 호출한다.
+  if declare -F print_unavailable_tools >/dev/null; then
+    print_unavailable_tools
+  fi
   log_info "======================================================"
 }
 

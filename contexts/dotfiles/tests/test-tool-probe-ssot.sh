@@ -114,6 +114,23 @@ else
   report "print_unavailable_tools 모든 줄이 [WARNING]로 시작" 1 "out=$OUT"
 fi
 
+# 5. 플러그인(bin/hooks/plugins/*.sh)은 tool-probe.sh 를 "조건부"로 source 한다(파일이
+#    없으면 건너뜀). 그런데 print_unavailable_tools 를 무가드로 호출하면, 라이브러리를
+#    못 찾은 환경에서 set -e 가 그 자리에서 스크립트를 죽여 "검증 실패"로 오보고된다.
+#    세 플러그인 중 aiops 만 declare -F 로 감싸고 나머지 둘은 무방비였다 — 같은 패턴을
+#    서로 다르게 방어하던 상태라, 셋 다 가드를 갖추도록 고정한다.
+unguarded=()
+for plugin in "$REPO_ROOT"/bin/hooks/plugins/*.sh; do
+  [ -f "$plugin" ] || continue
+  grep -qF "print_unavailable_tools" "$plugin" || continue
+  grep -qF "declare -F print_unavailable_tools" "$plugin" || unguarded+=("$(basename "$plugin")")
+done
+if [ "${#unguarded[@]}" -eq 0 ]; then
+  report "플러그인이 print_unavailable_tools 를 가드 후 호출" 0
+else
+  report "플러그인이 print_unavailable_tools 를 가드 후 호출" 1 "무가드: ${unguarded[*]}"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

@@ -31,21 +31,35 @@ for arg in "$@"; do
   fi
 done
 
+# PATH에서 찾지 못해 목록에서 빠진 게이트. 조용히 빠지면 "돌지도 않은 검증"이 통과로
+# 보이므로(아래 add_default_gate 주석) 마지막 요약에서 한 번 더 드러낸다.
+MISSING_GATES=()
+
+# add_default_gate <스크립트명>
+# PATH에 있으면 실행 목록에 넣고, 없으면 경고를 남긴다.
+# 예전엔 `command -v ... && SCRIPTS+=(...)` 뿐이라 미설치 시 아무 말 없이 빠졌다. 아래
+# "대상 0건" 가드는 run.sh 들이 잡히면 발동하지 않으므로, ai_agent 롤이 아직 안 돌아간
+# 새 클론에서 `just verify` 가 저장소 전체 스캔·프롬프트 린트·커버리지 게이트를 한 번도
+# 안 돌린 채 초록불만 띄웠다(실측: 15개여야 할 대상이 12개로 줄었는데 아무 표시 없음).
+add_default_gate() {
+  local name=$1
+  if command -v "$name" >/dev/null 2>&1; then
+    SCRIPTS+=("$name")
+  else
+    echo "[WARNING] $name 을(를) PATH에서 찾지 못해 이 검증을 건너뜁니다." >&2
+    MISSING_GATES+=("$name")
+  fi
+}
+
 if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   # 인자가 없으면 디폴트로 저장소 내 모든 테스트 및 pre-flight 스캔 수집
   # 1. 공통 필수: pre-flight-check.sh (어느 환경에서든 실행)
-  if command -v pre-flight-check.sh >/dev/null 2>&1; then
-    SCRIPTS+=("pre-flight-check.sh")
-  fi
+  add_default_gate pre-flight-check.sh
 
   # 2. dotfiles 저장소인 경우 예외적으로 prompt-lint.sh, test-coverage-check.sh 추가
   if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
-    if command -v prompt-lint.sh >/dev/null 2>&1; then
-      SCRIPTS+=("prompt-lint.sh")
-    fi
-    if command -v test-coverage-check.sh >/dev/null 2>&1; then
-      SCRIPTS+=("test-coverage-check.sh")
-    fi
+    add_default_gate prompt-lint.sh
+    add_default_gate test-coverage-check.sh
   fi
 
   # 3. 현재 저장소 내부의 모든 tests/run.sh 추가
@@ -142,6 +156,14 @@ for idx in "${!SCRIPTS[@]}"; do
     printf -- '----------------------------------------------------------------\n'
   fi
 done
+
+# 건너뛴 게이트는 판정 바로 옆에서 한 번 더 알린다. 위쪽 수집 시점의 경고는 개별
+# 스크립트 출력에 파묻혀 스크롤을 타고 지나가기 때문이다.
+if [ "${#MISSING_GATES[@]}" -gt 0 ]; then
+  echo "[WARNING] 아래 검증은 PATH에 없어 이번 실행에서 수행되지 않았습니다 — 통과 표시는 이 항목들을 포함하지 않습니다:" >&2
+  echo "[WARNING]    ${MISSING_GATES[*]}" >&2
+  echo "[WARNING]    (dotfiles 저장소에서 'just setup' 으로 ai_agent 롤을 돌리면 ~/.local/bin 에 링크됩니다)" >&2
+fi
 
 if [ "${#FAILED[@]}" -gt 0 ]; then
   printf '❌ 검증 실패 %s/%s: %s\n' "${#FAILED[@]}" "${#SCRIPTS[@]}" "${FAILED[*]}" >&2

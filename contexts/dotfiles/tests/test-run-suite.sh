@@ -115,6 +115,32 @@ else
   report "대상 0건이면 실패 처리" 1 "기대 exit=1 + 안내 문구 / 실제 exit=$CODE"
 fi
 
+# 9. 8번과 달리 실행 대상(tests/run.sh)은 있는데 3대 게이트(pre-flight-check.sh /
+#    prompt-lint.sh / test-coverage-check.sh)만 PATH 에 없는 경우. 이때는 8번의 "대상
+#    0건" 가드가 발동하지 않아서, 예전엔 그 게이트들이 아무 말 없이 목록에서 빠진 채
+#    남은 스위트만 초록불로 통과했다 — ai_agent 롤이 아직 안 돌아간 새 클론에서
+#    `just verify` 가 저장소 전체 스캔·프롬프트 린트·커버리지 게이트를 한 번도 돌리지
+#    않고 성공처럼 보이는 경로다(실측: 15개여야 할 대상이 12개로 줄었는데 표시 없음).
+#    건너뛴 사실이 반드시 출력에 드러나야 한다.
+GATE_REPO="$TMP/dotfiles"
+mkdir -p "$GATE_REPO/contexts/probe/tests"
+cat >"$GATE_REPO/contexts/probe/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "$GATE_REPO/contexts/probe/tests/run.sh"
+git -C "$GATE_REPO" init -q
+CODE=0
+OUT=$( (cd "$GATE_REPO" && HOME="$TMP" PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+if [ "$CODE" -eq 0 ] &&
+  grep -qF "[✓] contexts/probe/tests/run.sh" <<<"$OUT" &&
+  grep -qF "pre-flight-check.sh" <<<"$OUT" &&
+  grep -qF "PATH에 없어 이번 실행에서 수행되지 않았습니다" <<<"$OUT"; then
+  report "게이트 미탐지 시 무음 스킵 금지" 0
+else
+  report "게이트 미탐지 시 무음 스킵 금지" 1 "기대 exit=0 + 건너뜀 경고 / 실제 exit=$CODE out=${OUT//$'\n'/ }"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

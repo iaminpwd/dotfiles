@@ -35,8 +35,13 @@ JQ=$(resolve_jq)
 
 payload=$(cat)
 
+# IFS=$'\t' 필수: @tsv 출력을 기본 IFS(공백 포함)로 읽으면 공백이 든 cwd 가 잘려
+# 나가고 그 뒷조각이 stop_hook_active 로 들어간다(실측: cwd="/home/ubuntu/my repo/sub"
+# -> cwd="/home/ubuntu/my"). 그러면 뒤의 git -C "$cwd" 가 실패해 fail-open 으로 조용히
+# 빠지면서, 경로에 공백이 있는 프로젝트에서는 이 게이트가 통째로 안 돈다.
+# 형제 훅(pre-flight-live-hook.sh, agent-edits-hook.sh)은 원래부터 IFS 를 지정하고 있었다.
 # shellcheck disable=SC2016
-read -r cwd stop_hook_active < <(
+IFS=$'\t' read -r cwd stop_hook_active < <(
   "$JQ" -r '[(.cwd // ""), (.stop_hook_active // false)] | @tsv' <<<"$payload" 2>/dev/null
 ) || exit 0
 
