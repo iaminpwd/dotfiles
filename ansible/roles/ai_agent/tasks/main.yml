@@ -64,6 +64,11 @@
     recurse: true
   register: ai_agent_scripts_find
 
+# 아래 두 태스크의 `item.mode is search('^.[1357]')` 는 "소유자 실행 비트가 켜져 있는가"를
+# 본다. 예전 패턴 '[1357]' 은 앵커가 없어 mode 문자열 전체를 훑었고, 그래서 소유자에게
+# 실행 권한이 없는 0641 같은 값도(그룹/기타 자리의 1) 실행 파일로 오판했다. 첫 자리(0)를
+# 건너뛰고 소유자 자리만 보도록 앵커를 붙인다. (현재 저장소 파일은 0644/0755 뿐이라
+# 실제 오작동은 없었지만, 판정식이 의도와 다른 상태로 남아 있었다.)
 - name: 에이전트 스크립트 목적지 충돌 백업 (~/.local/bin)
   ansible.builtin.command:
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
@@ -72,7 +77,7 @@
     label: "{{ item.path | basename }}"
   when: >
     ('/scripts/' in item.path or '/bin/' in item.path) and
-    item.mode is search('[1357]')
+    item.mode is search('^.[1357]')
   changed_when: false
 
 - name: 에이전트 스크립트를 ~/.local/bin 경로에 심볼릭 링크
@@ -86,7 +91,7 @@
     label: "{{ item.path | basename }}"
   when: >
     ('/scripts/' in item.path or '/bin/' in item.path) and
-    item.mode is search('[1357]')
+    item.mode is search('^.[1357]')
 
 - name: 컨텍스트 도메인 디렉토리 목록 조회
   ansible.builtin.find:
