@@ -107,9 +107,18 @@ if [ ! -x "$HOME/.local/bin/mise" ]; then
     exit 1
   fi
 
+  # 검증 판정에 사람용 출력("Good signature from")을 쓰지 않는다. 두 가지 문제가 있었다:
+  #   1. 그 문구는 gpg 의 번역 대상이라 로케일에 따라 달라진다(gnupg 에 ko 번역이 없어
+  #      한국어 환경에서는 우연히 영어가 나왔을 뿐, ja/de 등에서는 정상 서명도 실패 판정).
+  #   2. 파이프라인 실패를 잡지 않아, 서명이 실제로 틀렸을 때 gpg 가 0 이 아닌 코드로
+  #      끝나면 set -euo pipefail 이 바로 아래 안내 문구에 닿기도 전에 스크립트를 죽였다
+  #      — 즉 정작 필요한 Hard Block 메시지가 한 번도 출력될 수 없었다.
+  # --status-fd 로 나오는 기계용 상태 줄(GOODSIG)은 번역되지 않으므로 이쪽을 판정에 쓴다.
+  gpg_rc=0
   curl -fsSL https://mise.jdx.dev/install.sh.sig |
-    gpg --homedir "$MISE_GPG_HOME" --decrypt >"$MISE_INSTALL_SCRIPT" 2>"$MISE_GPG_HOME/verify.log"
-  if ! grep -q "Good signature from" "$MISE_GPG_HOME/verify.log"; then
+    gpg --homedir "$MISE_GPG_HOME" --status-fd 3 --decrypt \
+      >"$MISE_INSTALL_SCRIPT" 3>"$MISE_GPG_HOME/status.log" 2>"$MISE_GPG_HOME/verify.log" || gpg_rc=$?
+  if [ "$gpg_rc" -ne 0 ] || ! grep -q '^\[GNUPG:\] GOODSIG ' "$MISE_GPG_HOME/status.log"; then
     echo "❌ [Hard Block] mise 설치 스크립트 GPG 서명 검증 실패." >&2
     cat "$MISE_GPG_HOME/verify.log" >&2
     rm -rf "$MISE_GPG_HOME"
@@ -128,7 +137,8 @@ echo "=> Installing Ansible & Just via mise & pipx..."
 
 echo "========================================================="
 echo "=> 🚀 Running 'mise install' automatically..."
-export PATH="$HOME/.local/bin:$PATH"
+# PATH 는 바로 위(mise 설치 직후)에서 shims 와 함께 이미 확정했다. 여기서 다시 export
+# 하면 진실의 원천이 두 곳이 되고, 앞의 선언이 바뀌어도 이쪽이 조용히 덮어쓴다.
 mkdir -p "$HOME/.config/mise"
 # mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해 GNU Stow로 미리
 # 링크해둔다. ansible stow 역할이 나중에 같은 패키지를 다시 stow해도(-R은 멱등) 안전.
