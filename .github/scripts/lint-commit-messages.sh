@@ -46,8 +46,16 @@ esac
 
 FAILED=0
 for sha in $COMMITS; do
+  # commit-msg 훅은 $2(COMMIT_SOURCE)가 "merge"면 검증을 건너뛴다. 그러므로 여기서는
+  # "이 커밋 자신이 머지인가"만 물어야 한다.
+  #
+  # 예전엔 `git rev-list --merges -n1 "$sha"` 를 썼는데, 이건 "$sha 에서 도달 가능한
+  # 머지 커밋"을 찾는 질의라 조상에 머지가 하나라도 있으면 항상 비어있지 않다. 그래서
+  # 머지 PR이 한 번 들어온 뒤로는 모든 후속 커밋이 SOURCE="merge" 로 판정돼 훅이
+  # 즉시 exit 0 했고, 이 게이트가 통째로 무력화됐다(실측: e914651 머지 이후 24개 커밋이
+  # 한 번도 검증되지 않음). --no-walk 는 조상을 따라가지 않고 주어진 커밋 자체만 본다.
   SOURCE=""
-  [ -n "$(git rev-list --merges -n1 "$sha")" ] && SOURCE="merge"
+  [ -n "$(git rev-list --no-walk --merges "$sha")" ] && SOURCE="merge"
   MSG_FILE=$(mktemp)
   git log --format=%B -n1 "$sha" >"$MSG_FILE"
   if ! bash stow/git/.githooks/commit-msg "$MSG_FILE" "$SOURCE"; then

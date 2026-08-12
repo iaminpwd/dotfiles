@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# test-coverage-check.sh - bin/ 및 git 훅 검사 스크립트의 회귀 테스트 커버리지 게이트
+# test-coverage-check.sh - bin/, git 훅, CI 스크립트의 회귀 테스트 커버리지 게이트
 #
 # 정적분석 도구(shellcheck/shfmt)는 문법·포맷 결함만 잡고, 검사 스크립트의 판정 로직(오탐/누락)
-# 자체가 깨져도 조용히 통과한다. 이를 막기 위해 bin/{hooks,linters,utils,lib} 및 git/.githooks
-# 하위 모든 스크립트가 contexts/*/tests 어딘가에서 최소 1번은 참조되는지(=회귀 테스트 대상인지)만
-# 기계적으로 확인한다. 실제 판정 로직의 정오는 각 test-*.sh 픽스처가 담당하고, 이 스크립트는
-# "테스트가 존재하는가"만 게이트한다.
+# 자체가 깨져도 조용히 통과한다. 이를 막기 위해 bin/{hooks,linters,utils,lib}, git/.githooks,
+# .github/scripts 하위 모든 스크립트가 contexts/*/tests 어딘가에서 최소 1번은 참조되는지
+# (=회귀 테스트 대상인지)만 기계적으로 확인한다. 실제 판정 로직의 정오는 각 test-*.sh 픽스처가
+# 담당하고, 이 스크립트는 "테스트가 존재하는가"만 게이트한다.
 #
 # git/.githooks/*도 bin/*.sh와 동일하게 스캔한다. 훅 파일명은 git 컨벤션상 확장자가 없어
 # (pre-commit/pre-push/commit-msg) "*.sh"로는 걸러지지 않으므로 별도로 전부 스캔한다.
@@ -28,6 +28,12 @@ REPO_ROOT=$(cd "$TCC_SCRIPT_DIR/../.." && pwd)
 
 BIN_DIR="$REPO_ROOT/bin"
 HOOKS_DIR="$REPO_ROOT/stow/git/.githooks"
+# .github/scripts/*.sh 도 같은 게이트 대상이다. ci.yml 이 "로컬 훅은 --no-verify 로 우회
+# 가능하므로 이 job 이 실제 우회 불가능한 최종 게이트"라고 선언한 그 검증 로직이 여기 있는데,
+# 정작 이 디렉토리만 커버리지 요구 밖이라 회귀 테스트가 하나도 없었다. 그 사각지대에서
+# lint-commit-messages.sh 의 머지 판정 결함(조상에 머지가 있으면 모든 커밋이 면제되어
+# 게이트가 통째로 무력화)이 실제로 살아 있었다.
+CI_SCRIPTS_DIR="$REPO_ROOT/.github/scripts"
 SELF="$(basename "${BASH_SOURCE[0]}")"
 
 # contexts/.archive 는 사용 종료된 스킬이라 커버리지 요구 대상에서 제외.
@@ -39,7 +45,7 @@ for d in "$REPO_ROOT"/contexts/*/tests; do
   TEST_DIRS+=("$d")
 done
 
-log_info "--- Step: Test Coverage Gate (bin/*.sh, git/.githooks/*) ---"
+log_info "--- Step: Test Coverage Gate (bin/*.sh, git/.githooks/*, .github/scripts/*.sh) ---"
 
 UNTESTED=()
 while IFS= read -r -d '' script; do
@@ -56,6 +62,8 @@ done < <(
     # git 훅은 확장자가 없는 고정 파일명(pre-commit/pre-push/commit-msg)이라 "*.sh"로
     # 걸러지지 않으므로 별도로 전부 스캔한다.
     find "$HOOKS_DIR" -type f -print0 2>/dev/null
+    # CI 게이트 스크립트(위 CI_SCRIPTS_DIR 주석 참조).
+    find "$CI_SCRIPTS_DIR" -type f -name "*.sh" -print0 2>/dev/null
   } | sort -z
 )
 
@@ -114,5 +122,5 @@ if [ "${#WEAK_COVERAGE[@]}" -gt 0 ]; then
   done
 fi
 
-log_info "[OK] bin/ 및 git/.githooks/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
+log_info "[OK] bin/, git/.githooks/, .github/scripts/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
 exit 0
