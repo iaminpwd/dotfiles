@@ -201,6 +201,30 @@ if require_tool trivy; then
   run_hardening_gate_pair ok-baseline.Dockerfile 0 fail-root-user.Dockerfile 1
 fi
 
+# 스캐너가 죽었을 때 "위반 없음"과 구분하지 못하고 통과시키면, 하드 블록 게이트가
+# 조용히 무력화된다. 예전엔 trivy 를 파이프 왼쪽에 두고 통째로 if 조건에 넣어서, trivy 가
+# 실패하면 jq 가 빈 입력을 받아 1을 반환하고 그대로 "통과"로 흘렀다(if 조건문 안이라
+# set -e 도 개입 못 함). trivy 를 실패하는 스텁으로 바꿔 차단되는지 고정한다.
+echo "--- container-hardening-gate.sh 스캐너 실패 시 차단 (무검증 통과 방지) ---"
+stub_dir=$(mktemp -d)
+cat >"$stub_dir/trivy" <<'STUB_EOF'
+#!/usr/bin/env bash
+# has_tool 의 --version 조회는 통과시키고, 실제 스캔만 실패시킨다.
+[ "${1:-}" = "--version" ] && exit 0
+exit 3
+STUB_EOF
+chmod +x "$stub_dir/trivy"
+stub_status=0
+PATH="$stub_dir:$PATH" bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" \
+  "$FIXTURES/ok-baseline.Dockerfile" >"$stub_dir/out" 2>&1 || stub_status=$?
+if [ "$stub_status" -ne 0 ] && grep -qF "판정을 내릴 수 없습니다" "$stub_dir/out"; then
+  report "scanner-failure-blocks (trivy 실패 시 통과시키지 않음)" 0
+else
+  report "scanner-failure-blocks (trivy 실패 시 통과시키지 않음)" 1 \
+    "exit=$stub_status out=$(cat "$stub_dir/out")"
+fi
+rm -rf "$stub_dir"
+
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.
 for path in "$FIXTURES"/*.Dockerfile; do
   name=$(basename "$path")

@@ -49,23 +49,48 @@ fi
 
 # 임시 파일 및 자원 정리용 전역 EXIT trap 헬퍼
 TMP_HOG=""
+TMP_STAGED=""
 cleanup() {
-  [ -n "$TMP_HOG" ] && rm -f "$TMP_HOG" 2>/dev/null || true
+  [ -n "$TMP_HOG" ] && rm -f "$TMP_HOG" 2>/dev/null
+  [ -n "$TMP_STAGED" ] && rm -rf "$TMP_STAGED" 2>/dev/null
+  true
 }
 trap cleanup EXIT
+
+# 스캔 대상은 워킹트리의 현재 파일이 아니라 "인덱스에 스테이징된 내용"이어야 한다.
+# 경로만 넘기면 스캐너가 디스크의 현재 내용을 읽으므로, git add 뒤 워킹트리에서만
+# 시크릿을 지우면(파일을 지운 게 아니라 내용만 고친 경우) 스캔은 통과하는데 커밋에는
+# 그 시크릿이 그대로 들어간다 — 위 "디스크 삭제 후 스테이징 잔류" 가드는 삭제만 막고
+# 이 수정 케이스는 못 막는다(실측 재현: 인덱스에 AWS 키가 남아 있는데 워킹트리가
+# 깨끗해 verified/unverified 0건으로 통과). 인덱스 내용을 임시 디렉토리에 그대로 풀어
+# 그쪽을 스캔해, 스캔한 바이트와 커밋될 바이트를 일치시킨다.
+materialize_staged_content() {
+  local dest=$1 file
+  for file in "${STAGED_FILES[@]}"; do
+    [ -n "$file" ] || continue
+    mkdir -p "$dest/$(dirname "$file")"
+    # 서브모듈(gitlink)은 blob 이 아니라 커밋 오브젝트라 추출 대상이 아니다. 추출에
+    # 실패하면 0바이트 파일이 남아 스캔 노이즈가 되므로 그 자리를 치운다.
+    git show ":$file" >"$dest/$file" 2>/dev/null || rm -f "$dest/$file"
+  done
+}
 
 # mise 환경이 구성되지 않은 외부 저장소에서의 오탐 차단을 위해 실제 실행 가능 여부(--version) 점검.
 if command -v trufflehog &>/dev/null && trufflehog --version &>/dev/null; then
   if [ "${#STAGED_FILES[@]}" -gt 0 ]; then
     TMP_HOG=$(mktemp)
+    TMP_STAGED=$(mktemp -d)
+    materialize_staged_content "$TMP_STAGED"
     # 전체가 아닌 변경된 파일만 스캔 (엄청 빠름)
-    if ! trufflehog filesystem "${STAGED_FILES[@]}" --no-update --fail >"$TMP_HOG" 2>&1; then
+    if ! trufflehog filesystem "$TMP_STAGED" --no-update --fail >"$TMP_HOG" 2>&1; then
       echo "🔒 커밋 전 시크릿 스캔 결과 (trufflehog):"
-      cat "$TMP_HOG"
+      # 스캔 경로가 임시 디렉토리라 그대로 보여주면 어느 파일인지 알아볼 수 없다.
+      # 접두사만 걷어내 저장소 상대 경로로 되돌린다.
+      sed "s#$TMP_STAGED/##g" "$TMP_HOG"
       echo "❌ 시크릿 유출이 발견되어 커밋이 차단되었습니다."
       exit 1
     fi
-    echo "  -> [✓] trufflehog secret scan passed"
+    echo "  -> [✓] trufflehog secret scan passed (스테이징된 내용 기준)"
   fi
 else
   echo "⚠️ trufflehog를 찾을 수 없거나 현재 위치에서 실행할 수 없어 시크릿 스캔을 건너뜁니다."

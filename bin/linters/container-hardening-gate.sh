@@ -29,11 +29,27 @@ if [ -f "$TARGET" ]; then
     # if 조건문 안이라 set -e가 개입하지 못해 DS-0002 하드 블록이 조용히 통과돼 버린다.
     JQ=$(resolve_jq)
     if [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; then
-      # trivy conf --format json 결과에서 DS-0002를 검색
-      if trivy conf --format json "$TARGET" 2>/dev/null | "$JQ" -e '.Results[].Misconfigurations[]? | select(.ID == "DS-0002")' >/dev/null 2>&1; then
-        echo "[ERROR] $TARGET 내에 USER 권한이 누락되었습니다 (DS-0002 위반)."
+      # trivy 를 파이프 왼쪽에 두고 통째로 if 조건에 넣으면, trivy 자체가 실패했을 때
+      # jq 가 빈 입력을 받아 1을 반환하고 "위반 없음"과 구분되지 않는다. 그 자리가 if
+      # 조건문이라 set -e 도 개입하지 못해 DS-0002 하드 블록이 조용히 통과된다 —
+      # 위 jq 부재 케이스와 정확히 같은 구멍이 스캐너 쪽에만 남아 있었다.
+      # 결과를 먼저 파일로 받아 trivy 의 종료 코드를 독립적으로 판정한다.
+      TRIVY_CONF_OUT=$(mktemp)
+      TRIVY_CONF_RC=0
+      trivy conf --format json "$TARGET" >"$TRIVY_CONF_OUT" 2>/dev/null || TRIVY_CONF_RC=$?
+      if [ "$TRIVY_CONF_RC" -ne 0 ]; then
+        echo "[ERROR] $TARGET 에 대한 trivy conf 스캔이 실패해(exit=$TRIVY_CONF_RC) DS-0002 판정을 내릴 수 없습니다."
+        echo "        검증하지 못한 채로 통과시키지 않습니다. trivy 설치·설정을 확인하십시오."
+        rm -f "$TRIVY_CONF_OUT"
         exit 1
       fi
+      # trivy conf --format json 결과에서 DS-0002를 검색
+      if "$JQ" -e '.Results[].Misconfigurations[]? | select(.ID == "DS-0002")' <"$TRIVY_CONF_OUT" >/dev/null 2>&1; then
+        echo "[ERROR] $TARGET 내에 USER 권한이 누락되었습니다 (DS-0002 위반)."
+        rm -f "$TRIVY_CONF_OUT"
+        exit 1
+      fi
+      rm -f "$TRIVY_CONF_OUT"
     else
       echo "[WARNING] jq 도구가 없어 DS-0002 스캔을 건너뜁니다."
     fi

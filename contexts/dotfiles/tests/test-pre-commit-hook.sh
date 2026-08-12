@@ -161,6 +161,32 @@ else
 fi
 git -C "$FIXTURE_REPO" reset -q -- ghost.txt 2>/dev/null || true
 
+# 4. [보안] 인덱스에는 시크릿이 남아 있는데 워킹트리에서만 지운 경우도 차단해야 한다.
+#    스캐너에 "경로"를 넘기면 디스크의 현재(깨끗한) 내용을 읽으므로, git add 후 워킹트리
+#    에서만 시크릿을 지우면 스캔은 통과하는데 커밋에는 인덱스의 시크릿이 그대로 들어간다.
+#    위 3번 가드는 파일 "삭제"만 막고 이 "수정" 케이스는 못 막았다(실측 재현: 1704바이트
+#    개인키가 인덱스에 남은 채 exit 0). 훅이 인덱스 내용을 풀어서 스캔하는지 고정한다.
+#    시크릿 픽스처를 저장소에 커밋해 둘 수는 없으므로(우리 자신의 시크릿 스캔에 걸린다)
+#    실행 시점에 임시로 키를 만들어 쓴다.
+if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1 &&
+  command -v openssl >/dev/null 2>&1; then
+  openssl genrsa -out "$FIXTURE_REPO/deploy_key" 2048 2>/dev/null
+  # -f: 전역 gitignore 가 키 계열 확장자를 걸러낼 수 있어 강제 스테이징한다.
+  git -C "$FIXTURE_REPO" add -f deploy_key
+  # 워킹트리에서만 시크릿 제거 (git add 를 다시 하지 않으므로 인덱스에는 그대로 남는다)
+  echo "redacted" >"$FIXTURE_REPO/deploy_key"
+  status=$(run_hook_allow_fail)
+  if [ "$status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/out"; then
+    report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 0
+  else
+    report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 1 "exit=$status out=$(cat "$TMP/out")"
+  fi
+  git -C "$FIXTURE_REPO" reset -q
+  rm -f "$FIXTURE_REPO/deploy_key"
+else
+  echo "  SKIP  fail-staged-secret-cleaned-in-worktree (trufflehog 또는 openssl 미설치)"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
