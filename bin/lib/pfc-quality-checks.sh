@@ -272,27 +272,46 @@ validate_security() {
     # 위 1번 시크릿 스캔에는 의도적으로 --skip-dirs를 걸지 않는다. 그쪽은 하드 블록이라
     # 제외 범위를 넓히면 픽스처 디렉토리에 실수로 들어간 진짜 자격 증명을 놓치게 된다
     # (노이즈 감소보다 유출 차단이 우선).
-    log_info "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
-    local tmp_vuln
-    tmp_vuln=$(mktemp)
-    # Trivy --exit-code 0 시 출력 파싱으로 취약점 존재 여부 및 실행 실패 판별
-    if trivy fs -q "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
-      --skip-dirs '**/tests/fixtures*' . >"$tmp_vuln" 2>&1; then
-      # 결과 테이블에 취약점이 있는지 확인 (Total: 0 이 아닌 경우)
-      # Trivy 출력에 ANSI 색상 코드가 포함되어 있을 수 있으므로 제거 후 검사
-      local clean_out
-      clean_out=$(sed -r 's/\x1B\[[0-9;]*[mK]//g' "$tmp_vuln")
-      if ! grep -qE "Total: 0 \(UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0\)" <<<"$clean_out" 2>/dev/null &&
-        ! grep -q "'0': Clean (no security findings detected)" <<<"$clean_out" 2>/dev/null; then
-        # 취약점이 있으면 출력
+    #
+    # 이 스캔은 커밋을 막지 않는 "경고 전용"인데 비용은 위 시크릿 스캔의 3배 이상이고
+    # (실측: 0.2s 대 0.7s, 저장소가 클수록 격차가 벌어진다), 대상 필터를 타지 않아
+    # README 한 줄만 스테이징해도 저장소 전체를 훑는다. 이 검증기는 전역 core.hooksPath
+    # 훅이라 임의 저장소의 매 커밋이 그 비용을 그대로 낸다.
+    # 그래서 커밋 경로(staged)와 AI 편집 훅 경로(explicit)에서는 생략하고, 회귀 검증
+    # 모드(--all/--changed → just verify, CI, pre-push)에서만 돌린다. 차단력은 그대로다:
+    # 하드 블록인 위 시크릿 스캔은 모드와 무관하게 항상, 저장소 전체를, --skip-dirs 없이
+    # 검사한다. 여기서 줄어드는 것은 "경고를 언제 보여줄 것인가"뿐이다.
+    if [ "$GLOBAL_TARGET_MODE" = "all" ] || [ "$GLOBAL_TARGET_MODE" = "changed" ]; then
+      log_info "[INFO] Running trivy vulnerability & misconfig scan (Warnings only)..."
+      local tmp_vuln
+      tmp_vuln=$(mktemp)
+      # Trivy --exit-code 0 시 출력 파싱으로 취약점 존재 여부 및 실행 실패 판별
+      if trivy fs -q "${skip_flags[@]}" --severity HIGH,CRITICAL --scanners vuln,misconfig --exit-code 0 \
+        --skip-dirs '**/tests/fixtures*' . >"$tmp_vuln" 2>&1; then
+        # 결과 테이블에 취약점이 있는지 확인 (Total: 0 이 아닌 경우)
+        # Trivy 출력에 ANSI 색상 코드가 포함되어 있을 수 있으므로 제거 후 검사
+        #
+        # `sed -r` 과 `\x1B` 는 둘 다 GNU sed 전용이다. 이 검증기는 전역 core.hooksPath
+        # 훅으로 macOS 에서도 도는데, BSD sed 는 -r 을 모르는 옵션으로 거절하고 \x 이스케이프도
+        # 해석하지 않는다. 그러면 이 대입이 실패하고 set -e 가 pre-flight-check 전체를
+        # 죽인다. POSIX 호환인 -E 와, ESC 문자를 printf 로 만들어 넘기는 방식으로 바꾼다.
+        local clean_out esc
+        esc=$(printf '\033')
+        clean_out=$(sed -E "s/${esc}\[[0-9;]*[mK]//g" "$tmp_vuln")
+        if ! grep -qE "Total: 0 \(UNKNOWN: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0\)" <<<"$clean_out" 2>/dev/null &&
+          ! grep -q "'0': Clean (no security findings detected)" <<<"$clean_out" 2>/dev/null; then
+          # 취약점이 있으면 출력
+          cat "$tmp_vuln"
+        fi
+        rm -f "$tmp_vuln"
+        log_info "[SUCCESS] Trivy vuln/misconfig scan passed."
+      else
         cat "$tmp_vuln"
+        rm -f "$tmp_vuln"
+        log_info "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
       fi
-      rm -f "$tmp_vuln"
-      log_info "[SUCCESS] Trivy vuln/misconfig scan passed."
     else
-      cat "$tmp_vuln"
-      rm -f "$tmp_vuln"
-      log_info "[WARNING] Trivy vuln/misconfig scan failed to run (see output above). Continuing without blocking the commit."
+      log_info "[INFO] '$GLOBAL_TARGET_MODE' 모드 — 경고 전용 vuln/misconfig 스캔은 --all/--changed 에서만 수행합니다."
     fi
 
     # 업데이트 진행 시 캐시 최신화 (쓰기 실패 시 무시, stderr 억제를 위해 리다이렉션 순서 주의)
