@@ -77,19 +77,34 @@ alias tfw='terraform workspace'
 
 # 4. 도구 환경 활성화 (Mise)
 # mise 존재 확인 후 eval 적용 ("command not found" 에러 방지)
-if [ -x "$HOME/.local/bin/mise" ] && [ -z "$MISE_ZSH_ACTIVATED" ]; then
+#
+# 재실행 가드로 환경 변수(export)를 쓰면 안 된다. 환경 변수는 자식 프로세스로 상속되는
+# 반면 activate가 만드는 것은 셸 함수/훅이라 상속되지 않아서, 중첩 zsh나 `exec zsh`에서는
+# "가드는 켜져 있는데 훅은 없는" 상태가 된다(실측: 중첩 셸에서 _mise_hook 0개 — 디렉토리별
+# 도구 버전 전환과 mise 환경 주입이 통째로 무효화됨). 하필 bootstrap.sh 마지막 안내가
+# `exec zsh`이고 tmux/IDE 터미널도 전부 기존 셸에서 파생된다.
+# 그래서 별도 플래그 대신 "이 셸에 훅이 실제로 있는가"를 직접 본다 — 이미 낡은 플래그를
+# 환경에 물려받은 셸에서도 자가 치유되고, 같은 셸에서 .zshrc를 두 번 source 해도
+# 중복 활성화되지 않는다.
+if [ -x "$HOME/.local/bin/mise" ] && ! typeset -f _mise_hook >/dev/null 2>&1; then
   eval "$(~/.local/bin/mise activate zsh)"
-  export MISE_ZSH_ACTIVATED=1
 fi
 
 # 5. fzf (Fuzzy Finder) 단축키 및 자동완성 연동 (Mise 설치 기준)
 # fzf --zsh는 0.48.0+에서만 지원. mise로 관리되는 버전이 PATH에 먹히지 않으면
 # 시스템 fzf(구버전)을 주울 수 있으므로 버전 확인 후 실행.
-if command -v fzf &> /dev/null && [ -z "$FZF_ZSH_ACTIVATED" ]; then
-  _fzf_ver=$(fzf --version 2>/dev/null | awk '{print $1}' | awk -F. '{printf "%d%03d", $1, $2}')
-  if [ -n "$_fzf_ver" ] && [ "$_fzf_ver" -ge 48000 ] 2>/dev/null; then
+# 가드로 위젯 정의 여부를 보는 이유는 위 mise 블록과 동일하다(export 가드는 중첩 셸에서
+# Ctrl-R/Ctrl-T 키바인딩을 조용히 잃게 만든다).
+#
+# 버전 비교는 major*1000+minor 로 인코딩한다. 예전엔 `printf "%d%03d"` 로 만든 문자열을
+# 48000 과 비교했는데, fzf 는 아직 0.x 라 0.48.0 도 0.74.2 도 "0048"/"0074" 가 되어
+# 임계값을 넘을 수가 없었다 — 즉 어떤 버전에서도 이 블록이 실행된 적이 없다(실측).
+# 게다가 앞의 0 때문에 셸 산술이 8진수로 해석해 "0048" 은 아예 오류가 난다.
+# 0.48.0 -> 48, 0.74.2 -> 74, 미래의 1.0 -> 1000 이 되도록 패딩 없이 계산한다.
+if command -v fzf &>/dev/null && ! typeset -f fzf-history-widget >/dev/null 2>&1; then
+  _fzf_ver=$(fzf --version 2>/dev/null | awk '{print $1}' | awk -F. '{print ($1 * 1000) + $2}')
+  if [ -n "$_fzf_ver" ] && [ "$_fzf_ver" -ge 48 ] 2>/dev/null; then
     eval "$(fzf --zsh)"
-    export FZF_ZSH_ACTIVATED=1
   fi
   unset _fzf_ver
 fi
