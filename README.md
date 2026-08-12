@@ -151,10 +151,16 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 아키텍처 백과사전
 │   ├── aws/, azure/, dotfiles/            # 🟢 Production 워크스페이스 룰북
-│   └── aiops/, containers/, drawio-gen/, k8s/,
-│       multi-cloud/, observability/,
-│       openstack/, pre-flight-check/,
-│       prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
+│   ├── aiops/, containers/, drawio-gen/, k8s/,
+│   │   multi-cloud/, observability/,
+│   │   openstack/, pre-flight-check/,
+│   │   prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
+│   ├── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
+│   └── .archive/              # 사용 종료된 스킬 보관소
+│                              # ↑ 두 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob과
+│                              #   ansible.builtin.find가 기본적으로 숨김 항목을 건너뛰므로, 스킬
+│                              #   스캔·글로벌 등록·테스트 탐색 대상에서 구조적으로 자동 제외된다
+│                              #   (평문 이름이면 제외 목록을 곳곳에 수동 등록해야 하고 그 목록이 낡는다).
 │
 ├── stow/                 # GNU Stow 대상 패키지 모음 (이 하위 폴더만 심볼릭 링크 대상 — 화이트리스트 방식)
 │   ├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
