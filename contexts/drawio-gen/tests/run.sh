@@ -38,6 +38,12 @@ EXPECTED = {
     # 090 §1 완료 조건 1번(파싱)의 실패 경로. 예전에는 ParseError 트레이스백으로 빠져나가
     # 나머지 두 조건과 보고 형식이 갈렸다.
     "fail-broken-xml.drawio":        (False, "[FAIL] XML 파싱 실패"),
+    # OpenStack 판별(035 §0) 회귀. 이 분기는 픽스처가 하나도 없어, 강조색을 아무 셀에서나
+    # 찾는 과잉 매칭이 오래 살아 있었다 — AWS 다이어그램에 빨간 아이콘 하나만 있어도 전체가
+    # OpenStack 으로 분류돼 010 §4 가 승인한 AWS 표준 색이 하드 FAIL 났다(실측 재현).
+    "ok-aws-emphasis-color-icon.drawio":     (True,  "[OK]"),
+    "ok-openstack-native.drawio":            (True,  "[OK]"),
+    "fail-openstack-gray-container.drawio":  (False, "[FAIL] OpenStack 컨테이너 색상 위반"),
 }
 
 fixtures = sorted(glob.glob(os.path.join(tests_dir, "fixtures", "*.drawio")))
@@ -209,5 +215,137 @@ if missing:
 print("  PASS  쿼리스트링 URL 포함 시에도 유효한 XML + URL 원형 보존")
 sys.exit(0)
 PY
+
+# ---------------------------------------------------------------------------
+# 레이아웃 계산 헬퍼 단위 테스트
+# ---------------------------------------------------------------------------
+# 이 헬퍼들(§10 규칙의 구현체)은 픽스처 기반 validate() 검사와 달리 호출 흔적이 전혀 없어
+# 회귀 테스트가 0건이었다. 실제로 grid() 가 아이콘 수와 무관하게 cols 기준으로 폭을 내
+# "빈 공간 과다"(§10, 상단 상수 주석) 버그가 그대로 살아 있었다. 계산식을 고정한다.
+echo "--- 레이아웃 계산 헬퍼 (grid/hstack/vstack/uniform_row/subnet_box_size) ---"
+layout_status=0
+python3 - "$SCRIPTS_DIR" <<'PY' || layout_status=$?
+import sys
+sys.path.insert(0, sys.argv[1])
+from layout_toolkit import (grid, hstack, vstack, offset_by_header, row_height,
+                            uniform_row, subnet_box_size, IW, IH, GX, GY, PAD, GAP_SIBLING)
+
+failures = []
+
+
+def check(name, cond, detail=""):
+    if cond:
+        print(f"  PASS  {name}")
+    else:
+        failures.append(name)
+        print(f"  FAIL  {name}")
+        if detail:
+            print(f"        {detail}")
+
+
+# grid: 폭은 "실제로 채워진 열 수" 기준이어야 한다. cols 를 그대로 쓰면 아이콘 2개짜리
+# 서브넷이 4칸 폭으로 그려진다(실측 190px 낭비).
+pos, w, h = grid(2, 4)
+check("grid(2,4) 폭은 채워진 2열 기준", w == 2 * IW + GX, f"w={w}, 기대={2 * IW + GX}")
+pos4, w4, h4 = grid(4, 4)
+check("grid(4,4) 폭은 4열 기준(가득 찬 행은 종전과 동일)", w4 == 4 * IW + 3 * GX, f"w={w4}")
+# 좌표와 폭의 정합: 마지막 아이콘의 오른쪽 끝이 pad + w 와 정확히 맞아야 한다.
+for n, cols in ((1, 3), (2, 4), (3, 3), (4, 4), (5, 4), (7, 3)):
+    p, gw, gh = grid(n, cols)
+    right = max(x for x, _ in p) + IW - PAD
+    bottom = max(y for _, y in p) + IH - PAD
+    check(f"grid({n},{cols}) 폭/높이가 실제 아이콘 경계와 일치", gw == right and gh == bottom,
+          f"w={gw}(실측 {right}), h={gh}(실측 {bottom})")
+check("grid(0,4) 은 빈 결과", grid(0, 4) == ([], 0, 0), f"{grid(0, 4)}")
+# 행 수 계산(올림)은 종전 동작 유지.
+check("grid(5,4) 은 2행", grid(5, 4)[2] == 2 * IH + GY, f"h={grid(5, 4)[2]}")
+
+xs, tw = hstack([100, 200, 50])
+check("hstack 좌표/전체폭", xs == [0, 130, 360] and tw == 410, f"xs={xs}, tw={tw}")
+check("hstack 빈 입력", hstack([]) == ([], 0), f"{hstack([])}")
+ys, th = vstack([80, 120])
+check("vstack 좌표/전체높이", ys == [0, 110] and th == 230, f"ys={ys}, th={th}")
+check("vstack 빈 입력", vstack([]) == ([], 0), f"{vstack([])}")
+check("offset_by_header", offset_by_header([0, 110], 45) == [45, 155])
+check("row_height 최댓값", row_height(100, 250, 180) == 250)
+check("row_height 빈 입력", row_height() == 0)
+check("uniform_row 높이 통일", uniform_row((100, 80), (200, 150)) == [(100, 150), (200, 150)])
+check("uniform_row 빈 입력", uniform_row() == [])
+check("subnet_box_size 역산", subnet_box_size(155, 60) == (155 + PAD * 2, 45 + 60 + PAD))
+check("GAP_SIBLING 기본값이 hstack/vstack 에 적용", hstack([10, 10])[0][1] == 10 + GAP_SIBLING)
+
+print(f"\n{'실패 없음' if not failures else '실패: ' + ', '.join(failures)}")
+sys.exit(1 if failures else 0)
+PY
+if [ "$layout_status" -ne 0 ]; then FAILED=1; fi
+
+# ---------------------------------------------------------------------------
+# 미리보기 보조 함수 + 아이콘 열거값 검증
+# ---------------------------------------------------------------------------
+# render_preview() 는 matplotlib 을 요구해 이 저장소 어디에도 설치 선언이 없다(위 CLI
+# 회귀 참조). 그래서 그 안에 중첩돼 있던 순수 계산 두 개를 모듈 레벨로 올려 여기서 직접
+# 고정한다 — 라벨 좌표 선택과 style 값 추출은 matplotlib 없이도 검증 가능한 로직이다.
+echo "--- 미리보기 보조 함수 (_edge_label_pos / _style_val) + 아이콘 열거값 ---"
+preview_status=0
+python3 - "$SCRIPTS_DIR" <<'PY' || preview_status=$?
+import sys
+sys.path.insert(0, sys.argv[1])
+from layout_toolkit import Diagram, _edge_label_pos, _style_val
+
+failures = []
+
+
+def check(name, cond, detail=""):
+    if cond:
+        print(f"  PASS  {name}")
+    else:
+        failures.append(name)
+        print(f"  FAIL  {name}")
+        if detail:
+            print(f"        {detail}")
+
+
+# waypoint 없는 엣지(점 2개)가 가장 흔한 경우다. 예전에는 이 인덱스가 도착점이라
+# 라벨이 타깃 도형 위에 겹쳐 찍혔고, 한 노드로 여러 엣지가 들어오면 그 자리에 포개졌다.
+src, tgt = (100.0, -50.0), (400.0, -50.0)
+check("_edge_label_pos: waypoint 없는 엣지는 선분 중점",
+      _edge_label_pos([src, tgt]) == (250.0, -50.0), f"{_edge_label_pos([src, tgt])}")
+check("_edge_label_pos: 라벨이 도착점에 겹치지 않음",
+      _edge_label_pos([src, tgt]) != tgt)
+check("_edge_label_pos: waypoint 1개면 그 점",
+      _edge_label_pos([src, (250.0, -120.0), tgt]) == (250.0, -120.0))
+check("_edge_label_pos: waypoint 2개면 가운데 선분의 중점",
+      _edge_label_pos([src, (200.0, -120.0), (300.0, -120.0), tgt]) == (250.0, -120.0))
+
+# strokeColor=none 은 "테두리 없음"이라는 명시적 선언이므로 그대로 전달돼야 한다.
+# 기본값으로 치환하면 미리보기에만 검은 테두리가 생겨 실제 렌더링과 달라진다.
+check("_style_val: none 을 기본값으로 치환하지 않음",
+      _style_val("fillColor=#fff;strokeColor=none;", "strokeColor", "black") == "none")
+check("_style_val: 키가 없으면 기본값",
+      _style_val("fillColor=#fff;", "strokeColor", "black") == "black")
+check("_style_val: 값에 = 가 있어도 통째로 반환",
+      _style_val("image=https://x/y?a=1&b=2;html=1;", "image", "") == "https://x/y?a=1&b=2")
+check("_style_val: 접두사가 같은 다른 키에 오매치되지 않음",
+      _style_val("fontColor=#111;fillColor=#222;", "fillColor", "?") == "#222")
+
+# 열거값 검증: shape/shape_name 과 동일하게 emphasis 오타도 차단해야 한다.
+d = Diagram()
+try:
+    d.openstack_icon("a", "1", "X", 0, 0, emphasis="bule")
+    check("openstack_icon: 잘못된 emphasis 차단", False, "ValueError 가 발생하지 않았습니다")
+except ValueError:
+    check("openstack_icon: 잘못된 emphasis 차단", True)
+d2 = Diagram()
+d2.openstack_icon("b", "1", "Nova", 0, 0, emphasis="blue")
+check("openstack_icon: 유효한 emphasis 는 그대로 적용", "strokeColor=#4A90D9" in d2.cells[0])
+d3 = Diagram()
+d3.openstack_icon("c", "1", "Keystone", 0, 0)
+check("openstack_icon: emphasis=None 은 검정 테두리",
+      "strokeColor=#000000" in d3.cells[0] and "strokeWidth=2" in d3.cells[0])
+
+print(f"\n{'실패 없음' if not failures else '실패: ' + ', '.join(failures)}")
+sys.exit(1 if failures else 0)
+PY
+if [ "$preview_status" -ne 0 ]; then FAILED=1; fi
 
 exit "$FAILED"

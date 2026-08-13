@@ -1,0 +1,20 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="ok-aws-emphasis-color-icon" name="ok-aws-emphasis-color-icon">
+    <!-- OpenStack 오분류 회귀. AWS 다이어그램의 아이콘 하나가 OpenStack 강조색과 같은
+         빨강(fillColor=#DA1A32)을 쓴다. 색상 검사는 swimlane 에만 적용되므로 아이콘 색은
+         원래 자유인데, 예전 판별자는 이 색을 어떤 셀에서든 찾아 전체를 OpenStack 으로
+         분류했고 그 결과 010 §4 가 승인한 AWS 표준 색(#147E40)까지 하드 FAIL 이 났다.
+         컨테이너 색을 1종만 둬서 범례 경고가 끼어들지 않게 한다([OK] 한 줄만 나와야 함). -->
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vpc" value="VPC" style="swimlane;startSize=30;strokeColor=#147E40;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="600" height="300" as="geometry"/></mxCell>
+        <mxCell id="ec2" value="EC2" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="vpc"><mxGeometry x="40" y="60" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="alarm" value="Alarm" style="ellipse;html=1;fillColor=#DA1A32;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="vpc"><mxGeometry x="200" y="60" width="60" height="60" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

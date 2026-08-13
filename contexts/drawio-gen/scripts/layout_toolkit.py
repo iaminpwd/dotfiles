@@ -63,7 +63,12 @@ def grid(n, cols, iw=IW, ih=IH, gx=GX, gy=GY, pad=PAD):
     """
     pos = [(pad + (i % cols) * (iw + gx), pad + (i // cols) * (ih + gy)) for i in range(n)]
     rows = -(-n // cols) if n else 0
-    w = cols * iw + (cols - 1) * gx if n else 0
+    # 폭은 실제로 채워진 열 수로 낸다. cols 를 그대로 쓰면 아이콘이 열 수보다 적을 때
+    # 빈 칸까지 폭에 포함되어(예: grid(2, 4) -> 345px, 실제 콘텐츠 155px) 그 차이가
+    # subnet_box_size() 를 타고 컨테이너 폭이 된다 — §10 "컨테이너 크기는 콘텐츠로부터
+    # 역산" 위반이자 이 파일 상단 주석이 재발 방지를 명시한 "빈 공간 과다" 그 버그다.
+    eff_cols = min(n, cols)
+    w = eff_cols * iw + (eff_cols - 1) * gx if n else 0
     h = rows * ih + (rows - 1) * gy if n else 0
     return pos, w, h
 
@@ -238,6 +243,14 @@ class Diagram:
         if shape not in base_map:
             raise ValueError(f"'{shape}' 은 035 §2 가 허용하는 shape(rounded/cylinder) 중 하나가 아닙니다.")
         base = base_map[shape]
+        # emphasis 도 shape/shape_name 과 동일하게 열거값을 강제한다. 예전에는 .get() 폴백이라
+        # 오타("bule" 등)가 조용히 검정으로 떨어졌는데, strokeWidth 는 3 그대로여서 "굵기만
+        # 강조되고 색은 없는" 아이콘이 나오고 호출자는 오타를 알 방법이 없었다. 035 §0의
+        # "같은 기능의 객체는 같은 색을 재사용" 규칙이 그 경로로 조용히 깨진다.
+        if emphasis is not None and emphasis not in self.OPENSTACK_ACCENT:
+            raise ValueError(f"'{emphasis}' 은 035 §0 이 허용하는 강조색"
+                             f"({sorted(self.OPENSTACK_ACCENT)}) 중 하나가 아닙니다. "
+                             f"강조가 필요 없으면 emphasis=None 을 쓰십시오.")
         stroke = self.OPENSTACK_ACCENT.get(emphasis, "#000000")
         sw = 3 if emphasis else 2
         style = (f"{base}whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor={stroke};strokeWidth={sw};"
@@ -374,6 +387,35 @@ def _abs_geom(cells, cid, _seen=None):
     return x + px, y + py, w, h
 
 
+def _style_val(style, key, default):
+    """drawio style 문자열에서 key= 값을 뽑는다. 없으면 default.
+
+    값이 "none" 이어도 그대로 돌려준다. 예전에는 "none" 을 default 로 치환했는데,
+    strokeColor=none(테두리 없음을 명시한 아이콘)이 미리보기에서 검은 테두리로 그려져
+    실제 drawio 렌더링과 달라졌다. matplotlib 은 "none" 을 그대로 받으므로 치환할 이유가 없다.
+    """
+    for part in style.split(";"):
+        if part.startswith(key + "="):
+            return part.split("=", 1)[1]
+    return default
+
+
+def _edge_label_pos(pts):
+    """엣지 폴리라인의 점 목록 → 라벨을 놓을 (x, y).
+
+    예전에는 pts[len(pts)//2] 를 그대로 썼다. 점이 짝수일 때 그 인덱스는 가운데가 아니라
+    뒤쪽 점이고, 특히 waypoint 없는 엣지(점 2개 = 출발/도착 중심)에서는 곧 "도착점"이라
+    라벨이 타깃 도형 위에 겹쳐 찍혔다. edge() 에 points 를 넘기는 것은 장거리 엣지용
+    예외 경로라 실제로는 대부분의 엣지가 이 경우에 해당했고, 한 노드로 여러 엣지가
+    들어오면 라벨이 그 자리에 포개졌다. 짝수면 가운데 선분의 중점을 쓴다.
+    """
+    half = len(pts) // 2
+    if len(pts) % 2 == 0:
+        p1, p2 = pts[half - 1], pts[half]
+        return (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
+    return pts[half]
+
+
 # ────────────────────────────────────────────────────────────────
 # 090 검증 + 겹침 검사 (090-validation-standard.md §1의 실제 구현)
 # ────────────────────────────────────────────────────────────────
@@ -408,7 +450,9 @@ def validate(path):
     if dup:
         lines.append(f"[FAIL] 중복 ID: {sorted(set(dup))}")
     idset = set(ids)
-    missing = [(c.get("id"), a, c.get(a)) for c in cells.values()
+    # cells(중복 제거된 dict)가 아니라 raw_cells 를 훑는다. 같은 id 가 여러 번 나오면 dict 에는
+    # 마지막 셀만 남아, 앞선 동명 셀에 달린 끊어진 참조가 검사에서 빠진다.
+    missing = [(c.get("id"), a, c.get(a)) for c in raw_cells
                for a in ("source", "target") if c.get(a) and c.get(a) not in idset]
     if missing:
         lines.append(f"[FAIL] 끊어진 참조: {missing}")
@@ -462,11 +506,17 @@ def validate(path):
     EPS = 2.0
     for parent, kids in siblings.items():
         containers = [k for k in kids if "swimlane" in cells[k].get("style", "")]
-        rows = defaultdict(list)
-        for k in containers:
-            _, y, _, h = abs_pos(k)
-            rows[round(y / EPS) * EPS].append((k, h))
-        for y, items in rows.items():
+        # y 를 EPS 단위로 반올림해 버킷팅하면 경계에서 갈린다: y=2.9 는 버킷 2.0, y=3.1 은
+        # 버킷 4.0 이라 0.2px 차이인 형제가 서로 다른 행으로 판정된다. 정렬한 뒤 행의 첫
+        # 원소를 기준으로 EPS 이내를 같은 행으로 묶어 그 경계 인위성을 없앤다.
+        measured = sorted((abs_pos(k)[1], abs_pos(k)[3], k) for k in containers)
+        rows = []
+        for y, h, k in measured:
+            if rows and y - rows[-1][0] <= EPS:
+                rows[-1][1].append((k, h))
+            else:
+                rows.append((y, [(k, h)]))
+        for y, items in rows:
             if len(items) < 2:
                 continue
             heights = [h for _, h in items]
@@ -523,12 +573,16 @@ def validate(path):
         "#DA1A32",  # red
         "#2E7D32",  # green
     }
+    container_strokes = set()
     for cid, c in cells.items():
         style = c.get("style", "")
         if "swimlane" not in style:
             continue
         m = re.search(r"strokeColor=(#[0-9A-Fa-f]{6})", style)
-        if m and m.group(1).upper() not in APPROVED_CONTAINER_COLORS:
+        if not m:
+            continue
+        container_strokes.add(m.group(1).upper())
+        if m.group(1).upper() not in APPROVED_CONTAINER_COLORS:
             color_violations.append((cid, m.group(1)))
             lines.append(f"[FAIL] 컨테이너 팔레트 위반 (010 §4): id={cid} strokeColor={m.group(1)} "
                          f"(허용값: {sorted(APPROVED_CONTAINER_COLORS)})")
@@ -539,10 +593,21 @@ def validate(path):
     # 회색 계열이 원천 불가함(openstack-basic 논리 아키텍처에서 #888888 적발 실사례).
     # native 스텐실(mxgraph.openstack.*) 또는 openstack_icon() 강조색 사용 여부로 OpenStack
     # 다이어그램인지 판별해, 해당 시에만 010 §4보다 더 엄격한 3원색 기준을 추가 적용한다.
-    OPENSTACK_MARKERS = ("mxgraph.openstack.", "#4A90D9", "#DA1A32", "#2E7D32")
-    is_openstack_diagram = any(
-        any(marker in c.get("style", "") for marker in OPENSTACK_MARKERS)
-        for c in cells.values()
+    #
+    # 판별 신호를 두 갈래로 나눈다. 예전에는 스텐실 경로와 강조색 3종을 한 묶음으로 놓고
+    # "아무 셀의 style 문자열에 들어 있으면 OpenStack"으로 봤는데, 강조색은 컨테이너
+    # 테두리뿐 아니라 아이콘 fillColor·폰트색·엣지색에도 정당하게 쓰인다. 그래서 AWS
+    # 다이어그램에 빨간 도형(fillColor=#DA1A32) 하나만 있어도 전체가 OpenStack으로 분류되고,
+    # 바로 위 010 §4가 승인한 AWS 표준 색(#147E40 VPC, #007CBC Subnet)이 전부 위반으로
+    # 걸려 정상 다이어그램이 하드 FAIL 났다(실측 재현). 색상 검사 자체가 swimlane에만
+    # 적용되므로 아이콘 색은 애초에 자유인데 그 자유가 판별자를 뒤집던 셈이다.
+    #   - mxgraph.openstack.* 스텐실: 어떤 셀에 있든 OpenStack 다이어그램의 확실한 증거
+    #   - 강조색 3종: 컨테이너(swimlane) 테두리로 쓰인 경우에만 신호로 인정
+    OPENSTACK_STENCIL_MARKER = "mxgraph.openstack."
+    OPENSTACK_EMPHASIS_COLORS = {"#4A90D9", "#DA1A32", "#2E7D32"}
+    is_openstack_diagram = (
+        any(OPENSTACK_STENCIL_MARKER in c.get("style", "") for c in cells.values())
+        or bool(container_strokes & OPENSTACK_EMPHASIS_COLORS)
     )
     if is_openstack_diagram:
         OPENSTACK_ALLOWED_CONTAINER_COLORS = {"#000000", "#4A90D9", "#DA1A32", "#2E7D32"}
@@ -660,21 +725,15 @@ def render_preview(path, out_png):
     fig, ax = plt.subplots(figsize=(24, 14))
     maxx = maxy = 0.0
 
-    def style_val(style, key, default):
-        for part in style.split(";"):
-            if part.startswith(key + "="):
-                v = part.split("=", 1)[1]
-                return v if v != "none" else default
-        return default
-
     for cid, c in cells.items():
         if cid in ("0", "1") or c.get("vertex") != "1":
             continue
         x, y, w, h = _abs_geom(cells, cid)
         style = c.get("style", "")
         is_container = "swimlane" in style
-        fill = style_val(style, "fillColor", "none")
-        stroke = style_val(style, "strokeColor", "black")
+        # 값 추출은 모듈 레벨 _style_val 로 옮겼다(순수 함수라 회귀 테스트가 가능해진다).
+        fill = _style_val(style, "fillColor", "none")
+        stroke = _style_val(style, "strokeColor", "black")
         rect = patches.Rectangle((x, -y - h), w, h,
                                   linewidth=1.8 if is_container else 0.8, edgecolor=stroke,
                                   facecolor=fill, alpha=0.5 if is_container else 0.85)
@@ -710,7 +769,7 @@ def render_preview(path, out_png):
         ax.plot(xs, ys, color="#555555", linewidth=1.2, linestyle="--" if dashed else "-", zorder=5)
         val = (c.get("value") or "").strip()
         if val:
-            mx, my = pts[len(pts) // 2]
+            mx, my = _edge_label_pos(pts)
             ax.text(mx, my, val, fontsize=6.5, color="#333333",
                     bbox=dict(facecolor="white", edgecolor="none", pad=0.5), zorder=6)
 

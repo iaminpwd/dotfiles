@@ -1,0 +1,18 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="fail-openstack-gray-container" name="fail-openstack-gray-container">
+    <!-- 035 §0 이 010 §4 보다 우선하는 실사례(openstack-basic 논리 아키텍처에서 적발).
+         #888888 은 010 §4 의 "팀 컨벤션 예외"로 허용되지만, OpenStack 공식 표준은 밝은
+         원색만 허용하므로 회색 컨테이너는 원천 불가다. mxgraph.openstack.* 스텐실이
+         있으므로 엄격 검사가 발동해 [FAIL] 이 나야 한다. -->
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="zone" value="Availability Zone" style="swimlane;startSize=30;strokeColor=#888888;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="600" height="300" as="geometry"/></mxCell>
+        <mxCell id="nova" value="Nova" style="shape=mxgraph.openstack.nova;html=1;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="zone"><mxGeometry x="40" y="60" width="60" height="60" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,18 @@
+<mxfile host="app.diagrams.net" agent="regression-fixture">
+  <diagram id="ok-openstack-native" name="ok-openstack-native">
+    <!-- OpenStack 판별의 정상 경로. mxgraph.openstack.* 네이티브 스텐실이 있고 컨테이너
+         테두리가 035 §0 의 밝은 원색(#4A90D9)이라 엄격 검사에서도 통과해야 한다.
+         컨테이너 색 1종만 둬서 범례 경고가 끼어들지 않게 한다. -->
+    <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1600"
+      math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="project" value="Project" style="swimlane;startSize=30;strokeColor=#4A90D9;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="600" height="300" as="geometry"/></mxCell>
+        <mxCell id="nova" value="Nova" style="shape=mxgraph.openstack.nova;html=1;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="project"><mxGeometry x="40" y="60" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="neutron" value="Neutron" style="shape=mxgraph.openstack.neutron;html=1;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="project"><mxGeometry x="200" y="60" width="60" height="60" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
