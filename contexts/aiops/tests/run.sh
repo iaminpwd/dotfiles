@@ -250,6 +250,17 @@ cases = [
     ("카드번호 마스킹(점 구분자)", "Card 1234.5678.9012.3456 used", "1234.5678.9012.3456", "[MASKED_CARD_NUMBER]"),
     ("RRN 마스킹(외국인 등록번호 5-8)", "RRN 900101-5234567 detected", "900101-5234567", "[MASKED_RRN]"),
     ("이메일 마스킹", "user hong@bank.co.kr failed login", "hong@bank.co.kr", "[MASKED_EMAIL]"),
+    # 라벨 정확성 회귀. CARD_PATTERN 은 자릿수만 보므로 13자리 이상 계좌를 카드로 먼저
+    # 삼켰다(실측: 1002-123-456789 -> [MASKED_CARD_NUMBER]). 마스킹은 되니 유출은 아니지만
+    # 감사 로그의 카테고리가 틀어진다 — RRN 을 카드보다 먼저 지우는 것과 같은 이유다.
+    ("13자리 계좌는 계좌로 라벨", "account 1002-123-456789 error", "1002-123-456789", "[MASKED_ACCOUNT_NUMBER]"),
+    ("전화번호는 전화번호로 라벨", "고객 010-1234-5678 문의", "010-1234-5678", "[MASKED_PHONE_NUMBER]"),
+    # 경계 가드(앞뒤 숫자·점 배제)를 넣을 때 하이픈까지 배제하면 키 이름에 이어 붙인 실제
+    # 카드번호가 검출망에서 빠져 유출 방향으로 뒤집힌다. 그 선택을 고정한다.
+    ("하이픈 접두가 붙어도 카드 검출", "key card-1234-5678-9012-3456 end", "1234-5678-9012-3456", "[MASKED_CARD_NUMBER]"),
+    # 카드 패턴을 "4자리 묶음"으로 좁히면 사라지는 축. Amex 는 4-6-5 그룹이라 4자리 배수가
+    # 아니다 — 오탐을 줄이려다 이쪽을 놓치면 그건 곧 유출이다.
+    ("Amex 4-6-5 그룹도 카드 검출", "Card 3782 822463 10005 used", "3782 822463 10005", "[MASKED_CARD_NUMBER]"),
 ]
 for name, raw, sensitive, marker in cases:
     out = sanitize(raw)
@@ -263,6 +274,13 @@ check("PII 없는 텍스트는 원형 보존", sanitize(plain) == plain, f"sanit
 # 카드번호로 오탐하기 쉬우므로, 그 축도 같이 고정한다.
 noisy = "v1.2.3 at 2026-08-12 07:32:09 latency=245ms host=web-01"
 check("숫자·점이 섞인 평범한 로그는 원형 보존", sanitize(noisy) == noisy, f"sanitize({noisy!r}) -> {sanitize(noisy)!r}")
+
+# 위 케이스는 시각의 콜론이 숫자 연속을 끊어줘서 우연히 통과했다 — 겨눈 축은 맞았지만
+# 예시가 실패 모드를 비껴갔다. 콜론 없이 점·공백만으로 이어지는 IP 나열이 실제 실패 케이스다:
+# 예전에는 앞 16자리가 잘려나가 "[MASKED_CARD_NUMBER].168.10.12" 라는 의미 불명 문자열이
+# 남았다. RCA 프롬프트에 실릴 로그가 훼손되면 이 파이프라인의 목적 자체가 무너진다.
+iplist = "peers: 192.168.10.11 192.168.10.12"
+check("IP 주소 나열은 원형 보존", sanitize(iplist) == iplist, f"sanitize({iplist!r}) -> {sanitize(iplist)!r}")
 
 sys.exit(1 if failures else 0)
 PY
