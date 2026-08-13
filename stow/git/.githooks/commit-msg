@@ -48,8 +48,23 @@ fi
 
 # Atomic Commit Analyzer
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+# 정본 탐색은 3계층으로 둔다: 현재 저장소 -> 이 훅의 물리적 위치 -> $HOME/dotfiles.
+#
+# 2순위가 없으면 dotfiles 클론이 ~/dotfiles 가 아닐 때(CI 체크아웃 경로, 여러 벌 클론,
+# ~/src/dotfiles 같은 개인 배치) 아래 블록이 통째로 조용히 생략된다 — Atomic Commit 분석이
+# 사라지는데 아무 표시도 나지 않는다(bin/hooks/pre-flight-*-hook.sh 에서 실측된 것과 같은
+# 클래스의 결함).
+# 3순위를 남기는 이유: 이 훅은 core.hooksPath 로 전역 배포되는데, 심볼릭 링크가 아니라
+# 복사본으로 배치한 환경에서는 2순위가 저장소 밖을 가리킨다. 그 경우 기존 동작을 그대로
+# 보존해 어떤 배포 형태에서도 지금보다 나빠지지 않게 한다.
+CM_HOOK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+CM_DOTFILES_ROOT=$(cd "$CM_HOOK_DIR/../../.." 2>/dev/null && pwd || echo "")
+
 LINT_SCRIPT="$REPO_ROOT/bin/linters/semantic-commit-lint.sh"
 
+if [ ! -f "$LINT_SCRIPT" ] && [ -n "$CM_DOTFILES_ROOT" ]; then
+  LINT_SCRIPT="$CM_DOTFILES_ROOT/bin/linters/semantic-commit-lint.sh"
+fi
 if [ ! -f "$LINT_SCRIPT" ]; then
   LINT_SCRIPT="$HOME/dotfiles/bin/linters/semantic-commit-lint.sh"
 fi

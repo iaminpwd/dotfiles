@@ -248,7 +248,19 @@ fi
 
 # 검증 대상 판정: workspace 하위 및 dotfiles 저장소는 상시 대상.
 # 그 외 외부 저장소는 루트에 링크(pre-flight-check.sh)가 있는 경우만 검증.
+# 정본 탐색은 3계층으로 둔다: 현재 저장소 -> 이 훅의 물리적 위치 -> $HOME/dotfiles.
+# 2순위가 없으면 dotfiles 클론이 ~/dotfiles 가 아닐 때 ~/workspace 하위 저장소의 사전 검증이
+# 통째로 빠진다. 이쪽은 아래에서 "정본을 실행할 수 없어 건너뜁니다" 경고를 내보내므로 무음
+# 실패는 아니지만, 원인이 "클론 위치"라는 것을 사용자가 알 방법이 없고 고칠 방법도 마땅치
+# 않았다(경로가 코드에 박혀 있으므로). 3순위를 남기는 이유는 commit-msg 의 같은 지점 주석 참조
+# — 훅을 심볼릭 링크가 아니라 복사본으로 배치한 환경에서 기존 동작을 그대로 보존한다.
+PC_HOOK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+PC_DOTFILES_ROOT=$(cd "$PC_HOOK_DIR/../../.." 2>/dev/null && pwd || echo "")
+
 DOTFILES_PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
+if [ ! -f "$DOTFILES_PFC" ] && [ -n "$PC_DOTFILES_ROOT" ]; then
+  DOTFILES_PFC="$PC_DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
+fi
 if [ ! -f "$DOTFILES_PFC" ]; then
   DOTFILES_PFC="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
 fi
