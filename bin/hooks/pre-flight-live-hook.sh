@@ -75,7 +75,10 @@ fi
 
 # --pfc-args="$target"는 SCRIPTS 중 경로에 pre-flight-check.sh가 포함된 항목에만
 # run-suite.sh가 패스스루한다(explicit 모드로 이 파일 1개만 검증하게 됨).
-out=$(env -C "$git_root" "$rs" "$pfc" --pfc-args="$target" 2>&1)
+#
+# `env -C`가 아니라 서브셸 cd 를 쓰는 이유는 pre-flight-gate-hook.sh 의 같은 지점 주석 참조
+# (env -C 는 GNU coreutils 전용이라 macOS 에서 이 훅이 매 편집마다 오탐 차단을 건다).
+out=$(cd "$git_root" && "$rs" "$pfc" --pfc-args="$target" 2>&1)
 rc=$?
 
 if [ "$rc" -eq 0 ]; then

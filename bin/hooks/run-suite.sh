@@ -92,6 +92,16 @@ if [ -z "$NPROC" ]; then
   NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 fi
 
+# 1 이상의 정수가 아니면 기본값으로 되돌린다. 아래 배치 루프는 end=$((i + NPROC)) 로 전진하는데
+# NPROC이 0이나 음수면 end가 i보다 커지지 않아 루프가 영원히 끝나지 않는다(실측: RUN_SUITE_JOBS=0,
+# RUN_SUITE_JOBS=-1 둘 다 타임아웃). 이 러너는 pre-commit/pre-push/Stop 훅이 모두 경유하므로
+# 그 상태가 되면 커밋과 푸시가 아무 메시지 없이 영구 정지한다. nproc/sysctl 결과도 같은 기준으로
+# 함께 검사해 판정 지점을 한 곳으로 모은다.
+if ! [[ "$NPROC" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[WARNING] 동시 실행 수가 유효하지 않아(값='$NPROC') 기본값 4로 대체합니다." >&2
+  NPROC=4
+fi
+
 run_script() {
   local script="$1" out_file="$2"
   local cmd

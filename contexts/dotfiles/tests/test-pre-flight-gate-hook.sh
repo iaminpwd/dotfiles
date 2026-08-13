@@ -139,7 +139,7 @@ stub "$OPTIN_REPO/pre-flight-check.sh" 1 "OPTIN_FAIL_MARKER"
 echo "dirty" >>"$OPTIN_REPO/README.md"
 out6=$(payload "$OPTIN_REPO" | bash "$HOOK")
 if echo "$out6" | jq -e '.hookSpecificOutput.additionalContext | contains("OPTIN_FAIL_MARKER")' >/dev/null 2>&1 &&
-  ! echo "$out6" | grep -qF "LINT_"; then
+  ! grep -qF "LINT_" <<<"$out6"; then
   report "옵트인 저장소 (pre-flight-check만 대상, prompt-lint 미실행)" 0
 else
   report "옵트인 저장소 (pre-flight-check만 대상, prompt-lint 미실행)" 1 "out=$out6"

@@ -65,13 +65,13 @@ else
   report "ok-valid-domain-kept (유효 도메인은 후보 제외, 그대로 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
-if [ ! -e "$SKILLS/removed-domain" ] && echo "$OUT" | grep -qF "[PRUNED]"; then
+if [ ! -e "$SKILLS/removed-domain" ] && grep -qF "[PRUNED]" <<<"$OUT"; then
   report "pruned-all-symlinks (전부 심볼릭 링크면 삭제)" 0
 else
   report "pruned-all-symlinks (전부 심볼릭 링크면 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
-if [ -d "$SKILLS/my-own-skill" ] && [ -f "$SKILLS/my-own-skill/notes.txt" ] && echo "$OUT" | grep -qF "[SKIP]"; then
+if [ -d "$SKILLS/my-own-skill" ] && [ -f "$SKILLS/my-own-skill/notes.txt" ] && grep -qF "[SKIP]" <<<"$OUT"; then
   report "fail-foreign-real-file (실제 파일이 섞여 있으면 보존 + 경고)" 0
 else
   report "fail-foreign-real-file (실제 파일이 섞여 있으면 보존 + 경고)" 1 "$(ls -la "$SKILLS/my-own-skill" 2>&1)"

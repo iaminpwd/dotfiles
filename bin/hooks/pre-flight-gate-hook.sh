@@ -87,7 +87,13 @@ fi
 
 # --pfc-args="--changed"는 SCRIPTS 중 경로에 pre-flight-check.sh가 포함된 항목에만
 # run-suite.sh가 알아서 패스스루한다(run-suite.sh:run_script 참조).
-OUT=$(env -C "$git_root" "$rs" "${SCRIPTS[@]}" --pfc-args="--changed" 2>&1)
+#
+# `env -C`(작업 디렉토리 변경)는 GNU coreutils 8.28+ 확장이라 BSD/macOS env 에는 없다.
+# 이 훅은 macOS 에서도 도는데(pre-flight-check.sh 의 BSD sed 대응 주석과 같은 이유),
+# 거기서 env 가 "illegal option -- C" 로 죽으면 그 0 아닌 종료 코드가 그대로 "검증 실패"로
+# 해석돼 매 턴 decision:block 이 걸린다. 서브셸 cd 는 이식성 문제가 없고 부모 셸의 CWD 도
+# 오염시키지 않는다.
+OUT=$(cd "$git_root" && "$rs" "${SCRIPTS[@]}" --pfc-args="--changed" 2>&1)
 RC=$?
 
 if [ "$RC" -eq 0 ]; then

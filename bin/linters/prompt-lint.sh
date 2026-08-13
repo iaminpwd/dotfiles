@@ -152,7 +152,7 @@ check_reference_links() {
 # -----------------------------------------------------------------------------
 check_orphaned_files() {
   log_info "--- Step: Orphaned Reference File Detection ---"
-  local skill_dir skill_md fname
+  local skill_dir skill_md fname f
   for skill_dir in "$CONTEXTS_DIR"/*/; do
     [ "$(basename "$skill_dir")" = ".archive" ] && continue
     skill_md="${skill_dir}SKILL.md"
@@ -324,7 +324,12 @@ check_code_fences() {
       current_file = FILENAME
       count = 0
     }
-    /^```/ { count++ }
+    # 들여쓴 펜스(리스트 항목 안의 코드 블록 등)도 센다. ^``` 만 보면 열림/닫힘 중 한쪽만
+    # 들여쓴 문서에서 짝이 안 맞는데도 조용히 통과한다. 현재 코퍼스에는 들여쓴 펜스가
+    # 20건 있고, 이 패턴으로 바꿔도 판정 결과는 그대로 깨끗함을 실측 확인했다.
+    # (블록쿼트 안의 "> ```" 은 종전과 동일하게 대상이 아니다 — 앞이 공백이 아니라 ">" 라
+    #  이 패턴에 걸리지 않는다.)
+    /^[[:space:]]*```/ { count++ }
     END {
       if (count % 2 != 0) {
         print current_file
@@ -505,7 +510,10 @@ check_index_freshness() {
 
   if ! diff -q "$index_file" "$tmp" >/dev/null 2>&1; then
     echo "[WARNING] contexts/INDEX.md 가 SKILL.md 라우팅 테이블과 어긋납니다:"
-    log_info "    'bash bin/utils/generate-context-index.sh > contexts/INDEX.md' 로 재생성하십시오."
+    # 맥락 줄도 반드시 echo + "[WARNING]" 접두사여야 한다(이 파일 상단 [출력 규약] 참조).
+    # log_info 로 두면 QUIET=1 이 기본인 훅·run-suite·CI 경로에서 "어긋났다"만 뜨고 정작
+    # 고치는 방법은 한 번도 출력되지 않는다.
+    echo "[WARNING]     'bash bin/utils/generate-context-index.sh > contexts/INDEX.md' 로 재생성하십시오."
   fi
   rm -f "$tmp"
   log_info "[INFO] 색인 최신성 검사 완료."
