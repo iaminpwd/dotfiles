@@ -17,7 +17,23 @@ FILE_PATH="$1"
 RULE_SOURCE="$2"
 PURPOSE="$3"
 ISO8601=$(date -Iseconds 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
-TARGET_DIR=".agent-state"
+
+# agent-edits-hook.sh(PostToolUse)가 계산하는 상대경로와 동일한 기준으로 정규화
+IFS=$'\t' read -r resolved git_root < <(resolve_target_and_git_root "$FILE_PATH")
+if [ -n "$git_root" ]; then
+  if [ "$resolved" = "$git_root" ]; then REL="$(basename "$resolved")"; else REL="${resolved#"$git_root"/}"; fi
+else
+  REL="$FILE_PATH"
+fi
+
+# 로그 위치도 REL과 같은 기준(git 최상위)으로 고정한다. 예전엔 CWD 상대(".agent-state")여서
+# 서브디렉토리에서 실행하면 <cwd>/.agent-state/edits.log가 새로 생기는데, 정작 기록되는 경로는
+# git 루트 기준이라 둘이 어긋났다(실측: sub/에서 실행 -> sub/.agent-state/edits.log에
+# "sub/a.txt"가 기록됨). 그러면 감사 로그가 디렉토리마다 쪼개져 base.AGENTS.md 9장이 지시하는
+# ".agent-state/edits.log 조회"가 이력의 일부만 보게 되고, 아래 "미확정 라인 보강"도 훅이
+# <git루트>에 남긴 줄을 영영 찾지 못해 중복 append만 쌓인다.
+# git 저장소가 아니면(추적 밖 경로) 종전대로 CWD 기준으로 남긴다.
+TARGET_DIR="${git_root:-.}/.agent-state"
 EDITS_LOG="$TARGET_DIR/edits.log"
 
 mkdir -p "$TARGET_DIR"
@@ -84,14 +100,6 @@ if [ -z "$RULE_SOURCE_RESOLVED" ]; then
 fi
 RULE_SOURCE_CLEAN="$RULE_SOURCE_RESOLVED"
 if [ "$FAILED" -eq 1 ]; then RESULT_TAG="FLAGGED"; else RESULT_TAG="SUCCESS"; fi
-
-# agent-edits-hook.sh(PostToolUse)가 계산하는 상대경로와 동일한 기준으로 정규화
-IFS=$'\t' read -r resolved git_root < <(resolve_target_and_git_root "$FILE_PATH")
-if [ -n "$git_root" ]; then
-  if [ "$resolved" = "$git_root" ]; then REL="$(basename "$resolved")"; else REL="${resolved#"$git_root"/}"; fi
-else
-  REL="$FILE_PATH"
-fi
 
 # Format: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
 # idempotency:bypass (로그 파일 연속 기록이므로 상태 검증 불필요)
