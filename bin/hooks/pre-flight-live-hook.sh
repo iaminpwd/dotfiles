@@ -30,6 +30,10 @@
 set -uo pipefail
 
 PFL_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# 정본 저장소 루트를 "$HOME/dotfiles" 하드코딩이 아니라 이 훅의 물리적 위치에서 구하는
+# 이유는 pre-flight-gate-hook.sh 의 같은 지점 주석 참조(저장소가 ~/dotfiles 에 없으면
+# 폴백이 없는 파일을 가리켜 훅이 조용히 exit 0 했다 — 실측: GitHub Actions).
+DOTFILES_ROOT=$(cd "$PFL_SCRIPT_DIR/../.." && pwd)
 # shellcheck source-path=SCRIPTDIR
 source "$PFL_SCRIPT_DIR/../lib/git-relpath.sh"
 # shellcheck source-path=SCRIPTDIR
@@ -62,11 +66,11 @@ IFS=$'\t' read -r target git_root < <(resolve_target_and_git_root "$target")
 pfc="$git_root/bin/hooks/pre-flight-check.sh"
 rs="$git_root/bin/hooks/run-suite.sh"
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
-  [ -x "$pfc" ] || pfc="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
-  [ -x "$rs" ] || rs="$HOME/dotfiles/bin/hooks/run-suite.sh"
+  [ -x "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
+  [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 elif [ -x "$git_root/pre-flight-check.sh" ]; then
   pfc="$git_root/pre-flight-check.sh"
-  rs="$HOME/dotfiles/bin/hooks/run-suite.sh"
+  rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 else
   exit 0
 fi

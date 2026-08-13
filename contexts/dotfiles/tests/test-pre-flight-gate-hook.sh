@@ -184,6 +184,17 @@ else
   report "스코프 밖 저장소 (건너뜀)" 1 "out=$out7"
 fi
 
+# 정본 저장소 경로를 $HOME 기준으로 하드코딩하지 않아야 한다(사유와 이 형태를 택한 근거는
+# test-pre-flight-live-hook.sh 의 같은 검사 주석 참조 — 실측으로 CI 에서만 실패했던 축이다).
+hook_code=$(grep -vE '^[[:space:]]*#' "$HOOK" || true)
+# 홑따옴표가 맞다: 셸이 전개한 값이 아니라 소스에 적힌 리터럴 문자열을 찾는 검사다.
+# shellcheck disable=SC2016
+if grep -qF '$HOME/dotfiles' <<<"$hook_code"; then
+  report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 1 "$(grep -nF '$HOME/dotfiles' "$HOOK")"
+else
+  report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 0
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

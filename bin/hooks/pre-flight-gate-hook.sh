@@ -27,6 +27,14 @@
 set -uo pipefail
 
 PFG_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# 정본 저장소 루트는 이 훅의 물리적 위치에서 구한다. 예전엔 "$HOME/dotfiles" 를 하드코딩해서,
+# 저장소가 그 경로에 없으면(CI 체크아웃 경로, 여러 벌 클론, ~/src/dotfiles 같은 개인 배치)
+# 폴백이 존재하지 않는 파일을 가리키고 아래 `[ -x "$rs" ] || exit 0` 에 걸려 훅이 조용히
+# 빠졌다 — 게이트가 통째로 비어 있는데 아무 표시도 나지 않는다(실측: GitHub Actions 에서
+# 이 경로로 회귀 테스트가 실패). PFG_SCRIPT_DIR 은 readlink -f 로 심볼릭 링크를 이미
+# 해소했으므로 ~/.local/bin 링크를 통해 호출돼도 정본 위치를 가리킨다
+# (prompt-lint.sh / test-coverage-check.sh / generate-context-index.sh 와 동일한 관용구).
+DOTFILES_ROOT=$(cd "$PFG_SCRIPT_DIR/../.." && pwd)
 # shellcheck source-path=SCRIPTDIR
 source "$PFG_SCRIPT_DIR/../lib/jq-resolve.sh"
 
@@ -53,14 +61,14 @@ git_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
 pfc="$git_root/bin/hooks/pre-flight-check.sh"
 rs="$git_root/bin/hooks/run-suite.sh"
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
-  [ -x "$pfc" ] || pfc="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
-  [ -x "$rs" ] || rs="$HOME/dotfiles/bin/hooks/run-suite.sh"
+  [ -x "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
+  [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 elif [ -x "$git_root/pre-flight-check.sh" ]; then
   pfc="$git_root/pre-flight-check.sh"
   # 옵트인 저장소는 자체 run-suite.sh를 두는 게 아니라 pre-flight-check.sh 심볼릭
   # 링크 하나만 옵트인하는 게 기존 관례(git/.githooks/pre-commit과 동일)라, 러너는
   # 항상 dotfiles 정본을 쓴다.
-  rs="$HOME/dotfiles/bin/hooks/run-suite.sh"
+  rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 else
   exit 0
 fi
@@ -77,11 +85,11 @@ SCRIPTS=("$pfc")
 # 대상 저장소가 dotfiles 자신일 때만 의미가 있다.
 if [ "$(basename "$git_root")" = "dotfiles" ]; then
   prompt_lint="$git_root/bin/linters/prompt-lint.sh"
-  [ -x "$prompt_lint" ] || prompt_lint="$HOME/dotfiles/bin/linters/prompt-lint.sh"
+  [ -x "$prompt_lint" ] || prompt_lint="$DOTFILES_ROOT/bin/linters/prompt-lint.sh"
   [ -x "$prompt_lint" ] && SCRIPTS+=("$prompt_lint")
 
   test_coverage="$git_root/bin/linters/test-coverage-check.sh"
-  [ -x "$test_coverage" ] || test_coverage="$HOME/dotfiles/bin/linters/test-coverage-check.sh"
+  [ -x "$test_coverage" ] || test_coverage="$DOTFILES_ROOT/bin/linters/test-coverage-check.sh"
   [ -x "$test_coverage" ] && SCRIPTS+=("$test_coverage")
 fi
 

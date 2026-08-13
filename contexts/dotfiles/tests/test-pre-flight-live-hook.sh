@@ -5,8 +5,8 @@
 # exit 0), 대상 저장소 판정·확장자 제외·성공/실패 시 JSON 출력 로직이 깨져도 아무도
 # 눈치채지 못한다. 실제 pre-flight-check.sh(무거운 외부 도구 의존)를 돌리는 대신,
 # 격리된 픽스처 저장소 루트에 성공/실패를 흉내내는 스텁을 놓아 훅 자체의 판정
-# 로직만 고정한다. 이 훅은 run-suite.sh를 거치므로(옵트인 저장소는 실제
-# $HOME/dotfiles/bin/hooks/run-suite.sh로 폴백) 성공 시에도 decision 없이
+# 로직만 고정한다. 이 훅은 run-suite.sh를 거치므로(옵트인 저장소는 훅 자신의 물리적
+# 위치에서 구한 정본 run-suite.sh로 폴백) 성공 시에도 decision 없이
 # additionalContext에 압축된 "-> [✓]" 한 줄이 실리는지, 실패 시엔 decision:block이
 # 걸리는지를 함께 고정한다.
 #
@@ -126,6 +126,24 @@ if [ -z "$out6" ]; then
   report "read-only 호출 (건너뜀)" 0
 else
   report "read-only 호출 (건너뜀)" 1 "out=$out6"
+fi
+
+# 7. 정본 저장소 경로를 $HOME 기준으로 하드코딩하지 않아야 한다.
+#    예전 폴백은 "$HOME/dotfiles/bin/..." 이었는데, 저장소가 그 경로에 없으면(CI 체크아웃
+#    경로 ~/work/dotfiles/dotfiles, 여러 벌 클론, ~/src/dotfiles 같은 개인 배치) 존재하지
+#    않는 파일을 가리켜 훅이 `[ -x "$rs" ] || exit 0` 에 걸려 조용히 빠졌다. 개발 머신에서는
+#    마침 ~/dotfiles 라 우연히 통과하고 CI 에서만 실패했다(실측).
+#    행동으로 재현하려면 HOME 을 임시 디렉토리로 바꿔야 하는데, 그러면 mise shim 이 도구를
+#    그 임시 홈에 통째로 새로 설치해 버려(네트워크 의존 + 매 실행 재설치) 스위트가 느리고
+#    불안정해진다 — 실측으로 확인해 그 방식은 택하지 않았다. 대신 같은 패턴이 소스에 다시
+#    들어오는 것을 정적으로 막는다.
+hook_code=$(grep -vE '^[[:space:]]*#' "$HOOK" || true)
+# 홑따옴표가 맞다: 셸이 전개한 값이 아니라 소스에 적힌 리터럴 문자열을 찾는 검사다.
+# shellcheck disable=SC2016
+if grep -qF '$HOME/dotfiles' <<<"$hook_code"; then
+  report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 1 "$(grep -nF '$HOME/dotfiles' "$HOOK")"
+else
+  report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 0
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
