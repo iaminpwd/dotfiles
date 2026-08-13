@@ -13,8 +13,13 @@
 [color]
     ui = auto
 
-[credential]
-    # GitHub CLI(gh)의 브라우저 로그인 인증을 credential helper로 사용 (bootstrap.sh가 gh 설치 및 인증을 보장)
+# GitHub CLI(gh)의 브라우저 로그인 인증을 credential helper로 사용 (bootstrap.sh가 gh 설치 및 인증을 보장).
+# 호스트를 한정한다: [credential] 아래 전역으로 두면 GitLab 등 gh와 무관한 호스트에서도
+# 매 인증마다 gh 프로세스가 뜬다(gh가 모르는 호스트엔 빈 응답을 내므로 동작은 하지만 순수 낭비).
+# 아래 두 항목은 `gh auth setup-git`이 생성하는 표준 형태와 동일하다.
+[credential "https://github.com"]
+    helper = !gh auth git-credential
+[credential "https://gist.github.com"]
     helper = !gh auth git-credential
 
 [alias]
