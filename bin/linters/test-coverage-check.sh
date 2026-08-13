@@ -7,6 +7,9 @@
 # (=회귀 테스트 대상인지)만 기계적으로 확인한다. 실제 판정 로직의 정오는 각 test-*.sh 픽스처가
 # 담당하고, 이 스크립트는 "테스트가 존재하는가"만 게이트한다.
 #
+# 여기에 더해 "그 테스트가 실제로 실행되는가"까지 게이트한다. 존재하는데 스킬의 run.sh 목록에
+# 등록되지 않으면 결과는 테스트가 아예 없는 것과 같기 때문이다(아래 두 번째 하드 게이트 참조).
+#
 # git/.githooks/*도 bin/*.sh와 동일하게 스캔한다. 훅 파일명은 git 컨벤션상 확장자가 없어
 # (pre-commit/pre-push/commit-msg) "*.sh"로는 걸러지지 않으므로 별도로 전부 스캔한다.
 
@@ -77,6 +80,65 @@ if [ "${#UNTESTED[@]}" -gt 0 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# 회귀 스위트 등록 누락 하드 게이트
+# -----------------------------------------------------------------------------
+# 위 게이트는 "테스트가 존재하는가"만 본다. 하지만 테스트 파일이 있어도 그 스킬의 run.sh
+# 목록에 등록되지 않으면 just test / pre-push / CI 어디서도 실행되지 않고, 결과는 테스트가
+# 아예 없는 것과 똑같다 — 판정 로직이 깨져도 아무것도 잡지 못하는 무검증 초록불.
+# 실제로 test-pre-flight-live-hook.sh / test-pre-flight-gate-hook.sh 두 스위트(서브테스트
+# 14건)가 등록 누락 상태로 한 번도 실행되지 않았는데, 파일 이름이 tests/ 안에 있다는 이유만으로
+# 위 게이트는 통과였다. 즉 커버리지 게이트가 보증한 범위가 사실과 달랐다.
+#
+# 파일 패턴에 언더스코어(test_*.sh)를 함께 넣는 이유: 이 저장소에는
+# contexts/prompt-architect/tests/test_prompt_lint.sh 처럼 언더스코어로 명명된 스위트가 실재한다.
+# test-*.sh 로만 좁히면 그 파일이 이 게이트의 시야 밖으로 빠져, 지금 막으려는 것과 정확히 같은
+# 클래스의 사각지대를 새로 만들게 된다.
+#
+# 위 첫 게이트와 달리 "주석에 언급됐는가"는 통과 근거로 치지 않는다. 등록이란 실행 목록에
+# 들어갔다는 뜻인데, run.sh 주석에 이름이 스쳐 지나가도 통과시키면 그 순간 게이트가 무력화된다
+# (실측: 이 게이트를 처음 넣은 직후, 같은 이름을 언급하는 설명 주석을 run.sh 에 추가했더니
+# 등록을 실제로 빼도 통과해 버렸다). 그래서 주석 줄을 걷어낸 본문만 대조한다.
+UNREGISTERED=()
+MISSING_RUNNERS=()
+for tdir in "${TEST_DIRS[@]}"; do
+  runner="$tdir/run.sh"
+  runner_code=""
+  if [ -f "$runner" ]; then
+    runner_code=$(grep -v '^[[:space:]]*#' "$runner" || true)
+  fi
+  while IFS= read -r -d '' tfile; do
+    if [ ! -f "$runner" ]; then
+      MISSING_RUNNERS+=("${tdir#"$REPO_ROOT"/}")
+      break
+    fi
+    tname="$(basename "$tfile" .sh)"
+    # here-string 을 쓴다. `grep -v ... | grep -qF ...` 형태는 오른쪽 grep 이 첫 매치에서
+    # stdin 을 닫아 왼쪽이 SIGPIPE(141)로 끝나고, set -o pipefail 이 그것을 파이프라인
+    # 결과로 채택해 "등록됐는데 미등록"으로 판정이 뒤집힌다(이 저장소의 tf_run_tflint /
+    # check_documented_clause_existence 주석이 짚은 것과 동일한 함정).
+    grep -qF -- "$tname" <<<"$runner_code" || UNREGISTERED+=("${tfile#"$REPO_ROOT"/}")
+  done < <(find "$tdir" -maxdepth 1 -type f -name "test[-_]*.sh" -print0 2>/dev/null | sort -z)
+done
+
+if [ "${#UNREGISTERED[@]}" -gt 0 ] || [ "${#MISSING_RUNNERS[@]}" -gt 0 ]; then
+  if [ "${#UNREGISTERED[@]}" -gt 0 ]; then
+    echo "[ERROR] 아래 회귀 테스트는 파일은 있지만 같은 스킬의 tests/run.sh 목록에 등록되지 않아, just test/pre-push/CI 어디서도 실행되지 않습니다:" >&2
+    for f in "${UNREGISTERED[@]}"; do
+      echo "  - $f" >&2
+    done
+    echo "  -> 해당 run.sh 의 스위트 목록에 파일명(확장자 제외)을 추가하십시오." >&2
+  fi
+  if [ "${#MISSING_RUNNERS[@]}" -gt 0 ]; then
+    echo "[ERROR] 아래 tests/ 디렉토리에는 회귀 테스트가 있는데 진입점(run.sh)이 없어 스위트가 통째로 실행되지 않습니다:" >&2
+    for f in "${MISSING_RUNNERS[@]}"; do
+      echo "  - $f" >&2
+    done
+    echo "  -> contexts/<skill>/tests/run.sh 를 추가해 각 테스트를 호출하십시오." >&2
+  fi
+  exit 1
+fi
+
+# -----------------------------------------------------------------------------
 # Plugin 전용 강화 검사 (경고 전용, 하드 블록 아님)
 # -----------------------------------------------------------------------------
 # bin/hooks/plugins/*.sh는 위 하드 게이트("이름이 어딘가 언급됐는가")만으로는 부족하다.
@@ -122,5 +184,5 @@ if [ "${#WEAK_COVERAGE[@]}" -gt 0 ]; then
   done
 fi
 
-log_info "[OK] bin/, git/.githooks/, .github/scripts/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조됩니다."
+log_info "[OK] bin/, git/.githooks/, .github/scripts/ 하위 모든 검사 스크립트가 최소 1개 이상의 회귀 테스트에서 참조되며, 모든 회귀 테스트가 스킬 run.sh에 등록되어 실제로 실행됩니다."
 exit 0

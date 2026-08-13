@@ -144,6 +144,86 @@ else
   report "indented-var-then-invoke-passes (들여쓰기된 변수 대입도 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 7. 등록 누락 하드 게이트: tests/ 에 테스트 파일이 있는데 run.sh 목록에 없으면 exit 1.
+#    (실제로 test-pre-flight-live-hook.sh / test-pre-flight-gate-hook.sh 가 이 상태로
+#     한 번도 실행되지 않았는데 위 1번 게이트는 통과했다 — 그 사각지대를 고정한다.)
+R7="$TMP/repo7"
+new_fixture_repo "$R7"
+echo '# example-check.sh 를 손보면 확인할 것' >"$R7/contexts/fake/tests/run.sh"
+echo '#!/usr/bin/env bash' >"$R7/contexts/fake/tests/test-orphan.sh"
+status=$(run_checker "$R7")
+if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" && grep -qF "등록되지 않아" "$TMP/out"; then
+  report "unregistered-suite-blocks (run.sh 미등록 테스트는 exit 1 + 목록 보고)" 0
+else
+  report "unregistered-suite-blocks (run.sh 미등록 테스트는 exit 1 + 목록 보고)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 8. 등록돼 있으면 통과한다(정상 경로가 막히지 않는지 확인).
+R8="$TMP/repo8"
+new_fixture_repo "$R8"
+cat >"$R8/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# example-check.sh 를 손보면 확인할 것
+for suite in test-orphan; do
+  bash "$suite.sh"
+done
+EOF
+echo '#!/usr/bin/env bash' >"$R8/contexts/fake/tests/test-orphan.sh"
+status=$(run_checker "$R8")
+if [ "$status" -eq 0 ] && ! grep -qF "등록되지 않아" "$TMP/out"; then
+  report "registered-suite-passes (run.sh 에 등록된 테스트는 통과)" 0
+else
+  report "registered-suite-passes (run.sh 에 등록된 테스트는 통과)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 9. 언더스코어 명명(test_*.sh)도 같은 게이트 대상이어야 한다. 이 저장소에는
+#    contexts/prompt-architect/tests/test_prompt_lint.sh 가 실재하므로, test-*.sh 로만
+#    좁히면 이 게이트가 막으려는 것과 같은 사각지대가 새로 생긴다.
+R9="$TMP/repo9"
+new_fixture_repo "$R9"
+echo '# example-check.sh 를 손보면 확인할 것' >"$R9/contexts/fake/tests/run.sh"
+echo '#!/usr/bin/env bash' >"$R9/contexts/fake/tests/test_underscore.sh"
+status=$(run_checker "$R9")
+if [ "$status" -eq 1 ] && grep -qF "test_underscore.sh" "$TMP/out"; then
+  report "underscore-named-suite-blocks (test_*.sh 도 등록 게이트 대상)" 0
+else
+  report "underscore-named-suite-blocks (test_*.sh 도 등록 게이트 대상)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 10. 진입점(run.sh) 자체가 없으면 스위트가 통째로 안 도는 것이므로 별도 메시지로 차단한다.
+#     원인과 조치가 "목록에 추가"와 다르기 때문에 등록 누락과 구분해 보고한다.
+R10="$TMP/repo10"
+new_fixture_repo "$R10"
+rm -f "$R10/contexts/fake/tests/run.sh"
+# run.sh 가 없으므로 1번 게이트용 example-check.sh 언급은 테스트 파일 쪽에 둔다.
+echo '# example-check.sh 를 손보면 확인할 것' >"$R10/contexts/fake/tests/test-no-runner.sh"
+status=$(run_checker "$R10")
+if [ "$status" -eq 1 ] && grep -qF "진입점(run.sh)이 없어" "$TMP/out"; then
+  report "missing-runner-blocks (run.sh 부재는 별도 메시지로 exit 1)" 0
+else
+  report "missing-runner-blocks (run.sh 부재는 별도 메시지로 exit 1)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 11. 주석에만 이름이 있으면 등록으로 치지 않는다. 이 게이트를 처음 넣은 직후 실제로
+#     run.sh 에 설명 주석을 추가했더니 등록을 빼도 통과해 버렸다(게이트 무력화 실측).
+R11="$TMP/repo11"
+new_fixture_repo "$R11"
+cat >"$R11/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# example-check.sh 를 손보면 확인할 것
+# 참고: test-orphan 스위트는 아래 목록에서 잠시 뺀 상태다
+for suite in ; do
+  bash "$suite.sh"
+done
+EOF
+echo '#!/usr/bin/env bash' >"$R11/contexts/fake/tests/test-orphan.sh"
+status=$(run_checker "$R11")
+if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out"; then
+  report "comment-only-mention-blocks (주석 언급은 등록으로 치지 않음)" 0
+else
+  report "comment-only-mention-blocks (주석 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

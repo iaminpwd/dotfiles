@@ -29,7 +29,12 @@ source "$TESTS_DIR/../../.shared/test-lib/tf-fixture-lib.sh"
 source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
 
 echo "=== aws Terraform 검증 파이프라인 회귀 테스트 ==="
-tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24
+# 결과를 받아두고 계속 진행한다. 맨몸으로 호출하면 tf_run_standard_suite 의 반환값(실패 시
+# 0 아님)을 set -e 가 잡아 스크립트를 그 자리에서 죽이고, 아래 SAM 스위트는 시도조차 되지
+# 않은 채 요약도 없이 끝난다. 이 저장소의 다른 러너들(dotfiles/prompt-architect/
+# pre-flight-check)이 지키는 "한 스위트가 실패해도 나머지를 계속 실행한다" 원칙에 맞춘다.
+TF_FAILED=0
+tf_run_standard_suite "$TESTS_DIR/fixtures" CKV_AWS_24 || TF_FAILED=1
 
 # sam CLI는 --region 없이는 템플릿 정합성과 무관한 "AWS Region was not found" 오류만
 # 내므로 AWS_DEFAULT_REGION을 명시한다.
@@ -83,4 +88,8 @@ fi
 SAM_TOTAL=$((SAM_PASS + SAM_FAIL))
 echo
 echo "$SAM_PASS/$SAM_TOTAL 통과"
-[ "$SAM_FAIL" -eq 0 ] || exit 1
+# Terraform 스위트 결과도 함께 판정한다. SAM 결과만 보면 위에서 실패한 Terraform 회귀가
+# 종료 코드에 반영되지 않아 조용히 통과한다.
+if [ "$SAM_FAIL" -ne 0 ] || [ "$TF_FAILED" -ne 0 ]; then
+  exit 1
+fi
