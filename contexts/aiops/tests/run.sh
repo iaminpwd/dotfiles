@@ -261,6 +261,16 @@ cases = [
     # 카드 패턴을 "4자리 묶음"으로 좁히면 사라지는 축. Amex 는 4-6-5 그룹이라 4자리 배수가
     # 아니다 — 오탐을 줄이려다 이쪽을 놓치면 그건 곧 유출이다.
     ("Amex 4-6-5 그룹도 카드 검출", "Card 3782 822463 10005 used", "3782 822463 10005", "[MASKED_CARD_NUMBER]"),
+    # 구분자 없는 17~19자리 PAN. 예전 CARD_PATTERN 은 상한이 16이라 이 범위를 부분적으로도
+    # 잡지 못하고 통째로 흘려보냈다(실측: 세 자릿수 모두 원문 그대로 통과). 앞뒤 lookaround
+    # 때문에 매치 시작점 자체가 사라지는 구조라 "일부만 마스킹"조차 되지 않았다.
+    # ISO/IEC 7812 은 PAN 을 최대 19자리로 정의하고 Visa/Maestro 등이 실제로 발급한다.
+    ("17자리 연속 PAN 검출", "card 12345678901234567 end", "12345678901234567", "[MASKED_CARD_NUMBER]"),
+    ("19자리 연속 PAN 검출", "card 1234567890123456789 end", "1234567890123456789", "[MASKED_CARD_NUMBER]"),
+    # 하이픈을 생략한 휴대전화. PHONE_PATTERN 이 하이픈을 필수로 요구해 어느 패턴에도 걸리지
+    # 않았고(11자리라 카드 하한 13 에도 미달), 개인정보가 그대로 게이트웨이로 나갔다.
+    ("하이픈 없는 휴대전화 검출", "고객 01012345678 문의", "01012345678", "[MASKED_PHONE_NUMBER]"),
+    ("하이픈 없는 지역번호 검출", "고객 0212345678 문의", "0212345678", "[MASKED_PHONE_NUMBER]"),
 ]
 for name, raw, sensitive, marker in cases:
     out = sanitize(raw)
@@ -281,6 +291,16 @@ check("숫자·점이 섞인 평범한 로그는 원형 보존", sanitize(noisy)
 # 남았다. RCA 프롬프트에 실릴 로그가 훼손되면 이 파이프라인의 목적 자체가 무너진다.
 iplist = "peers: 192.168.10.11 192.168.10.12"
 check("IP 주소 나열은 원형 보존", sanitize(iplist) == iplist, f"sanitize({iplist!r}) -> {sanitize(iplist)!r}")
+
+# 연속 PAN 패턴(13~19자리)의 바깥 경계. 이 범위를 "그냥 긴 숫자면 다 마스킹"으로 넓히면
+# 요청 ID·나노초 타임스탬프 같은 평범한 값이 전부 카드로 기록돼 RCA 로그가 못 쓰게 된다.
+# 카드 표준 범위(ISO/IEC 7812: 13~19)의 양 끝 바로 바깥을 고정한다.
+short_id = "trace id 123456789012 end"
+check("12자리(카드 하한 미만)는 원형 보존", sanitize(short_id) == short_id,
+      f"sanitize({short_id!r}) -> {sanitize(short_id)!r}")
+long_id = "nano ts 12345678901234567890 end"
+check("20자리(카드 상한 초과)는 원형 보존", sanitize(long_id) == long_id,
+      f"sanitize({long_id!r}) -> {sanitize(long_id)!r}")
 
 sys.exit(1 if failures else 0)
 PY
