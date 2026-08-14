@@ -80,6 +80,15 @@ if require_tool yq; then
   # 두 순서가 우연히 일치해 통과한다. 실제로 그 사각지대로 필드 정렬 버그가 통과한 적이
   # 있어, 규칙 3건짜리 픽스처로 그 축을 따로 고정한다.
   run_validator ok-multi-rule.yaml 0
+  # ok-multi-rule.yaml 은 "행/열 뒤바뀜"만 고정한다. 값 자체에 개행이 들어가는 축
+  # (접힌 스칼라 runbook_url)은 원인이 달라 따로 잡아야 한다 — 그 상태에서는 뒤따르는
+  # 규칙의 위반 2건(critical+runbook 누락, client_ip)이 모두 미탐이 됐다(실측).
+  #
+  # 기대 문구에 알람 이름과 레이블 키까지 넣는다. 문구 앞부분("고카디널리티 레이블 감지")만
+  # 대조하면 밀린 상태에서 엉뚱한 규칙이 user_id 로 오탐되는 것까지 통과로 세어, 뮤테이션이
+  # 검출되지 않는다(실측: 정규화를 되돌렸을 때 이 케이스만 여전히 PASS 였다).
+  run_validator fail-multiline-runbook.yaml 1 "runbook_url 누락: CriticalWithoutRunbook"
+  run_validator fail-multiline-runbook.yaml 1 "감지: HighCardinalityAfterShift label=client_ip"
 
   # 파싱·구조 실패를 "규칙 0건 = 위반 없음"으로 흘리면 하드 게이트가 조용히 무력화된다.
   # 예전 구현은 `mapfile ... < <(yq ...) || { 실패처리 }` 형태였는데, mapfile 이 프로세스

@@ -1,0 +1,48 @@
+# 값 자체에 개행이 들어가는 축을 고정하는 픽스처.
+#
+# validate-alert-rules.sh 는 필드를 "한 줄 = 한 필드"로 뽑아 인덱스로 재조립하는데,
+# 접힌 스칼라(`runbook_url: >`)로 쓴 긴 URL 은 값 끝에 개행이 붙어 줄이 2개가 된다.
+# 그러면 그 규칙부터 이후 필드가 전부 한 칸씩 밀린다 — ok-multi-rule.yaml 이 고정하는
+# "행/열 뒤바뀜"과는 다른 원인의 정렬 붕괴라 별도 픽스처가 필요하다.
+#
+# 밀린 상태에서는 아래 두 위반이 모두 미탐이 되어 [OK] exit 0 으로 통과했다(실측).
+# 접힌 스칼라를 첫 규칙에 두는 것이 핵심이다: 마지막 규칙에 두면 뒤에 밀릴 대상이 없어
+# 증상이 드러나지 않는다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: multiline-runbook
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        # 이 규칙 자체는 정상이다(critical 이 아니고 runbook_url 도 있다).
+        # 필드를 한 칸 밀어내는 역할만 한다.
+        - alert: FoldedRunbookIsFine
+          expr: rate(http_requests_total{code=~"4.."}[5m]) > 0.2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: 접힌 스칼라 runbook_url 은 그 자체로는 위반이 아니다
+            runbook_url: >
+              https://runbooks.internal/very/long/path/that/authors/tend/to/fold
+        # 위반 1: critical 인데 runbook_url 이 없다.
+        - alert: CriticalWithoutRunbook
+          expr: up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: 필드가 밀리면 severity 자리에 알람 이름이 들어와 미탐이 된다
+        # 위반 2: 고카디널리티 레이블(client_ip).
+        - alert: HighCardinalityAfterShift
+          expr: rate(nginx_requests_total[5m]) > 100
+          for: 5m
+          labels:
+            severity: warning
+            client_ip: "{{ $labels.client_ip }}"
+          annotations:
+            summary: 필드가 밀리면 레이블 자리도 함께 어긋나 미탐이 된다
+            runbook_url: https://runbooks.internal/high-cardinality

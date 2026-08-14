@@ -60,6 +60,15 @@ done
 #     행 단위가 아니라 열 단위(alert 전체 -> severity 전체 -> ...)로 나와, 규칙이 2건
 #     이상일 때 필드가 전부 어긋난다. 규칙 1건짜리 파일에서는 두 순서가 우연히 일치해
 #     증상이 안 드러나므로 반드시 다중 규칙 픽스처로 검증할 것.
+#  3. 값 자체에 개행이 들어갈 수 있다. 줄 하나 = 필드 하나라는 전제는 "필드 값에 개행이
+#     없다"에 기대는데, 긴 runbook_url 을 접힌 스칼라(`runbook_url: >`)로 쓰는 것은
+#     흔한 YAML 관례이고 그때 값 끝에 개행이 붙는다. 그러면 그 규칙부터 필드가 한 칸씩
+#     밀려 이후 전부 어긋난다(실측: 접힌 스칼라를 쓴 규칙 뒤에 runbook_url 없는 critical
+#     알람과 client_ip 레이블을 둔 파일이 위반 2건을 모두 놓치고 [OK] exit 0 으로 통과).
+#     그래서 각 필드를 `tostring | sub("\n"; " ")` 로 한 줄로 정규화한 뒤 내보낸다.
+#     sub 는 전역 치환이고, 판정이 보는 것은 "비었는가"와 알람 이름 표시뿐이라 개행을
+#     공백으로 바꿔도 결과가 달라지지 않는다. tostring 은 `severity: 5` 처럼 값이 문자열이
+#     아닐 때 sub 가 죽는 것을 막는다.
 # [주의] 아래를 `mapfile -t ARR < <(yq ...) || { 실패처리 }` 로 쓰면 안 된다. mapfile 은
 # 프로세스 치환의 종료 코드를 전파하지 않고, 입력이 비면 빈 배열을 만든 뒤 그냥 0을
 # 반환한다(실측: `mapfile -t A < <(false); echo $?` -> 0). 그래서 그 형태에서는 실패
@@ -89,7 +98,7 @@ fi
 RULE_FIELDS=()
 YQ_OUT=$(mktemp)
 trap 'rm -f "$YQ_OUT"' EXIT
-if ! yq eval -r "[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[]" "$FILE" >"$YQ_OUT" 2>/dev/null; then
+if ! yq eval -r "[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[] | tostring | sub(\"\n\"; \" \")" "$FILE" >"$YQ_OUT" 2>/dev/null; then
   echo "[FAIL] $FILE — .spec.groups[].rules[] 추출에 실패했습니다" >&2
   exit 1
 fi
