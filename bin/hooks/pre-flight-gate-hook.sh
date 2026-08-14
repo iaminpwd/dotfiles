@@ -60,10 +60,13 @@ git_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
 
 pfc="$git_root/bin/hooks/pre-flight-check.sh"
 rs="$git_root/bin/hooks/run-suite.sh"
+# pfc 는 -f, rs 는 -x 로 판정하는 이유는 pre-flight-live-hook.sh 의 같은 지점 주석 참조
+# (pfc 는 run-suite.sh 에 인자로 넘겨 bash 로 실행되므로 실행 권한이 필요 없고, 예전의
+#  -x 판정은 실행 권한 없는 옵트인 저장소에서 이 훅만 조용히 빠지게 만들었다).
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
-  [ -x "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
+  [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
-elif [ -x "$git_root/pre-flight-check.sh" ]; then
+elif [ -f "$git_root/pre-flight-check.sh" ]; then
   pfc="$git_root/pre-flight-check.sh"
   # 옵트인 저장소는 자체 run-suite.sh를 두는 게 아니라 pre-flight-check.sh 심볼릭
   # 링크 하나만 옵트인하는 게 기존 관례(git/.githooks/pre-commit과 동일)라, 러너는
@@ -72,7 +75,7 @@ elif [ -x "$git_root/pre-flight-check.sh" ]; then
 else
   exit 0
 fi
-[ -x "$pfc" ] || exit 0
+[ -f "$pfc" ] || exit 0
 [ -x "$rs" ] || exit 0
 
 # 커밋되지 않은 변경분이 하나도 없으면(순수 대화 턴 등) 검증할 게 없으므로 조용히 빠진다.

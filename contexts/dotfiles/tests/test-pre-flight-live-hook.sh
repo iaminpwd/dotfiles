@@ -119,6 +119,31 @@ else
   report "옵트인 대상 아닌 저장소 (건너뜀)" 1 "out=$out5"
 fi
 
+# 5b. 실행 권한이 없는 옵트인 스크립트도 검증 대상으로 잡아야 한다.
+#     이 훅은 pfc 를 직접 실행하지 않고 run-suite.sh 에 인자로 넘기며, run-suite 는
+#     `[ -f "$script" ]` 이면 `bash "$script"` 로 돌리므로 실행 권한이 필요 없다.
+#     예전엔 -x 로 판정해 복사본을 실행 권한 없이 배치한 옵트인 저장소에서 이 훅만
+#     조용히 exit 0 했는데, 정작 git/.githooks/pre-commit 은 -f 라 같은 저장소를
+#     검증하고 있었다 — 헤더 주석이 두 로직을 "동일하게 맞췄다"고 선언한 것과 어긋난
+#     상태였다(실측 재현). 무음 스킵은 이 저장소가 반복해서 제거해 온 실패 형태다.
+NOEXEC_REPO="$TMP/noexec-optin"
+mkdir -p "$NOEXEC_REPO"
+git -C "$NOEXEC_REPO" init -q
+cat >"$NOEXEC_REPO/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "STUB_VALIDATION_FAILURE: no-exec-optin"
+exit 1
+EOF
+chmod -x "$NOEXEC_REPO/pre-flight-check.sh"
+echo "bad" >"$NOEXEC_REPO/bad.sh"
+payload5b="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$NOEXEC_REPO/bad.sh\"}}"
+out5b=$(echo "$payload5b" | bash "$HOOK")
+if grep -qF '"decision": "block"' <<<"$out5b" && grep -qF 'STUB_VALIDATION_FAILURE' <<<"$out5b"; then
+  report "실행 권한 없는 옵트인 (검증 수행, 무음 스킵 아님)" 0
+else
+  report "실행 권한 없는 옵트인 (검증 수행, 무음 스킵 아님)" 1 "out=$out5b"
+fi
+
 # 6. 편집 대상이 없는 조회 도구 호출은 조용히 건너뛰어야 한다.
 payload6='{"tool_name":"Read","tool_input":{}}'
 out6=$(echo "$payload6" | bash "$HOOK")

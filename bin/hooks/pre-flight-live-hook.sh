@@ -19,6 +19,9 @@
 # 동일하게 맞췄다. 두 훅은 실행 컨텍스트가 달라(git 훅 vs Claude Code 훅) 공용
 # 라이브러리로 뽑으면 검증된 커밋 게이트까지 건드리는 리스크가 있어 최소 로직만
 # 중복 유지한다(git-relpath.sh 상단 주석과 동일한 판단).
+# [주의] 그 "동일하게"는 실제로 대조해 봐야 유지된다 — 한동안 pre-commit 만 -f 이고
+# 이쪽은 -x 라 실행 권한 없는 옵트인 저장소에서 판정이 갈렸다(아래 판정부 주석 참조).
+# 이 블록을 고칠 때는 pre-commit 의 PFC_TARGET 블록과 나란히 놓고 비교할 것.
 #
 # 성공 시에도 완전 무음이면 "통과했다"와 "훅이 애초에 안 돌았다"가 구분이 안 된다.
 # 그래서 pre-flight-check.sh를 run-suite.sh에 태워 압축된 "-> [✓] <경로>" 한 줄을
@@ -65,16 +68,23 @@ IFS=$'\t' read -r target git_root < <(resolve_target_and_git_root "$target")
 
 pfc="$git_root/bin/hooks/pre-flight-check.sh"
 rs="$git_root/bin/hooks/run-suite.sh"
+# pfc 는 -f 로, rs 는 -x 로 판정한다. pfc 는 직접 실행하지 않고 run-suite.sh 에 인자로
+# 넘기며 run-suite 는 `[ -f "$script" ]` 이면 `bash "$script"` 로 돌리므로 실행 권한이
+# 필요 없다. 반면 rs 는 `"$rs" ...` 로 직접 호출하니 -x 여야 한다.
+# 예전엔 pfc 도 -x 였는데, 그러면 루트에 옵트인 스크립트를 실행 권한 없이 둔 저장소에서
+# (심볼릭 링크가 아니라 복사본을 배치한 경우) 이 훅만 조용히 exit 0 했다 — 정작
+# git/.githooks/pre-commit 은 -f 라 같은 저장소를 검증하고 있었고, 아래 주석이 두 로직을
+# "의도적으로 동일하게 맞췄다"고 선언한 것과도 어긋났다(실측 재현).
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
-  [ -x "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
+  [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
-elif [ -x "$git_root/pre-flight-check.sh" ]; then
+elif [ -f "$git_root/pre-flight-check.sh" ]; then
   pfc="$git_root/pre-flight-check.sh"
   rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 else
   exit 0
 fi
-[ -x "$pfc" ] || exit 0
+[ -f "$pfc" ] || exit 0
 [ -x "$rs" ] || exit 0
 
 # --pfc-args="$target"는 SCRIPTS 중 경로에 pre-flight-check.sh가 포함된 항목에만
