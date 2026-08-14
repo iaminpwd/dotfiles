@@ -308,6 +308,21 @@ long_id = "nano ts 12345678901234567890 end"
 check("20자리(카드 상한 초과)는 원형 보존", sanitize(long_id) == long_id,
       f"sanitize({long_id!r}) -> {sanitize(long_id)!r}")
 
+# UUID 는 위 IP 나열과 정확히 같은 훼손 클래스인데, 경계 가드가 숫자·점만 봐서 걸러지지
+# 않았다(실측: "req 550e8400-e29b-41d4-a716-446655440000 ok"
+#  -> "req 550e8400-e29b-41d4-a[MASKED_CARD_NUMBER] ok"). 관측 로그에서 IP 나열보다
+# 훨씬 흔한 형태라 훼손 빈도도 더 높다. 16진 글자에 붙어 시작하는 숫자열을 막아 고정한다.
+# (그룹이 전부 숫자로만 이뤄진 UUID 는 하이픈 구분 카드번호와 패턴상 구별할 수 없어
+#  여전히 마스킹된다. 확률이 (10/16)^32 수준이고, 방향도 안전한 쪽이라 그대로 둔다.)
+for label, uu in [
+    ("표준", "req 550e8400-e29b-41d4-a716-446655440000 ok"),
+    ("숫자 비중 높음", "req 123e4567-e89b-12d3-a456-426614174000 ok"),
+]:
+    check(f"UUID({label})는 원형 보존", sanitize(uu) == uu, f"sanitize({uu!r}) -> {sanitize(uu)!r}")
+
+# 40자리 16진 커밋 해시도 같은 이유로 온전해야 한다.
+sha = "commit 9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1908 ok"
+check("git 커밋 해시는 원형 보존", sanitize(sha) == sha, f"sanitize({sha!r}) -> {sanitize(sha)!r}")
 
 sys.exit(1 if failures else 0)
 PY
