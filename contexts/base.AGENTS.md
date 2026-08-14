@@ -39,7 +39,7 @@ priority: highest
   </examples>
 - **[MUST] Match Existing Style:** 기존 코드 스타일 무조건 준수.
 - **[MUST] Report Dead Code:** 데드 코드는 원형을 유지한 채 보고만 수행할 것.
-- **[MUST] Traceability:** 모든 코드 변경 사항은 사용자 요청과 1:1 매핑.
+- **[MUST] Traceability:** 모든 코드 변경 사항은 사용자 요청과 1:1 매핑. 매핑 단위는 요청이 지정한 범위다 — 위치를 지정했으면 그 위치만, 결함 클래스를 지정했으면("~ 오류를 찾아서 고쳐줘") 그 클래스의 모든 인스턴스가 매핑 대상이다. 범위가 불분명하면 좁게 해석하고 나머지는 보고할 것.
 
 ## 4. 목표 주도 실행 및 검증 (Goal-Driven Execution & Verification)
 - **[MUST] Define & Report Success Criteria:** 시작 전 모호한 목표를 검증 가능한 성공 기준으로 변환하고, 완료 보고 시 그 기준을 확인할 수 있는 수동 검증 명령어를 함께 제공할 것.
