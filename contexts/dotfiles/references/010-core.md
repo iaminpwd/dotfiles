@@ -14,7 +14,10 @@ trigger: dotfiles 워크스페이스에서 모든 스킬 공통으로 로드되�
 ## 2. 자가 비판 절차 SSOT
 - **[MUST] 공통 자가 비판 절차 (전 dotfiles 모듈 SSOT):** 자가 비판(Self-Critique)은 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060)에 정의된 특정 `[Trigger]` 조건이 발동될 때만 수행하되, 절차는 다음과 같이 공통 적용합니다: 해당 모듈에 나열된 점검 기준을 하나씩 대조해 충족 여부를 확인하고, 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하며, 모든 항목이 충족된 후에만 완료를 선언할 것. (이 절차 자체는 본 항목에만 정의하며, 하위 도메인 모듈에서는 재정의하지 않고 점검 기준 목록만 기재함.)
 
-## 3. 실패 보고 양식 (base.AGENTS.md §6 Fast Fail & Halt 보강)
+## 3. 형제 인스턴스 점검 (base.AGENTS.md §3 Report Dead Code와 동일한 보고 전용 조항)
+- **[Trigger: Defect Fixed] Sibling Sweep:** 결함을 고쳤으면 그 결함을 한 문장으로 규정한 뒤, 고친 코드가 아니라 그 규정으로 같은 클래스의 다른 위치를 1회 검색할 것 (예: 한 표기를 막았으면 나머지 표기, 한 경로를 제외 목록에 넣었으면 같은 목록을 쓰는 다른 지점). 발견분은 고치지 말고 보고만 하여 범위 결정을 사용자에게 남길 것 — base.AGENTS.md §3 Strict Scope Isolation이 그대로 적용된다.
+
+## 4. 실패 보고 양식 (base.AGENTS.md §6 Fast Fail & Halt 보강)
 - **[Trigger: Validation Failed 3 times] 빠른 실패 및 중단:** base.AGENTS.md §6 Fast Fail & Halt가 발동되면(3회 재시도 실패), 도구 호출을 즉시 멈추고 아래 구조로 사용자 개입을 요청할 것.
   ```markdown
   ### [문제 상황 요약]
