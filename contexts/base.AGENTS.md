@@ -28,7 +28,7 @@ priority: highest
 ## 3. 외과적 코드 수정 (Surgical Code Changes)
 수정 시 명령받은 로직만 수정하고 주변 코드 원형 보존.
 
-- **[MUST] Strict Scope Isolation:** 지시 영역 내부만 수정. 주변 코드 포매팅/주석 원형 보존.
+- **[MUST] Strict Scope Isolation:** 지시 영역 내부만 수정하고 주변 코드 포매팅/주석은 원형 보존. 새로 쓰는 코드도 그 파일의 기존 스타일(들여쓰기, 네이밍, 주석 밀도, 관용구)을 그대로 따를 것.
   <examples>
   <example>
   [Good] 기존 들여쓰기와 주석 스타일을 완벽히 유지하며 타겟 함수 1개만 수정
@@ -37,7 +37,6 @@ priority: highest
   [Bad] 타겟 함수 외에 주변 파일의 싱글/더블 쿼트 포맷을 임의로 일괄 변경
   </example>
   </examples>
-- **[MUST] Match Existing Style:** 기존 코드 스타일 무조건 준수.
 - **[MUST] Report Dead Code:** 데드 코드는 원형을 유지한 채 보고만 수행할 것.
 - **[MUST] Traceability:** 모든 코드 변경 사항은 사용자 요청과 1:1 매핑. 매핑 단위는 요청이 지정한 범위다 — 위치를 지정했으면 그 위치만, 결함 클래스를 지정했으면("~ 오류를 찾아서 고쳐줘") 그 클래스의 모든 인스턴스가 매핑 대상이다. 범위가 불분명하면 좁게 해석하고 나머지는 보고할 것.
 

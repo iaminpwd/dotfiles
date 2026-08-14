@@ -228,8 +228,7 @@ LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 �
 
 **통합 워크스페이스 적용 사례:**
 ```markdown
-- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하십시오. 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오. (출처: base.AGENTS.md)
-- **[MUST] Match Existing Style:** 기존 코드 스타일을 무조건 적용할 것. (출처: base.AGENTS.md)
+- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하고 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오. 새로 쓰는 코드도 그 파일의 기존 스타일을 그대로 따르십시오. (출처: base.AGENTS.md)
 ```
 
 ### 5.2. Push-Back & Simplicity (단순성 방어 패턴)
