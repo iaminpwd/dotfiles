@@ -47,7 +47,10 @@ collect_changed_skills_from_range() {
   while IFS= read -r FILE; do
     [ -n "$FILE" ] || continue
     case "$FILE" in
-    contexts/*/scripts/* | contexts/*/tests/*)
+    contexts/*/scripts/* | contexts/*/tests/* | contexts/*/examples/*)
+      # examples/ 도 스킬 회귀 스위트의 검증 대상이다(contexts/aiops/tests/run.sh 가
+      # examples/anomaly-rag-pipeline.py 의 마스킹 로직을 직접 돌린다). 예전엔 이 패턴이
+      # 빠져 있어, 그 파일의 PII 마스킹 결함을 고쳐도 push 시 aiops 스위트가 돌지 않았다.
       SKILL=${FILE#contexts/}
       add_skill "${SKILL%%/*}"
       ;;
@@ -68,12 +71,19 @@ collect_changed_skills_from_range() {
         add_skill "$(basename "$(dirname "$CORE_SKILL_DIR")")"
       done
       ;;
-    bin/* | stow/git/.githooks/* | ansible/*)
+    bin/* | stow/* | ansible/* | .github/scripts/*)
       # 위 코어 패턴에 안 걸리는 나머지 검사 스크립트(bin/linters/*, bin/utils/*,
       # bin/hooks/run-suite.sh 등)와 git 훅 본체, ansible 롤. 정작 이 파일들에는
       # contexts/dotfiles/tests/ 에 전용 회귀 테스트가 다 있고 test-coverage-check.sh 가
       # 그 존재를 하드 게이트로 강제하는데, 트리거 패턴에만 빠져 있어서 고쳐도 push 시
       # 아무 테스트가 돌지 않았다 — 커버리지를 강제해 놓고 실행은 안 하는 상태였다.
+      #
+      # stow/ 는 예전에 stow/git/.githooks/* 로만 좁혀져 있었다. 그러면 같은 디렉토리의
+      # stow/zsh/.zshrc(test-zshrc-activation.sh 가 검증)와 stow 패키지 배치 자체
+      # (test-stow-backup.sh)가 트리거 밖으로 빠진다. .github/scripts/* 도 마찬가지로
+      # test-lint-commit-messages.sh / test-verify-bootstrap-env.sh 라는 전용 스위트가
+      # 있는데 패턴이 없어 한 번도 돌지 않았다 — 정작 그 디렉토리는 ci.yml 이 "우회
+      # 불가능한 최종 게이트"라고 선언한 곳이라, 커버리지 사각지대의 대가가 가장 크다.
       # (이 패턴은 위 코어 케이스보다 뒤에 와야 한다. case 는 첫 매치만 취하므로
       #  bin/lib/* 같은 코어 변경이 여기로 흡수되면 전 스킬 대상이 dotfiles 하나로 좁아진다.)
       add_skill dotfiles

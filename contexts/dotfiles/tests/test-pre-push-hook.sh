@@ -143,6 +143,58 @@ else
   report "githook-change (git 훅 본체 변경 시 dotfiles 스위트 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 1e. .github/scripts/* 는 ci.yml 이 "로컬 훅을 --no-verify 로 우회해도 막히는 최종
+#     게이트"라고 선언한 곳이고, test-coverage-check.sh 도 이 디렉토리를 커버리지
+#     하드 게이트 대상에 넣어 두었다(전용 스위트: test-lint-commit-messages.sh,
+#     test-verify-bootstrap-env.sh). 그런데 트리거 패턴에는 빠져 있어 그 최종 게이트를
+#     고쳐도 push 시 검증이 하나도 돌지 않았다(실측).
+mkdir -p "$FIXTURE_REPO/.github/scripts"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/.github/scripts/lint-commit-messages.sh"
+git -C "$FIXTURE_REPO" add .github/scripts/lint-commit-messages.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(ci): 커밋 메시지 게이트 판정 수정"
+CI_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $CI_SHA refs/heads/main $HOOKFILE_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out"; then
+  report "ci-script-change (.github/scripts 변경 시 dotfiles 스위트 트리거)" 0
+else
+  report "ci-script-change (.github/scripts 변경 시 dotfiles 스위트 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 1f. stow/ 는 예전에 stow/git/.githooks/* 로만 좁혀져 있어, 같은 디렉토리의
+#     stow/zsh/.zshrc(test-zshrc-activation.sh 가 mise/fzf 활성화 블록을 검증)가
+#     트리거 밖이었다. .githooks 가 아닌 stow 패키지 파일로 고정한다.
+mkdir -p "$FIXTURE_REPO/stow/zsh"
+echo "setopt AUTO_CD" >"$FIXTURE_REPO/stow/zsh/.zshrc"
+git -C "$FIXTURE_REPO" add stow/zsh/.zshrc
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(zsh): 도구 활성화 블록 수정"
+ZSHRC_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $ZSHRC_SHA refs/heads/main $CI_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out"; then
+  report "stow-package-change (stow/zsh 변경 시 dotfiles 스위트 트리거)" 0
+else
+  report "stow-package-change (stow/zsh 변경 시 dotfiles 스위트 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 1g. contexts/<skill>/examples/* 도 그 스킬의 회귀 스위트가 직접 돌리는 대상이다
+#     (contexts/aiops/tests/run.sh 가 examples/anomaly-rag-pipeline.py 의 PII 마스킹을
+#     실행해 검증한다). scripts/·tests/ 만 패턴에 있어 examples/ 의 마스킹 결함을 고쳐도
+#     push 시 그 스킬 스위트가 돌지 않았다. 해당 스킬"만" 트리거되는지까지 고정한다.
+mkdir -p "$FIXTURE_REPO/contexts/aws/examples"
+echo 'print("x")' >"$FIXTURE_REPO/contexts/aws/examples/sample-pipeline.py"
+git -C "$FIXTURE_REPO" add contexts/aws/examples/sample-pipeline.py
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(aws): 예제 파이프라인 마스킹 보강"
+EXAMPLE_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $EXAMPLE_SHA refs/heads/main $ZSHRC_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" &&
+  ! grep -qF "azure/tests/run.sh" "$TMP/out"; then
+  report "skill-examples-change (contexts/<skill>/examples 변경 시 해당 스킬만 트리거)" 0
+else
+  report "skill-examples-change (contexts/<skill>/examples 변경 시 해당 스킬만 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 2. 새 브랜치 최초 push(remote_sha=0000...)도 동일하게 감지되어야 한다(EMPTY_TREE 비교 분기).
 status=$(run_hook_with_refline "refs/heads/feature $NEW_SHA refs/heads/feature $ZERO_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out"; then
@@ -158,9 +210,9 @@ git -C "$FIXTURE_REPO" add README_UNRELATED.md
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "docs: 무관한 문서 추가"
 UNRELATED_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-# 비교 기준은 직전 커밋(HOOKFILE_SHA)이어야 한다. 더 앞을 기준으로 잡으면 그 사이의
-# 1c/1d 커밋까지 범위에 들어와 "무관한 변경만" 이라는 전제가 깨진다.
-status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $HOOKFILE_SHA")
+# 비교 기준은 직전 커밋(EXAMPLE_SHA)이어야 한다. 더 앞을 기준으로 잡으면 그 사이의
+# 1c~1g 커밋까지 범위에 들어와 "무관한 변경만" 이라는 전제가 깨진다.
+status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $EXAMPLE_SHA")
 if [ "$status" -eq 0 ] && [ ! -s "$TMP/out" ]; then
   report "no-skill-match (무관한 변경은 회귀 스위트 미실행 + exit 0)" 0
 else
