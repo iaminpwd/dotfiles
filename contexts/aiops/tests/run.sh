@@ -271,6 +271,12 @@ cases = [
     # 않았고(11자리라 카드 하한 13 에도 미달), 개인정보가 그대로 게이트웨이로 나갔다.
     ("하이픈 없는 휴대전화 검출", "고객 01012345678 문의", "01012345678", "[MASKED_PHONE_NUMBER]"),
     ("하이픈 없는 지역번호 검출", "고객 0212345678 문의", "0212345678", "[MASKED_PHONE_NUMBER]"),
+    # 국제 표기(+82)는 앞자리 0을 떼므로 국번 패턴에 안 걸리고, 앞의 하이픈 때문에
+    # (?<![\d.-]) 경계도 막혀 어떤 위치에서도 매치가 시작되지 않았다 — 번호 전체가
+    # 그대로 게이트웨이로 나갔다(실측). 국내 표기와 같은 유출 클래스다.
+    ("국제 표기 휴대전화(+82, 하이픈)", "call +82-10-1234-5678 now", "10-1234-5678", "[MASKED_PHONE_NUMBER]"),
+    ("국제 표기 휴대전화(+82, 공백)", "call +82 10 1234 5678 now", "10 1234 5678", "[MASKED_PHONE_NUMBER]"),
+    ("국제 표기 지역번호(+82-2)", "call +82-2-1234-5678 now", "2-1234-5678", "[MASKED_PHONE_NUMBER]"),
 ]
 for name, raw, sensitive, marker in cases:
     out = sanitize(raw)
@@ -301,6 +307,7 @@ check("12자리(카드 하한 미만)는 원형 보존", sanitize(short_id) == s
 long_id = "nano ts 12345678901234567890 end"
 check("20자리(카드 상한 초과)는 원형 보존", sanitize(long_id) == long_id,
       f"sanitize({long_id!r}) -> {sanitize(long_id)!r}")
+
 
 sys.exit(1 if failures else 0)
 PY
