@@ -66,7 +66,15 @@ resolve_source() {
     ;;
   esac
   if [ -d "$CONTEXTS_DIR" ]; then
-    matches=$(find "$CONTEXTS_DIR" -iname "$clean_src" 2>/dev/null)
+    # 점으로 시작하는 컨텍스트 디렉토리(.archive 폐기 스킬, .shared 공유 라이브러리)는
+    # 후보에서 뺀다. 폐기된 룰북이 살아있는 룰북과 파일명을 대량으로 공유하기 때문에
+    # (실측: azure/openstack 을 .archive 로 옮긴 뒤 080-database-standard.md 는 활성
+    # 스킬 1곳에만 있는데도 "후보: .archive,.archive,aws" 로 모호 판정되어 exit 1 +
+    # FLAGGED 가 됐다), 제외하지 않으면 정상적인 근거 기록이 막힌다.
+    # 반대 방향도 있다: .archive 에만 있는 이름은 유일 매치로 통과해 스킬이 리터럴
+    # ".archive" 로 보정되고, `agent:.archive/026-networking-standard.md` 라는 폐기
+    # 룰북 근거가 SUCCESS 로 기록됐다(실측).
+    matches=$(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -iname "$clean_src" -print 2>/dev/null)
     count=$(printf '%s\n' "$matches" | grep -c .)
     if [ "$count" -eq 1 ]; then
       skill=$(dirname "$matches" | sed -E "s#^${CONTEXTS_DIR}/([^/]+)/.*#\1#")
