@@ -81,10 +81,14 @@ jobs:
       - name: Install zsh (required by test-shell zsh -n subtest)
         run: sudo apt-get update -qq && sudo apt-get install -y zsh
 
+      # ! -path '*/contexts/.*' — 롤이 폐기 스킬(contexts/.archive/)을 링크하지 않으므로
+      # 여기서도 빼야 "mirrors" 가 사실이 된다. 안 빼면 CI 만 아카이브 스크립트 3개가
+      # PATH 에 더 올라간 환경에서 검증하게 된다.
       - name: Symlink agent scripts into ~/.local/bin (mirrors ansible ai_agent role)
         run: |
           mkdir -p ~/.local/bin
-          find ./bin ./contexts -type f -name '*.sh' \( -path '*/bin/*' -o -path '*/scripts/*' \) -perm -u+x \
+          find ./bin ./contexts -type f -name '*.sh' \( -path '*/bin/*' -o -path '*/scripts/*' \) \
+            ! -path '*/contexts/.*' -perm -u+x \
             -exec ln -sf "$(pwd)/{}" ~/.local/bin/ \;
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 

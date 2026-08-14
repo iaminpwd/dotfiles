@@ -14,11 +14,19 @@
 # 않는 이유는 aws/azure/openstack/multi-cloud/containers/
 # dotfiles 등 여러 스킬이 공유하는 자산이라, 이름과 위치만 봐도 "공유 자산"임이 드러나야
 # 하기 때문이다. 이름에 평문(`shared`) 대신 점(`.shared`)을 쓰는 이유는 `.archive`와
-# 동일하게 `ansible.builtin.find`(hidden 기본 미탐색)와 bash glob이 이 폴더를 스킬
-# 스캔·동기화 대상에서 구조적으로 자동 제외하게 하기 위함이다 — 평문 이름을 쓰면
-# `ansible/roles/ai_agent/tasks/main.yml`의 하드코딩 제외 목록에 수동으로 등록해야
-# 하고, 그 목록은 소비자가 늘어날 때 조용히 낡을 수 있다(실제로 이 저장소의
+# 동일하게 bash glob(dotglob 없이는 숨김 디렉토리를 건너뜀)이 이 폴더를 스킬 스캔 대상에서
+# 구조적으로 자동 제외하게 하기 위함이다 — 평문 이름을 쓰면 하드코딩 제외 목록에 수동으로
+# 등록해야 하고, 그 목록은 소비자가 늘어날 때 조용히 낡을 수 있다(실제로 이 저장소의
 # `git/.githooks/pre-push`에 그런 드리프트 버그가 있었다).
+#
+# [정정] 예전 주석은 여기에 `ansible.builtin.find`(hidden 기본 미탐색)도 같은 근거로
+# 들고 있었는데, 실측해 보니 사실이 아니다 — `hidden: false` 는 basename 이 점으로
+# 시작하는 "파일"만 거를 뿐 숨김 "디렉토리" 안으로는 그대로 recurse 한다(ansible-core
+# 2.19.11 확인). 그 잘못된 전제 때문에 `ansible/roles/ai_agent/tasks/main.yml` 의
+# ~/.local/bin 링크 태스크가 아무 제외 없이 방치돼, `contexts/.archive/` 의 스크립트가
+# 실제로 사용자 PATH 에 올라와 있었다. 지금은 그 태스크가 명시적으로 제외한다.
+# 즉 이 이름 규약의 자동 제외 효과는 셸 glob 경로에만 해당하며, ansible 쪽은 명시적
+# 조건이 필요하다.
 #
 # 이 파일은 단독 실행용이 아니다.
 
