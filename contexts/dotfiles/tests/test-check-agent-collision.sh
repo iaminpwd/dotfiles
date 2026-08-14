@@ -81,6 +81,22 @@ else
   report "ok-archived-name-reuse (.archive 스크립트는 충돌로 세지 않음)" 1 "기대 exit=0 / 실제 exit=$status: $out"
 fi
 
+# 4. fail-missing-search-path: 탐색 대상 디렉토리가 없으면 이유를 밝히고 중단해야 한다.
+#    예전엔 find 의 2>/dev/null + set -e + pipefail 이 겹쳐 "출력 한 줄 없이 exit 1" 이
+#    됐다. 이 스크립트는 ansible ai_agent 롤의 첫 태스크라, 그 상태면 `just setup` 이
+#    아무 이유도 알려주지 않고 멈춘다.
+MISSING_ROOT="$TMP/fail-missing-search-path"
+mkdir -p "$MISSING_ROOT/ansible" "$MISSING_ROOT/contexts/aws/scripts" # bin/ 은 일부러 안 만든다
+echo ": " >"$MISSING_ROOT/contexts/aws/scripts/deploy-check.sh"
+
+status=0
+out=$(bash "$CHECKER" "$MISSING_ROOT/ansible" 2>&1) || status=$?
+if [ "$status" -eq 1 ] && grep -qF "탐색 대상 디렉토리를 찾을 수 없습니다" <<<"$out"; then
+  report "fail-missing-search-path (무음 exit 1 이 아니라 이유를 보고)" 0
+else
+  report "fail-missing-search-path (무음 exit 1 이 아니라 이유를 보고)" 1 "기대 exit=1 + 사유 출력 / 실제 exit=$status: $out"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
