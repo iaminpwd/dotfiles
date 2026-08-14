@@ -393,6 +393,37 @@ else
   report "warn-two-skill-concept-without-mirror (문구에 미러링 언급 없음)" 0
 fi
 
+# 16. README 스킬 표의 모듈 수 대조. 이 저장소는 스킬을 .archive 로 옮기거나 룰북을
+#     통폐합해도 문서의 개수만 그대로 남는 드리프트가 실제로 있었다(활성 스킬이 9개가
+#     된 뒤에도 문서·주석 5곳이 "12개"를, 표가 Dotfiles "10개(000~060)"를 주장 — 실제는
+#     6개(010~060)). 산문 쪽 숫자는 개수 비의존 표현으로 걷어냈지만 표는 숫자가 형식상
+#     불가피하므로 그 축만 기계적으로 고정한다. 셋을 함께 본다: 일치하면 무경고,
+#     어긋나면 경고, 표에만 남은(아카이브된) 스킬도 경고.
+#     base 코퍼스에는 README 가 없어 나머지 케이스는 "README 없음 -> 건너뜀" 경로를 탄다.
+D=$(new_case readme-count-match)
+cat >"$D/README.md" <<'EOF'
+| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+|---|---|---|
+| **Demo** (`demo/`) | 2개 (`000`~`010`) | 픽스처용 데모 |
+EOF
+check_clean "readme-count-match (표가 실제와 일치하면 무경고)" "$D"
+
+D=$(new_case readme-count-drift)
+cat >"$D/README.md" <<'EOF'
+| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+|---|---|---|
+| **Demo** (`demo/`) | 9개 (`000`~`010`) | 픽스처용 데모 |
+EOF
+check "readme-count-drift (개수 불일치 경고)" 0 "README 스킬 표의 모듈 수가 실제와 다릅니다" "$D"
+
+D=$(new_case readme-archived-skill)
+cat >"$D/README.md" <<'EOF'
+| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+|---|---|---|
+| **Gone** (`gone/`) | 3개 (`010`~`030`) | 아카이브된 스킬 |
+EOF
+check "readme-archived-skill (표에만 남은 스킬 경고)" 0 "references 디렉토리가 없습니다" "$D"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

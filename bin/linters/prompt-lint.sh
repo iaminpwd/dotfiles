@@ -519,6 +519,50 @@ check_index_freshness() {
   log_info "[INFO] 색인 최신성 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 12. README 스킬 표의 모듈 수 최신성 검사 (Warning Only)
+# -----------------------------------------------------------------------------
+# 이 저장소의 문서는 스킬을 .archive 로 옮기거나 룰북을 통폐합해도 개수만 그대로 남는
+# 드리프트가 실제로 있었다(실측: 활성 스킬이 9개가 된 뒤에도 문서·주석 5곳이 "12개"를,
+# README 표가 Dotfiles "10개(000~060)"를 주장 — 실제는 6개(010~060)였고 000 번 파일은
+# 존재한 적이 없다). 산문 쪽 숫자는 개수 비의존 표현으로 걷어냈지만 표는 숫자가 형식상
+# 불가피하므로, 그 축만 기계적으로 대조한다.
+#
+# README 는 사람이 쓰는 문서라 하드 블록이 아니라 경고로 둔다(check_index_freshness 와
+# 동일한 등급). CONTEXTS_DIR 이 아니라 저장소 루트를 보는 유일한 검사다.
+check_readme_skill_counts() {
+  log_info "--- Step: README 스킬 표 모듈 수 (Warning Only) ---"
+  local readme="$REPO_ROOT/README.md"
+  [ -f "$readme" ] || {
+    log_info "[INFO] README.md 없음 — 스킬 표 검사 건너뜀."
+    return
+  }
+
+  local line skill claim actual
+  # 정규식 안의 백틱은 마크다운 인라인 코드 표기라 리터럴이다(셸 명령 치환이 아니므로
+  # 홑따옴표가 맞다). 루프 안팎의 grep 둘 다 해당하므로 while 전체에 한 번만 붙인다.
+  # shellcheck disable=SC2016
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    skill=$(grep -oE '\(`[a-z0-9-]+/`\)' <<<"$line" | tr -d '(`)/' | head -1)
+    claim=$(grep -oE '\| [0-9]+개' <<<"$line" | grep -oE '[0-9]+' | head -1)
+    [ -n "$skill" ] && [ -n "$claim" ] || continue
+    # 표에 있지만 이미 .archive 로 옮겨진 스킬은 references 디렉토리 자체가 없다.
+    # 그 경우는 개수 불일치가 아니라 표에 남은 항목 자체가 문제이므로 따로 알린다.
+    if [ ! -d "$CONTEXTS_DIR/$skill/references" ]; then
+      echo "[WARNING] README 스킬 표에 있는 '$skill' 의 references 디렉토리가 없습니다(아카이브됐거나 이름이 바뀜)."
+      continue
+    fi
+    actual=$(find "$CONTEXTS_DIR/$skill/references" -maxdepth 1 -name '*.md' | wc -l)
+    if [ "$claim" -ne "$actual" ]; then
+      echo "[WARNING] README 스킬 표의 모듈 수가 실제와 다릅니다: $skill — 표 ${claim}개 / 실제 ${actual}개"
+      echo "[WARNING]     $readme 의 해당 행을 실제 개수와 번호 범위에 맞추십시오."
+    fi
+  done < <(grep -E '^\|[^|]*\(`[a-z0-9-]+/`\)' "$readme" || true)
+
+  log_info "[INFO] README 스킬 표 검사 완료."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -533,6 +577,7 @@ main() {
   check_cross_skill_duplication
   check_vendor_mirror_symmetry
   check_index_freshness
+  check_readme_skill_counts
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then
