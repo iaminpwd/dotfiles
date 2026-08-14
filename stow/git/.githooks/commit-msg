@@ -5,6 +5,26 @@ set -euo pipefail
 COMMIT_MSG_FILE="$1"
 COMMIT_SOURCE="${2:-}"
 
+# $2(COMMIT_SOURCE)는 git 이 넘겨주지 않는다. commit-msg 훅이 git 에게서 받는 인자는
+# 메시지 파일 경로($1) 하나뿐이고, source 를 $2 로 받는 것은 prepare-commit-msg 훅이다.
+# 그래서 이 값은 이 훅을 직접 호출하는 .github/scripts/lint-commit-messages.sh(CI 재검증)
+# 에서만 채워지고, 정작 git 이 부르는 실제 커밋 경로에서는 항상 비어 있었다 — 즉 아래
+# 머지 면제가 로컬에서 한 번도 동작한 적이 없어 `git merge --no-ff` 가 자동 생성 메시지
+# ("Merge branch 'x'")로 인해 "컨벤션 위반"으로 차단됐다(실측 재현). 이 훅은 전역
+# core.hooksPath 라 dotfiles 밖 모든 저장소의 머지가 같이 막힌다.
+#
+# git 경로에서는 진행 중인 작업의 상태 파일로 직접 판정한다. 메시지 문자열("Merge "로
+# 시작하는가)이 아니라 상태 파일을 보는 이유는, 사용자가 손으로 쓴 메시지가 우연히 같은
+# 낱말로 시작해도 면제되지 않게 하기 위함이다. --git-path 는 worktree/서브모듈에서도
+# 올바른 위치를 돌려준다(git 2.5+).
+if [ -z "$COMMIT_SOURCE" ]; then
+  if [ -f "$(git rev-parse --git-path MERGE_HEAD 2>/dev/null)" ]; then
+    COMMIT_SOURCE="merge"
+  elif [ -f "$(git rev-parse --git-path SQUASH_MSG 2>/dev/null)" ]; then
+    COMMIT_SOURCE="squash"
+  fi
+fi
+
 # 병합/스쿼시 커밋은 Git이 메시지를 자동 생성하므로 컨벤션 강제 대상에서 제외한다.
 if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
   exit 0

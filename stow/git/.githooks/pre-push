@@ -51,8 +51,10 @@ collect_changed_skills_from_range() {
       SKILL=${FILE#contexts/}
       add_skill "${SKILL%%/*}"
       ;;
-    bootstrap.sh | ansible/site.yml | bin/utils/merge-agent-hooks.sh | contexts/base.hooks.json)
+    bootstrap.sh | ansible/site.yml | bin/utils/merge-agent-hooks.sh)
       # bootstrap.sh 와 ansible 관련 셋업 변경 시 dotfiles 스킬 검증 묶어서 실행
+      # (예전엔 여기에 contexts/base.hooks.json 도 있었는데 그 파일은 이 저장소에 실재하지
+      #  않는다 — 훅 병합 대상은 merge-agent-hooks.sh 가 직접 조립하므로 죽은 패턴이었다.)
       add_skill dotfiles
       ;;
     bin/lib/* | bin/hooks/pre-flight-check.sh | contexts/.shared/test-lib/*)

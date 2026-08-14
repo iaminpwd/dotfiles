@@ -152,6 +152,13 @@ if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
     bin/hooks/pre-flight-check.sh)
       BIN_REMINDERS+=("pre-flight-check/tests/run.sh  # 전체 — pre-flight-check.sh 는 범용 로직이라 파급 범위가 넓음")
       ;;
+    bin/utils/*.sh)
+      # bin/utils/* 는 전부 contexts/dotfiles/tests/ 에 전용 스위트가 있지만 이름 규칙이
+      # 1:1로 맞지 않아(generate-context-index.sh -> test-script-init.sh,
+      # record-provenance.sh -> test-git-relpath.sh) 개별 매핑을 두면 조용히 낡는다.
+      # 어느 패턴에도 안 걸려 아무 안내도 없던 사각지대였으므로 스위트 전체를 안내한다.
+      BIN_REMINDERS+=("dotfiles/tests/run.sh  # 전체 — bin/utils 는 스위트 전반에 걸침")
+      ;;
     bin/linters/*.sh | bin/hooks/*.sh | bin/lib/*.sh)
       BIN_REMINDERS+=("pre-flight-check/tests/run.sh  # 전체 — 아직 전용 서브스위트가 없는 스크립트")
       ;;
