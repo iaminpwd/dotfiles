@@ -7,6 +7,25 @@ set -euo pipefail
 # 인자가 없으면 현재 디렉토리 스캔
 TARGET_DIR="${1:-.}"
 
+# 의도적 위반을 담은 회귀 테스트 픽스처는 스캔 대상에서 제외한다. 이 검사기는
+# pre-flight-check.sh 의 validate_terraform 이 저장소 루트(".")를 통째로 넘겨 호출하므로,
+# 제외가 없으면 자기 저장소의 픽스처가 그대로 위반으로 잡혀 무관한 커밋이 영구 차단된다
+# (실측: contexts/pre-flight-check/tests/fixtures-db-sg 의 fail-* 3건이 신고됨).
+# 같은 함수의 checkov(--skip-path 'tests/fixtures')와 validate_security 의
+# trivy(--skip-dirs '**/tests/fixtures*')는 이미 같은 이유로 같은 범위를 제외하고 있는데
+# 이 검사기만 빠져 있었다. 끝에 * 를 붙여 fixtures-db-sg / fixtures-conftest 같은 접미사형
+# 디렉토리까지 함께 덮는다(세 검증기의 제외 범위를 일치시킨다).
+#
+# 단, 스캔 루트로 픽스처 자신을 지목해 호출한 경우(회귀 테스트 test-db-sg.sh 가 각
+# fail-* 디렉토리를 인자로 넘기는 방식)에는 제외하지 않는다. 무조건 걸러내면 그 테스트의
+# 위반 픽스처가 전부 미탐이 되어, 정작 이 검사기의 판정 로직이 깨져도 아무도 잡지 못한다.
+# checkov/trivy 의 제외 옵션도 스캔 루트 자체를 지정하면 그 안을 그대로 검사하므로
+# 의미론이 일치한다.
+FIXTURE_EXCLUDE=(! -path "*/tests/fixtures*")
+case "$TARGET_DIR" in
+*/tests/fixtures* | tests/fixtures*) FIXTURE_EXCLUDE=() ;;
+esac
+
 # .tf 파일이 없으면 조용히 종료 (하위 디렉토리 포함)
 #
 # `find ... | grep -q .` 형태를 쓰지 않는다. grep 이 첫 매치에서 stdin 을 닫으면 find 가
@@ -14,7 +33,7 @@ TARGET_DIR="${1:-.}"
 # 없다"로 뒤집힌다 — 그러면 DB SG 검사가 통째로 조용히 건너뛰어진다. 현재는 find 가 -quit 로
 # 즉시 끝나 발현되지 않지만, 같은 함정을 이 저장소는 이미 tf-fixture-lib.sh / prompt-lint.sh
 # 두 곳에서 고쳤다(파이프 버퍼 안에 들어가 안 터질 뿐 구조는 동일). 파이프 자체를 없앤다.
-if [ -z "$(find "$TARGET_DIR" -type f -name "*.tf" -print -quit)" ]; then
+if [ -z "$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print -quit)" ]; then
   exit 0
 fi
 
@@ -34,7 +53,7 @@ FAILED=0
 # 그 블록 안에서만 DB 포트와 0.0.0.0/0 의 공존을 판정한다. egress 블록은 대상에서 뺀다.
 # $0/$1 은 awk 자신의 필드 변수이므로 셸이 전개하면 안 된다. 홑따옴표가 맞다.
 # shellcheck disable=SC2016
-MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" -print0 | xargs -0 awk '
+MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print0 | xargs -0 awk '
   # 파일이 바뀌면 블록 추적 상태를 초기화한다(여러 파일을 한 awk 프로세스로 받기 때문).
   FNR == 1 { in_block = 0; depth = 0 }
 
