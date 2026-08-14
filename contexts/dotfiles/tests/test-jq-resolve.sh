@@ -60,9 +60,28 @@ FAKE_HOME="$TMP/home"
 mkdir -p "$FAKE_HOME"
 out=$(MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash -c 'source "$1"; resolve_jq' _ "$LIB")
 if [ -n "$out" ] && "$out" --version >/dev/null 2>&1; then
-  report "HOME 격리 환경 -> mise 설치 디렉토리 폴백으로 발견" 0
+  report "HOME 격리 + MISE_DATA_DIR 지정 -> 여전히 실행 가능한 jq 반환" 0
 else
-  report "HOME 격리 환경 -> mise 설치 디렉토리 폴백으로 발견" 1 "resolved='$out'"
+  report "HOME 격리 + MISE_DATA_DIR 지정 -> 여전히 실행 가능한 jq 반환" 1 "resolved='$out'"
+fi
+
+# 3b. 폴백 경로 자체의 검증. 위 3번은 MISE_DATA_DIR 을 실제 위치로 넘기는 순간 shim 이
+#     정상 동작해 첫 경로(command -v jq)에서 해결되므로, 이름과 달리 폴백을 한 번도 타지
+#     않는다 — 실제로 find 폴백을 통째로 지워도 위 케이스는 통과했다(뮤테이션으로 확인).
+#     폴백을 태우려면 "PATH 에 jq 는 있는데 실행이 안 되는" 상태를 만들어야 한다.
+FAKE_BIN="$TMP/fakebin"
+mkdir -p "$FAKE_BIN"
+cat >"$FAKE_BIN/jq" <<'EOF'
+#!/usr/bin/env bash
+# mise shim 이 해석에 실패해 먹통이 된 상황을 재현한다(어떤 인자로도 실패).
+exit 127
+EOF
+chmod +x "$FAKE_BIN/jq"
+out=$(PATH="$FAKE_BIN:$PATH" bash -c 'source "$1"; resolve_jq' _ "$LIB")
+if [ -n "$out" ] && [ "$out" != "$FAKE_BIN/jq" ] && "$out" --version >/dev/null 2>&1; then
+  report "PATH 의 jq 가 먹통 -> mise 설치 디렉토리 폴백으로 발견" 0
+else
+  report "PATH 의 jq 가 먹통 -> mise 설치 디렉토리 폴백으로 발견" 1 "resolved='$out' (먹통 shim 을 그대로 반환했거나 폴백이 비었습니다)"
 fi
 
 # 4. 소비자(agent-edits-hook.sh, merge-agent-hooks.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.

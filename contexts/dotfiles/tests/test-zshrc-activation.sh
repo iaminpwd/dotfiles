@@ -89,6 +89,13 @@ PROBE_EOF
     report "nested-shell-activation (중첩 셸에서도 mise 훅 유지)" 1 "L1='$L1' L2='$L2'"
   fi
 
+  # [측정 기록] 재실행 가드(`! typeset -f _mise_hook`)를 없애 매번 activate 가 다시
+  # 실행되게 만드는 뮤테이션은 이 스위트가 잡지 못하지만, 그건 커버리지 공백이 아니라
+  # 그 뮤테이션이 무해하기 때문이다. mise activate 자체가 멱등이라 두 번 eval 해도
+  # _mise_hook_precmd/_mise_hook_chpwd 가 각각 1개씩만 등록된다(실측). 즉 가드의 가치는
+  # 중복 방지가 아니라 불필요한 재실행 회피(성능)이므로 동작으로 고정할 대상이 아니다.
+  # 훅 이름도 _mise_hook 이 아니라 접미사가 붙은 두 개라는 점을 함께 남긴다.
+
   # 3. fzf 버전 게이트. fzf 0.48+ 가 설치돼 있는데도 위젯이 정의되지 않으면 임계값 비교가
   #    깨진 것이다(예전 48000 버그). fzf 가 없거나 구버전이면 검사 대상이 아니다.
   if command -v fzf >/dev/null 2>&1 &&
