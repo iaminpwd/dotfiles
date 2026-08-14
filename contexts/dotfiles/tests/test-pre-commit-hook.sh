@@ -70,12 +70,15 @@ run_hook_allow_fail() {
 echo "=== pre-commit 훅 오케스트레이션 로직 회귀 테스트 ==="
 
 # 1. bin/hooks/pre-flight-check.sh, bin/linters/container-hardening-gate.sh,
-#    bin/hooks/run-suite.sh, bin/lib/tool-probe.sh 를 동시에 스테이징하면 BIN_REMINDERS의
-#    모든 case(전용 case 3개 + 캐치올 1개)가 다 걸린다. 각 재현 명령 줄이 (a) 그대로
+#    bin/hooks/run-suite.sh, bin/lib/tool-probe.sh, bin/utils/stow-backup.sh 를 동시에
+#    스테이징하면 BIN_REMINDERS의 모든 case(전용 case 3개 + utils case 1개 + 캐치올 1개)가
+#    다 걸린다. 각 재현 명령 줄이 (a) 그대로
 #    실행 가능한(파싱 에러 없는) 셸 명령이어야 하고, (b) 실제 dotfiles 저장소에 그 경로가
 #    존재해야 한다 — (b)를 놓쳐서 test-run-suite.sh/test-tool-probe-ssot.sh가
 #    contexts/pre-flight-check/tests/ 로 잘못 안내되던 버그가 실제로 있었다(고쳐짐).
-mkdir -p "$FIXTURE_REPO/bin/linters" "$FIXTURE_REPO/bin/lib"
+#    bin/utils/* 는 예전엔 어느 case 에도 안 걸려 아무 안내도 나오지 않는 사각지대였고,
+#    이 픽스처가 utils 파일을 하나도 스테이징하지 않아 그 사실이 드러나지 않았다.
+mkdir -p "$FIXTURE_REPO/bin/linters" "$FIXTURE_REPO/bin/lib" "$FIXTURE_REPO/bin/utils"
 # 초기 커밋과 내용이 완전히 같으면 git diff --cached 에 아예 안 잡혀 이 case가
 # 검증되지 않으므로, 한 줄을 더해 실제 스테이징된 변경으로 만든다.
 cat >"$FIXTURE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
@@ -86,8 +89,9 @@ EOF
 echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/linters/container-hardening-gate.sh"
 echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/hooks/run-suite.sh"
 echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/lib/tool-probe.sh"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/utils/stow-backup.sh"
 git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh bin/linters/container-hardening-gate.sh \
-  bin/hooks/run-suite.sh bin/lib/tool-probe.sh
+  bin/hooks/run-suite.sh bin/lib/tool-probe.sh bin/utils/stow-backup.sh
 
 status=$(run_hook_allow_fail)
 OUT="$(cat "$TMP/out")"
@@ -95,8 +99,9 @@ REMINDER_LINES=$(grep -E '^\s+bash .*/tests/.*\.sh' "$TMP/out" || true)
 REMINDER_COUNT=$(printf '%s\n' "$REMINDER_LINES" | grep -c . || true)
 
 # pre-flight-check.sh 전용(1) + linters/*.sh 캐치올(1) + run-suite.sh 전용(1) +
-# tool-probe.sh 전용(2, test-tool-probe-ssot.sh/test-plugin-loop.sh) = 총 5줄이어야 한다.
-if [ "$status" -eq 0 ] && [ "$REMINDER_COUNT" -eq 5 ] && ! grep -qF '(' <<<"$REMINDER_LINES"; then
+# tool-probe.sh 전용(2, test-tool-probe-ssot.sh/test-plugin-loop.sh) + utils 캐치올(1)
+# = 총 6줄이어야 한다.
+if [ "$status" -eq 0 ] && [ "$REMINDER_COUNT" -eq 6 ] && ! grep -qF '(' <<<"$REMINDER_LINES"; then
   # 출력된 재현 명령 줄들을 그대로 셸에 넣어 파싱 에러(예: 괄호로 인한 syntax error)가
   # 없는지 실제로 검증한다. 스텁이 exit 0 이므로 명령 자체는 실행돼도 안전하다.
   PARSE_OK=1

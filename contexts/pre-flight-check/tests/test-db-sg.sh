@@ -60,6 +60,48 @@ code=0
 bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-sg-rule-ingress" >/dev/null 2>&1 || code=$?
 report "fail-sg-rule-ingress (aws_security_group_rule type=ingress 탐지)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
 
+# -----------------------------------------------------------------------------
+# 저장소 루트 스캔 시 회귀 픽스처 제외 (validate_terraform 의 실제 호출 형태)
+# -----------------------------------------------------------------------------
+# 위 5개는 픽스처 디렉토리를 "직접 지목"해 호출한다. 그런데 실제 커밋 경로에서는
+# pfc-iac-checks.sh 의 validate_terraform 이 저장소 루트(".")를 통째로 넘기므로, 그때
+# 자기 저장소의 의도적 위반 픽스처가 그대로 잡혀 무관한 커밋이 영구 차단됐다(실측:
+# fixtures-db-sg 의 fail-* 3건 신고). 같은 함수의 checkov(--skip-path 'tests/fixtures')와
+# validate_security 의 trivy(--skip-dirs '**/tests/fixtures*')는 이미 제외하고 있었다.
+#
+# 아래는 그 두 방향을 같이 고정한다. 제외만 검증하면 "전부 무시"로 퇴화해도 통과하므로,
+# 같은 위반이 일반 경로에 있을 때는 반드시 잡히는지도 함께 본다.
+SCAN_TMP=$(mktemp -d)
+trap 'rm -rf "$SCAN_TMP"' EXIT
+
+write_violation() {
+  mkdir -p "$1"
+  cat >"$1/main.tf" <<'EOF'
+resource "aws_security_group" "db" {
+  name = "db-sg"
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+EOF
+}
+
+write_violation "$SCAN_TMP/repo/contexts/skill/tests/fixtures-db-sg/fail-open-cidr"
+code=0
+bash "$DB_SG_SCRIPT" "$SCAN_TMP/repo" >/dev/null 2>&1 || code=$?
+report "root-scan-skips-fixtures (루트 스캔은 tests/fixtures 하위 위반을 무시)" \
+  "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
+
+write_violation "$SCAN_TMP/repo/infra"
+code=0
+bash "$DB_SG_SCRIPT" "$SCAN_TMP/repo" >/dev/null 2>&1 || code=$?
+report "root-scan-detects-real-code (제외가 과하지 않음: 일반 경로 위반은 검출)" \
+  "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
