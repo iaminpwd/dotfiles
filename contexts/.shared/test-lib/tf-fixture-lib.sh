@@ -80,14 +80,20 @@ tf_assert_gate() {
   fi
 }
 
-# validate_terraform 과 동일하게 'terraform fmt -check -recursive' 를 호출한다.
+# validate_terraform 의 'terraform fmt -check' 와 같은 게이트를 픽스처 디렉토리 단위로
+# 재현한다. 검증기 쪽은 대상 .tf 파일 목록을 직접 넘기는 반면 여기서는 픽스처 디렉토리를
+# 통째로 주므로 -recursive 가 필요하다 — 판정 기준(포맷 불일치 시 exit≠0)은 동일하고
+# 대상 지정 방식만 다르다는 것을 분명히 해 둔다(예전 주석은 검증기도 -recursive 를
+# 쓰는 것처럼 읽혀 실제 호출과 어긋나 있었다).
 tf_run_fmt() {
   local dir=$1 label=$2 want_fail=$3 status
   terraform fmt -check -recursive "$dir" >/dev/null 2>&1 && status=0 || status=$?
   tf_assert_gate "$label (terraform fmt)" "$want_fail" "$status"
 }
 
-# validate_terraform 과 동일하게 'tflint' 를 호출한다.
+# validate_terraform 의 'tflint' 게이트를 픽스처 디렉토리 단위로 재현한다. 검증기는
+# 저장소 루트(CWD)에서 인자 없이 부르고 여기서는 --chdir 로 픽스처를 지목하는데, 이는
+# 대상 지정 방식의 차이일 뿐 판정 기준은 같다(tf_run_fmt 주석과 동일한 사유).
 # want_rule 이 주어지면 그 룰이 실제로 지적됐는지까지 확인한다. 종료 코드만
 # 보면 다른 룰이 대신 걸려도 통과로 오판할 수 있다.
 tf_run_tflint() {

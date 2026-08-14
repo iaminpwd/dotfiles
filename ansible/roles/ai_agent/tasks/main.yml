@@ -201,6 +201,11 @@
   loop:
     - "{{ ansible_env.HOME }}/.gemini/config/skills"
     - "{{ ansible_env.HOME }}/.claude/skills"
+  # register 이름을 changed_when 에서 참조하는 것이 loop 태스크의 정상 관용구다. Ansible 은
+  # 각 아이템 실행 직후 그 아이템의 결과를 이 이름으로 바인딩하므로 아이템별로 정확히
+  # 갈린다(실측, ansible-core 2.19.11: [PRUNED] 아이템 changed=true / [SKIP] 아이템 false).
+  # 반대로 bare `stdout` 을 쓰면 "'stdout' is undefined" 로 태스크가 실패한다 — 조건식에
+  # 결과 필드를 자동 주입하던 옛 동작은 제거됐다.
   changed_when: "'[PRUNED]' in ai_agent_prune_result.stdout"
   register: ai_agent_prune_result
 
