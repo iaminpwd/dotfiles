@@ -70,6 +70,16 @@ else
   report "fail-append-after-heredoc (히어독 이후 append 는 경고 떠야 함)" 1 "경고가 떠야 하는데 안 떴습니다"
 fi
 
+# 탐지 대상은 리다이렉트 형식만이 아니라 tee 의 append 옵션도 포함하는데 그 축을 검증하는
+# 픽스처가 없었다 — 탐지 정규식에서 tee 쪽을 통째로 지워도 스위트가 그대로 통과했다
+# (뮤테이션으로 확인). 두 형식이 같은 경고 경로를 타는지 고정한다.
+out=$(bash "$IDEMPOTENCY_SCRIPT" "$IDEMPOTENCY_FIXTURES/fail-tee-append.sh" 2>&1 >/dev/null) || true
+if grep -qF "Idempotency check" <<<"$out"; then
+  report "fail-tee-append (tee append 도 경고 떠야 함)" 0
+else
+  report "fail-tee-append (tee append 도 경고 떠야 함)" 1 "경고가 떠야 하는데 안 떴습니다"
+fi
+
 # 히어독 탐지 정규식이 << 뒤 공백을 허용하면 산술 좌시프트(x=$((1 << b)))가 구분자 "b"
 # 짜리 히어독 시작으로 오인되고, 그 아래 파일 전체가 본문 취급되어 조용히 무검사로
 # 통과한다(실측 재현). 히어독 지원을 넓힐 때 이 무검증 통과가 딸려오지 않도록 고정한다.

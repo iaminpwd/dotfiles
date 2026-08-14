@@ -60,6 +60,14 @@ code=0
 bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-sg-rule-ingress" >/dev/null 2>&1 || code=$?
 report "fail-sg-rule-ingress (aws_security_group_rule type=ingress 탐지)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
 
+# 위 케이스의 짝. aws_security_group_rule 은 진입 조건에 방향과 무관하게 걸리므로,
+# type = "egress" 를 대상에서 빼는 is_egress 판정이 실제로 동작해야 한다. 이 픽스처가
+# 없던 동안 그 경로 전체가 미검증이라 is_egress 를 0 으로 못박아도 통과했다(뮤테이션 확인).
+# ok-egress-open 은 인라인 egress 블록이라 애초에 블록 진입 자체를 안 해 대체재가 못 된다.
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/ok-sg-rule-egress" >/dev/null 2>&1 || code=$?
+report "ok-sg-rule-egress (aws_security_group_rule type=egress 는 제외)" "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
+
 # -----------------------------------------------------------------------------
 # 저장소 루트 스캔 시 회귀 픽스처 제외 (validate_terraform 의 실제 호출 형태)
 # -----------------------------------------------------------------------------

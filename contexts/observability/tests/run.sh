@@ -73,6 +73,9 @@ if require_tool yq; then
   run_validator ok-baseline.yaml 0
   run_validator fail-missing-runbook.yaml 1 "runbook_url 누락"
   run_validator fail-high-cardinality-label.yaml 1 "고카디널리티 레이블 감지"
+  # 020 4절이 든 예시는 user_id 와 client_ip 둘인데 픽스처가 user_id 쪽만 있어,
+  # DENYLISTED_LABEL_KEYS 에서 client_ip 를 지워도 스위트가 통과했다(뮤테이션 확인).
+  run_validator fail-high-cardinality-client-ip.yaml 1 "고카디널리티 레이블 감지"
   # 위 셋은 모두 규칙이 1건이라, 검증기가 필드를 행 단위가 아니라 열 단위로 묶어도
   # 두 순서가 우연히 일치해 통과한다. 실제로 그 사각지대로 필드 정렬 버그가 통과한 적이
   # 있어, 규칙 3건짜리 픽스처로 그 축을 따로 고정한다.
