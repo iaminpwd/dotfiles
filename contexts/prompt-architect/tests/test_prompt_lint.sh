@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # prompt-lint.sh 회귀 테스트
 #
-# prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 11개 검사를 담고 있는데, 정작
+# prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 14개 검사를 담고 있는데, 정작
 # 자기 자신은 검증되지 않으면 grep 무매치 하나가 set -euo pipefail 에 걸려 아무
 # 메시지 없이 exit 1로 죽어도 알 수 없다. 린터가 죽으면 코퍼스가 깨끗해서 통과한
 # 것인지 검사가 실행조차 안 된 것인지 구분할 수 없다.
@@ -42,7 +42,8 @@ report() {
 }
 
 # -----------------------------------------------------------------------------
-# 최소 코퍼스: 11개 검사를 모두 통과하는 상태. 각 케이스는 여기서 한 군데만 어긋뜨린다.
+# 최소 코퍼스: 전 검사를 통과하는 상태. 각 케이스는 여기서 한 군데만 어긋뜨린다.
+# (개수를 적으면 검사가 늘 때마다 조용히 낡으므로 여기서는 수를 명시하지 않는다.)
 # -----------------------------------------------------------------------------
 BASE="$TMP/_base"
 build_base() {
@@ -218,6 +219,58 @@ reviewed: $TODAY
 - **[MUST] Least Privilege:** IAM/RBAC 권한을 최소화하십시오.
 EOF
 check "fail-iam-rbac-in-aws" 1 "'IAM/RBAC' 병기 발견" "$D"
+
+# 5b~5d. 예외 마커 무결성(check_exception_hook_integrity).
+#
+# base.AGENTS.md 의 [CORE EXCEPTION HOOK] 은 스킬이 전역 룰을 완화하려면 완화 대상을
+# 개별 열거하도록 요구하고, 그 형식 준수를 prompt-lint.sh 가 자동 검증한다고 선언한다.
+# 그런데 이 검사에는 회귀 케이스가 하나도 없었다 — 함수 본문을 통째로 `return 0` 으로
+# 바꿔도 스위트가 25/25 로 통과했다(뮤테이션 실측). 즉 게이트가 죽어도 아무도 모르는
+# 상태에서, 이 저장소의 contexts/dotfiles/SKILL.md 를 포함한 실제 예외 선언들이
+# 무검증으로 통과할 수 있었다. 통과·차단 양쪽 축을 함께 고정한다.
+#
+# 이 검사는 contexts/base.AGENTS.md 가 있어야 발동하므로(없으면 조용히 건너뜀),
+# 기준선 코퍼스가 아니라 각 케이스에서만 심는다.
+write_base_agents() {
+  cat >"$1/contexts/base.AGENTS.md" <<'EOF'
+# 공통 메타 프롬프트 엔진
+
+- **[MUST] Deterministic Output:** 출력은 결정론적이어야 합니다.
+- **[PREFER] Caution Over Speed:** 속도보다 정확성을 우선합니다.
+EOF
+}
+
+# 5b. 정상 선언: 실재하는 룰 이름을 개별 열거하면 통과해야 한다(오탐 회귀).
+D=$(new_case ok-exception-marker)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: Caution Over Speed ]**
+> - **Caution Over Speed** (`base.AGENTS.md` 최상단): 자동화된 안전망이 대체하므로 생략.
+EOF
+check "ok-exception-marker (실재 룰 개별 열거는 통과)" 0 "예외 마커 무결성 검사 완료" "$D"
+
+# 5c. 범위를 특정하지 않은 블랑켓 선언은 차단해야 한다.
+D=$(new_case fail-exception-blanket)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: 전체 무효화 ]**
+> - **Deterministic Output** (`base.AGENTS.md`): 근거.
+EOF
+check "fail-exception-blanket (범위 미특정 무효화 차단)" 1 "범위를 특정하지 않은 예외 선언" "$D"
+
+# 5d. 열거된 이름이 base.AGENTS.md 에 실재하지 않으면(개명·삭제·오타) 차단해야 한다.
+#     이게 이 검사의 본래 목적이다 — 룰 이름이 바뀌면 예외 선언이 조용히 낡아,
+#     아무 룰도 완화하지 않으면서 완화한 것처럼 보이는 상태가 된다.
+D=$(new_case fail-exception-ghost-rule)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: Exhaustive Review ]**
+> - **Exhaustive Review** (`base.AGENTS.md` §5.2): 이 룰은 base.AGENTS.md 에 실재하지 않는다.
+EOF
+check "fail-exception-ghost-rule (실재하지 않는 룰 열거 차단)" 1 "base.AGENTS.md에 실재하지 않음" "$D"
 
 echo "--- WARNING (통과시키되 보고) ---"
 
