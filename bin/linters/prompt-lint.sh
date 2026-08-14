@@ -563,6 +563,75 @@ check_readme_skill_counts() {
   log_info "[INFO] README 스킬 표 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 14. contexts/ 스캔의 숨김 디렉토리 제외 일관성
+# -----------------------------------------------------------------------------
+# `contexts/.archive`(폐기 스킬)와 `contexts/.shared`(테스트 전용 라이브러리)는 "어떤
+# 소비자도 취급하지 않는다"가 이 코퍼스의 규약이다. 그런데 그 규약은 자동으로 지켜지지
+# 않는다 — 셸 glob(`"$CONTEXTS_DIR"/*/`)은 dotglob 없이 숨김 디렉토리를 건너뛰지만,
+# `find` 와 `ansible.builtin.find` 는 그렇지 않다. 특히 후자는 `hidden: false` 가 숨김
+# "파일"만 거르고 숨김 "디렉토리" 안으로는 그대로 recurse 한다(ansible-core 2.19.11 실측).
+#
+# 그 차이 때문에 같은 규약을 여러 곳에 손으로 넣다가 두 곳을 빠뜨렸고, 둘 다 실제 피해로
+# 이어졌다: 폐기 스킬의 스크립트가 매 setup 마다 사용자 PATH 에 링크됐고(ansible ai_agent
+# 롤), 폐기 룰북이 근거 기록의 스킬 보정 후보에 섞여 정상 기록을 막거나 존재하지 않는
+# 룰을 SUCCESS 로 남겼다(record-provenance.sh).
+#
+# 문서 규칙(010-core.md 의 Sibling Sweep)만으로 두지 않고 여기서 기계적으로 대조한다 —
+# 050-rule-provenance-standard.md 의 자가 비판 기준("스크립트로 pass/fail 판정이 가능한
+# 조항인데 문서 규칙에만 머물러 있지 않은가")이 요구하는 바다.
+#
+# 판정은 오탐 0을 우선해 좁게 잡는다:
+#  (a) 셸: 명령 위치의 `find` 가 contexts "루트"를 대상으로 잡는 경우만. 특정 스킬 하위를
+#      지목하는 `find "$CONTEXTS_DIR/$skill/references"` 는 구조적으로 .archive 에 닿을 수
+#      없으므로 대상이 아니다. 제외 토큰(-prune / ! -path / -not -path / --exclude-dir)이
+#      하나라도 있으면 통과.
+#  (b) ansible: `ansible.builtin.find` 로 contexts 를 `recurse: true` 스캔하는 파일은
+#      경로 가드 토큰 `/contexts/.` 를 코드에 갖고 있어야 한다. 제외 조건이 find 태스크가
+#      아니라 그 결과를 loop 하는 별도 태스크의 when: 에 붙는 구조라, 태스크 블록 단위가
+#      아니라 파일 단위로 본다. 주석은 걷어내고 본문만 대조한다 — 주석에 토큰이 스쳐도
+#      통과시키면 그 순간 게이트가 무력화된다(test-coverage-check.sh 의 run.sh 등록 검사와
+#      동일한 사유).
+# 두 판정 모두 위 두 결함의 수정 직전 커밋 상태에서 실제로 검출됨을 확인했다.
+check_archive_scope_consistency() {
+  log_info "--- Step: contexts/ 스캔의 숨김 디렉토리 제외 일관성 ---"
+  local f hit lineno body rel code
+
+  # (a) 셸 find
+  while IFS= read -r -d '' f; do
+    rel="${f#"$REPO_ROOT"/}"
+    # 홑따옴표가 맞다: 셸이 아니라 grep 이 해석할 정규식이다.
+    # shellcheck disable=SC2016
+    while IFS= read -r hit; do
+      [ -n "$hit" ] || continue
+      lineno="${hit%%:*}"
+      body="${hit#*:}"
+      grep -qE '(-prune|! -path|-not -path|--exclude-dir)' <<<"$body" && continue
+      echo "❌ [ERROR] contexts/ 루트를 훑는 find 에 숨김 디렉토리 제외가 없습니다: $rel:$lineno" >&2
+      echo "    $(sed -E 's/^[[:space:]]+//' <<<"$body")" >&2
+      echo "    -> .archive/.shared 가 결과에 섞입니다. -prune 또는 ! -path \"*/contexts/.*\" 를 추가하십시오." >&2
+      EXIT_CODE=1
+    done < <(grep -nE '(^|[;|(&]|\$\()[[:space:]]*find[[:space:]]+("?\$\{?CONTEXTS_DIR\}?"?|"[^"]*/contexts")[[:space:]]' "$f" || true)
+  done < <(find "$REPO_ROOT/bin" "$REPO_ROOT/stow" "$REPO_ROOT/.github" \
+    -type f \( -name '*.sh' -o -path '*/.githooks/*' \) -print0 2>/dev/null)
+
+  # (b) ansible.builtin.find
+  while IFS= read -r -d '' f; do
+    rel="${f#"$REPO_ROOT"/}"
+    code=$(grep -vE '^[[:space:]]*#' "$f" || true)
+    grep -q 'ansible.builtin.find' <<<"$code" || continue
+    grep -q 'contexts' <<<"$code" || continue
+    grep -qE 'recurse:[[:space:]]*true' <<<"$code" || continue
+    grep -qF '/contexts/.' <<<"$code" && continue
+    echo "❌ [ERROR] contexts/ 를 recurse 스캔하는 ansible find 에 경로 가드가 없습니다: $rel" >&2
+    echo "    -> hidden 기본값은 숨김 디렉토리를 걸러 주지 않습니다. 결과를 소비하는 태스크의" >&2
+    echo "       when: 에 \"'/contexts/.' not in item.path\" 를 추가하십시오." >&2
+    EXIT_CODE=1
+  done < <(find "$REPO_ROOT/ansible" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 2>/dev/null)
+
+  log_info "[INFO] contexts/ 스캔 제외 일관성 검사 완료."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -578,6 +647,7 @@ main() {
   check_vendor_mirror_symmetry
   check_index_freshness
   check_readme_skill_counts
+  check_archive_scope_consistency
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then

@@ -272,6 +272,124 @@ cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 EOF
 check "fail-exception-ghost-rule (실재하지 않는 룰 열거 차단)" 1 "base.AGENTS.md에 실재하지 않음" "$D"
 
+# 5e~5h. contexts/ 스캔의 숨김 디렉토리 제외 일관성(check_archive_scope_consistency).
+#
+# .archive/.shared 를 "어떤 소비자도 취급하지 않는다"는 규약은 셸 glob 에서만 자동으로
+# 지켜진다. find 와 ansible.builtin.find 는 숨김 디렉토리 안으로 그대로 들어가므로 손으로
+# 제외해야 하는데, 실제로 두 곳을 빠뜨려 폐기 스킬의 스크립트가 사용자 PATH 에 링크되고
+# 폐기 룰북이 근거 기록에 섞였다. 두 결함의 수정 직전 커밋 상태에서 이 검사가 실제로
+# 검출됨을 확인하고 회귀로 고정한다.
+#
+# 오탐 축(5f/5h)을 함께 두는 이유: 판정을 넓히면 특정 스킬 하위만 지목하는 find 나
+# 제외 조건을 이미 갖춘 ansible 태스크까지 걸려, 멀쩡한 코드가 커밋을 막는다.
+
+# 5e. contexts 루트를 훑는 find 에 제외 토큰이 없으면 차단.
+D=$(new_case fail-contexts-find-no-prune)
+mkdir -p "$D/bin/utils"
+cat >"$D/bin/utils/scan-rules.sh" <<'EOF'
+#!/usr/bin/env bash
+CONTEXTS_DIR="$REPO_ROOT/contexts"
+matches=$(find "$CONTEXTS_DIR" -iname "$1" 2>/dev/null)
+echo "$matches"
+EOF
+check "fail-contexts-find-no-prune (셸 find 제외 누락 차단)" 1 "숨김 디렉토리 제외가 없습니다" "$D"
+
+# 5f. 특정 스킬 하위를 지목하는 find 는 구조적으로 .archive 에 닿을 수 없으므로 통과.
+D=$(new_case ok-contexts-find-scoped)
+mkdir -p "$D/bin/utils"
+cat >"$D/bin/utils/scan-one-skill.sh" <<'EOF'
+#!/usr/bin/env bash
+CONTEXTS_DIR="$REPO_ROOT/contexts"
+rhs_file=$(find "$CONTEXTS_DIR/$1/references" -maxdepth 1 -name "*.md" | head -1)
+echo "$rhs_file"
+EOF
+check "ok-contexts-find-scoped (스킬 하위 지목은 오탐 없음)" 0 "제외 일관성 검사 완료" "$D"
+
+# 5g. contexts 를 recurse 스캔하는 ansible find 가 경로 가드 토큰을 갖고 있지 않으면 차단.
+#     제외 조건이 find 태스크가 아니라 결과를 loop 하는 별도 태스크의 when: 에 붙는
+#     구조라, 태스크 블록이 아니라 파일 단위로 본다.
+D=$(new_case fail-ansible-find-no-guard)
+mkdir -p "$D/ansible/roles/demo/tasks"
+cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
+---
+- name: 스크립트 검색
+  ansible.builtin.find:
+    paths:
+      - "{{ role_path }}/../../../contexts"
+    file_type: file
+    patterns: "*.sh"
+    recurse: true
+  register: demo_scripts
+
+- name: 링크
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
+    state: link
+    force: true
+  loop: "{{ demo_scripts.files }}"
+  when: "'/scripts/' in item.path"
+EOF
+check "fail-ansible-find-no-guard (ansible recurse 스캔 가드 누락 차단)" 1 "경로 가드가 없습니다" "$D"
+
+# 5g-2. 가드 토큰이 "주석에만" 있으면 통과시키면 안 된다. 주석 언급을 근거로 인정하는
+#       순간 게이트가 무력화된다 — test-coverage-check.sh 의 run.sh 등록 검사가 실측으로
+#       겪은 것과 같은 구멍이다(설명 주석을 넣었더니 실제 등록을 빼도 통과). 위 5g 케이스는
+#       주석이 아예 없어서 주석 제거 로직을 없애도 검출되지 않았다(뮤테이션 실측).
+D=$(new_case fail-ansible-guard-in-comment-only)
+mkdir -p "$D/ansible/roles/demo/tasks"
+cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
+---
+# 주의: 링크 대상에서 '/contexts/.' 하위(폐기 스킬)는 빼야 한다.
+# (설명만 있고 아래 when: 에는 실제 조건이 없다 — 이 상태를 통과시키면 안 된다.)
+- name: 스크립트 검색
+  ansible.builtin.find:
+    paths:
+      - "{{ role_path }}/../../../contexts"
+    file_type: file
+    patterns: "*.sh"
+    recurse: true
+  register: demo_scripts
+
+- name: 링크
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
+    state: link
+    force: true
+  loop: "{{ demo_scripts.files }}"
+  when: "'/scripts/' in item.path"
+EOF
+check "fail-ansible-guard-in-comment-only (주석 언급은 근거로 인정 안 함)" 1 "경로 가드가 없습니다" "$D"
+
+# 5h. 같은 태스크에 경로 가드가 있으면 통과해야 한다(오탐 회귀). 주석이 아니라 본문에
+#     토큰이 있어야 인정되는지도 이 케이스가 함께 고정한다.
+D=$(new_case ok-ansible-find-guarded)
+mkdir -p "$D/ansible/roles/demo/tasks"
+cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
+---
+- name: 스크립트 검색
+  ansible.builtin.find:
+    paths:
+      - "{{ role_path }}/../../../contexts"
+    file_type: file
+    patterns: "*.sh"
+    recurse: true
+  register: demo_scripts
+
+- name: 링크
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
+    state: link
+    force: true
+  loop: "{{ demo_scripts.files }}"
+  when: >
+    '/scripts/' in item.path and
+    '/contexts/.' not in item.path
+EOF
+check "ok-ansible-find-guarded (가드 있으면 오탐 없음)" 0 "제외 일관성 검사 완료" "$D"
+
 echo "--- WARNING (통과시키되 보고) ---"
 
 # 6. 고아 참조 파일: 라우팅 테이블(SKILL.md)에만 없는 모듈. SSOT 선언에는 넣어둬야
