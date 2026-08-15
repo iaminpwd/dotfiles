@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Terraform 픽스처 회귀 테스트 공용 라이브러리
 #
-# aws / azure / openstack / multi-cloud 네 스킬이 검증하는 대상은 전부 pre-flight-check.sh 의
-# validate_terraform 하나이므로, 러너 로직을 각 스킬에 복제하지 않고 여기서
-# 공유한다. 복제하면 같은 러너 버그(예: set -e + grep 무매치로 조용히 죽는 버그)를
-# 스킬마다 따로 고쳐야 하는 상황을 피하기 위함이다.
+# 예전엔 aws / azure / openstack / multi-cloud 네 스킬이 이 러너를 공유했다. 지금은 뒤의
+# 셋이 .archive 로 옮겨져 실제 소비자는 aws 하나뿐이다. 그래도 파일을 유지하는 이유는
+# 벤더 스킬이 다시 활성화될 때 복제가 아니라 이 파일을 쓰게 하기 위해서다 — 복제하면 같은
+# 러너 버그(예: set -e + grep 무매치로 조용히 죽는 버그)를 스킬마다 따로 고쳐야 한다.
+# 소비자가 계속 하나뿐이라면 aws/tests/run.sh 로 인라인하는 편이 낫다.
 #
 #
 # 이 파일은 검증기가 아니라 회귀 테스트 전용 라이브러리라 scripts/ 가 아닌
 # contexts/.shared/test-lib/ 에 둔다. scripts/ 는 Ansible 셋업 과정이 에이전트에게 심볼릭
 # 링크로 노출하는 디렉토리이므로(Ansible 셋업 과정의 글로벌 스킬 등록 루프), 테스트
 # 헬퍼가 거기 있으면 런타임 배포 표면에 불필요하게 포함된다. 특정 스킬 산하에 두지
-# 않는 이유는 aws/azure/openstack/multi-cloud/containers/
-# dotfiles 등 여러 스킬이 공유하는 자산이라, 이름과 위치만 봐도 "공유 자산"임이 드러나야
-# 하기 때문이다. 이름에 평문(`shared`) 대신 점(`.shared`)을 쓰는 이유는 `.archive`와
+# 않는 이유는 같은 디렉토리의 parallel-pair.sh / exit-trap.sh 를 aws·containers·dotfiles·
+# pre-flight-check 가 함께 쓰기 때문이다 — 이름과 위치만 봐도 "공유 자산"임이 드러나야 한다. 이름에 평문(`shared`) 대신 점(`.shared`)을 쓰는 이유는 `.archive`와
 # 동일하게 bash glob(dotglob 없이는 숨김 디렉토리를 건너뜀)이 이 폴더를 스킬 스캔 대상에서
 # 구조적으로 자동 제외하게 하기 위함이다 — 평문 이름을 쓰면 하드코딩 제외 목록에 수동으로
 # 등록해야 하고, 그 목록은 소비자가 늘어날 때 조용히 낡을 수 있다(실제로 이 저장소의
@@ -30,7 +30,7 @@
 #
 # 이 파일은 단독 실행용이 아니다.
 
-# 호출자(aws/azure/openstack/multi-cloud tests/run.sh)의 TESTS_DIR이 아니라 이 파일
+# 호출자(aws/tests/run.sh)의 TESTS_DIR이 아니라 이 파일
 # 자신의 실제 위치 기준으로 parallel-pair.sh를 찾는다 (호출자마다 상대경로가 다름).
 _TF_FIXTURE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source-path=SCRIPTDIR
@@ -88,20 +88,9 @@ tf_assert_gate() {
   fi
 }
 
-# validate_terraform 의 'terraform fmt -check' 와 같은 게이트를 픽스처 디렉토리 단위로
-# 재현한다. 검증기 쪽은 대상 .tf 파일 목록을 직접 넘기는 반면 여기서는 픽스처 디렉토리를
-# 통째로 주므로 -recursive 가 필요하다 — 판정 기준(포맷 불일치 시 exit≠0)은 동일하고
-# 대상 지정 방식만 다르다는 것을 분명히 해 둔다(예전 주석은 검증기도 -recursive 를
-# 쓰는 것처럼 읽혀 실제 호출과 어긋나 있었다).
-tf_run_fmt() {
-  local dir=$1 label=$2 want_fail=$3 status
-  terraform fmt -check -recursive "$dir" >/dev/null 2>&1 && status=0 || status=$?
-  tf_assert_gate "$label (terraform fmt)" "$want_fail" "$status"
-}
-
 # validate_terraform 의 'tflint' 게이트를 픽스처 디렉토리 단위로 재현한다. 검증기는
 # 저장소 루트(CWD)에서 인자 없이 부르고 여기서는 --chdir 로 픽스처를 지목하는데, 이는
-# 대상 지정 방식의 차이일 뿐 판정 기준은 같다(tf_run_fmt 주석과 동일한 사유).
+# 대상 지정 방식의 차이일 뿐 판정 기준은 같다.
 # want_rule 이 주어지면 그 룰이 실제로 지적됐는지까지 확인한다. 종료 코드만
 # 보면 다른 룰이 대신 걸려도 통과로 오판할 수 있다.
 tf_run_tflint() {
@@ -148,7 +137,7 @@ tf_run_checkov_pair() {
   tmpdir=$(mktemp -d)
   # 스캔 도중 인터럽트되어 아래 rm 이 실행되지 못하는 경우에 대비한다.
   # `trap ... EXIT` 를 직접 걸면 호출자가 이미 걸어 둔 EXIT 트랩을 통째로 교체해 버리므로
-  # (aws/azure tests/run.sh 가 각자 SAM_TMPDIR/BICEP_TMPDIR 정리를 걸어 둔다),
+  # (aws/tests/run.sh 가 SAM_TMPDIR 정리를 걸어 둔다),
   # 반드시 push/pop 으로 감싸 원래 트랩을 복원한다 (exit-trap.sh 헤더 참조).
   # 홑따옴표가 맞다: 트랩 본문은 지금이 아니라 발동 시점에 전개돼야 한다.
   # shellcheck disable=SC2016
@@ -169,35 +158,20 @@ tf_run_checkov_pair() {
   pop_exit_trap
 }
 
-# validate_terraform 과 동일하게 'terraform init -backend=false' 후 validate.
-# init 산출물이 픽스처 디렉토리에 남으므로 성공·실패 어느 경로에서도 정리한다.
-tf_run_validate() {
-  local dir=$1 label=$2 want_fail=$3 status
-  rm -rf "$dir/.terraform" "$dir/.terraform.lock.hcl"
-  if ! terraform -chdir="$dir" init -backend=false -input=false >/dev/null 2>&1; then
-    tf_report "$label (terraform validate)" 1 "terraform init 에 실패했습니다"
-    rm -rf "$dir/.terraform" "$dir/.terraform.lock.hcl"
-    return
-  fi
-  terraform -chdir="$dir" validate >/dev/null 2>&1 && status=0 || status=$?
-  rm -rf "$dir/.terraform" "$dir/.terraform.lock.hcl"
-  tf_assert_gate "$label (terraform validate)" "$want_fail" "$status"
-}
-
-# 세 스킬이 공유하는 표준 픽스처 구성을 한 번에 검증한다.
+# 표준 픽스처 구성을 한 번에 검증한다.
 #   $1 fixtures 디렉토리
 #   $2 fail-open-ssh 에서 기대하는 checkov 체크 ID (벤더마다 다름)
+# 이 스위트가 실제로 지키는 것은 "tflint/checkov 가 우리가 의존하는 룰 ID 를 여전히 낸다"는
+# 도구 의존 계약이다(우리 코드는 경유하지 않는다 — validate_terraform 을 통째로 무력화해도
+# 이 스위트는 통과한다. 그 축은 pre-flight-check/tests/test-plugin-loop.sh 의 배선 검사가 담당한다).
+# Renovate 가 mise 도구 버전을 매주 자동으로 올리므로 그 계약은 실제로 흔들린다.
+#
+# 반면 terraform fmt / validate 케이스는 룰 ID 계약이 아니라 "terraform 이 잘못된 입력에
+# 여전히 0 아닌 코드를 낸다"는, 개편될 일이 없는 성질을 확인할 뿐이었다(실측 소요도 각각
+# 0.1초/0.0초로 잡아내는 것 대비 픽스처만 남았다). 그 두 케이스와 fail-fmt/fail-validate
+# 픽스처, 그리고 그것들만 쓰던 tf_run_fmt/tf_run_validate 를 함께 제거했다.
 tf_run_standard_suite() {
   local fx=$1 ssh_check_id=$2
-
-  echo "--- terraform fmt ---"
-  if tf_require_tool terraform; then
-    tf_run_fmt "$fx/ok-baseline" ok-baseline 0
-    tf_run_fmt "$fx/fail-fmt" fail-fmt 1
-
-    echo "--- terraform validate ---"
-    tf_run_validate "$fx/fail-validate" fail-validate 1
-  fi
 
   echo "--- tflint ---"
   if tf_require_tool tflint; then

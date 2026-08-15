@@ -183,12 +183,17 @@ run_hardening_gate_pair() {
 
 echo "=== containers 검증 파이프라인 회귀 테스트 ==="
 
+# 이 섹션이 실제로 지키는 것은 "hadolint 가 우리가 의존하는 룰 ID 를 여전히 낸다"는
+# 도구 의존 계약이다(우리 코드는 경유하지 않는다). Renovate 가 mise 도구 버전을 매주
+# 자동으로 올리므로 그 계약은 실제로 흔들리고, 계약이 깨지면 pre-flight 게이트가 조용히
+# 아무것도 막지 않게 된다 — 그래서 남긴다.
+# 다만 대표 ID 하나면 충분하다. 도구가 룰 셋을 개편하면 여러 ID 가 같이 바뀌지 하나만
+# 바뀌지 않으므로, ID 를 늘려도 잡히는 사건은 같고 픽스처 관리 비용만 는다.
+# (DL3018/DL3025 케이스와 그 픽스처는 이 근거로 제거했다.)
 echo "--- hadolint (pre-flight-check.sh / 커밋 중단) ---"
 if require_tool hadolint; then
   run_hadolint ok-baseline.Dockerfile ""
   run_hadolint fail-unpinned-base.Dockerfile DL3007
-  run_hadolint fail-unpinned-apt.Dockerfile DL3018
-  run_hadolint fail-shell-form-entrypoint.Dockerfile DL3025
 fi
 
 echo "--- trivy misconfig (pre-flight-check.sh / 경고 전용) ---"

@@ -107,13 +107,16 @@ run_pluto() {
 
 echo "=== k8s 검증 파이프라인 회귀 테스트 ==="
 
+# 이 섹션이 실제로 지키는 것은 "kube-linter 가 우리가 의존하는 체크 이름을 여전히 낸다"는
+# 도구 의존 계약이다(우리 코드는 경유하지 않는다). Renovate 가 mise 도구 버전을 매주 자동으로
+# 올리므로 그 계약은 실제로 흔들리고, 깨지면 pre-flight 게이트가 조용히 아무것도 막지 않는다.
+# 대표 체크 하나만 남긴다 — 도구가 체크 셋을 개편하면 여러 개가 같이 바뀌지 하나만 바뀌지
+# 않으므로 개수를 늘려도 잡히는 사건은 같고 픽스처 관리 비용만 는다.
+# (host-network / run-as-non-root / unset-memory-requirements 케이스와 픽스처는 이 근거로 제거.)
 echo "--- kube-linter (pre-flight-check.sh) ---"
 if require_tool kube-linter; then
   run_kube_linter ok-baseline.yaml ""
   run_kube_linter fail-privileged.yaml privileged-container
-  run_kube_linter fail-host-network.yaml host-network
-  run_kube_linter fail-run-as-root.yaml run-as-non-root
-  run_kube_linter fail-unset-resources.yaml unset-memory-requirements
 fi
 
 echo "--- promtool (k8s-check.sh) ---"
