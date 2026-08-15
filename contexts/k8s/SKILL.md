@@ -6,7 +6,7 @@ description: |
   모든 쿠버네티스(k8s) 관련 리소스 작업 및 트러블슈팅에 필수적으로 로드할 것.
   관리형 클러스터(EKS, AKS, GKE, Magnum) 위에서 워크로드·권한·정책·네트워킹을 다루는
   작업까지 포함하며, 이때는 클러스터를 제공하는 클라우드 쪽 스킬도 같이 필요함.
-  Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션 정책도 다룹니다.
+  Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션 정책도 다룸.
 ---
 # k8s Skill
 

@@ -44,6 +44,7 @@ ENTRYPOINT ["/app/server"]
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 이미지 내 셸에서 `whoami`가 비루트 사용자로 출력되고, 불필요한 setuid 바이너리가 존재하지 않아야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Image Hardened] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (권한 격리): 최종 이미지가 비루트 고정 UID로 실행되도록 강제되었는가?

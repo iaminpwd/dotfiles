@@ -56,6 +56,7 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `trivy`를 통한 취약점 스캔 분석 결과가 에러 없이 출력되고, 발견된 위반 내역과 조치 권고가 포함된 `security-audit-report.md` 작성이 완료되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Code Review / Security Scan] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (컨테이너 격리성): 컨테이너가 Root 권한 없이 가동되며 기본 OS Capability가 완벽하게 드롭(`drop: [ALL]`)되었는가?

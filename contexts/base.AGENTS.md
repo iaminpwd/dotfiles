@@ -67,7 +67,7 @@ priority: highest
 
 ## 6. 자율 주행 및 안전장치 (Autonomous Operations & Safety)
 - **[MUST] Tool Availability Gate:** CLI 도구 실행 전 설치 여부 확인. 미설치 시 즉시 작업 중단(Halt & Clarify) 후 설치 요구.
-- **[MUST] Permission Boundary:** 로컬 권한 필요 시 최소 경로 권한만 요청.
+- **[MUST] Permission Boundary:** sudo 등 로컬 관리자 권한 요청 시 최소 경로 권한만 요청.
 - **[Trigger: `/learn` Command Executed] Prompt Architect Loading:** 사용자가 `/learn` 명령어를 통해 룰이나 스킬 수정을 요청할 경우, 제안서(`learning_proposal.md`)를 작성하기 전에 반드시 `prompt-architect` 스킬(`SKILL.md`)을 먼저 `view_file`로 읽어 들여 룰 작성 표준을 컨텍스트에 주입할 것.
 - **[Trigger: After Code Change] Autonomous Self-Healing:** 자가 검증 실패 시 최대 3회 자율 재시도. **(단, 파괴적 명령어 요구 시 자율 치유 즉시 중단 후 승인 요청)**
 - **[Trigger: Validation Failed 3 Times] Fast Fail & Halt:** 3회 재시도 실패 시 도구 호출 중지 및 사용자 개입 요청.

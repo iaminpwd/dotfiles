@@ -56,6 +56,7 @@ password = "SuperSecret123!"
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 모든 자격 증명 노출 위반 검사가 무결하게 통과되고, IAM 정책의 범위가 승인된 리소스로 격리되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: IAM Policy Created] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (최소 권한): 정책이 와일드카드(`*`) 없이(또는 접두사 한정으로만) 작성되어 권한 상승(Privilege Escalation) 가능성이 통제되었는가?

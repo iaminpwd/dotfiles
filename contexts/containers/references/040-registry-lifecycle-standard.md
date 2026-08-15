@@ -17,7 +17,7 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 태깅 규칙
-- **[PREFER] Digest-Pinned Deployment:** Kubernetes/배포 매니페스트의 `image:` 필드는 가능한 다이제스트(`@sha256:...`)를 병기하여, 태그 재사용이 발생해도 배포 대상이 변하지 않도록 다이제스트를 고정할 것.
+- **[PREFER] Digest-Pinned Deployment:** Kubernetes/배포 매니페스트의 `image:` 필드에는 이미지 태그와 함께 불변 다이제스트(`@sha256:...`)를 병기하여, 태그 재사용 시에도 배포 대상을 고정할 것.
 - **[MUST] Immutable Tag Only in Production:** 프로덕션 배포 매니페스트에는 CI가 생성한 Commit SHA 또는 시맨틱 버전 태그만 사용할 것.
 
 ### 2.2 보관 주기 및 정리
@@ -51,6 +51,7 @@ image: myregistry.example.com/payment-api:latest
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 배포 매니페스트에 가변 태그(`latest` 등)가 없고, 레지스트리 GC 정책 코드에 릴리즈 태그 보호 예외가 명시되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Registry Policy Proposed] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (불변성): 프로덕션 배포 경로 어디에도 가변 태그가 남아있지 않은가?

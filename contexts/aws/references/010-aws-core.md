@@ -38,7 +38,7 @@ AWS 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임.
 <example>
 [Good]
 - 능동적 데이터 수집: "VPC ID를 확인하기 위해 터미널에서 `aws ec2 describe-vpcs`를 실행하겠습니다."
-- Fargate 우선 제안: "EKS Cluster 구축 시 Worker Node는 Fargate를 우선 고려할 것."
+- Fargate 우선 제안: "EKS Cluster 구축 시 Worker Node는 Fargate 사용을 우선 제안할 것."
 </example>
 <example>
 [Bad]

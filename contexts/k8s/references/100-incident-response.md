@@ -18,7 +18,7 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 트러블슈팅 및 장애 진단
-- **[PREFER] Deep Dive Analysis:** 단순 에러 문구 수집을 넘어 노드 자원 상태(`kubectl top node`), 커널 이벤트(`dmesg`), kube-apiserver 감사 로그 등을 다각도로 조회하여 장애 근본 원인을 교차 검증할 것.
+- **[PREFER] Deep Dive Analysis:** 파드 로그 외에 노드 자원 상태(`kubectl top node`), 커널 이벤트(`dmesg`), kube-apiserver 감사 로그를 추가 조회하여 장애 근본 원인을 교차 검증할 것.
 - **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증이 통과된 후에만 최종 보고서를 생성할 것.
 
 ### 2.2 장애 보고서 및 포스트모템 규격

@@ -27,7 +27,7 @@ CI/CD 파이프라인 설계 및 Day-2 운영(DR, 가시성) 표준임.
 - **[MUST] DR Model:** 멀티 리전 아키텍처 설계 시 비즈니스 RTO/RPO 사양에 따라 Backup & Restore(최저 비용, RTO 수 시간~일), Pilot Light, Warm Standby, Multi-Site Active/Active(최고 비용, RTO 초~분 단위) 4단계 중 요구사항에 부합하는 모델을 명시적으로 선택하여 적용할 것.
 - **[MUST] Centralized Backup:** 개별 서비스별 스냅샷 관리에 의존하는 대신, AWS Backup을 통해 계정/리전 간 백업 계획(Backup Plan)과 교차 계정·교차 리전 복제를 중앙 집중형으로 구성할 것.
 - **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현할 것.
-- **[PREFER] Migration Tool:** Flyway, Liquibase 등 팀마다 알맞는 스키마 버전 관리 도구를 선택하여 마이그레이션 이력을 코드로 관리할 것.
+- **[PREFER] Migration Tool:** Flyway, Liquibase 등 데이터베이스 규격에 맞는 스키마 버전 관리 도구를 채택하여 마이그레이션 이력을 코드로 관리할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -45,6 +45,7 @@ CI/CD 파이프라인 설계 및 Day-2 운영(DR, 가시성) 표준임.
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** CI/CD 파이프라인 구문 검증이 에러 없이 패스되고, 스키마 변경 시 `db-migration-plan.md`가 유효하게 작성되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Monitoring Configured] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (알람 최적화): 정상적인 스파이크 성 트래픽이나 정기 작업으로 인한 오탐(False Alarm) 피로를 방지하는 임계치가 적용되었는가?

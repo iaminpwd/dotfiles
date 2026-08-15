@@ -19,7 +19,7 @@ references:
 
 ### 2.1 능동적 에러 추적
 - **[MUST] PATH Override Tracking:** "Command not found" 에러 발생 시, 반드시 `echo $PATH` 및 `which <tool>`을 통해 기존 PATH가 어디서 잘못 덮어씌워졌는지(Override) 근본 원인을 역추적하여 해결할 것.
-- **[MUST] Stow Conflict Resolution:** GNU Stow 사용 중 심볼릭 링크 에러(File exists) 발생 시, 원본 충돌 파일의 성격을 먼저 파악하고, 필요한 경우 반드시 `.bak` 확장자로 백업본을 안전하게 생성한 후 링크를 재시도할 것.
+- **[MUST] Stow Conflict Resolution:** GNU Stow 사용 중 심볼릭 링크 에러(File exists) 발생 시, 원본 충돌 파일의 성격을 먼저 파악하고, 기존 대상이 일반 파일인 경우 반드시 `.bak` 확장자로 백업본을 안전하게 생성한 후 링크를 재시도할 것.
 - **[PREFER] Cross-Platform Awareness:** WSL2나 특정 Linux 배포판에서 퍼미션(chmod) 또는 파일 소유권 이슈가 발생할 경우, 시스템 레벨(`sudo`) 접근보다 로컬 사용자 환경(`~/.local/bin`)에서의 격리된 해결책을 최우선으로 탐색할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
@@ -38,6 +38,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 에러를 해결하기 위해 수정한 스크립트나 설정 파일이 `shellcheck` 검사를 통과하고, 2회 이상 반복 실행 시 동일한 결과를 보여주는 멱등성이 확보되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Error Resolved] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (멱등성 보존): 수정 사항이 기존의 멱등성(Idempotency)을 파괴하지 않고, 영구적이고 선언적인 해결책으로 구현되었는가?

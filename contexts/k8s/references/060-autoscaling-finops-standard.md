@@ -52,6 +52,7 @@ spec:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Infrastructure Design / Scaling Check] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (자원 격리): 개발 네임스페이스 내에 무단 프로비저닝을 차단하기 위한 ResourceQuota 하드 상한선이 정의되었는가?

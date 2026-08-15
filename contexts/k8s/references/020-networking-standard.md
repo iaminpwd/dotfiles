@@ -56,7 +56,7 @@ spec:
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Network Change] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (격리성): 네임스페이스 내 전체 파드가 `Default Deny All` 정책 하에 철저하게 격리되었는가?
-  - 기준 2 (복원력): L7 프록시 단에 네트워크 타임아웃 및 재시도 회수 제한 등 안정성 정책이 기입되었는가?
+  - 기준 2 (복원력): L7 프록시 단에 네트워크 타임아웃 및 재시도 횟수 제한 등 안정성 정책이 기입되었는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 신규 네임스페이스 매니페스트 중 `Default Deny All` NetworkPolicy 선언이 누락되었음이 확인될 시 작업을 즉시 중단(Hard Block)하고 정책을 보완할 것.
   - Ingress 설정 시 `tls` 영역의 `secretName`에 수동으로 생성한 Let's Encrypt 인증서(1회성)가 바인딩된 코드가 감지되면 즉시 작업을 멈추고 `cert-manager` 연동으로 수정을 유도할 것.

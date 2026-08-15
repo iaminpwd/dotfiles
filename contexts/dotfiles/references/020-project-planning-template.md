@@ -64,6 +64,7 @@ references:
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 6개 섹션이 모두 채워져 있고, 2번 섹션의 모든 경로가 `test -f` 로 확인되었으며, 5번 섹션의 명령이 계획서가 아닌 대상 파일을 조회함.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Publishing Plan] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (경로 실재): 계획서에 등장하는 모든 파일 경로를 실제로 조회해 확인했는가?

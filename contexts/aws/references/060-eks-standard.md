@@ -24,7 +24,7 @@ EKS 클러스터 설계 및 Helm 오케스트레이션 표준임.
 - **[PREFER] Managed Observability:** 클러스터 메트릭 및 로그 관측 시 자체 Prometheus/Grafana 운영 부담을 줄이기 위해 Amazon Managed Service for Prometheus(AMP) 및 Amazon Managed Grafana(AMG) 사용을 우선 제안할 것.
 
 ### 2.2 공통 K8s 코어 룰 참조
-- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 시스템에 기 등록된 `k8s` 스킬(SKILL.md)을 먼저 읽고(View), 그 안에 명시된 라우팅 가이드에 따라 `references/` 하위의 적절한 코어 룰을 참조할 것.
+- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 시스템에 기 등록된 `k8s` 스킬(SKILL.md)을 먼저 읽고(View), 그 안에 명시된 라우팅 테이블(작업 유형별 라우팅)에 매핑된 `references/` 하위 코어 룰을 참조할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -40,6 +40,7 @@ EKS 클러스터 설계 및 Helm 오케스트레이션 표준임.
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 생성될 K8s 매니페스트 파일이나 Helm 차트의 린트 검사가 경고 없이 패스되고, API 리소스 스키마가 대상 EKS 버전에 유효함이 검증되어야 합니다.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: EKS Config Proposed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (워크로드 권한 격리): 노드 인스턴스 프로파일 대신 Pod Identity(또는 교차 계정 시 IRSA)가 개별 파드 계정 단위로 완벽히 매핑되었는가?

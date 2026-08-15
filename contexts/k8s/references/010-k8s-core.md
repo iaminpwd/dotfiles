@@ -69,7 +69,7 @@ lifecycle:
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언할 것. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재함.)
 - **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
-  - 기준 1 (가용성): 파드의 고가용성 분산 배치를 보장하도록 `topologySpreadConstraints` 및 `podAntiAffinity` 구성이 적절한가?
+  - 기준 1 (가용성): 파드의 고가용성 분산 배치를 위해 `topologySpreadConstraints` 또는 `podAntiAffinity`가 매니페스트에 선언되었는가?
   - 기준 2 (보안성): Namespace 격리가 ResourceQuota 및 NetworkPolicy와 결합되어 완벽한 테넌시 격리를 보장하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
   - CLI 도구(`kubectl`, `helm`, `kube-linter` 등) 실행을 지시받았으나 로컬에 미설치되었음이 확인되면, 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구할 것.

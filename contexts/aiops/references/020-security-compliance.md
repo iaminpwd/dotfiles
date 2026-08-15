@@ -43,6 +43,7 @@ export DB_PASSWORD="SuperSecretPassword123!"
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 작성된 인프라 코드가 `checkov` 또는 `tfsec` 보안 스캐닝을 경고 없이 통과하고, 규정 위반 항목이 없음이 입증되어야 합니다.
 - **[MUST] 검증 도구 매핑:** IaC 코드에 대한 `checkov` 검증 절차 및 예외 처리 방법은 `050-iac-standard` 모듈을 참조하여 위임할 것.
+
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
   - 기준 1 (시크릿 격리): 파이프라인 설정 파일 및 런북 스크립트 내에 평문 자격 증명이 유출될 우려가 완벽히 배제되었는가?
