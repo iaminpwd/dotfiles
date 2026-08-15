@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # prompt-lint.sh 회귀 테스트
 #
-# prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 14개 검사를 담고 있는데, 정작
+# prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 여러 검사를 담고 있는데, 정작
 # 자기 자신은 검증되지 않으면 grep 무매치 하나가 set -euo pipefail 에 걸려 아무
 # 메시지 없이 exit 1로 죽어도 알 수 없다. 린터가 죽으면 코퍼스가 깨끗해서 통과한
 # 것인지 검사가 실행조차 안 된 것인지 구분할 수 없다.
@@ -471,6 +471,35 @@ cat >"$D/README.md" <<'EOF'
 | **Gone** (`gone/`) | 3개 (`010`~`030`) | 아카이브된 스킬 |
 EOF
 check "readme-archived-skill (표에만 남은 스킬 경고)" 0 "references 디렉토리가 없습니다" "$D"
+
+# 17. 끊긴 파일 참조. 주석이 지목한 파일이 사라져도 아무것도 깨지지 않아 조용히 남는다.
+#     실제로 tf-fixture-lib.sh 를 인라인한 뒤 그 파일을 가리키던 참조가 6곳 남았고,
+#     손으로 훑어 고친 뒤에도 ansible 롤에 1곳이 더 있었다(이 검사가 그것을 잡아냈다).
+#
+#     이 검사는 `git ls-files` 로 "추적 중인 파일"만 본다. 그래서 케이스마다 대상 파일을
+#     실제로 git add 해야 발동한다 — new_case 가 복사해 넣는 prompt-lint.sh 사본이
+#     코퍼스로 오인되지 않게 하는 장치이므로, 이 전제를 바꾸면 오탐이 되돌아온다.
+D=$(new_case fail-dangling-file-reference)
+mkdir -p "$D/bin/linters"
+echo "# 같은 함정을 contexts/demo/references/gone.md 에서 이미 고쳤다." >"$D/bin/linters/note.sh"
+git -C "$D" add bin/linters/note.sh
+check "fail-dangling-file-reference" 1 "존재하지 않는 파일을 가리키는 참조" "$D"
+
+# 17b. 오탐 회귀 (a): tests/ 하위는 합성 트리를 만드는 것이 본업이라 없는 경로를
+#      정당하게 쓴다. 실측에서 오탐 12건 중 11건이 여기였다.
+D=$(new_case ok-dangling-ref-inside-tests)
+mkdir -p "$D/contexts/demo/tests"
+echo "# 픽스처로 contexts/demo/references/synthetic.md 를 만든다" >"$D/contexts/demo/tests/run.sh"
+git -C "$D" add contexts/demo/tests/run.sh
+check_clean "ok-dangling-ref-inside-tests (합성 픽스처는 오탐 아님)" "$D"
+
+# 17c. 오탐 회귀 (b): 디렉토리부터 없으면 문서 템플릿의 자리표시자로 보고 넘긴다
+#      (contexts/example-skill/custom-role.md 가 실제 그런 사례다).
+D=$(new_case ok-placeholder-path)
+mkdir -p "$D/bin/linters"
+echo "# 예시: contexts/example-skill/custom-role.md 처럼 배치하십시오." >"$D/bin/linters/note.sh"
+git -C "$D" add bin/linters/note.sh
+check_clean "ok-placeholder-path (없는 디렉토리는 자리표시자)" "$D"
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo

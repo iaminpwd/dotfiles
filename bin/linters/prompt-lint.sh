@@ -536,6 +536,65 @@ check_archive_scope_consistency() {
   log_info "[INFO] contexts/ 스캔 제외 일관성 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 15. 끊긴 파일 참조 검사 (주석·문서가 가리키는 저장소 내 경로가 실존하는가)
+# -----------------------------------------------------------------------------
+# 이 저장소의 주석은 밀도가 높아 근거(rationale)와 사실(fact)을 함께 담는다. 근거는 낡지
+# 않지만 사실은 낡는다 — 특히 "이 함정을 X.sh 에서 이미 고쳤다", "Y.sh 가 이걸 공유한다"
+# 처럼 다른 파일을 지목하는 문장은 그 파일이 옮겨지거나 지워지면 곧바로 거짓이 된다.
+# 실제로 tf-fixture-lib.sh 를 인라인했을 때 그 파일을 가리키던 참조가 6곳 남았고, 손으로
+# 훑어 고친 뒤에도 ansible 롤에 1곳이 더 남아 있었다(이 검사가 그것을 잡아냈다).
+#
+# 낡은 참조는 조용하다. 코드가 아니라 주석이라 아무것도 깨뜨리지 않고, 다음에 읽는 사람
+# (사람이든 에이전트든)에게만 없는 파일을 찾게 만든다. 기계적으로 대조한다.
+#
+# 판정은 오탐 0을 우선해 좁게 잡는다:
+#  (a) 저장소 최상위 디렉토리(bin/contexts/stow/ansible)로 "시작하는" 경로만 본다. 앞에
+#      변수나 따옴표가 붙은 것($FIXTURE_REPO/contexts/...), URL(//host/install.sh),
+#      가상의 예시 경로(src/main.py, sub/check.sh)가 구조적으로 배제된다.
+#  (b) tests/ 하위는 스캔하지 않는다. 회귀 테스트는 합성 트리(contexts/demo,
+#      contexts/fake, contexts/probe 등)를 만드는 것이 본업이라 존재하지 않는 경로를
+#      정당하게 쓴다 — 실측에서 오탐 12건 중 11건이 여기였다.
+#  (c) 참조된 "디렉토리"가 실존할 때만 판정한다. 디렉토리부터 없으면 문서 템플릿의
+#      자리표시자(contexts/example-skill/custom-role.md)로 보고 넘긴다.
+#  (d) 대상은 `git ls-files` 가 돌려주는 "이 저장소가 추적하는 파일"뿐이다. find 로 훑으면
+#      저장소 안에 굴러들어온 사본까지 코퍼스로 취급한다 — 실제로 이 검사의 회귀 테스트가
+#      그렇게 깨졌다. 케이스 디렉토리는 prompt-lint.sh 자신을 복사해 넣는데(격리 실행을
+#      위해 필요하다), 그 사본의 주석이 지목하는 bin/lib/tool-probe.sh 같은 파일은 그
+#      최소 코퍼스에 없으므로 전부 끊긴 참조로 잡혔다. 추적 대상으로 한정하면 사본은
+#      애초에 코퍼스가 아니게 되어 이 혼동이 구조적으로 사라진다.
+# 위 넷을 적용해 현재 코퍼스 오탐 0, 그리고 ansible 수정 직전 커밋에서 실제 검출을 확인했다.
+check_dangling_file_references() {
+  log_info "--- Step: Dangling File Reference ---"
+  local f ref dir
+  # 홑따옴표가 맞다: 셸이 아니라 grep 이 해석할 정규식이다.
+  # shellcheck disable=SC2016
+  local pat='(^|[^A-Za-z0-9_./$"{-])(bin|contexts|stow|ansible)/[A-Za-z0-9_./-]+\.(sh|py|md|yml|yaml)'
+
+  if ! git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    log_info "[INFO] git 저장소가 아니어서 끊긴 참조 검사를 건너뜁니다."
+    return 0
+  fi
+
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in */tests/*) continue ;; esac
+    [ -f "$REPO_ROOT/$f" ] || continue
+    while IFS= read -r ref; do
+      [ -n "$ref" ] || continue
+      [ -e "$REPO_ROOT/$ref" ] && continue
+      dir=$(dirname "$ref")
+      [ -d "$REPO_ROOT/$dir" ] || continue
+      echo "❌ [ERROR] 존재하지 않는 파일을 가리키는 참조: $f -> $ref" >&2
+      echo "    -> 그 파일이 옮겨졌거나 지워졌습니다. 현재 위치로 고치거나 문장을 지우십시오." >&2
+      EXIT_CODE=1
+    done < <(grep -ohE "$pat" "$REPO_ROOT/$f" 2>/dev/null | sed -E 's#^[^A-Za-z0-9_.]##' | sort -u || true)
+  done < <(git -C "$REPO_ROOT" ls-files -- 'bin/*' 'contexts/*' 'stow/*' 'ansible/*' 2>/dev/null |
+    grep -E '\.(sh|md|yml|yaml)$' || true)
+
+  log_info "[INFO] 끊긴 파일 참조 검사 완료."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -550,6 +609,7 @@ main() {
   check_index_freshness
   check_readme_skill_counts
   check_archive_scope_consistency
+  check_dangling_file_references
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then
