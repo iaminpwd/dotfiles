@@ -51,6 +51,14 @@ else
   report "ok-conventional (정상 형식, exit 0)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 1-1. 다중 스코프(콤마 포함) conventional commit -> exit 0
+status=$(run_hook "fix(k8s,observability): 멀티 도큐먼트 매니페스트에서 검증이 어긋나던 문제")
+if [ "$status" -eq 0 ]; then
+  report "ok-multi-scope (다중 스코프 콤마 허용, exit 0)" 0
+else
+  report "ok-multi-scope (다중 스코프 콤마 허용, exit 0)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 2. 컨벤션 위반 -> exit 1 + 안내 문구 포함
 status=$(run_hook "fixed the bug")
 if [ "$status" -eq 1 ] && grep -qF "시맨틱 커밋 컨벤션 위반" "$TMP/out"; then

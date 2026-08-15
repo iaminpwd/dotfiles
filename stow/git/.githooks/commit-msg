@@ -56,7 +56,7 @@ fixup\!* | squash\!* | Revert\ \"*)
 esac
 
 # Conventional Commits: type(scope)?!: subject
-CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/-]+\))?!?: .+'
+CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/,-]+\))?!?: .+'
 
 if ! [[ "$SUBJECT" =~ $CONVENTIONAL_PATTERN ]]; then
   # 선행 공백은 따로 짚어 준다. git 은 제목 줄 앞의 공백을 제거하지 않으므로
