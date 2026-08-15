@@ -24,6 +24,12 @@ export QUIET=0
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 
+# 판정 패턴은 검증기 본체에서 가져온다. 예전엔 이 테스트가 같은 정규식을 손으로 복제해
+# 갖고 있었는데, 그러면 본체만 고쳤을 때 테스트가 그대로 통과해 회귀를 못 잡는다.
+# (source 전용 라이브러리라 함수 정의와 이 상수만 들어오고 부작용은 없다.)
+# shellcheck source=../../../bin/lib/pfc-quality-checks.sh
+source "$REPO_ROOT/bin/lib/pfc-quality-checks.sh"
+
 PASS_COUNT=0
 FAIL_COUNT=0
 
@@ -39,6 +45,30 @@ report() {
   fi
 }
 
+echo "--- FinOps 판정 패턴 (API 호출 없음, 항상 실행) ---"
+
+# 이 판정은 지금까지 RUN_COST_CHECK=true 일 때만 검증됐다. 그래서 평소 `just test` 에서는
+# 정규식이 깨져도 아무도 몰랐고, 실제로 깨져 있었다 — 단어 경계 없는 `LTS` 가 부분 문자열로
+# "lts" 를 품는 흔한 단어를 전부 잡아, `aws_s3_bucket.results` 한 줄로 커밋이 막혔다.
+# infracost 를 부르지 않고 판정식만 직접 태워 그 축을 상시 고정한다.
+pattern_case() {
+  local name=$1 want=$2 line=$3 got
+  if grep -E -qi "$PFC_EXTENDED_SUPPORT_PATTERN" <<<"$line"; then got=match; else got=nomatch; fi
+  if [ "$got" = "$want" ]; then
+    report "$name" 0
+  else
+    report "$name" 1 "기대 $want / 실제 $got — 입력: $line"
+  fi
+}
+
+pattern_case "match: Extended Support"        match   "aws_rds_cluster.main  RDS Extended Support  \$100.00"
+pattern_case "match: Long Term Support"       match   "Ubuntu Long Term Support subscription"
+pattern_case "match: 독립 토큰 LTS"           match   "ubuntu_pro.this  Ubuntu Pro LTS  \$25.00"
+pattern_case "nomatch: results (오탐 회귀)"   nomatch "aws_s3_bucket.results"
+pattern_case "nomatch: defaults (오탐 회귀)"  nomatch "module.defaults.aws_vpc.this"
+pattern_case "nomatch: vaults (오탐 회귀)"    nomatch "aws_backup_vaults.archive"
+
+echo
 echo "--- FinOps 비용 검증 (validate_finops_costs) ---"
 
 if [ "${RUN_COST_CHECK:-false}" != "true" ]; then
@@ -48,14 +78,14 @@ elif command -v infracost >/dev/null 2>&1; then
   FINOPS_FIXTURES="$TESTS_DIR/fixtures-finops"
 
   out=$(cd "$FINOPS_FIXTURES/ok-baseline" && infracost breakdown --path . 2>&1) || true
-  if grep -E -qi "Extended Support|Long Term Support|LTS" <<<"$out"; then
+  if grep -E -qi "$PFC_EXTENDED_SUPPORT_PATTERN" <<<"$out"; then
     report "ok-baseline (Extended Support 없음)" 1 "기대: 매치 없음 / 실제: 매치됨"
   else
     report "ok-baseline (Extended Support 없음)" 0
   fi
 
   out=$(cd "$FINOPS_FIXTURES/fail-extended-support" && infracost breakdown --path . 2>&1) || true
-  if grep -E -qi "Extended Support|Long Term Support|LTS" <<<"$out"; then
+  if grep -E -qi "$PFC_EXTENDED_SUPPORT_PATTERN" <<<"$out"; then
     report "fail-extended-support (Extended Support 비용 감지)" 0
   else
     report "fail-extended-support (Extended Support 비용 감지)" 1 "기대: 매치 / 실제: 매치 없음 (AWS 가격 정책이 바뀌었을 수 있습니다)"

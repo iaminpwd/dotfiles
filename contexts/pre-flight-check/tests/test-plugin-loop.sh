@@ -167,6 +167,33 @@ EOF
 git -C "$SMOKE_K8S" add pod.yaml
 run_smoke "validate_k8s_manifests 실제 호출 (커밋 차단)" "$SMOKE_K8S" "kube-linter 지적 사항"
 
+# -----------------------------------------------------------------------------
+# 하드 게이트가 실행 비트에 의존하지 않는가
+# -----------------------------------------------------------------------------
+# validate_docker 는 DS-0002(root 실행) 하드 게이트를 container-hardening-gate.sh 에
+# 위임하는데, 그 존재 여부를 예전엔 -x(실행 가능)로 판정했다. 정작 호출은 `bash <경로>` 라
+# 실행 비트가 필요 없어서, 비트가 없으면 게이트가 아무 메시지 없이 사라졌다 — 실측으로
+# root 유저 Dockerfile 이 exit 0 으로 통과했다. git 이 100755 를 추적해 정상 클론에서는
+# 드러나지 않지만 core.fileMode=false 환경에서는 그대로 무력화된다.
+#
+# bin/ 을 통째로 복사해 그 사본의 비트만 떼고 돌린다(실제 저장소 파일 권한은 건드리지 않는다).
+BITLESS="$TMP/bitless"
+mkdir -p "$BITLESS"
+cp -a "$REPO_ROOT/bin" "$BITLESS/bin"
+chmod -x "$BITLESS/bin/linters/container-hardening-gate.sh"
+
+BITLESS_REPO="$TMP/bitless-repo"
+smoke_repo "$BITLESS_REPO"
+printf 'FROM ubuntu:22.04\nRUN echo hi\n' >"$BITLESS_REPO/Dockerfile"
+git -C "$BITLESS_REPO" add Dockerfile
+CODE=0
+OUT=$( (cd "$BITLESS_REPO" && QUIET=0 bash "$BITLESS/bin/hooks/pre-flight-check.sh") 2>&1) || CODE=$?
+if [ "$CODE" -ne 0 ] && grep -qF "하드닝" <<<"$OUT"; then
+  report "하드닝 게이트가 실행 비트 없이도 동작" 0
+else
+  report "하드닝 게이트가 실행 비트 없이도 동작" 1 "기대 exit≠0 + 하드닝 차단 / 실제 exit=$CODE: $(grep -m1 '❌' <<<"$OUT")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

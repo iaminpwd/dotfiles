@@ -75,7 +75,12 @@ resolve_source() {
     # ".archive" 로 보정되고, `agent:.archive/026-networking-standard.md` 라는 폐기
     # 룰북 근거가 SUCCESS 로 기록됐다(실측).
     matches=$(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -iname "$clean_src" -print 2>/dev/null)
-    count=$(printf '%s\n' "$matches" | grep -c .)
+    # grep -c 는 카운트가 0일 때 "0" 을 찍고도 종료 코드 1을 낸다. 이 함수는 항상
+    # $(resolve_source ...) 로 호출되는데, 명령 치환 서브셸 안에서는 set -e 가 이 대입을
+    # 죽이지 않아 지금까지 발현되지 않았다(실측: 최상위·함수 직접 호출에서는 exit 1 로 죽고,
+    # 명령 치환 안에서는 살아남는다). 즉 호출 방식 하나에 기대고 있던 셈이라, 누가 이 함수를
+    # 직접 부르는 순간 무매치 rule_source 가 스크립트를 조용히 죽인다. || true 로 흡수한다.
+    count=$(printf '%s\n' "$matches" | grep -c . || true)
     if [ "$count" -eq 1 ]; then
       skill=$(dirname "$matches" | sed -E "s#^${CONTEXTS_DIR}/([^/]+)/.*#\1#")
       printf '%s/%s' "$skill" "$clean_src"

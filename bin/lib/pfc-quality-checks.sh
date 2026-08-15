@@ -6,6 +6,20 @@
 #
 # [주의] source 전용 라이브러리이므로 호출자의 셸 옵션을 보존하기 위해 set -euo pipefail을 선언하지 않습니다.
 
+# 연장 지원(Extended Support/LTS) 유료화 항목 감지 패턴. validate_finops_costs 가 쓰고,
+# test-finops.sh 가 이 파일을 source 해 같은 값을 검증한다(패턴을 테스트에 복제하면 본체만
+# 고쳤을 때 테스트가 통과해 버려 회귀를 못 잡는다 — 실제로 그 상태였다).
+#
+# LTS 는 반드시 단어 경계를 함께 봐야 한다. 예전엔 `LTS` 를 -i 로 그냥 찾아서, 부분 문자열로
+# "lts" 를 품는 흔한 단어가 전부 걸렸다 — defaults / results / faults / vaults / halts.
+# 실측 재현: `resource "aws_s3_bucket" "results"` 하나만 있어도 infracost 출력의
+# `aws_s3_bucket.results` 줄이 매치되어 "Extended Support 추가 요금 감지"로 커밋이 막혔다.
+# 이 검증기는 전역 core.hooksPath 훅이라 임의 저장소가 그 오탐을 그대로 맞는다.
+#
+# \b 대신 문자 클래스를 쓰는 이유는 이식성이다. 이 훅은 macOS 에서도 도는데 BSD grep 은
+# \b 를 GNU 와 같게 해석한다는 보장이 없다(같은 사유로 아래 trivy 출력 정리도 sed -E 를 쓴다).
+PFC_EXTENDED_SUPPORT_PATTERN='Extended Support|Long Term Support|(^|[^A-Za-z])LTS([^A-Za-z]|$)'
+
 # 1. Shell Script Validation
 validate_shell() {
   # 지정된 범위 내의 확장자(.sh/.zsh) 파일, Git 훅 스크립트, 셸 설정 파일만 검사
@@ -117,8 +131,14 @@ validate_docker() {
     # 있었지만, db-sg-checker.sh 급의 오탐 거의 없는 기초 항목이라 다른 하드 게이트들과
     # 같은 강제력으로 맞춘다. container-hardening-gate.sh는 파일 경로를 받으면 trivy
     # conf로 그 경로만 검사하고 이미지 스캔 분기(릴리즈 단계 책임)는 타지 않는다.
+    # -x 가 아니라 -f 로 본다. 아래에서 `bash <경로>` 로 부르므로 실행 비트는 필요 없는데,
+    # -x 로 판정하면 비트가 없는 순간 이 하드 게이트가 아무 메시지 없이 사라진다(실측:
+    # chmod -x 후 root 유저 Dockerfile 이 exit 0 으로 통과했다). git 이 100755 를 추적하니
+    # 정상 클론에서는 드러나지 않지만, core.fileMode=false 환경이나 권한을 보존하지 않는
+    # 복사 경로에서 조용히 무력화된다. 바로 위 validate_shell 의 idempotency 호출이 같은
+    # 이유로 이미 -f 를 쓴다.
     local HARDENING_SCRIPT="$PFC_SCRIPT_DIR/../linters/container-hardening-gate.sh"
-    if [ -x "$HARDENING_SCRIPT" ]; then
+    if [ -f "$HARDENING_SCRIPT" ]; then
       local dockerfile
       for dockerfile in "${dockerfiles[@]}"; do
         if ! bash "$HARDENING_SCRIPT" "$dockerfile"; then
@@ -370,10 +390,10 @@ validate_finops_costs() {
 
       # infracost breakdown을 수행하여 비용 항목 확인
       if infracost breakdown --path . >"$cost_output_tmp" 2>/dev/null; then
-        if grep -E -qi "Extended Support|Long Term Support|LTS" "$cost_output_tmp"; then
+        if grep -E -qi "$PFC_EXTENDED_SUPPORT_PATTERN" "$cost_output_tmp"; then
           echo "[ERROR] Extended Support 또는 LTS (연장 지원) 추가 요금이 발생하는 리소스가 감지되었습니다." >&2
           echo "검출된 유효 비용 항목:" >&2
-          grep -E -i "Extended Support|Long Term Support|LTS" "$cost_output_tmp" >&2
+          grep -E -i "$PFC_EXTENDED_SUPPORT_PATTERN" "$cost_output_tmp" >&2
           rm -f "$cost_output_tmp"
           return 1
         fi

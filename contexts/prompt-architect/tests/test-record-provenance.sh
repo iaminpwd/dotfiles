@@ -101,6 +101,18 @@ else
   report "확정된 SUCCESS 라인 이후 재호출 (append)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
 fi
 
+# 6b. 어떤 룰북과도 매칭되지 않는 이름은 입력값을 그대로 쓰고 정상 종료해야 한다.
+#     문서화된 동작인데 케이스가 없었다. 스킬 보정 find 가 0건일 때의 경로라,
+#     resolve_source 안에서 카운트를 세는 grep 이 무매치로 죽으면 여기서 드러난다.
+rm -f "$LOG"
+status=0
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" h.tf "매칭되지-않는-이름.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:매칭되지-않는-이름.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+  report "no-match (입력값 그대로 SUCCESS)" 0
+else
+  report "no-match (입력값 그대로 SUCCESS)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
+fi
+
 # -----------------------------------------------------------------------------
 # 7~8. contexts/ 의 숨김 디렉토리가 스킬 보정 후보에 섞이면 안 된다.
 #
