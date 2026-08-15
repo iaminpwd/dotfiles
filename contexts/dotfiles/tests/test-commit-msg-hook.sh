@@ -184,6 +184,20 @@ else
   report "fail-real-git-plain (평상시 커밋은 git 경로에서도 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 선행 공백 제목: 차단은 맞지만 원인을 이름으로 불러 줘야 한다. git 은 제목 줄 앞의
+# 공백을 제거하지 않아 `git commit -m "  feat: 제목"` 이 그대로 훅까지 오는데, 예전
+# 메시지는 "현재 메시지:   feat: 제목" 이라 형식이 맞는데 왜 막히는지 알 수 없었다
+# (실측 재현). 차단 여부와 진단 문구를 함께 고정한다.
+MSG_WS="$TMP/ws-subject.txt"
+printf '  feat: 들여쓴 제목\n' >"$MSG_WS"
+status=0
+out=$(bash "$HOOK" "$MSG_WS" 2>&1) || status=$?
+if [ "$status" -eq 1 ] && grep -qF "제목 줄이 공백으로 시작합니다" <<<"$out"; then
+  report "fail-leading-whitespace (원인을 지목해 차단)" 0
+else
+  report "fail-leading-whitespace (원인을 지목해 차단)" 1 "기대 exit=1 + 공백 안내 / 실제 exit=$status: $out"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

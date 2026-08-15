@@ -7,7 +7,8 @@
 # 경로가 된다 — 검증이 죽어도 설치는 성공하니 아무도 모른다.
 #
 # 실제 설치는 네트워크에 의존하므로 여기서 반복하지 않는다. 대신 네트워크 없이 확인
-# 가능한 두 축을 고정한다: (1) 이미 설치돼 있으면 아무것도 하지 않는다(멱등),
+# 가능한 세 축을 고정한다: (1) 이미 설치돼 있으면 아무것도 하지 않는다(멱등),
+# (1b) 설치가 필요한데 검증을 못 하면 조용히 통과하지 않는다,
 # (2) 지문 판정이 "주 키가 정확히 1개이고 기대값"인가.
 #
 # (2)는 판정식을 이 파일에 복제하지 않는다. 복제하면 본체만 고쳤을 때 테스트가 그대로
@@ -54,6 +55,25 @@ if [ "$status" -eq 0 ] && [ -z "$out" ]; then
   report "already-installed (재실행 시 무동작)" 0
 else
   report "already-installed (재실행 시 무동작)" 1 "기대 exit=0 + 무출력 / 실제 exit=$status: $out"
+fi
+
+# 1b. 설치가 필요한 상태에서 네트워크가 막히면 반드시 시끄럽게 실패해야 한다.
+#     1번(멱등)과 2번(지문 판정)만으로는 "스크립트가 통째로 아무 일도 안 하게 된" 경우를
+#     구분하지 못한다 — 껍데기도 exit 0 무출력이고, 지문 식은 파일에 텍스트로 남아 있어
+#     정적 추출도 그대로 성공한다(실측: 즉시 exit 0 을 심어도 이 스위트가 통과했다).
+#     curl 을 실패하게 만든 뒤 exit≠0 을 요구하면 그 축이 닫힌다.
+BLOCKED_HOME="$TMP/blocked"
+mkdir -p "$BLOCKED_HOME" "$TMP/fakebin"
+printf '#!/bin/sh\nexit 1\n' >"$TMP/fakebin/curl"
+chmod +x "$TMP/fakebin/curl"
+
+status=0
+out=$(HOME="$BLOCKED_HOME" PATH="$TMP/fakebin:$PATH" bash "$INSTALLER" 2>&1) || status=$?
+if [ "$status" -ne 0 ]; then
+  report "network-blocked (검증 불가 시 조용히 통과하지 않음)" 0
+else
+  report "network-blocked (검증 불가 시 조용히 통과하지 않음)" 1 \
+    "기대 exit≠0 / 실제 exit=0 — 설치도 검증도 못 했는데 성공으로 끝났습니다: $out"
 fi
 
 # 2. 지문 판정. 스크립트 본문에서 awk 식을 그대로 뽑아 쓴다(복제 금지 — 헤더 참조).

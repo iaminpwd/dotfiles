@@ -59,6 +59,16 @@ esac
 CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9._/-]+\))?!?: .+'
 
 if ! [[ "$SUBJECT" =~ $CONVENTIONAL_PATTERN ]]; then
+  # 선행 공백은 따로 짚어 준다. git 은 제목 줄 앞의 공백을 제거하지 않으므로
+  # `git commit -m "  feat: 제목"` 이 그대로 이 훅까지 오는데, 그때 아래 "현재 메시지"에는
+  # 눈에 보이지 않는 공백만 다를 뿐 완벽히 정상인 제목이 찍힌다 — 사용자는 형식이 맞는데
+  # 왜 막히는지 알 방법이 없다(실측 재현). 원인을 이름으로 불러 준다.
+  if [[ "$SUBJECT" =~ ^[[:space:]] ]]; then
+    echo "❌ 시맨틱 커밋 컨벤션 위반: 제목 줄이 공백으로 시작합니다." >&2
+    echo "   앞의 공백을 지우고 'type(scope): subject' 형식으로 다시 작성하십시오." >&2
+    echo "   현재 메시지(공백 표시): [$SUBJECT]" >&2
+    exit 1
+  fi
   echo "❌ 시맨틱 커밋 컨벤션 위반: 커밋 메시지가 'type(scope): subject' 형식이 아닙니다." >&2
   echo "   허용 타입: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert" >&2
   echo "   예: feat(aws): EKS 노드그룹 오토스케일링 정책 추가" >&2

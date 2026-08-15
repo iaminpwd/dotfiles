@@ -196,63 +196,6 @@ if [ -f "$PROMPT_LINT" ]; then
   done
 fi
 
-# agent-handoff는 현재 미사용 상태로, contexts/.archive/에 임시 보관 중이라 훅 게이트를 비활성화함.
-# 나중에 다시 쓰게 되면 아래 주석을 해제하면 됨 (단, HANDOFF_CHECK/HANDOFF_LINT의
-#
-# # agent-handoff 프롬프트 원본 변경 시 배포본 드리프트 자가 치유(자동 재배포).
-# HANDOFF_DEPLOY="$REPO_ROOT/contexts/agent-handoff/scripts/deploy.sh"
-# if [ -f "$HANDOFF_DEPLOY" ]; then
-#   for FILE in "${STAGED_FILES[@]:-}"; do
-#     case "$FILE" in
-#     contexts/agent-handoff/SKILL.md | contexts/agent-handoff/role.*.md)
-#       if ! bash "$HANDOFF_DEPLOY" --check; then
-#         echo "🔗 agent-handoff 배포본을 원본에 맞춰 재배포합니다..."
-#         bash "$HANDOFF_DEPLOY" || {
-#           echo "❌ agent-handoff 재배포 실패로 커밋이 차단되었습니다."
-#           exit 1
-#         }
-#       fi
-#       break
-#       ;;
-#     esac
-#   done
-# fi
-#
-# # agent-handoff 프로토콜의 구조적 상태 검사 (트리거 미해제, 3왕복 상한 초과 방지).
-# HANDOFF_CHECK="$REPO_ROOT/contexts/agent-handoff/scripts/handoff-check.sh"
-# if [ ! -f "$HANDOFF_CHECK" ]; then
-#   HANDOFF_CHECK="$HOME/dotfiles/contexts/agent-handoff/scripts/handoff-check.sh"
-# fi
-# if [ -f "$HANDOFF_CHECK" ]; then
-#   # --commit-gate: 3왕복 상한 초과는 경고만 남김 (사용자 개입 유도용).
-#   if ! bash "$HANDOFF_CHECK" --commit-gate "$REPO_ROOT"; then
-#     echo "❌ 핸드오프 상태 검사 실패로 커밋이 차단되었습니다."
-#     echo "   재현: bash $HANDOFF_CHECK --commit-gate $REPO_ROOT"
-#     exit 1
-#   fi
-# fi
-#
-# # agent-handoff 설계도(Blueprint) 포맷 검사
-# HANDOFF_LINT="$REPO_ROOT/contexts/agent-handoff/scripts/handoff-lint.sh"
-# if [ ! -f "$HANDOFF_LINT" ]; then
-#   HANDOFF_LINT="$HOME/dotfiles/contexts/agent-handoff/scripts/handoff-lint.sh"
-# fi
-# if [ -f "$HANDOFF_LINT" ]; then
-#   # 배열 앞에 REPO_ROOT 경로를 붙여서 스크립트에 전달합니다.
-#   HANDOFF_FILES=()
-#   for f in "${STAGED_FILES[@]:-}"; do
-#     # 스테이징 대상이 없을 경우 프로세스 실행 건너뜀
-#     [ -n "$f" ] || continue
-#     HANDOFF_FILES+=("$REPO_ROOT/$f")
-#   done
-#
-#   if [ ${#HANDOFF_FILES[@]} -gt 0 ]; then
-#     if ! bash "$HANDOFF_LINT" "${HANDOFF_FILES[@]}"; then
-#       exit 1
-#     fi
-#   fi
-# fi
-
 # 검증 대상 판정: workspace 하위 및 dotfiles 저장소는 상시 대상.
 # 그 외 외부 저장소는 루트에 링크(pre-flight-check.sh)가 있는 경우만 검증.
 # 정본 탐색은 3계층으로 둔다: 현재 저장소 -> 이 훅의 물리적 위치 -> $HOME/dotfiles.

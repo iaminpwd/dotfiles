@@ -441,6 +441,17 @@ cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 (cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
 check_clean "ok-fresh-index (오탐 없음)" "$D"
 
+# 위 케이스는 생성기를 "돌리기만" 한다. 생성기가 아무것도 출력하지 않아도 INDEX.md 가
+# 빈 파일이 되고, check_index_freshness 는 그 빈 파일을 다시 빈 출력과 비교해 일치로 보고
+# 조용히 통과한다 — 실측: generate-context-index.sh 를 즉시 exit 0 인 껍데기로 바꿔도
+# 이 스위트 전체가 통과했다. 생성기가 실제로 스킬을 실어 내는지까지 확인한다.
+if grep -qF '## demo' "$D/contexts/INDEX.md" && [ -s "$D/contexts/INDEX.md" ]; then
+  report "generate-context-index (스킬을 실제로 실어 냄)" 0
+else
+  report "generate-context-index (스킬을 실제로 실어 냄)" 1 \
+    "생성된 INDEX.md 에 '## demo' 가 없습니다 ($(wc -l <"$D/contexts/INDEX.md")줄)"
+fi
+
 # 16. README 스킬 표의 모듈 수 대조. 이 저장소는 스킬을 .archive 로 옮기거나 룰북을
 #     통폐합해도 문서의 개수만 그대로 남는 드리프트가 실제로 있었다(활성 스킬이 9개가
 #     된 뒤에도 문서·주석 5곳이 "12개"를, 표가 Dotfiles "10개(000~060)"를 주장 — 실제는
