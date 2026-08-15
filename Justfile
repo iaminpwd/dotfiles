@@ -61,7 +61,7 @@ check-idempotency file:
 #
 # just는 레시피 직전 "마지막" 주석 줄만 --list 설명으로 쓴다. 그래서 배경 설명을 위에 두고
 # 한 줄 요약을 맨 아래에 붙인다(순서를 바꾸면 --list에 문장 조각이 잘려 나온다).
-# 단위 테스트 전체 실행 (contexts/ 하위 모든 스킬 자동 탐색, .archive 제외)
+# 단위 테스트 전체 실행 (contexts/ 하위 모든 스킬 자동 탐색, 숨김 디렉토리 제외)
 test:
     @echo "=> Running Unit Tests for all skills..."
     bash bin/hooks/run-suite.sh contexts/*/tests/run.sh

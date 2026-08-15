@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 20
     # 스케줄 실행은 외부 드리프트 감지가 목적이라 bootstrap-smoke만 필요 (위 on.schedule 주석 참고).
     if: github.event_name != 'schedule'
-    # mise github: 백엔드(bicep 등)의 익명 API 요청 제한(60/시간) 회피용 —
+    # mise가 GitHub Releases에서 도구를 받을 때 걸리는 익명 API 요청 제한(60/시간) 회피용 —
     # GITHUB_TOKEN을 넘겨 인증 요청(5000/시간)으로 바꾼다.
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

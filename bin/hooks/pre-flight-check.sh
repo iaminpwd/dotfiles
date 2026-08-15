@@ -283,7 +283,6 @@ main() {
   validate_shell
   validate_terraform
   validate_sam
-  validate_bicep
   validate_ansible
   validate_helm
   validate_k8s_manifests

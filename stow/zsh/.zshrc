@@ -28,9 +28,6 @@ export PATH="$HOME/.local/bin:$PATH"
 # Ansible 캐시/찌꺼기 프로젝트 오염 방지 (XDG 호환 캐시 디렉토리로 격리)
 export ANSIBLE_HOME="$HOME/.cache/ansible"
 
-# Bicep (libicu 부재 환경) Invariant 모드 강제 활성화
-export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-
 # 1. 파일/에디터 관련
 # OS별 파일 탐색기 별칭 분기 처리 (WSL, 리눅스, macOS)
 if grep -qi microsoft /proc/version 2>/dev/null; then

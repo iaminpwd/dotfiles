@@ -10,7 +10,7 @@
 # 여전히 pre-commit 훅이 맡는다(그래서 이 훅은 실패해도 에이전트 루프를 막지 않는
 # fail-open 정책을 따른다 — agent-edits-hook.sh와 동일한 이유).
 #
-# 스코프 제외: .tf/.tfvars/.bicep는 validate_terraform/validate_bicep이 init 등
+# 스코프 제외: .tf/.tfvars는 validate_terraform이 init 등
 # 네트워크·빌드 의존 단계를 거쳐 편집 1회마다 돌리면 지연이 크다. 이 확장자는
 # 지금처럼 커밋 시점 게이트에서만 검증되고, 여기서는 건너뛴다.
 #
@@ -60,7 +60,7 @@ target=$(
 
 # 네트워크/빌드 의존 확장자는 실시간 훅에서 제외 (커밋 게이트에서만 검증됨)
 case "$target" in
-*.tf | *.tfvars | *.bicep) exit 0 ;;
+*.tf | *.tfvars) exit 0 ;;
 esac
 
 IFS=$'\t' read -r target git_root < <(resolve_target_and_git_root "$target")

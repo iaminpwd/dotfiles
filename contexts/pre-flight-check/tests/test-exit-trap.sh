@@ -5,8 +5,7 @@
 # 치우려고 EXIT 트랩을 걸 때 호출자의 트랩을 파괴하지 않도록 하는 SSOT다.
 # `trap ... EXIT` 는 추가가 아니라 교체라, 이 계약이 깨지면 호출자가 걸어 둔 정리
 # 로직이 조용히 사라지고 임시 디렉토리가 스크립트 종료 후에도 남는다.
-# 실제로 tf-fixture-lib.sh(aws/azure/openstack/multi-cloud 공유)와
-# containers/tests/run.sh 가 이 형태였다.
+# 실제로 aws/tests/run.sh 의 checkov 러너와 containers/tests/run.sh 가 이 형태였다.
 #
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-exit-trap.sh
 

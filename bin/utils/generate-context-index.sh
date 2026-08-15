@@ -38,7 +38,6 @@ echo "> 반드시 해당 참조 문서를 직접 여십시오. 전체 이론적 
 
 for skill_dir in "$CONTEXTS_DIR"/*/; do
   skill=$(basename "$skill_dir")
-  [ "$skill" = ".archive" ] && continue
   skill_md="${skill_dir}SKILL.md"
   [ -f "$skill_md" ] || continue
 

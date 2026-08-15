@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pfc-iac-checks.sh - pre-flight-check.sh 의 IaC 검증 모듈 (Terraform/SAM/Bicep/Ansible/Helm/K8s Manifest)
+# pfc-iac-checks.sh - pre-flight-check.sh 의 IaC 검증 모듈 (Terraform/SAM/Ansible/Helm/K8s Manifest)
 # 970줄이던 pre-flight-check.sh 를 도메인별로 분리한 것 중 하나(다른 하나는
 # pfc-quality-checks.sh). 오케스트레이션(main, 인자 파싱, 캐싱)과 GLOBAL_* 전역 상태는
 # pre-flight-check.sh 에 그대로 남아있고, 이 파일은 source 되어 그 전역 상태
@@ -131,60 +131,6 @@ validate_sam() {
     fi
   done
   log_info "[SUCCESS] SAM template validation passed."
-}
-
-# 3b. Azure Bicep Validation (3. AWS SAM 과 같은 계열: 클라우드 네이티브 템플릿)
-validate_bicep() {
-  local bicep_files=()
-  mapfile -d '' -t bicep_files < <(filter_target_files '*.bicep')
-
-  if [ "${#bicep_files[@]}" -eq 0 ] || [ -z "${bicep_files[0]}" ]; then
-    return 0
-  fi
-
-  # Bicep(.NET 기반)이 libicu가 없는 Linux 환경에서도 정상 실행되도록 Invariant 모드 강제 활성화
-  export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-
-  local has_bicep=0
-  if has_tool bicep && bicep --version &>/dev/null 2>&1; then
-    has_bicep=1
-  elif has_tool az && az bicep version &>/dev/null 2>&1; then
-    has_bicep=2
-  fi
-  if [ "$has_bicep" -eq 0 ]; then
-    log_info "--- Step: Azure Bicep Validation ---"
-    log_info "[WARNING] Bicep files found but neither standalone 'bicep' CLI nor 'az bicep' is installed."
-    return 0
-  fi
-
-  log_info "--- Step: Azure Bicep Validation ---"
-  local bicep_cmd="none"
-  if [ "$has_bicep" -eq 1 ]; then
-    bicep_cmd="standalone"
-  elif [ "$has_bicep" -eq 2 ]; then
-    bicep_cmd="az"
-  fi
-
-  for bf in "${bicep_files[@]}"; do
-    [ -z "$bf" ] && continue
-    log_info "Validating bicep file: $bf"
-
-    if [ "$bicep_cmd" = "standalone" ]; then
-      if ! bicep build "$bf" --stdout >/dev/null; then
-        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 중단되었습니다: $bf" >&2
-        return 1
-      fi
-    elif [ "$bicep_cmd" = "az" ]; then
-      if ! az bicep build --file "$bf" --stdout >/dev/null; then
-        echo "❌ [ERROR] Bicep 템플릿 검증에 실패하여 커밋이 중단되었습니다: $bf" >&2
-        return 1
-      fi
-    else
-      echo "❌ [ERROR] Bicep 실행 파일을 찾을 수 없거나 실행이 미지원능합니다(OS 호환성 문제 등). 커밋이 중단되었습니다." >&2
-      return 1
-    fi
-  done
-  log_info "[SUCCESS] Bicep validation passed."
 }
 
 # 4. Ansible Validation

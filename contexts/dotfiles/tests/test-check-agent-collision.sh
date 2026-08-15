@@ -61,12 +61,12 @@ else
   report "fail-collision (동일 파일명 충돌, 경로까지 보고)" 1 "기대 exit=1 + 충돌 보고 / 실제 exit=$status: $out"
 fi
 
-# 3. ok-archived-name-reuse: 폐기된 스킬(contexts/.archive/)의 스크립트는 세면 안 된다.
+# 3. ok-archived-name-reuse: 점으로 시작하는 컨텍스트 디렉토리의 스크립트는 세면 안 된다.
 #    이 검사는 "ansible ai_agent 롤이 ~/.local/bin 에 링크할 스크립트들"의 이름 충돌을
 #    보는 것인데, 그 롤은 점으로 시작하는 컨텍스트 디렉토리를 링크 대상에서 뺀다. 여기서
-#    아카이브까지 세면 폐기된 스킬의 파일명이 새 스크립트 이름을 영구히 점유해, 실재하지
-#    않는 충돌로 `just setup` 이 막힌다(현재 저장소에는 .archive 에 deploy.sh 처럼 흔한
-#    이름이 실제로 들어 있다).
+#    그것까지 세면 링크되지도 않을 파일명이 새 스크립트 이름을 영구히 점유해, 실재하지
+#    않는 충돌로 `just setup` 이 막힌다(폐기 스킬 보관소가 있던 시절 deploy.sh 처럼 흔한
+#    이름으로 실제 발생했다 — 픽스처는 그 구조를 합성해 유지한다).
 ARCHIVE_ROOT="$TMP/ok-archived-name-reuse"
 mkdir -p "$ARCHIVE_ROOT/ansible" "$ARCHIVE_ROOT/contexts/.archive/old-skill/scripts" \
   "$ARCHIVE_ROOT/contexts/aws/scripts" "$ARCHIVE_ROOT/bin/linters"

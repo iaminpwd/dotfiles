@@ -5,13 +5,13 @@
 # `trap '<cmd>' EXIT` 는 기존 트랩에 추가하는 게 아니라 통째로 교체한다. 그래서
 # 라이브러리 함수나 스크립트 중간의 함수가 자기 임시 디렉토리를 치우려고 무심코
 # 트랩을 걸면, 그 시점까지 호출자가 걸어 둔 정리 로직이 조용히 사라진다. 실제로 이
-# 저장소에도 같은 형태가 세 곳(tf-fixture-lib.sh 의 tf_run_checkov_pair,
+# 저장소에도 같은 형태가 세 곳(aws/tests/run.sh 의 tf_run_checkov_pair,
 # containers/tests/run.sh 의 run_trivy_misconfig_pair / run_hardening_gate_pair) 있었고,
 # 전부 "함수 끝에서 rm -rf 를 직접 하니까 괜찮다"는 전제 위에 서 있었다. 그 전제는
 # 호출 순서가 바뀌는 순간 깨진다 — 라이브러리 쪽 트랩이 나중에 걸리면 호출자의
 # 임시 디렉토리가 스크립트가 끝나도 남는다.
 #
-# tf-fixture-lib.sh 의 예전 주석은 "`trap - EXIT` 로 해제하지 않는다(호출자 트랩이
+# 그 checkov 러너의 예전 주석은 "`trap - EXIT` 로 해제하지 않는다(호출자 트랩이
 # 날아가므로)"까지는 짚었지만, 정작 "거는 것 자체가 이미 호출자 트랩을 덮어썼다"는
 # 점은 놓치고 있었다. 이 헬퍼는 그 절반을 마저 채운다.
 #

@@ -31,7 +31,7 @@ esac
 # `find ... | grep -q .` 형태를 쓰지 않는다. grep 이 첫 매치에서 stdin 을 닫으면 find 가
 # SIGPIPE(141)로 끝나고, set -o pipefail 이 그것을 파이프라인 결과로 채택해 ".tf 가 있는데
 # 없다"로 뒤집힌다 — 그러면 DB SG 검사가 통째로 조용히 건너뛰어진다. 현재는 find 가 -quit 로
-# 즉시 끝나 발현되지 않지만, 같은 함정을 이 저장소는 이미 tf-fixture-lib.sh / prompt-lint.sh
+# 즉시 끝나 발현되지 않지만, 같은 함정을 이 저장소는 이미 aws/tests/run.sh / prompt-lint.sh
 # 두 곳에서 고쳤다(파이프 버퍼 안에 들어가 안 터질 뿐 구조는 동일). 파이프 자체를 없앤다.
 if [ -z "$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print -quit)" ]; then
   exit 0

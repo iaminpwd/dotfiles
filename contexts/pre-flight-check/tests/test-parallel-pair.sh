@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-parallel-pair.sh
 #
-# parallel-pair.sh는 checkov/sam/bicep/trivy/ansible-lint 다섯 곳이 공유하는 "두 명령을
+# parallel-pair.sh는 checkov/sam/trivy/ansible-lint 네 곳이 공유하는 "두 명령을
 # 백그라운드로 동시 실행하고 종료 코드를 정확히 회수" SSOT다. wait의 종료 코드 회수가
 # 조금만 어긋나도(예: 첫 번째 wait가 두 번째 PID를 잘못 회수) 실패 픽스처가 통과로
 # 둔갑할 수 있으므로, 실제 병행성(순차보다 빠름)과 종료 코드/출력 격리를 함께 고정한다.

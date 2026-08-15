@@ -2,10 +2,9 @@
 # parallel-pair.sh - 서로 무관한 두 명령을 백그라운드로 동시에 실행하고 각각의
 # 종료 코드를 정확히 회수하는 회귀 테스트 전용 공용 라이브러리.
 #
-# checkov(tf-fixture-lib.sh), sam validate(aws), bicep build(azure), trivy(containers),
-# ansible-lint(dotfiles) 다섯 곳이 "인터프리터 기동 비용이 큰 CLI를 ok/fail 픽스처
-# 두 개에 대해 순차 호출"하는 동일한 모양이라, 같은 백그라운드+wait 코드를 반복하지
-# 않도록 이 라이브러리로 뽑아냈다.
+# checkov·sam validate(aws), trivy(containers), ansible-lint(dotfiles)
+# 네 곳이 "인터프리터 기동 비용이 큰 CLI를 ok/fail 픽스처 두 개에 대해 순차 호출"하는
+# 동일한 모양이라, 같은 백그라운드+wait 코드를 반복하지 않도록 이 라이브러리로 뽑아냈다.
 #
 # 판정 로직(무엇을 grep해서 pass/fail을 가릴지)은 도구마다 완전히 다르므로 여기서
 # 다루지 않는다. 이 라이브러리는 "두 명령을 동시에 돌리고 결과 파일 + 종료 코드를

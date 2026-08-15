@@ -60,7 +60,7 @@
 
 > K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
 >
-> Azure · Multi-Cloud · OpenStack 워크스페이스는 현재 사용하지 않아 `contexts/.archive/`로 보관했습니다. 룰북 자체는 그대로 남아 있으므로 다시 쓰게 되면 `contexts/` 아래로 되돌리기만 하면 됩니다(스킬 스캔·글로벌 등록·테스트 탐색이 모두 폴더 위치만 보고 자동으로 다시 잡습니다).
+> Azure · Multi-Cloud · OpenStack 워크스페이스는 현재 사용하지 않아 워킹 트리에서 지웠습니다. 룰북은 git 히스토리에 그대로 남아 있으므로 다시 쓰게 되면 `git checkout 1104de6 -- contexts/.archive` 로 꺼내 `contexts/` 아래로 옮기기만 하면 됩니다(스킬 스캔·글로벌 등록·테스트 탐색이 모두 폴더 위치만 보고 자동으로 다시 잡습니다).
 
 ---
 
@@ -155,12 +155,13 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │   ├── aiops/, containers/, drawio-gen/, k8s/,
 │   │   observability/, pre-flight-check/,
 │   │   prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
-│   ├── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
-│   └── .archive/              # 사용 종료된 스킬 보관소 (azure/, multi-cloud/, openstack/, agent-handoff/)
-│                              # ↑ 두 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob과
+│   └── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
+│                              # ↑ 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob과
 │                              #   ansible.builtin.find가 기본적으로 숨김 항목을 건너뛰므로, 스킬
 │                              #   스캔·글로벌 등록·테스트 탐색 대상에서 구조적으로 자동 제외된다
 │                              #   (평문 이름이면 제외 목록을 곳곳에 수동 등록해야 하고 그 목록이 낡는다).
+│                              #   사용 종료된 스킬은 보관 폴더를 두지 않고 지운다 — git 히스토리가
+│                              #   그 역할을 하며, 워킹 트리에 두면 모든 스캐너가 제외 토큰을 져야 한다.
 │
 ├── stow/                 # GNU Stow 대상 패키지 모음 (이 하위 폴더만 심볼릭 링크 대상 — 화이트리스트 방식)
 │   ├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
@@ -226,7 +227,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 `terraform` · `terragrunt` · `tflint` · `terraform-docs` · `infracost` · `ansible` · `ansible-lint`
 
 **클라우드 CLI**
-`awscli` · `azure-cli` · `aws-sam-cli` · `bicep` (Ubuntu glibc 호환을 위해 `github:` 백엔드로 고정 설치)
+`awscli` · `aws-sam-cli`
 
 **Kubernetes & 컨테이너**
 `kubectl` · `kubectx` · `k9s` · `helm` · `kustomize` · `kube-linter` · `hadolint` · `helm-docs` · `kyverno` · `pluto` · `promtool` · `yq`

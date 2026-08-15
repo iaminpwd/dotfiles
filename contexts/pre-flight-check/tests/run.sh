@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # pre-flight-check 스킬 회귀 테스트 진입점
 #
-# pre-flight-check.sh 자체의 IaC 검증 로직(SAM/Bicep/Helm/conftest/Ansible 등)은
-# 각 클라우드 스킬의 스위트(aws/azure/k8s/dotfiles 등)가 픽스처로 덮고 있으므로
+# pre-flight-check.sh 자체의 IaC 검증 로직(SAM/Helm/conftest/Ansible 등)은
+# 각 클라우드 스킬의 스위트(aws/k8s/dotfiles 등)가 픽스처로 덮고 있으므로
 # 여기서는 특정 클라우드에 속하지 않는 범용 래퍼/공용 로직만 다룬다.
 #
 # git 훅에서 bin/ 변경을 감지해 회귀 테스트를 안내하려면 "무엇이 바뀌면 어느

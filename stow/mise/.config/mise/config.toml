@@ -38,11 +38,7 @@ terraform-docs = "0.24.0"
 
 # Cloud Services
 awscli = "2.36.19"
-azure-cli = "2.89.0"
 "pipx:aws-sam-cli" = "1.165.0"
-# bicep: Ubuntu(glibc) 호환성을 위해 github: 백엔드 사용 (aqua: 는 musl 바이너리로 깨짐)
-# macOS에서 문제 시 수정 대신 ~/.config/mise/conf.d/macos.toml 로컬 오버라이드 권장
-"github:Azure/bicep" = "0.46.1"
 
 # Kubernetes & Containers
 kubectl = "1.36.3"

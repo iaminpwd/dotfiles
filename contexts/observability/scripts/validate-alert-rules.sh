@@ -10,7 +10,7 @@
 # bin/hooks/plugins/observability-check.sh(실 커밋 파이프라인)와
 # contexts/observability/tests/run.sh(회귀 테스트) 양쪽이 이 스크립트를 그대로 호출한다.
 # 판정 로직을 두 곳에 복제하면 한쪽만 고치고 다른 쪽을 놓치는 사고가 나기 쉽기 때문이다
-# (aws/azure/openstack 이 tf-fixture-lib.sh 를 공유하는 것과 동일한 이유).
+# (여러 스킬의 테스트가 .shared/test-lib/parallel-pair.sh 를 공유하는 것과 동일한 이유).
 #
 # 사용: validate-alert-rules.sh <PrometheusRule YAML 경로>
 # 종료 코드: 0=정책 위반 없음, 1=위반 감지 또는 파싱 실패

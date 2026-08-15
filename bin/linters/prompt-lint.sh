@@ -37,25 +37,6 @@ REPO_ROOT=$(cd "$PROMPT_LINT_SCRIPT_DIR/../.." && pwd)
 CONTEXTS_DIR="$REPO_ROOT/contexts"
 EXIT_CODE=0
 
-# 벤더 미러링 쌍: 같은 개념이 각 벤더 스킬에 "의도적으로" 각각 존재하는 관계.
-# check_vendor_mirror_symmetry(조항 수 대조)와 check_cross_skill_duplication(중복 후보
-# 탐지)이 둘 다 이 전제를 쓰는데, 예전엔 양쪽이 'aws|azure'를 각자 하드코딩하고 있었다.
-# 한쪽을 .archive 로 보관하면 미러링 관계 자체가 사라지므로, 실제로 활성인 스킬만 남겨
-# 두 검사가 같은 사실을 보게 한다(한쪽만 고치면 낡는 SSOT 위반을 제거).
-MIRROR_PAIR=()
-for _mirror_skill in aws azure; do
-  [ -d "$CONTEXTS_DIR/$_mirror_skill/references" ] && MIRROR_PAIR+=("$_mirror_skill")
-done
-unset _mirror_skill
-# 정규식 조각. 쌍이 성립하지 않으면(활성 스킬이 2개 미만) 미러링 예외는 적용하지 않는다.
-MIRROR_ALT=""
-if [ "${#MIRROR_PAIR[@]}" -ge 2 ]; then
-  MIRROR_ALT=$(
-    IFS='|'
-    echo "${MIRROR_PAIR[*]}"
-  )
-fi
-
 log_info "======================================================"
 log_info "=== Prompt Corpus Lint Started ==="
 log_info "======================================================"
@@ -87,7 +68,7 @@ check_ssot_module_lists() {
     # 그런데 2>/dev/null 로 그 에러가 묻혀 actual 이 빈 값이 되고, 결국 declared 와
     # 어긋나 "SSOT 모듈 목록 불일치"라는 없는 결함을 신고하며 커밋을 막는다.
     # references/ 바로 아래만 보므로(기존 -maxdepth 1 과 동등) 셸 글롭으로 대체한다.
-    # 참고: 기존의 -path "*/.archive/*" -prune 은 깊이 1에서는 매치될 수 없어 무의미했다.
+    # 참고: 기존의 -path "$CONTEXTS_DIR/.*" -prune 은 깊이 1에서는 매치될 수 없어 무의미했다.
     ref_names=()
     for ref_md in "$skill_dir"/references/*.md; do
       [ -f "$ref_md" ] || continue
@@ -121,7 +102,7 @@ check_reference_links() {
       echo "❌ [ERROR] 깨진 참조 링크: $f -> $ref" >&2
       EXIT_CODE=1
     }
-  done < <(grep -rHoE 'contexts/[a-z0-9-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | sort -u || true)
+  done < <(grep -rHoE 'contexts/[a-z0-9-]+/(references/[0-9]{3}-[a-z0-9_-]+\.md|SKILL\.md|role\.[a-z0-9_-]+\.md|(scripts|tests)/([a-z0-9_-]+/)?[a-z0-9_-]+\.(sh|py)|evals/[a-z0-9_-]+/[a-z0-9_-]+\.(sh|tsv))' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".*" 2>/dev/null | sort -u || true)
 
   # SKILL.md 라우팅 테이블은 절대 경로가 아니라 자신의 스킬 루트 기준 상대 경로
   # (예: "references/020-xxx.md")를 쓴다. 위 절대 패턴 검사는 이 형태를 잡지 못하므로
@@ -142,7 +123,7 @@ check_reference_links() {
         EXIT_CODE=1
       }
     done < <(grep -oE 'references/[0-9]{3}-[a-z0-9_-]+\.md' <<<"$stripped" || true)
-  done < <(grep -rHE 'references/[0-9]{3}-[a-z0-9_-]+\.md' "$CONTEXTS_DIR"/*/SKILL.md "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null | grep -v '/\.archive/' | sort -u || true)
+  done < <(grep -rHE 'references/[0-9]{3}-[a-z0-9_-]+\.md' "$CONTEXTS_DIR"/*/SKILL.md "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null | sort -u || true)
 
   log_info "[INFO] 참조 링크 검사 완료."
 }
@@ -154,7 +135,6 @@ check_orphaned_files() {
   log_info "--- Step: Orphaned Reference File Detection ---"
   local skill_dir skill_md fname f
   for skill_dir in "$CONTEXTS_DIR"/*/; do
-    [ "$(basename "$skill_dir")" = ".archive" ] && continue
     skill_md="${skill_dir}SKILL.md"
     [ -f "$skill_md" ] || continue
     [ -d "${skill_dir}references" ] || continue
@@ -192,7 +172,7 @@ check_documented_clause_existence() {
   # 매치에서 종료하며 stdin 을 닫고, 그 SIGPIPE 로 printf 가 141 을 반환하는데 set -o
   # pipefail 이 그것을 파이프라인 결과로 채택해 "찾았는데 못 찾음"으로 뒤집힌다.
   if [ -s "$names_file" ]; then
-    grep -rhoFf "$names_file" --include="*.md" --exclude-dir=".archive" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
+    grep -rhoFf "$names_file" --include="*.md" --exclude-dir=".*" --exclude="README.md" "$CONTEXTS_DIR" 2>/dev/null |
       sort -u >"$found_file" || true
 
     local name line_no
@@ -259,7 +239,7 @@ check_exception_hook_integrity() {
         EXIT_CODE=1
       }
     done < <(grep -E '^>[[:space:]]*-[[:space:]]+\*\*' <<<"$block" || true)
-  done < <(find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -name "SKILL.md" -print)
+  done < <(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "SKILL.md" -print)
 
   rm -f "$names_file"
   log_info "[INFO] 예외 마커 무결성 검사 완료."
@@ -270,7 +250,7 @@ check_exception_hook_integrity() {
 # -----------------------------------------------------------------------------
 check_file_size() {
   log_info "--- Step: File Size Constraint (rule=150 / library=250 lines) ---"
-  find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
+  find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -path "*/references/*.md" -print0 | xargs -0 wc -l 2>/dev/null | awk '
     $2 != "total" && $2 != "" {
       lines = $1;
       f = $2;
@@ -289,16 +269,18 @@ check_vendor_leakage() {
   log_info "--- Step: Cross-Vendor Terminology Leakage ---"
   local hit
 
-  # azurecr.io는 azure/ 폴더 안에서만 사용할 것 (예시 코드에 벤더 종속 레지스트리 하드코딩)
-  hit=$(grep -rl "azurecr\.io" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep -v "^$CONTEXTS_DIR/azure/" || true)
+  # azurecr.io는 예시 코드에 하드코딩된 벤더 종속 레지스트리다. 예전엔 azure/ 스킬 안에서만
+  # 허용하는 예외를 뒀는데, 그 스킬을 지운 뒤로는 어느 룰북에도 등장할 이유가 없다 —
+  # 예외를 없애 검사 범위를 코퍼스 전체로 넓힌다.
+  hit=$(grep -rl "azurecr\.io" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".*" 2>/dev/null || true)
   [ -n "$hit" ] && {
-    echo "❌ [ERROR] azure 폴더 밖에서 azurecr.io 발견:" >&2
+    echo "❌ [ERROR] 룰북에서 azurecr.io 발견:" >&2
     echo "    ${hit//$'\n'/$'\n    '}" >&2
     EXIT_CODE=1
   }
 
   # "IAM/RBAC" 병기는 aws 폴더에서는 부정확한 표현 (AWS는 IAM/RBAC를 공식 병기하지 않음)
-  hit=$(grep -rl "IAM/RBAC" "$CONTEXTS_DIR/aws" --include="*.md" --exclude-dir=".archive" 2>/dev/null || true)
+  hit=$(grep -rl "IAM/RBAC" "$CONTEXTS_DIR/aws" --include="*.md" --exclude-dir=".*" 2>/dev/null || true)
   [ -n "$hit" ] && {
     echo "❌ [ERROR] aws 폴더에서 'IAM/RBAC' 병기 발견 (Azure 전용 표현):" >&2
     echo "    ${hit//$'\n'/$'\n    '}" >&2
@@ -314,7 +296,7 @@ check_vendor_leakage() {
 check_code_fences() {
   log_info "--- Step: Code Fence Balance ---"
   local unclosed
-  unclosed=$(find "$CONTEXTS_DIR" -path "*/.archive/*" -prune -o -name "*.md" -print0 | xargs -0 awk '
+  unclosed=$(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "*.md" -print0 | xargs -0 awk '
     BEGIN { fail = 0; }
     FNR == 1 {
       if (count % 2 != 0) {
@@ -357,7 +339,7 @@ check_severity_tag_heuristic() {
   # 보안 취약점 등 고위험 키워드가 포함된 경우 Hard Block 등급 상향 필요성 알림
   local risk_keywords='privileged|hostNetwork|평문|자격 증명|시크릿.*유출|credential|secret.*leak|0\.0\.0\.0/0|CVE|readOnlyRootFilesystem'
   local hits
-  hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep "Halt & Clarify" || true)
+  hits=$(grep -rHE "$risk_keywords" "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".*" 2>/dev/null | grep "Halt & Clarify" || true)
   if [ -n "$hits" ]; then
     echo "$hits" | awk -F':' '{
       file = $1;
@@ -380,7 +362,7 @@ check_prefer_language_tagged_must() {
   # 본문에 선호 표현("가급적", "우선 탐색" 등) 포함 시 MUST 대신 PREFER 사용 안내
   local prefer_words='최우선으로 (제안|탐색|시도|고려)|최우선 (제안|탐색)|가급적|우선 탐색|권장합니다|권장하십시오'
   local hits
-  hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".archive" 2>/dev/null | grep -E "$prefer_words" || true)
+  hits=$(grep -rHE '^\s*[-*]\s+\*\*\[MUST\]' "$CONTEXTS_DIR" --include="*.md" --exclude-dir=".*" 2>/dev/null | grep -E "$prefer_words" || true)
   if [ -n "$hits" ]; then
     echo "$hits" | awk -F':' '{
       file = $1;
@@ -397,89 +379,9 @@ check_prefer_language_tagged_must() {
 
 # -----------------------------------------------------------------------------
 # 9. 크로스 스킬 개념 중복 후보 탐지 (경고 전용, 자동 수정 없음)
-# -----------------------------------------------------------------------------
-check_cross_skill_duplication() {
-  log_info "--- Step: Cross-Skill Concept Duplication Candidates (Warning Only) ---"
-  # aws/azure 미러링(같은 개념이 두 클라우드 스킬에 각각 존재)은 의도된 구조이므로
-  # 그 둘만 겹치는 경우는 제외하고, 그 외 스킬까지 걸치면 실수일 확률이 높아 경고한다.
-  # 다른 스킬로 위임하는 문장("위임"/"참조하십시오")에서 개념 이름만 언급하는 것은
-  # 실제 내용 중복이 아니므로 제외한다.
-  # 감시 대상은 "개념"이어야 한다. 제품/도구 이름(예: OpenTelemetry)은 그 도구를 쓰는
-  # 모든 도메인에서 정당하게 등장하므로 중복 신호가 되지 못한다 — 같은 도구를 쓸 뿐
-  # 서로 다른 도메인 조항인 경우가 실제로 있었다. 개념만 남긴다.
-  local concepts=("SLI/SLO" "RED (Rate" "Error Budget" "카디널리티")
-  local concept files skill_count mirror_re mirror_note
-  # 미러링 쌍이 성립할 때만 그 둘을 집계에서 빼고, 문구에도 그 사실을 밝힌다. 쌍이
-  # 깨졌으면(한쪽이 .archive) 예외 없이 모든 스킬을 세고 문구에서도 미러링을 언급하지
-  # 않는다 — 없는 관계를 근거로 보고하면 읽는 사람이 사실과 다른 구조를 전제하게 된다.
-  if [ -n "$MIRROR_ALT" ]; then
-    mirror_re="^($MIRROR_ALT)$"
-    mirror_note="${MIRROR_PAIR[0]}/${MIRROR_PAIR[1]} 미러링 범위를 넘어 "
-  else
-    mirror_re='^$'
-    mirror_note=""
-  fi
-  for concept in "${concepts[@]}"; do
-    files=$(grep -E "$concept" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null |
-      grep -v "위임\|참조하십시오\|참조하고" |
-      cut -d: -f1 | sort -u || true)
-    [ -z "$files" ] && continue
-    # grep -vc는 카운트가 0일 때 종료 코드 1을 반환해 set -euo pipefail 하의 대입이
-    # 린터 전체를 조용히 죽인다. 카운트 0은 정상 결과이므로 || true로 흡수한다.
-    skill_count=$(echo "$files" | sed -E "s#$CONTEXTS_DIR/([a-z0-9-]+)/.*#\1#" | sort -u | grep -vcE "$mirror_re" || true)
-    if [ "$skill_count" -ge 2 ] ||
-      { [ "$skill_count" -ge 1 ] && [ -n "$MIRROR_ALT" ] && grep -qE "$CONTEXTS_DIR/($MIRROR_ALT)/" <<<"$files"; }; then
-      echo "[WARNING] '$concept' 개념이 ${mirror_note}여러 스킬에 실질적으로 등장 (중복 검토 필요):"
-      while IFS= read -r hit_file; do
-        [ -n "$hit_file" ] && echo "[WARNING]     $hit_file"
-      done <<<"$files"
-    fi
-  done
-  log_info "[INFO] 크로스 스킬 중복 후보 검사 완료."
-}
 
 # -----------------------------------------------------------------------------
 # 10. aws/azure 미러링 대칭성 검사 (Warning Only)
-# -----------------------------------------------------------------------------
-check_vendor_mirror_symmetry() {
-  log_info "--- Step: aws/azure Mirror Symmetry (Warning Only) ---"
-  # 미러링 쌍이 다 활성 상태일 때만 의미가 있는 검사다(MIRROR_PAIR 정의부 주석 참조).
-  # 한쪽을 .archive로 보관하면 그쪽 references 디렉토리가 사라지는데, 아래 find 가 없는
-  # 경로를 받으면 0이 아닌 코드로 끝나고 pipefail+set -e 가 이 린터 전체를 아무 메시지
-  # 없이 죽인다(실측: azure 보관 직후 prompt-lint 가 exit 1 로 조용히 중단 — 커밋
-  # 게이트가 "검사 실패"로 막히는데 이유가 출력되지 않았다). 쌍이 없으면 건너뛴다.
-  if [ "${#MIRROR_PAIR[@]}" -lt 2 ]; then
-    log_info "[INFO] 미러링 쌍(aws/azure) 중 한쪽이 활성 스킬이 아니어서 대칭성 검사를 건너뜁니다."
-    return 0
-  fi
-  # aws/azure 미러링은 9번 검사 주석대로 의도된 구조다. 다만 한쪽 벤더에만 조항을
-  # 추가하면 드리프트가 쌓이므로 동일 번호 모듈의 조항 수를 대조해 경고한다.
-  # 조항명은 벤더 용어로 갈리므로(TGW <-> vWAN, IRSA <-> Workload Identity) 이름이
-  # 아니라 개수만 비교해야 대응어 28건을 오탐하지 않는다.
-  # 벤더 이름은 MIRROR_PAIR 에서 받아 쓴다(하드코딩 제거 — 정의부가 SSOT).
-  local lhs="${MIRROR_PAIR[0]}" rhs="${MIRROR_PAIR[1]}"
-  local f prefix rhs_file a_count z_count
-  for f in "$CONTEXTS_DIR/$lhs/references"/*.md; do
-    [ -f "$f" ] || continue
-    # || true 가 없으면 숫자 접두사 없는 .md 하나만 있어도 grep 이 1을 반환해 린터가
-    # 메시지 없이 죽고, 바로 아래 작성자 의도의 가드가 영영 도달하지 못한다.
-    prefix=$(basename "$f" | grep -oE '^[0-9]{3}' || true)
-    [ -z "$prefix" ] && continue
-    rhs_file=$(find "$CONTEXTS_DIR/$rhs/references" -maxdepth 1 -name "${prefix}-*.md" | head -1)
-    if [ -z "$rhs_file" ]; then
-      echo "[WARNING] $lhs/$rhs 미러링 누락: $rhs 에 ${prefix} 모듈이 없습니다 ($(basename "$f"))"
-      continue
-    fi
-    a_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$f" || true)
-    z_count=$(grep -cE '^- \*\*\[(MUST|NEVER|PREFER|CRITICAL)\]' "$rhs_file" || true)
-    if [ "$a_count" -ne "$z_count" ]; then
-      echo "[WARNING] $lhs/$rhs 조항 수 불일치 (${prefix}): $lhs ${a_count}건 / $rhs ${z_count}건 — 한쪽에만 추가된 규칙이 없는지 확인하십시오"
-      echo "[WARNING]     $f"
-      echo "[WARNING]     $rhs_file"
-    fi
-  done
-  log_info "[INFO] $lhs/$rhs 미러링 대칭성 검사 완료."
-}
 
 # -----------------------------------------------------------------------------
 # 11. contexts/INDEX.md 최신성 검사 (Warning Only)
@@ -566,16 +468,18 @@ check_readme_skill_counts() {
 # -----------------------------------------------------------------------------
 # 14. contexts/ 스캔의 숨김 디렉토리 제외 일관성
 # -----------------------------------------------------------------------------
-# `contexts/.archive`(폐기 스킬)와 `contexts/.shared`(테스트 전용 라이브러리)는 "어떤
-# 소비자도 취급하지 않는다"가 이 코퍼스의 규약이다. 그런데 그 규약은 자동으로 지켜지지
+# `contexts/` 아래 점으로 시작하는 디렉토리(현재는 테스트 전용 라이브러리 `.shared` 하나)는
+# "어떤 소비자도 취급하지 않는다"가 이 코퍼스의 규약이다. 그런데 그 규약은 자동으로 지켜지지
 # 않는다 — 셸 glob(`"$CONTEXTS_DIR"/*/`)은 dotglob 없이 숨김 디렉토리를 건너뛰지만,
 # `find` 와 `ansible.builtin.find` 는 그렇지 않다. 특히 후자는 `hidden: false` 가 숨김
 # "파일"만 거르고 숨김 "디렉토리" 안으로는 그대로 recurse 한다(ansible-core 2.19.11 실측).
 #
 # 그 차이 때문에 같은 규약을 여러 곳에 손으로 넣다가 두 곳을 빠뜨렸고, 둘 다 실제 피해로
-# 이어졌다: 폐기 스킬의 스크립트가 매 setup 마다 사용자 PATH 에 링크됐고(ansible ai_agent
+# 이어졌다(당시엔 폐기 스킬 보관소 `.archive` 도 있었다 — 지금은 지웠고 내용은 git 히스토리에
+# 남아 있다): 폐기 스킬의 스크립트가 매 setup 마다 사용자 PATH 에 링크됐고(ansible ai_agent
 # 롤), 폐기 룰북이 근거 기록의 스킬 보정 후보에 섞여 정상 기록을 막거나 존재하지 않는
-# 룰을 SUCCESS 로 남겼다(record-provenance.sh).
+# 룰을 SUCCESS 로 남겼다(record-provenance.sh). 보관소를 지웠다고 규약이 없어지지는 않는다 —
+# `.shared` 가 그대로 있고, 숨김 디렉토리는 언제든 다시 생긴다.
 #
 # 문서 규칙(010-core.md 의 Sibling Sweep)만으로 두지 않고 여기서 기계적으로 대조한다 —
 # 050-rule-provenance-standard.md 의 자가 비판 기준("스크립트로 pass/fail 판정이 가능한
@@ -583,8 +487,8 @@ check_readme_skill_counts() {
 #
 # 판정은 오탐 0을 우선해 좁게 잡는다:
 #  (a) 셸: 명령 위치의 `find` 가 contexts "루트"를 대상으로 잡는 경우만. 특정 스킬 하위를
-#      지목하는 `find "$CONTEXTS_DIR/$skill/references"` 는 구조적으로 .archive 에 닿을 수
-#      없으므로 대상이 아니다. 제외 토큰(-prune / ! -path / -not -path / --exclude-dir)이
+#      지목하는 `find "$CONTEXTS_DIR/$skill/references"` 는 구조적으로 숨김 디렉토리에 닿을
+#      수 없으므로 대상이 아니다. 제외 토큰(-prune / ! -path / -not -path / --exclude-dir)이
 #      하나라도 있으면 통과.
 #  (b) ansible: `ansible.builtin.find` 로 contexts 를 `recurse: true` 스캔하는 파일은
 #      경로 가드 토큰 `/contexts/.` 를 코드에 갖고 있어야 한다. 제외 조건이 find 태스크가
@@ -609,7 +513,7 @@ check_archive_scope_consistency() {
       grep -qE '(-prune|! -path|-not -path|--exclude-dir)' <<<"$body" && continue
       echo "❌ [ERROR] contexts/ 루트를 훑는 find 에 숨김 디렉토리 제외가 없습니다: $rel:$lineno" >&2
       echo "    $(sed -E 's/^[[:space:]]+//' <<<"$body")" >&2
-      echo "    -> .archive/.shared 가 결과에 섞입니다. -prune 또는 ! -path \"*/contexts/.*\" 를 추가하십시오." >&2
+      echo "    -> .shared 등 숨김 디렉토리가 결과에 섞입니다. -prune 또는 ! -path \"*/contexts/.*\" 를 추가하십시오." >&2
       EXIT_CODE=1
     done < <(grep -nE '(^|[;|(&]|\$\()[[:space:]]*find[[:space:]]+("?\$\{?CONTEXTS_DIR\}?"?|"[^"]*/contexts")[[:space:]]' "$f" || true)
   done < <(find "$REPO_ROOT/bin" "$REPO_ROOT/stow" "$REPO_ROOT/.github" \
@@ -643,8 +547,6 @@ main() {
   check_code_fences
   check_severity_tag_heuristic
   check_prefer_language_tagged_must
-  check_cross_skill_duplication
-  check_vendor_mirror_symmetry
   check_index_freshness
   check_readme_skill_counts
   check_archive_scope_consistency

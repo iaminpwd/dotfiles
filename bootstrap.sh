@@ -102,7 +102,7 @@ if [ ! -x "$HOME/.local/bin/mise" ]; then
   # stdin 을 닫으면 gpg 가 SIGPIPE(141)로 죽고, set -o pipefail 이 그것을 파이프라인 결과로
   # 채택해 이 대입이 실패한 뒤 set -e 가 스크립트를 죽인다 — 공급망 검증 직전에 아무 메시지
   # 없이 중단되는 형태다. 지금은 키 1개짜리 출력이 파이프 버퍼(64KB)에 들어가 발현되지
-  # 않지만, 구조는 이 저장소가 db-sg-checker.sh / tf-fixture-lib.sh / prompt-lint.sh /
+  # 않지만, 구조는 이 저장소가 db-sg-checker.sh / aws/tests/run.sh / prompt-lint.sh /
   # test-coverage-check.sh 네 곳에서 이미 제거한 함정과 동일하다. 출력을 먼저 받아 파이프를
   # 없애고, awk 는 exit 없이 첫 매치만 취한다.
   MISE_GPG_FPR_RAW="$(gpg --homedir "$MISE_GPG_HOME" --with-colons --fingerprint)"

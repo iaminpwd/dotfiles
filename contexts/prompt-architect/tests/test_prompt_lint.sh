@@ -201,10 +201,10 @@ D=$(new_case fail-odd-code-fence)
 printf '\n```bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-odd-code-fence" 1 "코드펜스 짝이 맞지 않음" "$D"
 
-# 4. 벤더 용어 오염: azure 폴더 밖에 azurecr.io 를 둔다.
-D=$(new_case fail-azurecr-outside-azure)
+# 4. 벤더 용어 오염: 룰북에 벤더 종속 레지스트리(azurecr.io)를 하드코딩한다.
+D=$(new_case fail-azurecr-in-rulebook)
 echo "- 예시 레지스트리: myregistry.azurecr.io" >>"$D/contexts/demo/references/010-demo-core.md"
-check "fail-azurecr-outside-azure" 1 "azurecr.io 발견" "$D"
+check "fail-azurecr-in-rulebook" 1 "azurecr.io 발견" "$D"
 
 # 5. 벤더 용어 오염: aws 폴더에 Azure 전용 병기(IAM/RBAC)를 둔다.
 D=$(new_case fail-iam-rbac-in-aws)
@@ -422,30 +422,6 @@ D=$(new_case warn-halt-on-high-risk)
 echo "- 자격 증명 평문 노출이 감지되면 Halt & Clarify 하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-halt-on-high-risk" 0 "Hard Block 검토 필요" "$D"
 
-# 10. aws/azure 미러링 조항 수 불일치.
-D=$(new_case warn-mirror-asymmetry)
-mkdir -p "$D/contexts/aws/references" "$D/contexts/azure/references"
-cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
----
-role: AWS Core
-reviewed: $TODAY
----
-# 9. AWS 코어
-
-- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
-- **[MUST] Encryption:** 저장 데이터를 암호화하십시오.
-EOF
-cat >"$D/contexts/azure/references/010-azure-core.md" <<EOF
----
-role: Azure Core
-reviewed: $TODAY
----
-# 9. Azure 코어
-
-- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
-EOF
-check "warn-mirror-asymmetry" 0 "조항 수 불일치" "$D"
-
 # 10b. contexts/INDEX.md 최신성: 색인이 라우팅 테이블과 어긋나면 경고해야 한다.
 #      실제 생성기(bin/utils/generate-context-index.sh)를 케이스 디렉토리에 그대로
 #      복사해 넣는다 — check_index_freshness 는 PATH 가 아니라 REPO_ROOT 기준
@@ -464,105 +440,6 @@ mkdir -p "$D/bin/utils"
 cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 (cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
 check_clean "ok-fresh-index (오탐 없음)" "$D"
-
-echo "--- 린터 자신의 조용한 사망 회귀 ---"
-
-# 11. 개념이 aws/azure 에만 있으면 grep -vc 가 0을 세고 종료 코드 1을 반환한다.
-#     예전에는 그 1이 set -e 에 걸려 린터가 아무 메시지 없이 죽었다.
-D=$(new_case ok-concept-only-in-aws-azure)
-mkdir -p "$D/contexts/aws/references" "$D/contexts/azure/references"
-for v in aws azure; do
-  cat >"$D/contexts/$v/references/010-$v-core.md" <<EOF
----
-role: ${v} Core
-reviewed: $TODAY
----
-# 9. ${v} 코어
-
-- **[MUST] Observability:** SLI/SLO 를 정의하십시오.
-EOF
-done
-check_clean "ok-concept-only-in-aws-azure (완주)" "$D"
-
-# 12. 숫자 접두사 없는 aws 참조 파일이 있으면 grep -oE '^[0-9]{3}' 가 무매치로 1을
-#     반환한다. 예전에는 여기서도 린터가 메시지 없이 죽었다.
-D=$(new_case ok-aws-ref-without-numeric-prefix)
-mkdir -p "$D/contexts/aws/references"
-cat >"$D/contexts/aws/references/notes.md" <<EOF
----
-role: AWS Notes
-reviewed: $TODAY
----
-# 메모
-
-- 숫자 접두사가 없는 참조 파일.
-EOF
-check "ok-aws-ref-without-numeric-prefix (완주)" 0 "Prompt Corpus Lint Passed" "$D"
-
-# 13. 미러링 짝(azure)이 .archive 로 보관되어 사라진 경우. 예전에는 없는 디렉토리를 받은
-#     find 가 0이 아닌 코드로 끝나고 pipefail+set -e 가 린터를 아무 메시지 없이 죽였다
-#     (실측: azure 보관 직후 prompt-lint 가 exit 1 로 조용히 중단 — 커밋 게이트가 이유
-#     없이 막혔다). 한쪽이 비활성이면 그 검사만 건너뛰고 완주해야 한다.
-D=$(new_case ok-mirror-pair-archived)
-mkdir -p "$D/contexts/aws/references" "$D/contexts/.archive/azure/references"
-cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
----
-role: AWS Core
-reviewed: $TODAY
----
-# 9. AWS 코어
-
-- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
-EOF
-cat >"$D/contexts/.archive/azure/references/010-azure-core.md" <<EOF
----
-role: Azure Core
-reviewed: $TODAY
----
-# 9. Azure 코어
-
-- **[MUST] Tagging:** 모든 리소스에 태그를 부여하십시오.
-EOF
-check "ok-mirror-pair-archived (짝이 보관돼도 완주)" 0 "Prompt Corpus Lint Passed" "$D"
-
-# 14. 미러링 쌍이 깨진 상태에서 개념이 "한 스킬에만" 있으면 경고가 없어야 한다.
-#     쌍이 없을 때 제외 정규식을 잘못 만들면 단일 스킬 등장까지 중복으로 오탐한다.
-D=$(new_case ok-single-skill-concept-without-mirror)
-mkdir -p "$D/contexts/aws/references"
-cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
----
-role: AWS Core
-reviewed: $TODAY
----
-# 9. AWS 코어
-
-- **[MUST] Observability:** SLI/SLO 를 정의하십시오.
-EOF
-check_clean "ok-single-skill-concept-without-mirror (단일 등장은 무경고)" "$D"
-
-# 15. 반대편: 쌍이 깨진 상태에서 개념이 두 스킬에 걸치면 여전히 경고해야 하고, 그때
-#     문구가 없는 미러링 관계를 근거로 대지 않아야 한다(사실과 다른 구조 전제 방지).
-D=$(new_case warn-two-skill-concept-without-mirror)
-mkdir -p "$D/contexts/aws/references" "$D/contexts/k8s/references"
-for v in aws k8s; do
-  cat >"$D/contexts/$v/references/010-$v-core.md" <<EOF
----
-role: ${v} Core
-reviewed: $TODAY
----
-# 9. ${v} 코어
-
-- **[MUST] Observability:** SLI/SLO 를 정의하십시오.
-EOF
-done
-check "warn-two-skill-concept-without-mirror (교차 등장은 경고)" 0 "여러 스킬에 실질적으로 등장" "$D"
-OUT_NO_MIRROR=$( (cd "$D" && bash "$LINT") 2>&1 || true)
-if grep -qF "미러링 범위를 넘어" <<<"$OUT_NO_MIRROR"; then
-  report "warn-two-skill-concept-without-mirror (문구에 미러링 언급 없음)" 1 \
-    "쌍이 깨졌는데 미러링을 근거로 든 문구가 남아 있습니다"
-else
-  report "warn-two-skill-concept-without-mirror (문구에 미러링 언급 없음)" 0
-fi
 
 # 16. README 스킬 표의 모듈 수 대조. 이 저장소는 스킬을 .archive 로 옮기거나 룰북을
 #     통폐합해도 문서의 개수만 그대로 남는 드리프트가 실제로 있었다(활성 스킬이 9개가

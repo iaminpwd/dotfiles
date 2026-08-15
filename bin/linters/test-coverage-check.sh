@@ -39,12 +39,11 @@ HOOKS_DIR="$REPO_ROOT/stow/git/.githooks"
 CI_SCRIPTS_DIR="$REPO_ROOT/.github/scripts"
 SELF="$(basename "${BASH_SOURCE[0]}")"
 
-# contexts/.archive 는 사용 종료된 스킬이라 커버리지 요구 대상에서 제외.
 # SKILL.md/references 등 "문서상 언급"은 실제 테스트가 아니므로, tests/ 디렉토리로만 한정한다.
+# 점으로 시작하는 컨텍스트 디렉토리(.shared)는 글롭이 dotglob 없이 건너뛰므로 별도 제외가 없다.
 TEST_DIRS=()
 for d in "$REPO_ROOT"/contexts/*/tests; do
   [ -d "$d" ] || continue
-  case "$d" in "$REPO_ROOT/contexts/.archive/"*) continue ;; esac
   TEST_DIRS+=("$d")
 done
 

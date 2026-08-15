@@ -58,7 +58,6 @@ else
 fi
 
 # 3. 여러 "활성" 스킬에 동일 파일명이 있으면(050-iac-standard.md: aws/aiops) FLAGGED + exit 1.
-#    (azure/openstack 에도 같은 이름이 있지만 .archive 로 옮겨져 후보에서 빠진다 — 아래 7 참조.)
 rm -f "$LOG"
 status=0
 out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" c.tf "050-iac-standard.md" "테스트 목적" 2>&1) || status=$?
@@ -103,47 +102,54 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 7~8. 폐기된 스킬(contexts/.archive/)이 후보에 섞이면 안 된다.
+# 7~8. contexts/ 의 숨김 디렉토리가 스킬 보정 후보에 섞이면 안 된다.
 #
-# azure/openstack 을 .archive 로 옮긴 뒤, 폐기된 룰북이 살아있는 룰북과 파일명을 대량으로
-# 공유하게 됐다(005/020/025/030/040/050/080/090/100 등). 스킬 보정 find 가 그것을 함께
-# 세면 양방향으로 깨진다 — 둘 다 실측으로 재현했다.
-# 픽스처를 합성하지 않고 실제 코퍼스를 쓰는 것은 이 스위트의 기존 방침이므로(헤더 참조),
-# 전제가 무너지면 원인을 알 수 있게 먼저 확인한다.
-ARCHIVE_ONLY="026-networking-standard.md"      # .archive/openstack 에만 존재
-ACTIVE_PLUS_ARCHIVE="080-database-standard.md" # 활성 aws 1곳 + .archive 2곳
+# 스킬 보정 find 가 숨김 디렉토리를 함께 세면 양방향으로 깨진다 — 둘 다 폐기 스킬
+# 보관소(contexts/.archive)가 실제 코퍼스에 있던 시절 실측으로 재현하고 고친 결함이다.
+# 그 보관소를 지운 뒤(내용은 git 히스토리에 그대로 남아 있다) 남은 숨김 디렉토리는
+# .shared 뿐인데 거기엔 룰북이 없어 실물로는 재현할 수 없다. 판정 로직 자체는 그대로
+# 살아 있으므로 최소 코퍼스를 합성해 고정한다 — 이 스위트에서 합성 픽스처를 쓰는 유일한
+# 케이스다(나머지는 헤더 방침대로 실제 contexts/ 를 쓴다).
+#
+# record-provenance.sh 는 CONTEXTS_DIR 를 "자기 실경로의 상위 두 단계"로 계산하므로
+# (환경변수로 못 바꾼다) 합성 코퍼스를 태우려면 스크립트와 그 의존 lib 을 가짜 트리에
+# 복사해 그쪽 사본을 실행해야 한다. 심볼릭 링크는 readlink -f 가 원본으로 되돌리므로 안 된다.
+FAKE="$TMP/fake-repo"
+mkdir -p "$FAKE/bin/utils" "$FAKE/bin/lib" \
+  "$FAKE/contexts/aws/references" "$FAKE/contexts/.hidden/references" "$FAKE/work"
+cp "$RECORD_PROVENANCE" "$FAKE/bin/utils/"
+cp "$REPO_ROOT/bin/lib/git-relpath.sh" "$FAKE/bin/lib/"
+FAKE_RP="$FAKE/bin/utils/record-provenance.sh"
+FAKE_LOG="$FAKE/work/.agent-state/edits.log"
 
-premise_ok=1
-[ -e "$REPO_ROOT/contexts/.archive/openstack/references/$ARCHIVE_ONLY" ] || premise_ok=0
-[ -e "$REPO_ROOT/contexts/aws/references/$ACTIVE_PLUS_ARCHIVE" ] || premise_ok=0
-[ "$(find "$REPO_ROOT/contexts/.archive" -name "$ACTIVE_PLUS_ARCHIVE" | wc -l)" -ge 1 ] || premise_ok=0
+DUP_NAME="080-database-standard.md"    # 활성 1곳 + 숨김 1곳
+HIDDEN_ONLY="026-networking-standard.md" # 숨김에만 존재
+: >"$FAKE/contexts/aws/references/$DUP_NAME"
+: >"$FAKE/contexts/.hidden/references/$DUP_NAME"
+: >"$FAKE/contexts/.hidden/references/$HIDDEN_ONLY"
 
-if [ "$premise_ok" -eq 0 ]; then
-  report "archive 제외 케이스 전제 확인" 1 "코퍼스가 바뀌어 픽스처 전제가 깨졌습니다 — 위 두 파일명을 현재 구조에 맞게 갱신하십시오."
+# 7. 활성 스킬 1곳에만 있으면, 숨김 디렉토리에 같은 이름이 몇 개 있든 그 활성 스킬로
+#    보정돼야 한다. 예전에는 "후보: .archive,.archive,aws" 로 모호 판정되어 exit 1 +
+#    FLAGGED 였다 — 실재하지 않는 모호성 때문에 정상적인 근거 기록이 막혔다.
+rm -f "$FAKE_LOG"
+status=0
+out=$(cd "$FAKE/work" && bash "$FAKE_RP" f.tf "$DUP_NAME" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:aws/$DUP_NAME" "$FAKE_LOG" && grep -qF "| SUCCESS" "$FAKE_LOG"; then
+  report "hidden-not-counted (활성 1곳이면 숨김 중복과 무관하게 보정)" 0
 else
-  # 7. 활성 스킬 1곳에만 있으면, .archive 에 같은 이름이 몇 개 있든 그 활성 스킬로 보정돼야
-  #    한다. 예전에는 "후보: .archive,.archive,aws" 로 모호 판정되어 exit 1 + FLAGGED 였다
-  #    — 실재하지 않는 모호성 때문에 정상적인 근거 기록이 막혔다.
-  rm -f "$LOG"
-  status=0
-  out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" f.tf "$ACTIVE_PLUS_ARCHIVE" "테스트 목적" 2>&1) || status=$?
-  if [ "$status" -eq 0 ] && grep -qF "agent:aws/$ACTIVE_PLUS_ARCHIVE" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
-    report "archive-not-counted (활성 1곳이면 .archive 중복과 무관하게 보정)" 0
-  else
-    report "archive-not-counted (활성 1곳이면 .archive 중복과 무관하게 보정)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
-  fi
+  report "hidden-not-counted (활성 1곳이면 숨김 중복과 무관하게 보정)" 1 "exit=$status out=$out log=$(cat "$FAKE_LOG" 2>/dev/null)"
+fi
 
-  # 8. .archive 에만 있는 이름은 유일 매치로 통과시키면 안 된다. 예전에는 스킬이 리터럴
-  #    ".archive" 로 보정되어 `agent:.archive/<파일>` 이라는 폐기 룰북 근거가 SUCCESS 로
-  #    남았다 — 감사 로그가 존재하지 않는 룰을 가리킨다.
-  rm -f "$LOG"
-  status=0
-  out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" g.tf "$ARCHIVE_ONLY" "테스트 목적" 2>&1) || status=$?
-  if ! grep -qF "agent:.archive/" "$LOG"; then
-    report "archive-only (폐기 룰북을 스킬로 보정하지 않음)" 0
-  else
-    report "archive-only (폐기 룰북을 스킬로 보정하지 않음)" 1 "exit=$status log=$(cat "$LOG" 2>/dev/null)"
-  fi
+# 8. 숨김 디렉토리에만 있는 이름은 유일 매치로 통과시키면 안 된다. 예전에는 스킬이 리터럴
+#    ".archive" 로 보정되어 `agent:.archive/<파일>` 이라는 폐기 룰북 근거가 SUCCESS 로
+#    남았다 — 감사 로그가 존재하지 않는 룰을 가리킨다.
+rm -f "$FAKE_LOG"
+status=0
+out=$(cd "$FAKE/work" && bash "$FAKE_RP" g.tf "$HIDDEN_ONLY" "테스트 목적" 2>&1) || status=$?
+if ! grep -qF "agent:.hidden/" "$FAKE_LOG"; then
+  report "hidden-only (숨김 디렉토리를 스킬로 보정하지 않음)" 0
+else
+  report "hidden-only (숨김 디렉토리를 스킬로 보정하지 않음)" 1 "exit=$status log=$(cat "$FAKE_LOG" 2>/dev/null)"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
