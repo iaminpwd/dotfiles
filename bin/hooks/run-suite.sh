@@ -15,6 +15,14 @@ RS_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 source "$RS_SCRIPT_DIR/../lib/script-init.sh"
 
 # 이 스크립트가 실행된 현재 저장소의 루트를 찾음 (script-init.sh SSOT 재사용)
+#
+# [주의] init_repo_root 가 CWD 를 저장소 루트로 바꾸므로, 아래 인자 수집은 그 이전의 CWD 를
+# 알아야 상대 경로를 사용자가 의도한 대로 해석할 수 있다. 그러지 않으면 서브디렉토리에서
+# 실행했을 때 같은 이름의 루트 파일이 대신 실행된다 — 실측: sub/suite.sh(exit 1)를
+# sub/ 에서 `run-suite.sh suite.sh` 로 지정했더니 루트의 통과하는 suite.sh 가 돌고
+# "-> [✓] suite.sh" 와 함께 rc=0 이 났다. 지목한 스위트는 한 번도 실행되지 않았다.
+# (pre-flight-check.sh 의 PFC_INVOCATION_CWD 와 동일한 결함 클래스다.)
+RS_INVOCATION_CWD=$PWD
 init_repo_root
 
 # 검증할 스크립트 목록 수집
@@ -26,6 +34,11 @@ PFC_ARGS=()
 for arg in "$@"; do
   if [[ "$arg" == --pfc-args=* ]]; then
     PFC_ARGS+=("${arg#--pfc-args=}")
+  elif [[ "$arg" != /* ]] && [ -f "$RS_INVOCATION_CWD/$arg" ]; then
+    # 상대 경로는 호출 시점 CWD 기준으로 해석한다(RS_INVOCATION_CWD 주석 참조).
+    # 파일로 실재할 때만 치환하므로, PATH 명령어 이름(add_default_gate 가 넣는
+    # pre-flight-check.sh 등)은 그대로 남아 종전처럼 PATH 로 해석된다.
+    SCRIPTS+=("$RS_INVOCATION_CWD/$arg")
   else
     SCRIPTS+=("$arg")
   fi

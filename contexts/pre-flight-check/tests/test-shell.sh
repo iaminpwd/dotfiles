@@ -147,6 +147,39 @@ if [ -x "$PFC" ]; then
     fi
   fi
 
+  # Case 3: explicit 모드의 상대 경로는 "명령을 친 위치" 기준으로 해석되어야 한다.
+  # pre-flight-check.sh 는 인자 검증 전에 저장소 루트로 cd 하므로, 그 전의 CWD 를 기억해
+  # 두지 않으면 서브디렉토리에서 실행했을 때 같은 이름의 루트 파일이 대신 검증된다.
+  # 그러면 사용자가 지목한 파일은 한 번도 보지 않은 채 exit 0 이 나온다 — 이 저장소가
+  # 반복해서 제거해 온 무검증 초록불이다(실측: rc=0 무출력, 절대경로로는 rc=1).
+  # 루트에 "정상" 동명 파일을 두는 것이 핵심이다. 없으면 경로를 못 찾아 실패하므로
+  # 오히려 증상이 드러나고, 있어야만 조용한 오검증으로 뒤집힌다.
+  if require_tool shellcheck; then
+    SR3="$PLUGIN_TMP/repo3"
+    new_repo "$SR3"
+    mkdir -p "$SR3/sub"
+    cp "$FIXTURES/ok-baseline.sh" "$SR3/script.sh"
+    cp "$FIXTURES/fail-shellcheck.sh" "$SR3/sub/script.sh"
+    git -C "$SR3" add script.sh sub/script.sh
+
+    status=0
+    (cd "$SR3/sub" && QUIET=0 bash "$PFC" script.sh) >"$PLUGIN_TMP/out" 2>&1 || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "shellcheck" "$PLUGIN_TMP/out"; then
+      report "explicit-relative-path (서브디렉토리 상대경로가 그 위치 기준으로 해석됨)" 0
+    else
+      report "explicit-relative-path (서브디렉토리 상대경로가 그 위치 기준으로 해석됨)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    # 오탐 회귀: 저장소 루트에서 준 상대 경로는 종전대로 루트 기준이어야 한다.
+    status=0
+    (cd "$SR3" && QUIET=0 bash "$PFC" script.sh) >"$PLUGIN_TMP/out" 2>&1 || status=$?
+    if [ "$status" -eq 0 ]; then
+      report "explicit-relative-path-from-root (루트 기준 해석은 그대로)" 0
+    else
+      report "explicit-relative-path-from-root (루트 기준 해석은 그대로)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "pre-flight-check.sh 배선 확인" 1 "bin/hooks/pre-flight-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"

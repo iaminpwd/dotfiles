@@ -17,6 +17,15 @@ log_info "============================================="
 # Common Helpers
 # -----------------------------------------------------------------------------
 # git diff --cached의 pathspec이 CWD 기준으로 해석되어 오탐하는 것을 방지하기 위해 저장소 루트로 이동
+#
+# [주의] init_repo_root 가 CWD 를 저장소 루트로 바꾸므로, explicit 모드로 넘어온 상대 경로는
+# 반드시 그 이전의 CWD 기준으로 해석해야 한다. 인자 검증(parse_target_args)은 cd 이후에
+# 일어나기 때문에, 그러지 않으면 서브디렉토리에서 실행했을 때 같은 이름의 루트 파일이 대신
+# 검증되고 정작 지정한 파일은 한 번도 보지 않은 채 exit 0 이 난다 — 사용자가 "이 파일을
+# 검증해 달라"고 지목했는데 통과 신호만 돌려주는, 이 저장소가 반복해서 제거해 온 무검증
+# 초록불이다(실측: sub/check.sh 에 shellcheck 위반을 두고 sub/ 에서 `pre-flight-check.sh
+# check.sh` 실행 -> rc=0 무출력. 같은 파일을 절대경로로 주면 rc=1 로 검출).
+PFC_INVOCATION_CWD=$PWD
 init_repo_root
 CACHE_FILE="$REPO_ROOT/.pre-flight-check.cache"
 
@@ -174,7 +183,7 @@ collect_target_files() {
 # 옵션 인자 파싱 및 실행 모드(staged/changed/all/explicit) 확정
 # 존재하지 않는 경로는 조용히 건너뛰지 않고 즉시 중단(오탐 방지)
 parse_target_args() {
-  local arg
+  local arg resolved_arg
   if [ $# -eq 0 ]; then
     GLOBAL_TARGET_MODE="staged"
     return 0
@@ -210,11 +219,16 @@ parse_target_args() {
         print_usage
         exit 2
       fi
-      if [ ! -e "$arg" ]; then
+      # 상대 경로는 호출 시점 CWD 기준으로 해석한다(PFC_INVOCATION_CWD 선언부 주석 참조).
+      case "$arg" in
+      /*) resolved_arg="$arg" ;;
+      *) resolved_arg="$PFC_INVOCATION_CWD/$arg" ;;
+      esac
+      if [ ! -e "$resolved_arg" ]; then
         echo "[ERROR] 검증 대상 경로를 찾을 수 없습니다: $arg" >&2
         exit 1
       fi
-      GLOBAL_TARGET_FILES+=("$arg")
+      GLOBAL_TARGET_FILES+=("$resolved_arg")
     done
     ;;
   esac

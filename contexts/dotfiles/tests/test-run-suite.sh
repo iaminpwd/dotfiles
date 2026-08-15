@@ -141,6 +141,37 @@ else
   report "게이트 미탐지 시 무음 스킵 금지" 1 "기대 exit=0 + 건너뜀 경고 / 실제 exit=$CODE out=${OUT//$'\n'/ }"
 fi
 
+# 6. 상대 경로는 "명령을 친 위치" 기준으로 해석되어야 한다.
+#    run-suite.sh 는 인자 수집 전에 init_repo_root 로 저장소 루트에 cd 하므로, 그 이전의
+#    CWD 를 기억해 두지 않으면 서브디렉토리에서 실행했을 때 같은 이름의 루트 파일이 대신
+#    실행된다. 지목한 스위트는 한 번도 돌지 않은 채 "-> [✓]" 와 rc=0 이 나온다(실측).
+#    루트에 "통과하는" 동명 파일을 두는 것이 핵심이다 — 없으면 exit 127 로 시끄럽게
+#    실패하므로 오히려 증상이 드러나고, 있어야만 조용한 거짓 초록불로 뒤집힌다.
+#    (pre-flight-check.sh 의 explicit 모드와 동일한 결함 클래스다.)
+CWD_REPO="$TMP/cwd-repo"
+mkdir -p "$CWD_REPO/sub"
+git -C "$CWD_REPO" init -q
+printf '#!/usr/bin/env bash\necho ROOT_SUITE\nexit 0\n' >"$CWD_REPO/suite.sh"
+printf '#!/usr/bin/env bash\necho SUB_SUITE_MARKER\nexit 1\n' >"$CWD_REPO/sub/suite.sh"
+chmod +x "$CWD_REPO/suite.sh" "$CWD_REPO/sub/suite.sh"
+
+CODE=0
+OUT=$( (cd "$CWD_REPO/sub" && bash "$RUNNER" suite.sh) 2>&1) || CODE=$?
+if [ "$CODE" -ne 0 ] && grep -qF "SUB_SUITE_MARKER" <<<"$OUT"; then
+  report "상대 경로는 호출 위치 기준 해석 (루트 동명 파일로 대체되지 않음)" 0
+else
+  report "상대 경로는 호출 위치 기준 해석 (루트 동명 파일로 대체되지 않음)" 1 "기대 exit≠0 + sub 스위트 실행 / 실제 exit=$CODE out=${OUT//$'\n'/ }"
+fi
+
+# 6b. 오탐 회귀: 저장소 루트에서 준 상대 경로는 종전대로 루트 기준이어야 한다.
+CODE=0
+OUT=$( (cd "$CWD_REPO" && bash "$RUNNER" suite.sh) 2>&1) || CODE=$?
+if [ "$CODE" -eq 0 ] && ! grep -qF "SUB_SUITE_MARKER" <<<"$OUT"; then
+  report "루트에서 준 상대 경로는 루트 기준 유지" 0
+else
+  report "루트에서 준 상대 경로는 루트 기준 유지" 1 "기대 exit=0 / 실제 exit=$CODE out=${OUT//$'\n'/ }"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
