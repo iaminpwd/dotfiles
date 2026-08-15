@@ -83,46 +83,75 @@ done
 #      groups: []      -> rc=0, !!seq (규칙 0건은 정상이므로 통과시켜야 한다)
 #    따라서 "시퀀스인가"까지 확인해야 네 경우가 모두 구분된다.
 #    (명령 치환은 mapfile 과 달리 종료 코드를 그대로 전파하므로 || 처리가 유효하다.)
-GROUPS_TYPE=$(yq eval -r '.spec.groups | type' "$FILE" 2>/dev/null) || {
-  echo "[FAIL] $FILE — YAML 파싱에 실패했습니다 (문법 오류)" >&2
-  exit 1
-}
-if [ "$GROUPS_TYPE" != "!!seq" ]; then
-  echo "[FAIL] $FILE — .spec.groups 가 시퀀스가 아닙니다 (현재: $GROUPS_TYPE)." >&2
-  echo "        PrometheusRule 구조가 맞는지, spec.groups 키에 오타가 없는지 확인하십시오." >&2
-  exit 1
+#
+# 0) 검사 대상 문서 결정. 예전엔 파일 전체에 `.spec.groups` 를 걸었는데, 멀티 도큐먼트
+#    매니페스트(K8s 에서 아주 흔하다)에서 그 전제가 깨진다 — PrometheusRule 이 아닌 문서의
+#    .spec.groups 가 null 로 함께 잡혀 구조 판정이 !!null 로 떨어지고, 정상 파일이
+#    "PrometheusRule 구조가 아닙니다" 로 거부됐다(실측: ConfigMap 문서 하나만 앞에 붙여도
+#    exit 1). 그 상태에서는 실제 정책(runbook_url·고카디널리티)이 평가조차 되지 않는다.
+#    PrometheusRule 문서가 여러 개인 파일도 마찬가지로 첫 개만 반영됐다.
+#    kind 로 특정되는 문서가 하나도 없으면(kind 없이 spec.groups 만 있는 파일, YAML 이
+#    깨져 파싱 자체가 안 되는 파일) 종전대로 파일 전체를 단일 문서로 본다.
+DOC_INDICES=()
+LAST_IDX=$(yq eval 'documentIndex' "$FILE" 2>/dev/null | tail -1) || true
+if [[ "$LAST_IDX" =~ ^[0-9]+$ ]]; then
+  for ((i = 0; i <= LAST_IDX; i++)); do
+    DOC_KIND=$(yq eval -r "select(documentIndex == $i) | .kind // \"\"" "$FILE" 2>/dev/null) || true
+    [ "$DOC_KIND" = "PrometheusRule" ] && DOC_INDICES+=("$i")
+  done
 fi
-
-# 2) 필드 추출. 규칙 수에 비례하던 yq 스폰을 없앤다는 위 최적화 취지는 그대로다
-#    (규칙 50건 기준 251회 -> 파일당 고정 2회).
-RULE_FIELDS=()
-YQ_OUT=$(mktemp)
-trap 'rm -f "$YQ_OUT"' EXIT
-if ! yq eval -r "[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[] | tostring | sub(\"\n\"; \" \")" "$FILE" >"$YQ_OUT" 2>/dev/null; then
-  echo "[FAIL] $FILE — .spec.groups[].rules[] 추출에 실패했습니다" >&2
-  exit 1
-fi
-mapfile -t RULE_FIELDS <"$YQ_OUT"
+[ "${#DOC_INDICES[@]}" -eq 0 ] && DOC_INDICES=("")
 
 # 규칙 1건당 고정 필드 수: alert/severity/runbook_url + 검사 대상 레이블 개수
 FIELDS_PER_RULE=$((3 + ${#DENYLISTED_LABEL_KEYS[@]}))
 VIOLATIONS=0
+YQ_OUT=$(mktemp)
+trap 'rm -f "$YQ_OUT"' EXIT
 
-for ((base = 0; base + FIELDS_PER_RULE <= ${#RULE_FIELDS[@]}; base += FIELDS_PER_RULE)); do
-  ALERT_NAME="${RULE_FIELDS[base]}"
-  SEVERITY="${RULE_FIELDS[base + 1]}"
-  RUNBOOK="${RULE_FIELDS[base + 2]}"
-
-  if [ "$SEVERITY" = "critical" ] && [ -z "$RUNBOOK" ]; then
-    echo "[FAIL] Critical 알람에 runbook_url 누락: $ALERT_NAME"
-    VIOLATIONS=$((VIOLATIONS + 1))
+for DOC_IDX in "${DOC_INDICES[@]}"; do
+  if [ -n "$DOC_IDX" ]; then
+    SEL="select(documentIndex == $DOC_IDX) | "
+    DOC_LABEL=" (문서 $DOC_IDX)"
+  else
+    SEL=""
+    DOC_LABEL=""
   fi
 
-  for ((k = 0; k < ${#DENYLISTED_LABEL_KEYS[@]}; k++)); do
-    if [ -n "${RULE_FIELDS[base + 3 + k]}" ]; then
-      echo "[FAIL] 고카디널리티 레이블 감지: $ALERT_NAME label=${DENYLISTED_LABEL_KEYS[k]}"
+  GROUPS_TYPE=$(yq eval -r "${SEL}.spec.groups | type" "$FILE" 2>/dev/null) || {
+    echo "[FAIL] $FILE — YAML 파싱에 실패했습니다 (문법 오류)" >&2
+    exit 1
+  }
+  if [ "$GROUPS_TYPE" != "!!seq" ]; then
+    echo "[FAIL] $FILE${DOC_LABEL} — .spec.groups 가 시퀀스가 아닙니다 (현재: $GROUPS_TYPE)." >&2
+    echo "        PrometheusRule 구조가 맞는지, spec.groups 키에 오타가 없는지 확인하십시오." >&2
+    exit 1
+  fi
+
+  # 2) 필드 추출. 규칙 수에 비례하던 yq 스폰을 없앤다는 위 최적화 취지는 그대로다
+  #    (규칙 50건 기준 251회 -> 문서당 고정 2회).
+  RULE_FIELDS=()
+  if ! yq eval -r "${SEL}[.spec.groups[].rules[]] | .[] | [(.alert // \"(이름 없음)\"), (.labels.severity // \"\"), (.annotations.runbook_url // \"\")${LABEL_EXPRS}] | .[] | tostring | sub(\"\n\"; \" \")" "$FILE" >"$YQ_OUT" 2>/dev/null; then
+    echo "[FAIL] $FILE${DOC_LABEL} — .spec.groups[].rules[] 추출에 실패했습니다" >&2
+    exit 1
+  fi
+  mapfile -t RULE_FIELDS <"$YQ_OUT"
+
+  for ((base = 0; base + FIELDS_PER_RULE <= ${#RULE_FIELDS[@]}; base += FIELDS_PER_RULE)); do
+    ALERT_NAME="${RULE_FIELDS[base]}"
+    SEVERITY="${RULE_FIELDS[base + 1]}"
+    RUNBOOK="${RULE_FIELDS[base + 2]}"
+
+    if [ "$SEVERITY" = "critical" ] && [ -z "$RUNBOOK" ]; then
+      echo "[FAIL] Critical 알람에 runbook_url 누락: $ALERT_NAME"
       VIOLATIONS=$((VIOLATIONS + 1))
     fi
+
+    for ((k = 0; k < ${#DENYLISTED_LABEL_KEYS[@]}; k++)); do
+      if [ -n "${RULE_FIELDS[base + 3 + k]}" ]; then
+        echo "[FAIL] 고카디널리티 레이블 감지: $ALERT_NAME label=${DENYLISTED_LABEL_KEYS[k]}"
+        VIOLATIONS=$((VIOLATIONS + 1))
+      fi
+    done
   done
 done
 

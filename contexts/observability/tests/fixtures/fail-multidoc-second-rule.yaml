@@ -1,0 +1,42 @@
+# validate-alert-rules.sh 기준 통과 픽스처. Critical 알람에 runbook_url이 있고,
+# 고카디널리티 레이블(user_id/client_ip)도 없다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ok-baseline
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: HighErrorBudgetBurn
+          expr: sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])) > 0.02
+          for: 5m
+          labels:
+            severity: critical
+            route: /checkout
+          annotations:
+            summary: 에러 버짓 소진 속도가 임계치를 초과했습니다
+            runbook_url: https://runbooks.internal/checkout-error-budget
+---
+# 020-metrics-alerting-standard.md 4절이 예시로 든 고카디널리티 레이블은 user_id 와
+# client_ip 두 가지인데, 회귀 픽스처는 user_id 쪽만 있었다. 그래서 검증기의
+# DENYLISTED_LABEL_KEYS 에서 client_ip 를 지워도 스위트가 그대로 통과했다(뮤테이션으로
+# 확인) — 목록의 절반이 사실상 미검증이었다. 나머지 한 축을 고정한다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fail-high-cardinality-client-ip
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: SuspiciousRequestRate
+          expr: rate(http_requests_total[5m]) > 100
+          for: 5m
+          labels:
+            severity: warning
+            client_ip: "{{ $labels.client_ip }}"
+          annotations:
+            summary: 통제되지 않는 클라이언트 IP 를 레이블로 바인딩한 위반 재현

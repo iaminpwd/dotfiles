@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unrelated-cm
+data:
+  key: value
+---
+# 020-metrics-alerting-standard.md 4절 중단 조건 재현: "Critical 등급 알람에 런북 URL이
+# 누락된 상태로 배포가 시도되면 작업을 멈추고 런북 링크 추가를 요구할 것".
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: fail-missing-runbook
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: HighErrorBudgetBurn
+          expr: sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])) > 0.02
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: runbook_url 없이 배포를 시도하는 위반 재현

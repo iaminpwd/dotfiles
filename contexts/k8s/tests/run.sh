@@ -204,6 +204,59 @@ if [ -x "$K8S_PLUGIN" ]; then
     else
       report "prometheus-trigger-and-pass (PromQL 정상 -> 통과)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
     fi
+
+    # Case 2b~2c: 멀티 도큐먼트 매니페스트에서도 게이트가 살아 있어야 한다.
+    #
+    # 예전엔 파일 전체에 `yq eval '.spec'` 을 걸었다. PrometheusRule 이 아닌 문서는
+    # .spec 이 null 로 나오고, 그 null 이 출력의 첫 문서가 되면 promtool 이 "Multiple
+    # document yaml rules files are not supported, only the first document is processed"
+    # 를 경고하며 null 만 보고 "0 rules found / SUCCESS" 로 끝났다. 실측: 같은 깨진
+    # PromQL 이 단독 파일이면 exit 1, 앞에 ConfigMap 문서 하나만 붙이면 exit 0.
+    # K8s 에서 멀티 도큐먼트는 아주 흔하므로 게이트가 사실상 우회 가능했다.
+    KR2B="$PLUGIN_TMP/repo2b"
+    new_plugin_repo "$KR2B"
+    {
+      printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  a: b\n---\n'
+      cat "$FIXTURES/fail-promql-syntax.yaml"
+    } >"$KR2B/rule.yaml"
+    git -C "$KR2B" add rule.yaml
+    status=$(run_plugin "$KR2B")
+    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
+      report "prometheus-multidoc-block (앞 문서에 가려도 차단)" 0
+    else
+      report "prometheus-multidoc-block (앞 문서에 가려도 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    # 두 번째 PrometheusRule 문서만 깨진 경우. 문서별로 돌지 않으면 첫 개만 보고 통과한다.
+    KR2C="$PLUGIN_TMP/repo2c"
+    new_plugin_repo "$KR2C"
+    {
+      cat "$FIXTURES/ok-prometheus-rule.yaml"
+      printf -- '---\n'
+      cat "$FIXTURES/fail-promql-syntax.yaml"
+    } >"$KR2C/rule.yaml"
+    git -C "$KR2C" add rule.yaml
+    status=$(run_plugin "$KR2C")
+    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
+      report "prometheus-multidoc-second-rule (뒤 문서 위반도 차단)" 0
+    else
+      report "prometheus-multidoc-second-rule (뒤 문서 위반도 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    # 오탐 회귀: 정상 Rule 이 다른 문서와 함께 있어도 통과해야 한다.
+    KR2D="$PLUGIN_TMP/repo2d"
+    new_plugin_repo "$KR2D"
+    {
+      printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  a: b\n---\n'
+      cat "$FIXTURES/ok-prometheus-rule.yaml"
+    } >"$KR2D/rule.yaml"
+    git -C "$KR2D" add rule.yaml
+    status=$(run_plugin "$KR2D")
+    if [ "$status" -eq 0 ]; then
+      report "prometheus-multidoc-pass (정상 Rule 은 오탐 없음)" 0
+    else
+      report "prometheus-multidoc-pass (정상 Rule 은 오탐 없음)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
   fi
 
   if require_tool pluto; then

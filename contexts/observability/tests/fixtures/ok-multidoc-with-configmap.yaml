@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unrelated-cm
+data:
+  key: value
+---
+# validate-alert-rules.sh 기준 통과 픽스처. Critical 알람에 runbook_url이 있고,
+# 고카디널리티 레이블(user_id/client_ip)도 없다.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ok-baseline
+  namespace: sample
+spec:
+  groups:
+    - name: sample.rules
+      rules:
+        - alert: HighErrorBudgetBurn
+          expr: sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h])) > 0.02
+          for: 5m
+          labels:
+            severity: critical
+            route: /checkout
+          annotations:
+            summary: 에러 버짓 소진 속도가 임계치를 초과했습니다
+            runbook_url: https://runbooks.internal/checkout-error-budget

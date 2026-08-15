@@ -98,6 +98,15 @@ if require_tool yq; then
   run_validator fail-typo-groups-key.yaml 1 "시퀀스가 아닙니다"
   run_validator fail-broken-yaml.yaml 1 "YAML 파싱에 실패"
   run_validator ok-empty-groups.yaml 0
+
+  # 멀티 도큐먼트 매니페스트. 예전엔 파일 전체에 `.spec.groups` 를 걸어서, PrometheusRule 이
+  # 아닌 문서의 null 이 함께 잡혀 구조 판정이 !!null 로 떨어졌다 — 정상 파일이 "PrometheusRule
+  # 구조가 아닙니다" 로 거부되고(오탐), 위반이 있는 파일도 실제 정책은 평가조차 되지 않은 채
+  # 엉뚱한 사유로 막혔다(실측: ConfigMap 문서 하나만 앞에 붙여도 exit 1). K8s 에서 멀티
+  # 도큐먼트는 아주 흔하므로 세 방향을 모두 고정한다.
+  run_validator ok-multidoc-with-configmap.yaml 0
+  run_validator fail-multidoc-hidden-violation.yaml 1 "runbook_url 누락"
+  run_validator fail-multidoc-second-rule.yaml 1 "고카디널리티 레이블 감지"
 fi
 
 echo "--- observability-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
