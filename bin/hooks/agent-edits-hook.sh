@@ -23,19 +23,34 @@ JQ=$(resolve_jq)
 
 payload=$(cat)
 
+# 구분자로 탭(@tsv)을 쓰지 않는다. 탭은 IFS 공백문자라 `IFS=$'\t' read` 가 연속 탭을
+# 구분자 하나로 합쳐 빈 필드를 삼킨다. 여기서는 네 필드 중 가운데 둘이 정상적으로 빌 수
+# 있어(cwd/workspacePaths 가 없는 페이로드, 에러 없는 성공 호출) 그 순간 필드가 밀린다.
+#   실측 1: cwd 없이 tool_response.error 가 있는 페이로드 -> err 이 root 자리로 밀리고
+#           err 이 비어 결과가 ERROR:... 가 아니라 OK 로 기록됐다. 감사 로그가 실패한
+#           편집을 성공으로 남긴다.
+#   실측 2: tool_name 없이 file_path 만 있는 페이로드 -> 경로가 tool 자리로 밀리고
+#           root 판정까지 어긋나, 저장소 밖(부모 디렉토리)의 .agent-state 에
+#           "| <디렉토리명> | hook:<전체경로> |" 라는 깨진 줄이 기록됐다.
+# 아래 root 폴백 사슬(git_root > 워크스페이스 > 파일 디렉토리) 자체가 "root 가 빌 수 있다"를
+# 전제로 짜여 있으므로, 그 경로에서 파싱이 깨지는 것은 설계와 어긋난다.
+# unit separator(\037)는 IFS 공백이 아니라 연속해도 합쳐지지 않는다. clean 이 그 문자까지
+# 값에서 제거하므로 구분자가 값과 충돌하지도 않는다.
+# (validate-alert-rules.sh 헤더가 같은 @tsv 함정을 짚고 있다 — 그쪽은 필드 안의 개행,
+#  여기는 빈 필드로 발현만 다르고 원인은 같다.)
 fields=$(
   "$JQ" -r '
-    def clean: tostring | gsub("[\t\r\n|]"; " ") | sub("^ +"; "") | sub(" +$"; "");
+    def clean: tostring | gsub("[\t\r\n|\u001f]"; " ") | sub("^ +"; "") | sub(" +$"; "");
     [
       ((.toolCall.name // .tool_name // "") | clean),
       ((.toolCall.args.TargetFile // .tool_input.file_path // "") | clean),
       ((.workspacePaths[0]? // .cwd // "") | clean),
       (((.error // (.tool_response | objects | .error) // "") | clean))
-    ] | @tsv
+    ] | join("\u001f")
   ' <<<"$payload" 2>/dev/null
 ) || exit 0
 
-IFS=$'\t' read -r tool target root err <<<"$fields"
+IFS=$'\037' read -r tool target root err <<<"$fields"
 
 # 편집 대상이 없는 호출(조회 도구, toolCall이 null인 스텝)은 기록 대상이 아니다.
 [ -n "${target:-}" ] || exit 0

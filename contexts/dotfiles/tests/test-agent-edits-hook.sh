@@ -76,6 +76,43 @@ else
   report "edits.log 자기참조 (기록 제외)" 1 "라인 수가 늘어났습니다: $(wc -l <"$LOG")"
 fi
 
+# 5. 도구 에러는 ERROR:<사유> 로 기록되어야 한다 — cwd 가 없는 페이로드에서도.
+#    필드 구분자로 탭을 쓰면 `IFS=$'\t' read` 가 연속 탭을 하나로 합쳐 빈 필드를 삼킨다.
+#    네 필드(tool/target/root/err) 중 root(cwd)는 정상적으로 빌 수 있어서, 그때 err 이
+#    root 자리로 밀리고 err 이 비어 실패한 편집이 OK 로 기록됐다(실측). 감사 로그가 바로
+#    그 결과 필드를 위해 존재하므로 이건 로그의 목적을 무력화한다.
+#    cwd 가 있는 대조군을 함께 두어 "둘 다 ERROR" 를 고정한다.
+payload5="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/bar.txt\"},\"tool_response\":{\"error\":\"permission denied\"}}"
+echo "$payload5" | bash "$HOOK"
+if tail -1 "$LOG" | grep -qF "ERROR:permission denied"; then
+  report "도구 에러 기록 (cwd 없는 페이로드)" 0
+else
+  report "도구 에러 기록 (cwd 없는 페이로드)" 1 "last=$(tail -1 "$LOG")"
+fi
+
+payload6="{\"tool_name\":\"Edit\",\"cwd\":\"$FIXTURE_REPO\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/bar.txt\"},\"tool_response\":{\"error\":\"permission denied\"}}"
+echo "$payload6" | bash "$HOOK"
+if tail -1 "$LOG" | grep -qF "ERROR:permission denied"; then
+  report "도구 에러 기록 (cwd 있는 페이로드)" 0
+else
+  report "도구 에러 기록 (cwd 있는 페이로드)" 1 "last=$(tail -1 "$LOG")"
+fi
+
+# 6. tool_name 이 없는 페이로드도 경로·기록 위치가 어긋나지 않아야 한다.
+#    같은 필드 밀림으로 경로가 tool 자리로 들어가고 root 판정까지 어긋나, 저장소 밖
+#    부모 디렉토리의 .agent-state 에 "| <디렉토리명> | hook:<전체경로> |" 라는 깨진 줄이
+#    기록됐다(실측). 이 저장소 안에 정상 형식으로 남는지 고정한다.
+BEFORE=$(wc -l <"$LOG")
+payload7="{\"cwd\":\"$FIXTURE_REPO\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/baz.txt\"}}"
+echo "$payload7" | bash "$HOOK"
+if [ "$(wc -l <"$LOG")" -eq $((BEFORE + 1)) ] &&
+  tail -1 "$LOG" | grep -qE '\| baz\.txt \| hook:[^/]' &&
+  [ ! -e "$TMP/.agent-state/edits.log" ]; then
+  report "tool_name 없는 페이로드 (경로·기록 위치 정상)" 0
+else
+  report "tool_name 없는 페이로드 (경로·기록 위치 정상)" 1 "last=$(tail -1 "$LOG") 밖=$(ls "$TMP/.agent-state" 2>/dev/null || echo 없음)"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

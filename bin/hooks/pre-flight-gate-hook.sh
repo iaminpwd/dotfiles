@@ -43,14 +43,19 @@ JQ=$(resolve_jq)
 
 payload=$(cat)
 
-# IFS=$'\t' 필수: @tsv 출력을 기본 IFS(공백 포함)로 읽으면 공백이 든 cwd 가 잘려
+# 구분자를 명시하는 이유: @tsv 출력을 기본 IFS(공백 포함)로 읽으면 공백이 든 cwd 가 잘려
 # 나가고 그 뒷조각이 stop_hook_active 로 들어간다(실측: cwd="/home/ubuntu/my repo/sub"
 # -> cwd="/home/ubuntu/my"). 그러면 뒤의 git -C "$cwd" 가 실패해 fail-open 으로 조용히
 # 빠지면서, 경로에 공백이 있는 프로젝트에서는 이 게이트가 통째로 안 돈다.
-# 형제 훅(pre-flight-live-hook.sh, agent-edits-hook.sh)은 원래부터 IFS 를 지정하고 있었다.
+#
+# 다만 탭도 쓸 수 없다. 탭은 IFS 공백문자라 `IFS=$'\t' read` 가 연속 탭을 구분자 하나로
+# 합치는데, cwd 는 정상적으로 빌 수 있어(페이로드에 cwd 가 없는 경우) 그때 필드가 밀린다
+# (실측: 빈 cwd + false -> cwd="false", stop_hook_active=""). unit separator(\037)는 IFS
+# 공백이 아니라 연속해도 합쳐지지 않는다. agent-edits-hook.sh 가 같은 이유로 같은 구분자를
+# 쓴다(그쪽은 이 밀림이 감사 로그 훼손으로 실제 발현했다).
 # shellcheck disable=SC2016
-IFS=$'\t' read -r cwd stop_hook_active < <(
-  "$JQ" -r '[(.cwd // ""), (.stop_hook_active // false)] | @tsv' <<<"$payload" 2>/dev/null
+IFS=$'\037' read -r cwd stop_hook_active < <(
+  "$JQ" -r '[(.cwd // ""), (.stop_hook_active // false)] | map(tostring) | join("\u001f")' <<<"$payload" 2>/dev/null
 ) || exit 0
 
 [ "$stop_hook_active" = "true" ] && exit 0

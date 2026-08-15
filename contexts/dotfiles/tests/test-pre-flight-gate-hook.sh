@@ -173,6 +173,15 @@ else
   report "공백 포함 경로 (cwd 가 잘리지 않고 게이트가 실제로 수행됨)" 1 "out=$out_spaced"
 fi
 
+# [빈 필드 밀림 축은 여기서 고정하지 않는다]
+# 이 훅도 agent-edits-hook.sh 와 같은 이유로 구분자를 탭에서 unit separator 로 바꿨지만
+# (빈 cwd 뒤의 stop_hook_active 가 cwd 자리로 밀려 들어옴), 이쪽은 그 밀림이 관측되지
+# 않는다 — 밀린 상태에서도 뒤의 git 조회가 실패해 fail-open 으로 똑같이 무출력 exit 0 이
+# 되기 때문이다. 실제로 두 파싱 방식으로 각각 회귀 케이스를 돌려 결과가 동일함을 확인했다.
+# 통과·차단을 가르지 못하는 케이스를 남기면 "테스트는 있는데 아무것도 안 잡는" 상태가
+# 되므로 넣지 않는다. 그 축의 실증은 test-agent-edits-hook.sh 가 담당한다(거기서는 같은
+# 밀림이 감사 로그 훼손으로 실제 발현한다).
+
 # --- 픽스처 3: 스코프 밖 저장소 (pre-flight-check.sh 어디에도 없음) ---
 UNSCOPED_REPO="$TMP/unscoped-repo"
 git_init_clean "$UNSCOPED_REPO"
