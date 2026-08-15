@@ -79,8 +79,10 @@
 # contexts/.archive/agent-handoff/scripts/{deploy,handoff-check,handoff-lint}.sh 세 개가
 # 매 setup 마다 ~/.local/bin 에 링크돼 사용자 PATH 에 올라와 있었다. deploy.sh 처럼
 # 흔한 이름을 폐기된 스킬 것이 점유한 셈이다(보관소는 지웠고 링크도 정리했다).
-# 아래 스킬 등록 태스크들은 이미 startswith('.') 로 같은 것을 걸러내고 있어, 이 두
-# 태스크만 그 규약 밖에 있었다. (bin/utils/check-agent-collision.sh 도 같은 이유로 맞춤.)
+# 아래 스킬 등록 태스크들은 recurse: false 로 도는 find 가 숨김 디렉토리를 결과에서
+# 이미 빼 주지만(실측: contexts 하위 10개 중 .shared 를 뺀 9개만 반환), 이 두 태스크의
+# find 는 recurse: true 라 그 보호를 못 받아 명시적 경로 가드가 필요하다.
+# (bin/utils/check-agent-collision.sh 도 같은 이유로 맞춤.)
 - name: 에이전트 스크립트 목적지 충돌 백업 (~/.local/bin)
   ansible.builtin.command:
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
@@ -123,8 +125,7 @@
   loop_control:
     label: "{{ item[0] | basename }}/skills/{{ item[1].path | basename }}"
   when: >
-    item[1].path | basename not in ['dotfiles', 'agent-handoff'] and
-    not (item[1].path | basename).startswith('.')
+    item[1].path | basename not in ['dotfiles']
 
 - name: Gemini / Claude 스킬 파일 및 폴더 링크 생성 대상 정의
   ansible.builtin.set_fact:
@@ -152,8 +153,7 @@
     label: ".gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
   when: >
     item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
-    not (item.item[0].path | basename).startswith('.')
+    item.item[0].path | basename not in ['dotfiles']
   changed_when: false
 
 - name: Gemini 글로벌 스킬 에셋 링크 설정
@@ -167,8 +167,7 @@
     label: ".gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
   when: >
     item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
-    not (item.item[0].path | basename).startswith('.')
+    item.item[0].path | basename not in ['dotfiles']
 
 - name: Claude 스킬 에셋 목적지 충돌 백업
   ansible.builtin.command:
@@ -180,8 +179,7 @@
     label: ".claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
   when: >
     item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
-    not (item.item[0].path | basename).startswith('.')
+    item.item[0].path | basename not in ['dotfiles']
   changed_when: false
 
 - name: Claude 글로벌 스킬 에셋 링크 설정
@@ -195,8 +193,7 @@
     label: ".claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
   when: >
     item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles', 'agent-handoff'] and
-    not (item.item[0].path | basename).startswith('.')
+    item.item[0].path | basename not in ['dotfiles']
 
 - name: Gemini 및 Claude 편집 이력 훅(agent-edits-hook) 병합
   ansible.builtin.command:

@@ -277,6 +277,11 @@ cases = [
     ("국제 표기 휴대전화(+82, 하이픈)", "call +82-10-1234-5678 now", "10-1234-5678", "[MASKED_PHONE_NUMBER]"),
     ("국제 표기 휴대전화(+82, 공백)", "call +82 10 1234 5678 now", "10 1234 5678", "[MASKED_PHONE_NUMBER]"),
     ("국제 표기 지역번호(+82-2)", "call +82-2-1234-5678 now", "2-1234-5678", "[MASKED_PHONE_NUMBER]"),
+    # 앞 경계에서 하이픈을 빼기 전에는 키 이름에 하이픈으로 이어 붙인 번호가 통째로
+    # 빠져나갔다(실측: 아래 두 건 모두 원문 그대로 통과). CARD_PATTERN 이 "card-4111-..."
+    # 때문에 이미 같은 판단을 내려 둔 것과 같은 유출 클래스다.
+    ("하이픈 접두 휴대전화(붙임)", "trace-01012345678 done", "01012345678", "[MASKED_PHONE_NUMBER]"),
+    ("하이픈 접두 휴대전화(구분)", "user-010-1234-5678 done", "010-1234-5678", "[MASKED_PHONE_NUMBER]"),
 ]
 for name, raw, sensitive, marker in cases:
     out = sanitize(raw)
@@ -307,6 +312,27 @@ check("12자리(카드 하한 미만)는 원형 보존", sanitize(short_id) == s
 long_id = "nano ts 12345678901234567890 end"
 check("20자리(카드 상한 초과)는 원형 보존", sanitize(long_id) == long_id,
       f"sanitize({long_id!r}) -> {sanitize(long_id)!r}")
+
+# 게이트웨이로 나가는 것은 payload 전체이지 log_snippet 하나가 아니다. 예전엔
+# analyze_incident 가 log_snippet 만 살균해서 metric_data·trace_id 의 PII 가 원문 그대로
+# 실려 나갔고, trace_id 는 logger.info 를 통해 로컬 로그에도 찍혔다(실측). 클래스 주석이
+# 선언한 "이 클래스를 통과한 텍스트만 나간다"가 호출부에서 깨져 있던 지점이다.
+import json as _json
+
+_payload = mod.IncidentRAGPipeline("https://gw.internal/v1").analyze_incident(
+    metric_data={"cpu": 98.4, "owner_email": "kim@example.com",
+                 "note": "RRN 900101-1234567", "peers": ["01099998888", 42]},
+    log_snippet="transfer for 123-45-67890",
+    trace_id="trace-01012345678",
+)
+_dumped = _json.dumps(_payload, ensure_ascii=False)
+for _probe in ["kim@example.com", "900101-1234567", "01099998888", "01012345678", "123-45-67890"]:
+    check(f"payload 전체 살균: {_probe} 미노출", _probe not in _dumped, f"payload={_dumped}")
+
+# 숫자 등 비문자열 값은 살균 대상이 아니므로 원형이어야 한다(과잉 변환 방지).
+check("payload 살균이 비문자열 값을 훼손하지 않음",
+      _payload["metrics"]["cpu"] == 98.4 and _payload["metrics"]["peers"][1] == 42,
+      f"metrics={_payload['metrics']!r}")
 
 # UUID 는 위 IP 나열과 정확히 같은 훼손 클래스인데, 경계 가드가 숫자·점만 봐서 걸러지지
 # 않았다(실측: "req 550e8400-e29b-41d4-a716-446655440000 ok"

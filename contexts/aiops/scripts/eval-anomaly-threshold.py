@@ -4,7 +4,6 @@ Dynamic Anomaly Threshold Evaluation Utility
 Calculates dynamic confidence intervals (Moving Mean & StdDev) to eliminate alert noise.
 """
 
-import sys
 import math
 
 def calculate_dynamic_threshold(data_points: list, sigma: float = 3.0) -> dict:

@@ -79,8 +79,17 @@ class FinancialDataAnonymizer:
     # 두 분기를 합쳐 앞자리 0을 선택으로 만들지는 않는다. 그러면 유닉스 타임스탬프
     # (예: 1755172800 -> 17|5517|2800)처럼 평범한 10자리 숫자가 전화번호로 오탐된다.
     # 구분자로 공백도 받는 것은 이 분기뿐이다("+82 10 1234 5678"가 흔한 표기라서).
+    #
+    # 앞 경계에서 하이픈을 빼는 이유는 CARD_PATTERN 이 이미 같은 판단을 내려 둔 것과 같다 —
+    # 제외하면 "user-010-1234-5678", "trace-01012345678" 처럼 키 이름에 하이픈으로 이어
+    # 붙인 실제 번호가 검출망에서 빠져 유출 방향으로 뒤집힌다(실측: 둘 다 원문 그대로 통과.
+    # 밑줄로 이은 "id_01012345678" 은 마스킹돼서 하이픈만의 문제임이 드러났다).
+    # 뒤 경계에는 하이픈을 남긴다. 앞은 "키 이름이 붙는 자리"라 흘려보내면 유출이지만,
+    # 뒤는 더 긴 번호의 앞부분을 잘라 오탐하는 자리이기 때문이다.
+    # 카드·계좌를 가로챌 위험은 국번 접두사(01x/02/0[3-6]x) 강제가 막는다 — 카드번호
+    # 앞머리(4111, 1002 등)는 이 접두사에 걸리지 않는다.
     PHONE_PATTERN = re.compile(
-        r'(?<![\d.-])(?:'
+        r'(?<![\d.])(?:'
         r'\+82[ -]?(?:1[016789]|2|[3-6]\d)[ -]?\d{3,4}[ -]?\d{4}'
         r'|(?:01[016789]|02|0[3-6]\d)-?\d{3,4}-?\d{4}'
         r')(?![\d.-])'
@@ -110,6 +119,26 @@ class FinancialDataAnonymizer:
         text = cls.CARD_PATTERN.sub("[MASKED_CARD_NUMBER]", text)
         return text
 
+    @classmethod
+    def sanitize_obj(cls, obj):
+        """문자열이 어디에 들어 있든(중첩 dict/list 포함) 살균한다.
+
+        sanitize()는 문자열 하나만 받으므로, 게이트웨이로 나가는 payload 에 dict 나 list 로
+        실려 나가는 값은 손도 못 댄다. 그런데 이 클래스의 계약은 "여기를 통과한 것만
+        나간다"이므로, 자료구조 단위 진입점이 없으면 그 계약이 호출부에서 조용히 깨진다
+        (실측: metric_data 에 넣은 이메일·주민번호가 payload 에 원문 그대로 남았다).
+        키도 함께 살균한다 — 키 이름에 식별자를 박아 넣는 로그 스키마가 실제로 있다.
+        """
+        if isinstance(obj, str):
+            return cls.sanitize(obj)
+        if isinstance(obj, dict):
+            return {cls.sanitize_obj(k): cls.sanitize_obj(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [cls.sanitize_obj(v) for v in obj]
+        if isinstance(obj, tuple):
+            return tuple(cls.sanitize_obj(v) for v in obj)
+        return obj
+
 class IncidentRAGPipeline:
     """이종 텔레메트리 수집 및 프라이빗 LLM RAG 기반 RCA 진단 파이프라인"""
     def __init__(self, private_llm_gateway_url: str):
@@ -117,12 +146,21 @@ class IncidentRAGPipeline:
 
     def analyze_incident(self, metric_data: dict, log_snippet: str, trace_id: str) -> dict:
         # 1. PII 및 금융 민감 데이터 마스킹
+        #
+        # log_snippet 하나만 살균하면 안 된다. 게이트웨이로 나가는 것은 이 함수가 만드는
+        # payload 전체이지 로그 조각 하나가 아니다. 예전엔 metric_data 와 trace_id 가
+        # 원문 그대로 실려 나갔고(실측: metric_data 에 넣은 이메일·주민번호와 trace_id 에
+        # 섞인 휴대전화 번호가 payload 에 그대로 남음), trace_id 는 아래 logger.info 를
+        # 통해 로컬 로그에도 찍혔다 — FinancialDataAnonymizer 의 클래스 주석이 선언한
+        # "이 클래스를 통과한 텍스트만 나간다"가 호출부에서 지켜지지 않고 있었다.
         clean_log = FinancialDataAnonymizer.sanitize(log_snippet)
-        
+        clean_metrics = FinancialDataAnonymizer.sanitize_obj(metric_data)
+        clean_trace_id = FinancialDataAnonymizer.sanitize(trace_id)
+
         # 2. 이종 데이터 통합 컨텍스트 구성
         prompt_payload = {
-            "trace_id": trace_id,
-            "metrics": metric_data,
+            "trace_id": clean_trace_id,
+            "metrics": clean_metrics,
             "sanitized_logs": clean_log,
             "instruction": (
                 "분석 시 개인 추정을 배제하고 수집된 팩트 데이터와 사내 런북에만 기반(Grounding)하여 "
@@ -130,7 +168,7 @@ class IncidentRAGPipeline:
             )
         }
         
-        logger.info(f"[AIOps-Agent-Action] RCA Prompt generated for Trace ID: {trace_id}")
+        logger.info(f"[AIOps-Agent-Action] RCA Prompt generated for Trace ID: {clean_trace_id}")
         return prompt_payload
 
 if __name__ == "__main__":

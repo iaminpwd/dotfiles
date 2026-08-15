@@ -31,13 +31,26 @@
   become: true
   when: ansible_os_family == "Debian"
 
+# 예전엔 `기대 지문이 stdout 에 포함되는가`(부분 문자열)로만 봤다. 그러면 키링에 기대
+# 키가 들어 있기만 하면 통과하므로, 기대 키 "와 함께" 다른 키가 섞여 들어와도 그대로
+# 승인된다 — 그리고 apt 는 signed-by 로 지정된 이 파일의 모든 키를 신뢰한다(실측: 신뢰
+# 키 + 공격자 키를 함께 export 한 키링이 통과). 지문을 하드코딩한 의미가 사라지는 지점이다.
+#
+# bootstrap.sh 의 mise 검증이 쓰는 "첫 fpr 과 정확히 일치" 방식도 같은 이유로 부족하다
+# (실측: 두 키를 합친 키링에서도 첫 fpr 은 여전히 신뢰 키라 통과). 주 키(pub 레코드 바로
+# 뒤의 fpr) 만 뽑아 "정확히 1개이고 그것이 기대값" 인지를 본다 — 서브키 fpr 은 제외한다.
 - name: Docker GPG 키 지문 검증 (공급망 보안)
-  ansible.builtin.command: gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc
+  ansible.builtin.shell: |
+    set -euo pipefail
+    gpg --show-keys --with-colons /etc/apt/keyrings/docker.asc |
+      awk -F: '/^pub:/ { want = 1; next } /^fpr:/ { if (want) { print $10; want = 0 } }'
+  args:
+    executable: /bin/bash
   register: docker_gpg_check
   become: true
   when: ansible_os_family == "Debian"
   changed_when: false
-  failed_when: "'9DC858229FC7DD38854AE2D88D81803C0EBFCD88' not in docker_gpg_check.stdout"
+  failed_when: docker_gpg_check.stdout_lines != ['9DC858229FC7DD38854AE2D88D81803C0EBFCD88']
 
 - name: Docker apt 레포지토리 추가
   ansible.builtin.apt_repository:
