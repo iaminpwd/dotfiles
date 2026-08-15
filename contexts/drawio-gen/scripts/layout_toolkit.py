@@ -336,8 +336,13 @@ class Diagram:
             self.add(f"{id_}_lb{i}", id_, label, lb, 50, sy, w - 58, 16)
 
     def to_xml(self, diagram_name="Architecture"):
+        # diagram_name 도 반드시 esc 를 거쳐야 한다. add()/edge() 는 모든 속성을 통과시키는데
+        # 정작 여기만 날것으로 보간하고 있었다. 다이어그램 이름에 & 나 " 가 들어가는 것은
+        # 아주 흔한데("VPC & Subnet 구성", "Dev \"Prod\" 비교"), 그러면 add() 주석이 적어 둔
+        # 바로 그 사고가 재현된다 — .drawio 파일 전체가 XML 파싱 불가가 되어 draw.io 가
+        # 열지 못한다(실측: & / " / < 세 경우 모두 ET.fromstring 이 not well-formed 로 실패).
         return f'''<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
-  <diagram id="arch" name="{diagram_name}">
+  <diagram id="arch" name="{esc(diagram_name)}">
     <mxGraphModel dx="1800" dy="1600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1400" math="0" shadow="0">
       <root>
         <mxCell id="0" />

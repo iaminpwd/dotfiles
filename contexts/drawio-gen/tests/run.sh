@@ -343,6 +343,23 @@ d3.openstack_icon("c", "1", "Keystone", 0, 0)
 check("openstack_icon: emphasis=None 은 검정 테두리",
       "strokeColor=#000000" in d3.cells[0] and "strokeWidth=2" in d3.cells[0])
 
+# to_xml 의 diagram_name 이스케이프. add()/edge() 는 모든 속성을 esc 로 통과시키는데
+# 정작 여기만 날것으로 보간하고 있었다. 다이어그램 이름에 & 나 " 가 들어가는 것은 아주
+# 흔한데("VPC & Subnet 구성"), 그러면 .drawio 파일 전체가 XML 파싱 불가가 되어 draw.io 가
+# 열지 못한다 — add() 주석이 image URL 의 & 로 겪었다고 적어 둔 바로 그 사고다.
+# 파싱만 보지 않고 이름이 원문 그대로 복원되는지까지 확인한다(과잉 이스케이프 방지).
+import xml.etree.ElementTree as _ET
+for _name in ["Architecture", "VPC & Subnet 구성", 'Dev "Prod" 비교', "a<b 비교"]:
+    _d = Diagram()
+    _d.add("n1", "1", "노드", "rounded=1;", 0, 0, 100, 40)
+    try:
+        _root = _ET.fromstring(_d.to_xml(_name))
+        _got = _root.find("diagram").get("name")
+        check(f"to_xml: diagram_name 이스케이프 ({_name!r})", _got == _name,
+              f"복원된 이름이 다릅니다: {_got!r}")
+    except _ET.ParseError as _e:
+        check(f"to_xml: diagram_name 이스케이프 ({_name!r})", False, f"XML 파싱 실패: {_e}")
+
 print(f"\n{'실패 없음' if not failures else '실패: ' + ', '.join(failures)}")
 sys.exit(1 if failures else 0)
 PY

@@ -65,19 +65,58 @@ else
   report "fail-broken-link (깨진 링크 경로까지 보고)" 1 "기대 exit=1 + 깨진 링크 경로 포함 / 실제 exit=$status: $out"
 fi
 
-# 3. depth 경계: maxdepth 2를 벗어난(3단계 이상 하위) 깨진 링크는 잡지 않는 것이
-#    현재 구현의 명시된 동작이다("~/ 디렉토리 기준 depth 2까지"). 이 경계가 조용히
-#    넓어지거나 좁아지면(find 옵션 오타 등) 여기서 드러난다.
-DEPTH_HOME="$TMP/ok-beyond-depth"
-mkdir -p "$DEPTH_HOME/.config/nested"
-ln -s "$DEPTH_HOME/.config/nested/does-not-exist" "$DEPTH_HOME/.config/nested/broken-link"
+# 3. 실제 설치 대상 깊이가 사정권 안에 있어야 한다.
+#
+#    예전 이 케이스는 "maxdepth 2 밖은 스캔하지 않음"을 정상 동작으로 고정하고 있었다.
+#    그런데 그 경계 밖에 정작 이 저장소가 링크를 심는 곳이 전부 있었다 —
+#    ~/.local/bin/<script>.sh(깊이 3), ~/.claude/skills/<skill>/SKILL.md(깊이 4),
+#    ~/.gemini/config/skills/<skill>/<file>(깊이 5).
+#    실측: 폐기 스킬을 지운 뒤 ~/.local/bin 에 남은 깨진 링크 3개를 탐지기가 "0건"으로
+#    보고했다. 테스트가 결함을 사양으로 못 박고 있었던 셈이라, 경계를 설치 대상 기준으로
+#    다시 잡는다.
+for depth_case in ".local/bin:3" ".claude/skills/demo:4" ".gemini/config/skills/demo:5"; do
+  rel="${depth_case%%:*}"
+  depth="${depth_case##*:}"
+  DEPTH_HOME="$TMP/fail-depth-$depth"
+  mkdir -p "$DEPTH_HOME/$rel"
+  ln -s "$DEPTH_HOME/$rel/does-not-exist" "$DEPTH_HOME/$rel/broken-link"
+
+  status=0
+  out=$(HOME="$DEPTH_HOME" bash "$DETECTOR" 2>&1) || status=$?
+  if [ "$status" -eq 1 ] && grep -qF "$DEPTH_HOME/$rel/broken-link" <<<"$out"; then
+    report "fail-depth-$depth ($rel 의 깨진 링크 탐지)" 0
+  else
+    report "fail-depth-$depth ($rel 의 깨진 링크 탐지)" 1 "기대 exit=1 + 경로 보고 / 실제 exit=$status: $out"
+  fi
+done
+
+# 3b. 새 경계 바깥(깊이 6)은 여전히 스캔하지 않는다. 그 아래엔 우리가 심는 링크가 없고
+#     깊이를 더 늘리면 비용만 는다(실측 prune 적용: depth 5 는 0.29초, depth 6 은 0.33초).
+DEEP_HOME="$TMP/ok-beyond-new-depth"
+mkdir -p "$DEEP_HOME/a/b/c/d/e"
+ln -s "$DEEP_HOME/a/b/c/d/e/does-not-exist" "$DEEP_HOME/a/b/c/d/e/broken-link"
 
 status=0
-out=$(HOME="$DEPTH_HOME" bash "$DETECTOR" 2>&1) || status=$?
+out=$(HOME="$DEEP_HOME" bash "$DETECTOR" 2>&1) || status=$?
 if [ "$status" -eq 0 ]; then
-  report "ok-beyond-depth (maxdepth 2 밖은 스캔하지 않음)" 0
+  report "ok-beyond-new-depth (깊이 6은 스캔하지 않음)" 0
 else
-  report "ok-beyond-depth (maxdepth 2 밖은 스캔하지 않음)" 1 "기대 exit=0 / 실제 exit=$status: $out"
+  report "ok-beyond-new-depth (깊이 6은 스캔하지 않음)" 1 "기대 exit=0 / 실제 exit=$status: $out"
+fi
+
+# 3c. 무거운 트리는 쳐낸다. 남의 저장소나 캐시 안의 깨진 링크를 보고해 봐야 조치할 것이
+#     없고, 스캔 비용만 든다.
+PRUNE_HOME="$TMP/ok-pruned"
+mkdir -p "$PRUNE_HOME/proj/.git/refs" "$PRUNE_HOME/proj/node_modules/pkg"
+ln -s "$PRUNE_HOME/proj/.git/refs/gone" "$PRUNE_HOME/proj/.git/refs/broken-link"
+ln -s "$PRUNE_HOME/proj/node_modules/pkg/gone" "$PRUNE_HOME/proj/node_modules/pkg/broken-link"
+
+status=0
+out=$(HOME="$PRUNE_HOME" bash "$DETECTOR" 2>&1) || status=$?
+if [ "$status" -eq 0 ]; then
+  report "ok-pruned (.git/node_modules 내부는 무시)" 0
+else
+  report "ok-pruned (.git/node_modules 내부는 무시)" 1 "기대 exit=0 / 실제 exit=$status: $out"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
