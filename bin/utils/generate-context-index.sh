@@ -41,7 +41,20 @@ for skill_dir in "$CONTEXTS_DIR"/*/; do
   skill_md="${skill_dir}SKILL.md"
   [ -f "$skill_md" ] || continue
 
-  desc=$(awk '/^description:/{getline; gsub(/^[[:space:]]+/,""); print; exit}' "$skill_md")
+  # description: 뒤에 인라인으로 오는 단일행("...")과 블록 스칼라(|, >) 멀티라인을 모두 안전하게 처리
+  desc=$(awk '
+    /^description:[[:space:]]*[|>]/ { in_desc=1; next }
+    /^description:[[:space:]]*/ {
+      sub(/^description:[[:space:]]*/, "");
+      gsub(/^["'\''"]|["'\''"]$/, "");
+      if ($0 != "") { print; exit }
+    }
+    in_desc {
+      if (/^[a-z_]+:/ || /^---/) { exit }
+      gsub(/^[[:space:]]+/, "");
+      if ($0 != "") { print; exit }
+    }
+  ' "$skill_md")
 
   echo
   echo "## $skill"

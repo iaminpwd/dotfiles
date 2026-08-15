@@ -452,6 +452,25 @@ else
     "생성된 INDEX.md 에 '## demo' 가 없습니다 ($(wc -l <"$D/contexts/INDEX.md")줄)"
 fi
 
+# 10d. 단일행("...") description 형식도 제목/구분자로 왜곡되지 않고 정상 파싱되어야 한다.
+D=$(new_case ok-singleline-desc-index)
+mkdir -p "$D/bin/utils"
+cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
+cat >"$D/contexts/demo/SKILL.md" <<'EOF'
+---
+name: demo
+description: "단일행 겹따옴표 설명입니다."
+---
+# demo Skill
+EOF
+(cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
+if grep -qF '단일행 겹따옴표 설명입니다.' "$D/contexts/INDEX.md" && ! grep -qF -- '---' "$D/contexts/INDEX.md"; then
+  report "generate-context-index (단일행 description 지원)" 0
+else
+  report "generate-context-index (단일행 description 지원)" 1 \
+    "단일행 description 이 올바르게 파싱되지 않았습니다"
+fi
+
 # 16. README 스킬 표의 모듈 수 대조. 이 저장소는 스킬을 .archive 로 옮기거나 룰북을
 #     통폐합해도 문서의 개수만 그대로 남는 드리프트가 실제로 있었다(활성 스킬이 9개가
 #     된 뒤에도 문서·주석 5곳이 "12개"를, 표가 Dotfiles "10개(000~060)"를 주장 — 실제는
