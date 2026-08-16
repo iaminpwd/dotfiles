@@ -11,6 +11,12 @@
       "labels": ["dependencies", "mise"]
     },
     {
+      "matchManagers": ["mise"],
+      "matchDepNames": ["checkov"],
+      "overrideDatasource": "github-releases",
+      "description": "mise는 checkov를 aqua 백엔드(aqua:bridgecrewio/checkov)로 받고, aqua는 GitHub Release 에셋을 내려받는다. 그런데 Renovate 기본 datasource는 github-tags라 릴리스 없이 태그만 밀린 버전까지 제안한다. 실측: 3.3.11은 refs/tags에는 있고 PyPI에도 있지만 GitHub Release가 없어(최신 릴리스 3.3.9) mise install이 404로 죽었고, PR #5의 3개 job이 전부 실패했다. 조회 대상을 릴리스로 맞춰 설치 가능한 버전만 제안하게 한다. packageName은 두 datasource 모두 owner/repo 형식이라 그대로 쓴다."
+    },
+    {
       "matchManagers": ["custom.regex"],
       "groupName": "zsh 플러그인 버전 업데이트",
       "labels": ["dependencies", "zsh"]
