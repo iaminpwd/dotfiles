@@ -96,6 +96,9 @@ new_case() {
   mkdir -p "$dir/bin/linters" "$dir/bin/lib"
   cp "$REPO_ROOT_SRC/bin/linters/prompt-lint.sh" "$dir/bin/linters/prompt-lint.sh"
   cp "$REPO_ROOT_SRC/bin/lib/script-init.sh" "$dir/bin/lib/script-init.sh"
+  # prompt-lint.sh 가 최상단에서 무조건 source 하는 의존이라 전 케이스에 필요하다
+  # (없으면 검사 대상과 무관하게 스크립트가 로드 단계에서 죽는다).
+  cp "$REPO_ROOT_SRC/bin/lib/tool-probe.sh" "$dir/bin/lib/tool-probe.sh"
   echo "$dir"
 }
 
@@ -140,7 +143,8 @@ check_clean() {
 add_hardening_gate() {
   local dir=$1
   cp "$REPO_ROOT_SRC/bin/linters/container-hardening-gate.sh" "$dir/bin/linters/"
-  cp "$REPO_ROOT_SRC/bin/lib/jq-resolve.sh" "$REPO_ROOT_SRC/bin/lib/tool-probe.sh" "$dir/bin/lib/"
+  # tool-probe.sh 는 new_case 가 이미 배치한다(prompt-lint 자신의 의존).
+  cp "$REPO_ROOT_SRC/bin/lib/jq-resolve.sh" "$dir/bin/lib/"
 }
 
 # append_dockerfile_example <케이스디렉토리> <라벨> <Dockerfile 본문>
@@ -607,6 +611,26 @@ CMD ["/bin/true"]'
   append_dockerfile_example "$D" "[Good]" 'COPY --from=build /app/dist /app
 ENTRYPOINT ["/app/server"]'
   check_clean "ok-partial-dockerfile-ignored (FROM 없으면 대상 아님)" "$D"
+
+  # 핀 고정 축. 하드닝 게이트는 DS-0002(비루트)만 하드 블록하므로, 이 케이스가 없으면
+  # [MUST] Pinned Versions 를 정면으로 어긴 [Good] 예제가 그대로 통과한다(실측으로
+  # 확인된 갭 — 예제를 FROM node:latest 로 되돌려도 검출되지 않았다).
+  D=$(new_case fail-good-dockerfile-latest)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Good]" 'FROM alpine:latest
+USER 10001
+CMD ["/bin/true"]'
+  check "fail-good-dockerfile-latest ([Good] 예제가 가변 태그)" 1 "hadolint 에 걸립니다" "$D"
+
+  # 오탐 회귀 (c): distroless 계열은 패치 태그를 발행하지 않아 역할 태그가 정답이다
+  #      (010 2.1 Pinned Versions 의 두 번째 갈래). 이게 DL3007 로 걸리면 룰북이
+  #      권장하는 형태를 린터가 막는 셈이 된다.
+  D=$(new_case ok-good-dockerfile-role-tag)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Good]" 'FROM gcr.io/distroless/static-debian12:nonroot
+USER 65532:65532
+ENTRYPOINT ["/app/server"]'
+  check_clean "ok-good-dockerfile-role-tag (역할 태그는 정상)" "$D"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

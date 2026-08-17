@@ -26,6 +26,11 @@ set -euo pipefail
 PROMPT_LINT_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 # shellcheck source-path=SCRIPTDIR
 source "$PROMPT_LINT_SCRIPT_DIR/../lib/script-init.sh"
+# [Good] Dockerfile 예제 검사가 hadolint 가용성을 판정하는 데 쓴다. mise shim 환경에서
+# command -v 가 조용히 실패하는 케이스를 tool-probe.sh SSOT 가 해결한다
+# (container-hardening-gate.sh 와 동일한 이유·동일한 패턴).
+# shellcheck source-path=SCRIPTDIR
+source "$PROMPT_LINT_SCRIPT_DIR/../lib/tool-probe.sh"
 
 # 이 스크립트는 pre-flight-check.sh처럼 "호출 시점의 현재 저장소"를 검증하는 범용
 # 도구가 아니라 항상 자기 자신이 속한 dotfiles 저장소의 contexts/만 대상으로 하는
@@ -608,6 +613,9 @@ check_dangling_file_references() {
 # 8줄 위의 [MUST] Pinned Versions 가, 비루트는 020 의 [MUST] Non-Root by Default 가
 # 요구하던 것이다. 사람이 두 문서를 나란히 놓고 대조해야만 보이던 종류라 기계로 옮긴다.
 #
+# 검사 축은 둘이다: container-hardening-gate.sh(비루트, trivy DS-0002)와 hadolint(핀
+# 고정, DL3006/DL3007). 위 두 [MUST] 가 각각 이 둘에 대응한다.
+#
 # 완결된 예제만 태운다("FROM 이 있는가"). 이 코퍼스에는 USER 지시어 하나만 보여 주는
 # 의도적 부분 스니펫이 있는데, 그건 Dockerfile 로서 미완성인 게 정상이라 게이트에
 # 넣으면 고칠 수 없는 오탐(DL3061 류)이 된다. [Bad] 예제도 당연히 제외한다 — 위반을
@@ -650,6 +658,23 @@ check_good_dockerfile_examples() {
               sed -e "s#$out#${md#"$REPO_ROOT"/}:$start#g" -e 's/^/    /' "$tmpdir/out.$n" >&2
               echo "    -> 이 예제를 그대로 따르면 커밋이 막힙니다. 예제를 고치거나, 규칙 쪽이 현실과 다르면 규칙을 고치십시오." >&2
               EXIT_CODE=1
+            fi
+            # 위 게이트는 DS-0002(비루트) 한 축만 하드 블록한다. 핀 고정 축은 hadolint
+            # DL3006/DL3007 이 담당하며, 저장소는 이미 실제 Dockerfile 에 같은 잣대를
+            # 적용하고 있다(pfc-quality-checks.sh 의 validate_docker). 예제에만 느슨한
+            # 기준을 두면 [MUST] Pinned Versions 를 정면으로 어긴 예제가 그대로 통과한다
+            # (실측: [Good] 예제를 FROM node:latest 로 되돌린 뮤테이션이 게이트만으로는
+            # 검출되지 않았다). `:nonroot` 같은 역할 태그는 DL3007 대상이 아니므로
+            # distroless 예제는 이 검사를 그대로 통과한다(실측).
+            if has_tool hadolint; then
+              if ! hadolint "$out" >"$tmpdir/hado.$n" 2>&1; then
+                echo "❌ [ERROR] [Good] Dockerfile 예제가 hadolint 에 걸립니다: ${md#"$REPO_ROOT"/}:$start" >&2
+                sed -e "s#$out#${md#"$REPO_ROOT"/}:$start#g" -e 's/^/    /' "$tmpdir/hado.$n" >&2
+                echo "    -> 이 예제를 그대로 따르면 커밋이 막힙니다. 예제를 고치거나, 규칙 쪽이 현실과 다르면 규칙을 고치십시오." >&2
+                EXIT_CODE=1
+              fi
+            else
+              log_info "[INFO] hadolint 가 없어 [Good] Dockerfile 예제의 핀 고정 검사를 건너뜁니다."
             fi
           fi
           continue
