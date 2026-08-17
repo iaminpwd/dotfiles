@@ -18,7 +18,9 @@ Dockerfile 작성 및 OCI 이미지 빌드 시 적용되는 표준임.
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 빌드 인자 및 재현성
-- **[MUST] Pinned Versions:** 베이스 이미지는 `FROM node:24.18.0-slim`처럼 패치 버전까지 명시적으로 고정할 것.
+- **[MUST] Pinned Versions:** 베이스 이미지에 가변 태그(`latest`, 태그 생략)를 쓰지 말 것 — 같은 Dockerfile을 언제 빌드해도 같은 베이스를 가리켜야 합니다. 고정 방법은 그 이미지가 발행하는 태그 체계에 따라 갈리므로 아래에서 택일할 것.
+  - 패치 버전 태그를 발행하는 이미지: `FROM node:24.18.0-slim` 처럼 패치 자리까지 명시.
+  - 패치 태그를 발행하지 않는 이미지(`distroless` 등, §1에서 우선 채택을 권장하는 그 계열이다): 발행 태그가 `:latest`/`:nonroot`/`:debug` 와 아키텍처 변형뿐이라 패치 고정이 애초에 불가능합니다(실측: `gcr.io/distroless/nodejs24-debian13` 의 `x.y.z` 형태 태그는 0개). 역할 태그(`:nonroot` 등)로 쓰되, 운영 배포에서는 다이제스트(`@sha256:...`)로 고정할 것.
 - **[MUST] Non-EOL Runtime Only:** 베이스 이미지의 런타임 메이저 버전은 작성 시점에 웹 검색으로 지원 상태를 확인하여 EOL이 지나지 않은 LTS 버전을 채택할 것. 특정 버전을 "최신 LTS"로 이 문서에 못박는 대신, 아래 예시의 버전도 그대로 복사하는 대신 채택 전 EOL 여부를 재확인할 것. (런타임은 주기적으로 EOL됩니다 — 예: Node.js 20은 2026-04-30 EOL.)
 - **[MUST] No Build Secrets in Layers:** API 키, 토큰 등은 `ARG`/`ENV`로 영구 레이어에 굽는 대신, BuildKit `--mount=type=secret`으로 빌드 시점에만 임시 마운트할 것.
 
