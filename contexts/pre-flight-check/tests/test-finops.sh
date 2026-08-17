@@ -27,6 +27,11 @@ REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 # 판정 패턴은 검증기 본체에서 가져온다. 예전엔 이 테스트가 같은 정규식을 손으로 복제해
 # 갖고 있었는데, 그러면 본체만 고쳤을 때 테스트가 그대로 통과해 회귀를 못 잡는다.
 # (source 전용 라이브러리라 함수 정의와 이 상수만 들어오고 부작용은 없다.)
+# source-path=SCRIPTDIR 가 함께 있어야 한다. shellcheck 는 source= 의 상대 경로를 기본적으로
+# "shellcheck 를 실행한 CWD" 기준으로 푸는데, 이 검사는 저장소 루트에서 돌기 때문에
+# ../../../ 이 저장소 밖을 가리켜 SC1091(파일 없음)이 난다. SCRIPTDIR 을 주면 이 스크립트
+# 자신의 위치를 기준으로 풀어 어느 CWD 에서 실행하든 같은 파일을 찾는다.
+# shellcheck source-path=SCRIPTDIR
 # shellcheck source=../../../bin/lib/pfc-quality-checks.sh
 source "$REPO_ROOT/bin/lib/pfc-quality-checks.sh"
 
@@ -61,12 +66,12 @@ pattern_case() {
   fi
 }
 
-pattern_case "match: Extended Support"        match   "aws_rds_cluster.main  RDS Extended Support  \$100.00"
-pattern_case "match: Long Term Support"       match   "Ubuntu Long Term Support subscription"
-pattern_case "match: 독립 토큰 LTS"           match   "ubuntu_pro.this  Ubuntu Pro LTS  \$25.00"
-pattern_case "nomatch: results (오탐 회귀)"   nomatch "aws_s3_bucket.results"
-pattern_case "nomatch: defaults (오탐 회귀)"  nomatch "module.defaults.aws_vpc.this"
-pattern_case "nomatch: vaults (오탐 회귀)"    nomatch "aws_backup_vaults.archive"
+pattern_case "match: Extended Support" match "aws_rds_cluster.main  RDS Extended Support  \$100.00"
+pattern_case "match: Long Term Support" match "Ubuntu Long Term Support subscription"
+pattern_case "match: 독립 토큰 LTS" match "ubuntu_pro.this  Ubuntu Pro LTS  \$25.00"
+pattern_case "nomatch: results (오탐 회귀)" nomatch "aws_s3_bucket.results"
+pattern_case "nomatch: defaults (오탐 회귀)" nomatch "module.defaults.aws_vpc.this"
+pattern_case "nomatch: vaults (오탐 회귀)" nomatch "aws_backup_vaults.archive"
 
 echo
 echo "--- FinOps 비용 검증 (validate_finops_costs) ---"

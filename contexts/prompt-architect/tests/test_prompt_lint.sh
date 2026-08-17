@@ -152,11 +152,13 @@ reviewed: $TODAY
 ---
 # 19. 추가 모듈
 EOF
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "| 추가 모듈 | contexts/demo/references/020-extra.md |" >>"$D/contexts/demo/SKILL.md"
 check "fail-ssot-mismatch" 1 "SSOT 모듈 목록 불일치" "$D"
 
 # 2. 깨진 참조 링크: 존재하지 않는 모듈을 라우팅 테이블에 적는다.
 D=$(new_case fail-broken-link)
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "| 없는 모듈 | contexts/demo/references/999-missing.md |" >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link" 1 "깨진 참조 링크" "$D"
 
@@ -166,6 +168,7 @@ D=$(new_case fail-broken-link-nested)
 {
   echo "| 역할 지침 | contexts/demo/role.missing.md |"
   echo "| 위임 검증기 | bin/hooks/plugins/demo-check.sh |"
+  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 } >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-link-nested (role.*.md / scripts 하위)" 1 "깨진 참조 링크" "$D"
 
@@ -198,11 +201,13 @@ check_clean "ok-documented-clause-present (오탐 없음)" "$D"
 
 # 3. 코드펜스 짝 불일치: 여는 펜스만 남긴다.
 D=$(new_case fail-odd-code-fence)
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 printf '\n```bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-odd-code-fence" 1 "코드펜스 짝이 맞지 않음" "$D"
 
 # 4. 벤더 용어 오염: 룰북에 벤더 종속 레지스트리(azurecr.io)를 하드코딩한다.
 D=$(new_case fail-azurecr-in-rulebook)
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "- 예시 레지스트리: myregistry.azurecr.io" >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-azurecr-in-rulebook" 1 "azurecr.io 발견" "$D"
 
@@ -409,16 +414,19 @@ check "warn-orphaned-reference" 0 "고아 후보" "$D"
 D=$(new_case warn-file-size)
 {
   for i in $(seq 1 160); do echo "- 라인 $i"; done
+  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 } >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-file-size" 0 "150줄 제약 초과" "$D"
 
 # 8. MUST 로 태깅됐지만 본문은 선호를 서술.
 D=$(new_case warn-must-with-prefer-wording)
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "- **[MUST] Prefer Small Modules:** 가급적 모듈을 작게 유지하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-must-with-prefer-wording" 0 "MUST 인데 본문이 선호를 서술함" "$D"
 
 # 9. 고위험 키워드인데 Halt & Clarify 로 태깅(Hard Block 후보).
 D=$(new_case warn-halt-on-high-risk)
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "- 자격 증명 평문 노출이 감지되면 Halt & Clarify 하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-halt-on-high-risk" 0 "Hard Block 검토 필요" "$D"
 

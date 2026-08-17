@@ -90,6 +90,7 @@ else
 fi
 
 # 2. 변경사항이 있고 3종 스텁이 전부 통과하면 decision 없이 압축 로그 3줄이 실려야 한다.
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "dirty" >>"$DOTFILES_REPO/README.md"
 out2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
 if echo "$out2" | jq -e 'has("decision") | not' >/dev/null 2>&1 &&
@@ -164,6 +165,7 @@ stub "$SPACED_REPO/bin/linters/prompt-lint.sh" 0 "SPACED_LINT_OK"
 stub "$SPACED_REPO/bin/linters/test-coverage-check.sh" 0 "SPACED_COVERAGE_OK"
 git -C "$SPACED_REPO" add -A
 git -C "$SPACED_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 스텁 편입"
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "dirty" >>"$SPACED_REPO/README.md"
 
 out_spaced=$(payload "$SPACED_REPO" | bash "$HOOK")

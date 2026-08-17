@@ -180,6 +180,38 @@ if [ -x "$PFC" ]; then
     fi
   fi
 
+  # Case 4: tests/ 하위의 제외 범위는 "픽스처"까지만이어야 한다.
+  # 예전엔 filter_target_files 가 */tests/* 를 통째로 뺐다. 제외의 근거는 언제나 의도적
+  # 위반을 담은 픽스처였는데 범위가 테스트 스크립트 본체까지 덮어서, tests/ 아래 파일은
+  # 무엇이든 대상 0건이 되어 검증기가 아무것도 보지 않고 exit 0 을 냈다 — explicit 모드를
+  # 쓰는 pre-flight-live-hook.sh 가 AI 편집마다 "-> [✓]" 를 돌려주던 무검증 초록불이다
+  # (실측: 추적 .sh 98개 중 59개가 그 상태, 같은 위반을 tests/ 밖에 두면 rc=1 로 차단).
+  # 두 방향을 같이 고정한다. 한쪽만 두면 반대쪽으로 되돌아가도 잡지 못한다.
+  if require_tool shellcheck; then
+    SR4="$PLUGIN_TMP/repo4"
+    new_repo "$SR4"
+    mkdir -p "$SR4/tests/fixtures-shell"
+    cp "$FIXTURES/fail-shellcheck.sh" "$SR4/tests/real-test.sh"
+    cp "$FIXTURES/fail-shellcheck.sh" "$SR4/tests/fixtures-shell/fail-x.sh"
+    git -C "$SR4" add tests/real-test.sh tests/fixtures-shell/fail-x.sh
+
+    status=0
+    (cd "$SR4" && QUIET=0 bash "$PFC" tests/real-test.sh) >"$PLUGIN_TMP/out" 2>&1 || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "shellcheck" "$PLUGIN_TMP/out"; then
+      report "tests-script-is-linted (픽스처가 아닌 테스트 스크립트는 검증 대상)" 0
+    else
+      report "tests-script-is-linted (픽스처가 아닌 테스트 스크립트는 검증 대상)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+
+    status=0
+    (cd "$SR4" && QUIET=0 bash "$PFC" tests/fixtures-shell/fail-x.sh) >"$PLUGIN_TMP/out" 2>&1 || status=$?
+    if [ "$status" -eq 0 ]; then
+      report "tests-fixture-still-excluded (의도적 위반 픽스처는 종전대로 제외)" 0
+    else
+      report "tests-fixture-still-excluded (의도적 위반 픽스처는 종전대로 제외)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+    fi
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "pre-flight-check.sh 배선 확인" 1 "bin/hooks/pre-flight-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"

@@ -134,7 +134,7 @@ cp "$REPO_ROOT/bin/lib/git-relpath.sh" "$FAKE/bin/lib/"
 FAKE_RP="$FAKE/bin/utils/record-provenance.sh"
 FAKE_LOG="$FAKE/work/.agent-state/edits.log"
 
-DUP_NAME="080-database-standard.md"    # 활성 1곳 + 숨김 1곳
+DUP_NAME="080-database-standard.md"      # 활성 1곳 + 숨김 1곳
 HIDDEN_ONLY="026-networking-standard.md" # 숨김에만 존재
 : >"$FAKE/contexts/aws/references/$DUP_NAME"
 : >"$FAKE/contexts/.hidden/references/$DUP_NAME"

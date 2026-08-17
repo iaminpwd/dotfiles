@@ -205,6 +205,7 @@ fi
 
 # 3. 어떤 스킬 패턴에도 안 걸리는 무관한 변경만 push하면, 회귀 스위트를 아예 실행하지
 #    않고(스텁 마커 없음) 조용히 exit 0이어야 한다(오탐 방지 + 불필요한 실행 방지).
+# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "무관한 변경" >>"$FIXTURE_REPO/README_UNRELATED.md"
 git -C "$FIXTURE_REPO" add README_UNRELATED.md
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "docs: 무관한 문서 추가"

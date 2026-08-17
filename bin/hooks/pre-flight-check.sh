@@ -98,8 +98,11 @@ run_delegated_skill_checks() {
   # pre-flight-live-hook.sh(explicit)에서는 위임 검증이 통째로 비어 있으면서 초록불만 떴다
   # (실측 재현: bin/lib/plugin-targets.sh 헤더 주석 참조).
   #
-  # 넘기는 목록은 filter_target_files 를 거친 것이라 */tests/* 가 이미 빠져 있다. 의도적
-  # 위반을 담은 회귀 테스트 픽스처가 --all 스캔에서 잡혀 무관한 커밋을 막는 일을 방지한다.
+  # 넘기는 목록은 filter_target_files 를 거친 것이라 */tests/fixtures* 가 이미 빠져 있다.
+  # 의도적 위반을 담은 회귀 테스트 픽스처가 --all 스캔에서 잡혀 무관한 커밋을 막는 일을
+  # 방지한다. (픽스처가 아닌 테스트 스크립트는 제외 대상이 아니지만, 이 세 플러그인이 보는
+  # 확장자는 yaml/yml/json/tf 뿐이고 그 확장자를 가진 비-픽스처 테스트 파일은 이 저장소에
+  # 하나도 없어 위임 대상은 실질적으로 달라지지 않는다.)
   # 세 플러그인이 보는 확장자의 합집합을 넘기고, 그 안에서 무엇을 볼지는 종전대로 각
   # 플러그인이 자기 패턴으로 다시 좁힌다.
   local plugin_targets=()
@@ -152,8 +155,25 @@ filter_target_files() {
   local pattern f
   for f in "${GLOBAL_TARGET_FILES[@]}"; do
     [ -z "$f" ] && continue
-    # 테스트 관련 파일(픽스처 등)은 전역 린트 대상에서 원천 제외
-    if [[ "$f" == */tests/* ]] || [[ "$f" == tests/* ]]; then
+    # 의도적 위반을 담은 회귀 테스트 픽스처만 전역 린트 대상에서 원천 제외한다.
+    #
+    # 예전엔 tests/ 하위를 통째로 뺐다. 그런데 제외의 근거는 언제나 "픽스처"였고
+    # (fail-bash-syntax.sh 처럼 일부러 깨뜨려 둔 파일이 --all 스캔에 걸려 무관한 커밋을
+    # 막는 것을 방지), 픽스처가 아닌 테스트 스크립트 본체까지 뺄 이유는 없었다. 실제로
+    # 같은 목적의 다른 검증기 셋은 전부 fixtures 까지 좁혀 쓰고 있었고 이 함수만
+    # 옛 범위로 남아 있었다(checkov --skip-path 'tests/fixtures',
+    # trivy --skip-dirs '**/tests/fixtures*', db-sg-checker ! -path "*/tests/fixtures*",
+    # 그리고 바로 옆 pfc-iac-checks.sh 의 */tests/fixtures/*).
+    #
+    # 그 차이의 대가는 무검증 초록불이었다. tests/ 하위 파일은 explicit 모드와 --all
+    # 모드 양쪽에서 대상 0건이 되어, 검증기가 아무것도 보지 않고 exit 0 을 냈다.
+    # 실측: shellcheck 가 SC2086 을 잡아내는 파일을 pre-flight-live-hook.sh 에 물렸더니
+    # decision 없이 "-> [✓]" 한 줄이 에이전트 컨텍스트로 들어갔다(같은 위반을 tests/
+    # 밖에 두면 rc=1 로 차단). 추적 중인 .sh 98개 중 59개가 그 상태였다.
+    #
+    # 접미사형 디렉토리(fixtures-shell, fixtures-idempotency 등)까지 덮어야 하므로 끝에
+    # 슬래시가 아니라 * 를 둔다 — 위 세 검증기와 동일한 이유, 동일한 형태다.
+    if [[ "$f" == */tests/fixtures* ]] || [[ "$f" == tests/fixtures* ]]; then
       continue
     fi
     for pattern in "$@"; do

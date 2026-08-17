@@ -101,21 +101,27 @@ else
     }
 
     # 정상: 기대 키 하나만 들어 있으면 통과해야 한다(오탐 회귀).
-    [ "$(judge "$TMP/single.asc")" = "$EXPECTED" ] &&
-      report "single-key (기대 키만 있으면 통과)" 0 ||
+    if [ "$(judge "$TMP/single.asc")" = "$EXPECTED" ]; then
+      report "single-key (기대 키만 있으면 통과)" 0
+    else
       report "single-key (기대 키만 있으면 통과)" 1 "판정=$(judge "$TMP/single.asc") / 기대=$EXPECTED"
+    fi
 
     # 핵심: 기대 키 "와 함께" 다른 키가 섞여 들어오면 막아야 한다. 이 키링은 그대로
     # 서명 검증에 쓰이므로, 통과시키면 섞여 들어온 키로 서명된 설치 스크립트가
     # GOODSIG 로 승인된다. 예전의 "첫 fpr 일치" 방식은 여기서 통과했다(실측).
-    [ "$(judge "$TMP/double.asc")" != "$EXPECTED" ] &&
-      report "mixed-keys (키가 섞이면 차단)" 0 ||
+    if [ "$(judge "$TMP/double.asc")" != "$EXPECTED" ]; then
+      report "mixed-keys (키가 섞이면 차단)" 0
+    else
       report "mixed-keys (키가 섞이면 차단)" 1 "섞인 키링이 통과했습니다 — 판정이 주 키 개수를 보지 않습니다"
+    fi
 
     # 기본: 다른 키만 있으면 당연히 막아야 한다.
-    [ "$(judge "$TMP/wrong.asc")" != "$EXPECTED" ] &&
-      report "wrong-key (다른 키는 차단)" 0 ||
+    if [ "$(judge "$TMP/wrong.asc")" != "$EXPECTED" ]; then
+      report "wrong-key (다른 키는 차단)" 0
+    else
       report "wrong-key (다른 키는 차단)" 1 "판정=$(judge "$TMP/wrong.asc")"
+    fi
   else
     report "합성 키링 생성" 1 "gpg 키 생성에 실패했습니다 — gnupg 설치 상태를 확인하십시오"
   fi
