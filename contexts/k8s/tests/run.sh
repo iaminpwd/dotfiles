@@ -355,6 +355,31 @@ if require_tool helm; then
   else
     report "fail-chart (템플릿 파싱 오류 차단)" 1 "기대 exit≠0 + parse error / 실제 exit=$status"
   fi
+
+  # 위 두 케이스는 helm lint 를 직접 불러 "판정이 맞는가"만 본다. 정작 validate_helm 이
+  # 검사할 차트 디렉토리를 "찾아내는" 단계는 덮이지 않아, 루트에 놓인 차트가 한 번도
+  # lint 되지 않는 결함이 그대로 살아 있었다 — dirname 이 "." 이라 비교 대상이
+  # "./Chart.yaml"/"./*" 가 되는데 git 이 주는 경로엔 그 접두사가 없어 매칭이 전부
+  # 빗나갔다(실측: 같은 차트를 sub/ 로 옮기면 검출, 루트에 두면 미검출). 차트 저장소는
+  # 루트에 Chart.yaml 을 두는 배치가 가장 흔하므로 그 경로를 격리 저장소로 고정한다.
+  PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
+  if [ -f "$PFC" ]; then
+    HELM_TMP=$(mktemp -d)
+    cp -r "$HELM_FIXTURES/fail-chart/." "$HELM_TMP/"
+    git -C "$HELM_TMP" init -q
+    git -C "$HELM_TMP" config user.email test@example.com
+    git -C "$HELM_TMP" config user.name Test
+    git -C "$HELM_TMP" add -A
+
+    status=0
+    out=$( (cd "$HELM_TMP" && QUIET=0 bash "$PFC") 2>&1) || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "Helm lint" <<<"$out"; then
+      report "root-chart-is-linted (루트 배치 차트도 helm lint 대상)" 0
+    else
+      report "root-chart-is-linted (루트 배치 차트도 helm lint 대상)" 1 "기대 exit≠0 + Helm lint / 실제 exit=$status out=$out"
+    fi
+    rm -rf "$HELM_TMP"
+  fi
 fi
 
 echo "--- conftest (pre-flight-check.sh) ---"

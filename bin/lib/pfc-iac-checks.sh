@@ -192,7 +192,9 @@ validate_ansible() {
 validate_helm() {
   # 서브디렉토리 차트 탐지를 위해 글롭(*) pathspec으로 스테이징된 Helm 관련 파일 스캔
   local helm_changed=()
-  mapfile -d '' -t helm_changed < <(filter_target_files '*Chart.yaml' '*values.yaml' '*/templates/*')
+  # 'templates/*' 를 '*/templates/*' 와 함께 둔다. 후자는 앞에 슬래시를 요구해서 저장소
+  # 루트에 놓인 templates/ 를 한 건도 잡지 못한다(차트 저장소에서 가장 흔한 배치다).
+  mapfile -d '' -t helm_changed < <(filter_target_files '*Chart.yaml' '*values.yaml' '*/templates/*' 'templates/*')
   if [ "${#helm_changed[@]}" -eq 0 ] || [ -z "${helm_changed[0]}" ]; then
     return 0
   fi
@@ -209,10 +211,17 @@ validate_helm() {
   for cf in "${chart_files[@]}"; do
     [ -z "$cf" ] && continue
     d=$(dirname "$cf")
+    # 저장소 루트에 놓인 차트는 dirname 이 "." 라, 그대로 이어붙이면 비교 대상이
+    # "./Chart.yaml" 과 "./*" 가 된다. git 이 돌려주는 경로에는 그 "./" 접두사가 없어
+    # 두 비교가 모두 빗나가고, 루트 차트만 helm lint 를 한 번도 받지 못한 채 조용히
+    # 통과했다(실측: 같은 차트를 sub/ 로 옮기면 found=1, 루트에 두면 found=0).
+    # 접두사를 먼저 정규화해 루트("")와 하위("<dir>/")를 같은 식으로 다룬다.
+    local prefix
+    if [ "$d" = "." ]; then prefix=""; else prefix="$d/"; fi
     found=0
     for hf in "${helm_changed[@]}"; do
-      [ "$hf" = "$d/Chart.yaml" ] && found=1 && break
-      [[ "$hf" == "$d"/* ]] && found=1 && break
+      [ "$hf" = "${prefix}Chart.yaml" ] && found=1 && break
+      [[ "$hf" == "$prefix"* ]] && found=1 && break
     done
     [ "$found" -eq 0 ] && continue
     for existing in "${chart_dirs[@]:-}"; do
