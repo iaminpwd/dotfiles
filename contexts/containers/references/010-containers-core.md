@@ -34,8 +34,12 @@ RUN npm ci --omit=dev
 COPY . .
 RUN npm run build
 
-FROM gcr.io/distroless/nodejs24-debian13
+# distroless 는 패치 버전 태그를 발행하지 않으므로(:nonroot/:latest/digest 뿐) 운영에서는
+# 다이제스트(@sha256:...)로 고정할 것.
+FROM gcr.io/distroless/nodejs24-debian13:nonroot
 COPY --from=build /app/dist /app
+# :nonroot 태그만으로는 부족하다 — 검증기(trivy DS-0002)는 명시적 USER 지시어를 요구한다.
+USER 65532:65532
 CMD ["/app/index.js"]
 ```
 </example>

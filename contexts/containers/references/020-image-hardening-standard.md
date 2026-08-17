@@ -16,7 +16,10 @@ references:
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 사용자 및 권한 최소화
-- **[MUST] Explicit Non-Root User:** `RUN groupadd -r app && useradd -r -g app app` 등으로 전용 시스템 사용자를 생성하고 `USER app`을 명시할 것. UID/GID는 임의값이 아닌 고정 정수(예: 10001)로 지정하여 호스트와의 식별자(UID/GID) 독립성을 확보할 것.
+- **[MUST] Explicit Non-Root User:** 최종 스테이지에 `USER`를 고정 정수 UID/GID로 명시할 것(임의값 금지 — 호스트와의 식별자 독립성 확보). 사용자를 확보하는 방법은 베이스 이미지에 따라 갈리므로 아래에서 택일할 것.
+  - 셸·패키지 매니저가 있는 베이스: `RUN groupadd -r app --gid=10001 && useradd -r -g app --uid=10001 app` 으로 전용 시스템 사용자를 만들고 `USER 10001` 을 명시.
+  - `distroless`/`scratch` 베이스(§2.2 에서 우선 채택을 권장하는 그 베이스다): `RUN` 자체를 쓸 수 없으므로 사용자를 만들 수 없다. 이미지가 미리 제공하는 비루트 UID 를 그대로 지정할 것 — `:nonroot` 태그 + `USER 65532:65532`. distroless 는 `/etc/passwd` 에 65532 만 정의하므로 여기서는 10001 이 아니라 65532 를 쓴다(임의 UID 를 지정하면 존재하지 않는 사용자로 실행되어 파일 소유권이 어긋난다).
+  - **[주의] 어느 쪽이든 태그만으로는 통과하지 못한다.** `:nonroot` 태그를 붙여도 `USER` 지시어가 없으면 검증기가 그대로 막는다(실측: trivy `DS-0002` 가 태그가 아니라 `USER` 지시어의 존재를 본다 — `container-hardening-gate.sh` 가 이 판정을 커밋 게이트로 쓴다).
 - **[MUST] No Setuid Binaries:** 불필요한 setuid/setgid 바이너리는 빌드 단계에서 `find / -perm /6000 -type f -delete` 등으로 제거할 것.
 
 ### 2.2 공격 표면 축소
