@@ -12,10 +12,15 @@ references:
 
 ## 0. 공식 아이콘 사용 가이드라인 (SSOT — 원문 그대로 적용)
 
-출처: AWS 공식 "AWS Architecture Icons" 배포 자료(PowerPoint 자산 패키지, Release 23-2026.04.28) Guidelines
+출처: AWS 공식 "AWS Architecture Icons" 배포 자료(PowerPoint 자산 패키지, Release 24-2026.07.31) Guidelines
 섹션(슬라이드 14~18, 25). 자산 패키지 다운로드 페이지:
 https://aws.amazon.com/architecture/icons/
-(조회일: 2026-07-24, 원본 zip: `Microsoft-PPTx-toolkits_04302026.zip` → `AWS-Architecture-Icons-Deck_For-Light-BG_04282026.pptx`)
+(조회일: 2026-08-17, 원본 zip: `Microsoft-PPTx-toolkits_07312026.zip` → `AWS-Architecture-Icons-Deck_For-Light-BG_07312026.pptx`)
+
+아래 인용문은 Release 24 원문과 1:1 대조 완료. Release 23-2026.04.28 대비 가이드라인
+변경분은 없으며(Release 24의 What's New 는 Cloud Financial Management 카테고리에
+`AWS FinOps Agent` 아이콘 1개 추가가 전부), 슬라이드 번호도 동일합니다. 자산 패키지는
+분기별(1월 말/4월 말/7월 말) 배포되므로, 다음 릴리스 이후 재대조할 것.
 
 > **[MUST] 이 절은 여러 사례를 보고 유추한 관행이 아니라 AWS가 실제로 배포한 디자인
 > 시스템 규정임. 임의 해석 없이 원문 그대로 적용할 것.**
@@ -31,8 +36,8 @@ https://aws.amazon.com/architecture/icons/
 
 **그룹(Groups) — 원문 그대로 인용 (슬라이드 14)**
 > "DO: Use a generic group type if the presets do not suit your needs. Add a
-> custom group if needed. DON'T: Create groups with nonapproved AWS icon(s).
-> Resize group icons."
+> custom group if needed (see slide 26). DON'T: Create groups with nonapproved
+> AWS icon(s). Resize group icons."
 
 - **[MUST]** Cloud/Region/VPC/Subnet 등 컨테이너(swimlane)는 AWS 프리셋 그룹
   유형을 기본으로 쓰고, 프리셋에 없을 때만 제네릭 그룹으로 대체할 것. 그룹
