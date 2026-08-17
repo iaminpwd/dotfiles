@@ -127,6 +127,119 @@ else
   fi
 fi
 
+# 3. 판정 "결과로 실제 설치를 막는가" (종단 검증).
+#
+# 위 2번은 awk 추출식을 격리해서 "섞인 키링을 올바로 판별하는가"만 본다. 정작 그 판별을
+# 받아 설치를 중단시키는 4줄(지문 비교 -> Hard Block -> exit 1)은 어느 케이스도 실행하지
+# 않았다 — 실측: `if [ "$IMPORTED_FP" != "$MISE_GPG_KEY_FP" ]` 을 `if false` 로 바꿔도 이
+# 스위트가 전부 통과했다. 게다가 1번(멱등)이 조기 종료 경로라, mise 가 이미 설치된 환경
+# (=개발자 머신과 CI 대부분)에서는 본체에 도달조차 하지 않는다.
+#
+# 네트워크 없이 본체를 끝까지 태우기 위해 curl/gpg/sh 를 PATH 앞에 스텁으로 둔다. gpg
+# 스텁이 내보낼 지문과 서명 상태를 환경변수로 조종해 네 시나리오를 만든다. 기대 지문은
+# 스크립트에서 뽑아 쓴다(상수를 복제하면 본체만 바뀌었을 때 테스트가 조용히 낡는다).
+REAL_FP=$(grep -oE 'MISE_GPG_KEY_FP="[0-9A-Fa-f]+"' "$INSTALLER" | head -1 | sed -E 's/.*"([^"]*)".*/\1/')
+if [ -z "$REAL_FP" ]; then
+  report "기대 지문 상수 확보" 1 "install-mise.sh 에서 MISE_GPG_KEY_FP 를 찾지 못했습니다"
+else
+  report "기대 지문 상수 확보" 0
+
+  E2E_BIN="$TMP/e2ebin"
+  mkdir -p "$E2E_BIN"
+
+  printf '#!/usr/bin/env bash\necho STUB-PAYLOAD\nexit 0\n' >"$E2E_BIN/curl"
+
+  # gpg 스텁: --import / --fingerprint / --decrypt 세 호출을 인자로 구분한다.
+  # fd 3 은 호출부가 `3>status.log` 로 열어 주므로 그대로 쓴다.
+  cat >"$E2E_BIN/gpg" <<'STUB'
+#!/usr/bin/env bash
+mode=""
+for a in "$@"; do
+  case "$a" in
+  --import) mode=import ;;
+  --fingerprint) mode=fpr ;;
+  --decrypt) mode=decrypt ;;
+  esac
+done
+case "$mode" in
+import)
+  cat >/dev/null
+  ;;
+fpr)
+  # STUB_FPS 는 공백 구분 목록이다. 여러 개면 "키가 섞인 키링"을 재현한다.
+  for fp in ${STUB_FPS:-}; do
+    echo "pub:u:255:22:0000000000000000:1700000000:::u:::scESC::::::23::0:"
+    echo "fpr:::::::::${fp}:"
+  done
+  ;;
+decrypt)
+  cat >/dev/null
+  echo '#!/bin/sh'
+  echo 'echo stub-installer'
+  if [ "${STUB_GOODSIG:-1}" = "1" ]; then
+    echo '[GNUPG:] GOODSIG 0000000000000000 vendor <v@example.com>' >&3
+  else
+    echo '[GNUPG:] BADSIG 0000000000000000 rogue <r@example.com>' >&3
+    echo 'gpg: BAD signature from "rogue"' >&2
+    exit 1
+  fi
+  ;;
+esac
+exit 0
+STUB
+
+  # sh 스텁: "설치가 실제로 실행됐다"의 유일한 증거. 차단 케이스에서는 생기면 안 된다.
+  # 홑따옴표가 맞다 — $STUB_MARKER 는 지금이 아니라 스텁이 실행되는 시점에 전개돼야 한다.
+  # shellcheck disable=SC2016
+  printf '#!/usr/bin/env bash\necho ran >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
+  chmod +x "$E2E_BIN/curl" "$E2E_BIN/gpg" "$E2E_BIN/sh"
+
+  # run_e2e <지문목록> <GOODSIG여부> -> "<exit코드>|<설치실행여부>|<출력>"
+  run_e2e() {
+    local fps=$1 goodsig=$2 home marker st out
+    home="$TMP/e2e-home-$RANDOM"
+    marker="$TMP/e2e-marker-$RANDOM"
+    mkdir -p "$home"
+    st=0
+    out=$(HOME="$home" PATH="$E2E_BIN:$PATH" STUB_FPS="$fps" STUB_GOODSIG="$goodsig" \
+      STUB_MARKER="$marker" bash "$INSTALLER" 2>&1) || st=$?
+    if [ -e "$marker" ]; then echo "$st|ran|$out"; else echo "$st|blocked|$out"; fi
+  }
+
+  # 3a. 지문 불일치 -> 차단, 설치 미실행.
+  r=$(run_e2e "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF" 1)
+  if [ "${r%%|*}" -ne 0 ] && [[ "$r" == *"|blocked|"* ]] && [[ "$r" == *"Hard Block"* ]]; then
+    report "e2e wrong-fingerprint (차단 + 설치 미실행)" 0
+  else
+    report "e2e wrong-fingerprint (차단 + 설치 미실행)" 1 "$r"
+  fi
+
+  # 3b. 기대 키 "와 함께" 다른 키가 섞인 키링 -> 차단. 2번의 mixed-keys 를 종단으로 잇는다.
+  r=$(run_e2e "$REAL_FP DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF" 1)
+  if [ "${r%%|*}" -ne 0 ] && [[ "$r" == *"|blocked|"* ]]; then
+    report "e2e mixed-keyring (섞인 키링 차단 + 설치 미실행)" 0
+  else
+    report "e2e mixed-keyring (섞인 키링 차단 + 설치 미실행)" 1 "$r"
+  fi
+
+  # 3c. 지문은 맞지만 서명이 불량(GOODSIG 없음) -> 차단. 두 번째 하드 블록이다.
+  r=$(run_e2e "$REAL_FP" 0)
+  if [ "${r%%|*}" -ne 0 ] && [[ "$r" == *"|blocked|"* ]] && [[ "$r" == *"서명 검증 실패"* ]]; then
+    report "e2e bad-signature (서명 불량 차단 + 설치 미실행)" 0
+  else
+    report "e2e bad-signature (서명 불량 차단 + 설치 미실행)" 1 "$r"
+  fi
+
+  # 3d. 정상 경로 -> 설치 진행. 이 케이스가 없으면 "항상 차단"으로 바뀌어도 3a~3c 가 전부
+  #     통과해 게이트가 고장난 채 초록불이 된다(차단 전용 테스트만 두면 생기는 사각지대).
+  r=$(run_e2e "$REAL_FP" 1)
+  if [ "${r%%|*}" -eq 0 ] && [[ "$r" == *"|ran|"* ]]; then
+    report "e2e happy-path (검증 통과 시 설치 진행)" 0
+  else
+    report "e2e happy-path (검증 통과 시 설치 진행)" 1 "$r"
+  fi
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
