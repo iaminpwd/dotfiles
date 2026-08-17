@@ -137,6 +137,31 @@ class FinancialDataAnonymizer:
             return [cls.sanitize_obj(v) for v in obj]
         if isinstance(obj, tuple):
             return tuple(cls.sanitize_obj(v) for v in obj)
+        # bool 은 int 의 서브클래스라 아래 숫자 분기보다 먼저 빼낸다. True/False 를
+        # 문자열화해도 어떤 패턴에도 걸리지 않지만, 타입을 건드릴 이유가 없다.
+        if isinstance(obj, bool):
+            return obj
+        # 숫자로 실려 나가는 식별자를 막는다. 예전엔 문자열만 살균해서, 같은 값이라도
+        # 자료형이 int 면 그대로 나갔다(실측: {"pan": 4111111111111111} 이 payload 에
+        # 원문 유지, "4111111111111111" 은 마스킹). JSON 텔레메트리에서 계좌·카드번호가
+        # 숫자로 직렬화되는 것은 특수 케이스가 아니라 기본 동작이라, 이 클래스의 계약
+        # ("여기를 통과한 것만 나간다")이 자료형 하나로 조용히 우회되고 있었다.
+        #
+        # [트레이드오프] 13자리 epoch-millis 타임스탬프(예: 1755172800000)가
+        # CARD_PLAIN_PATTERN(13~19자리)에 걸려 카드로 마스킹된다. 이를 감수하는 이유는
+        # 두 가지다. (1) 오탐은 라벨이 틀릴 뿐이지만 미탐은 곧 유출이고, 이 클래스의
+        # 선언이 그 우선순위를 이미 정해 뒀다. (2) 같은 오탐이 문자열 경로에는 이미
+        # 존재하므로, 숫자만 예외로 두는 쪽이 오히려 정책의 일관성을 깨뜨린다.
+        # 자릿수 대신 Luhn 검사로 좁히는 방법이 있지만 그건 룰북에 없는 정책을 이
+        # 스크립트가 임의로 신설하는 것이라(DENYLISTED_LABEL_KEYS 주석의 같은 판단)
+        # 채택하지 않는다.
+        #
+        # 패턴에 걸렸을 때만 문자열로 바꾼다. 안 걸린 값까지 문자열화하면 숫자 메트릭이
+        # 전부 문자열이 되어 다운스트림 집계가 깨진다.
+        if isinstance(obj, (int, float)):
+            as_text = str(obj)
+            masked = cls.sanitize(as_text)
+            return masked if masked != as_text else obj
         return obj
 
 class IncidentRAGPipeline:
