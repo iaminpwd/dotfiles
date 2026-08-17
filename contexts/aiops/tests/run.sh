@@ -189,7 +189,23 @@ def check(name, cond, detail=""):
 
 # 1. 빈 입력: 크래시 없이 전부 0이어야 한다.
 r = calc([])
-check("empty-input (전부 0)", r == {"mean": 0, "std_dev": 0, "upper_bound": 0, "lower_bound": 0}, str(r))
+check(
+    "empty-input (전부 0)",
+    r["mean"] == 0 and r["std_dev"] == 0 and r["upper_bound"] == 0 and r["lower_bound"] == 0
+    and r["total_points"] == 0 and r["anomaly_count"] == 0,
+    str(r),
+)
+
+# 1b. 빈 입력과 정상 입력의 "키 집합"이 같아야 한다.
+# 예전엔 빈 분기가 키 4개, 정상 분기가 7개를 돌려줘서 result["anomaly_count"] 접근이
+# KeyError 로 죽었다. 메트릭 조회가 빈 결과를 내는 것은 운영에서 흔한 경로라 호출자가
+# 방어할 이유가 없는 자리다. 이 케이스가 없으면 두 분기가 또 갈라져도 아무도 못 잡는다
+# (위 1번은 키를 하나씩 확인하므로 "빈 쪽에만 키가 더 생기는" 방향은 여전히 못 잡는다).
+check(
+    "return-shape (빈 입력과 정상 입력의 키 집합 동일)",
+    set(calc([]).keys()) == set(calc([1, 2, 3]).keys()),
+    f"empty={sorted(calc([]).keys())} / normal={sorted(calc([1, 2, 3]).keys())}",
+)
 
 # 2. 균일 데이터: 표준편차 0, 이상치 0건.
 r = calc([5, 5, 5, 5], sigma=3.0)
@@ -328,6 +344,28 @@ _payload = mod.IncidentRAGPipeline("https://gw.internal/v1").analyze_incident(
 _dumped = _json.dumps(_payload, ensure_ascii=False)
 for _probe in ["kim@example.com", "900101-1234567", "01099998888", "01012345678", "123-45-67890"]:
     check(f"payload 전체 살균: {_probe} 미노출", _probe not in _dumped, f"payload={_dumped}")
+
+# sanitize_obj 의 자료형 축. 예전엔 str/dict/list/tuple 만 처리하고 int/float 는 그대로
+# 통과시켜서, 같은 값이라도 자료형이 숫자면 게이트웨이로 원문이 나갔다(실측:
+# {"pan": 4111111111111111} 원문 유지 / "4111111111111111" 은 마스킹). JSON 텔레메트리에서
+# 계좌·카드번호가 숫자로 직렬화되는 것은 기본 동작이라, 클래스 계약이 자료형 하나로
+# 조용히 우회되던 지점이다.
+_sanitize_obj = mod.FinancialDataAnonymizer.sanitize_obj
+
+check("숫자 카드번호(int)도 마스킹", "[MASKED_CARD_NUMBER]" == _sanitize_obj({"pan": 4111111111111111})["pan"],
+      str(_sanitize_obj({"pan": 4111111111111111})))
+check("중첩 list 안의 숫자 식별자도 마스킹",
+      _sanitize_obj({"x": [1002123456789]})["x"][0] == "[MASKED_CARD_NUMBER]",
+      str(_sanitize_obj({"x": [1002123456789]})))
+
+# 과잉 마스킹 회귀: 패턴에 걸리지 않는 값은 자료형까지 그대로여야 한다. 여기가 무너지면
+# 숫자 메트릭이 전부 문자열이 되어 다운스트림 집계가 깨진다.
+_kept = _sanitize_obj({"cpu": 42, "util": 98.4, "ok": True, "off": False, "id": 123456789012})
+check("평범한 숫자·불리언은 값과 자료형 보존",
+      _kept == {"cpu": 42, "util": 98.4, "ok": True, "off": False, "id": 123456789012}
+      and isinstance(_kept["cpu"], int) and isinstance(_kept["util"], float)
+      and isinstance(_kept["ok"], bool) and isinstance(_kept["off"], bool),
+      str(_kept))
 
 # 숫자 등 비문자열 값은 살균 대상이 아니므로 원형이어야 한다(과잉 변환 방지).
 check("payload 살균이 비문자열 값을 훼손하지 않음",
