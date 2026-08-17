@@ -595,6 +595,93 @@ check_dangling_file_references() {
   log_info "[INFO] 끊긴 파일 참조 검사 완료."
 }
 
+# -----------------------------------------------------------------------------
+# 16. [Good] Dockerfile 예제가 저장소 자신의 하드 게이트를 통과하는가
+# -----------------------------------------------------------------------------
+# 룰북의 few-shot 예제는 설명이 아니라 에이전트가 그대로 베끼는 템플릿이다. 그래서
+# [Good] 예제가 이 저장소의 커밋 게이트에 걸리는 코드를 시연하면, 룰을 따른 결과물이
+# 그 룰을 강제하는 파이프라인에 막히는 모순이 생긴다.
+#
+# 실제로 그 상태였다: 010-containers-core.md 의 [Good] Dockerfile 이 최종 스테이지에
+# USER 를 두지 않아 container-hardening-gate.sh(trivy DS-0002)에 exit 1 로 걸렸고,
+# 베이스 이미지에 태그가 없어 DS-0001(:latest)까지 났다. 정작 태그 고정은 같은 파일
+# 8줄 위의 [MUST] Pinned Versions 가, 비루트는 020 의 [MUST] Non-Root by Default 가
+# 요구하던 것이다. 사람이 두 문서를 나란히 놓고 대조해야만 보이던 종류라 기계로 옮긴다.
+#
+# 완결된 예제만 태운다("FROM 이 있는가"). 이 코퍼스에는 USER 지시어 하나만 보여 주는
+# 의도적 부분 스니펫이 있는데, 그건 Dockerfile 로서 미완성인 게 정상이라 게이트에
+# 넣으면 고칠 수 없는 오탐(DL3061 류)이 된다. [Bad] 예제도 당연히 제외한다 — 위반을
+# 시연하는 것이 그 예제의 목적이다.
+check_good_dockerfile_examples() {
+  log_info "--- Step: [Good] Dockerfile 예제의 하드 게이트 준수 ---"
+  local gate="$PROMPT_LINT_SCRIPT_DIR/container-hardening-gate.sh"
+  if [ ! -f "$gate" ]; then
+    log_info "[INFO] container-hardening-gate.sh 를 찾지 못해 건너뜁니다."
+    return
+  fi
+
+  local tmpdir md line trimmed label inany indocker buf start lineno n=0 out
+  tmpdir=$(mktemp -d)
+  while IFS= read -r md; do
+    label=""
+    inany=0
+    indocker=0
+    buf=""
+    start=0
+    lineno=0
+    while IFS= read -r line || [ -n "$line" ]; do
+      lineno=$((lineno + 1))
+      trimmed="${line#"${line%%[![:space:]]*}"}"
+      if [ "$inany" -eq 1 ]; then
+        case "$trimmed" in
+        '```'*)
+          inany=0
+          if [ "$indocker" -eq 1 ]; then
+            indocker=0
+            grep -q '^[[:space:]]*FROM[[:space:]]' <<<"$buf" || continue
+            n=$((n + 1))
+            out="$tmpdir/$n.Dockerfile"
+            printf '%s' "$buf" >"$out"
+            if ! bash "$gate" "$out" >"$tmpdir/out.$n" 2>&1; then
+              echo "❌ [ERROR] [Good] Dockerfile 예제가 컨테이너 하드닝 게이트에 걸립니다: ${md#"$REPO_ROOT"/}:$start" >&2
+              # 게이트는 추출된 임시 파일 경로를 그대로 찍는다. 그대로 두면 어느 예제인지
+              # 알아볼 수 없으므로 원본 위치로 되돌린다(pre-commit 훅의 trufflehog 출력
+              # 정리와 동일한 관용구).
+              sed -e "s#$out#${md#"$REPO_ROOT"/}:$start#g" -e 's/^/    /' "$tmpdir/out.$n" >&2
+              echo "    -> 이 예제를 그대로 따르면 커밋이 막힙니다. 예제를 고치거나, 규칙 쪽이 현실과 다르면 규칙을 고치십시오." >&2
+              EXIT_CODE=1
+            fi
+          fi
+          continue
+          ;;
+        esac
+        [ "$indocker" -eq 1 ] && buf="${buf}${line}"$'\n'
+        continue
+      fi
+      case "$trimmed" in
+      '```dockerfile'*)
+        inany=1
+        indocker=1
+        buf=""
+        start=$lineno
+        ;;
+      '```'*)
+        inany=1
+        indocker=0
+        ;;
+      '[Good]'*) label="Good" ;;
+      '[Bad]'*) label="Bad" ;;
+      esac
+      # 여는 펜스를 만난 시점의 라벨만 유효하다. [Bad] 블록이면 아예 수집하지 않는다.
+      if [ "$indocker" -eq 1 ] && [ "$label" != "Good" ]; then
+        indocker=0
+      fi
+    done <"$md"
+  done < <(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "*.md" -print)
+  rm -rf "$tmpdir"
+  log_info "[INFO] [Good] Dockerfile 예제 검사 완료(대상 ${n}건)."
+}
+
 main() {
   check_ssot_module_lists
   check_reference_links
@@ -610,6 +697,7 @@ main() {
   check_readme_skill_counts
   check_archive_scope_consistency
   check_dangling_file_references
+  check_good_dockerfile_examples
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then

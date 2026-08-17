@@ -134,6 +134,35 @@ check_clean() {
   report "$name" 0
 }
 
+# container-hardening-gate.sh 와 그 의존 라이브러리를 케이스 디렉토리에 배치한다.
+# 이게 없으면 prompt-lint 의 [Good] Dockerfile 검사가 조용히 건너뛰므로, 그 축을 보는
+# 케이스에서만 명시적으로 넣는다(나머지 케이스에 trivy 실행 비용을 지우지 않는다).
+add_hardening_gate() {
+  local dir=$1
+  cp "$REPO_ROOT_SRC/bin/linters/container-hardening-gate.sh" "$dir/bin/linters/"
+  cp "$REPO_ROOT_SRC/bin/lib/jq-resolve.sh" "$REPO_ROOT_SRC/bin/lib/tool-probe.sh" "$dir/bin/lib/"
+}
+
+# append_dockerfile_example <케이스디렉토리> <라벨> <Dockerfile 본문>
+# 새 references/*.md 를 만들지 않고 기존 데모 모듈에 덧붙인다 — 파일을 추가하면 고아 파일
+# 경고와 SSOT 모듈 목록 대조가 함께 흔들려 이 케이스가 보려는 축이 흐려진다.
+append_dockerfile_example() {
+  local dir=$1 label=$2 body=$3
+  {
+    echo
+    echo "### 예시 코드 및 패턴 (Few-Shot Examples)"
+    echo "<examples>"
+    echo "<example>"
+    echo "$label"
+    echo '```dockerfile'
+    echo "$body"
+    echo '```'
+    echo "</example>"
+    echo "</examples>"
+    # idempotency:bypass (케이스마다 새로 만든 디렉토리에 1회 기록)
+  } >>"$dir/contexts/demo/references/010-demo-core.md"
+}
+
 build_base
 
 echo "=== prompt-lint.sh 회귀 테스트 ==="
@@ -538,6 +567,47 @@ mkdir -p "$D/bin/linters"
 echo "# 예시: contexts/example-skill/custom-role.md 처럼 배치하십시오." >"$D/bin/linters/note.sh"
 git -C "$D" add bin/linters/note.sh
 check_clean "ok-placeholder-path (없는 디렉토리는 자리표시자)" "$D"
+
+# 18. [Good] Dockerfile 예제가 저장소 자신의 하드 게이트를 통과하는가.
+#     실제로 010-containers-core.md 의 [Good] 예제가 최종 스테이지에 USER 를 두지 않아
+#     container-hardening-gate.sh(trivy DS-0002)에 걸리는 상태였다. 사람이 두 문서를
+#     나란히 놓고 대조해야만 보이던 종류라 기계로 옮겼고, 여기서 그 판정을 고정한다.
+#     도구 미설치를 조용히 건너뛰면 "검사했다"는 신호만 남으므로 실패로 처리한다.
+if ! command -v trivy >/dev/null 2>&1; then
+  report "[Good] Dockerfile 게이트 검사" 1 "trivy 미설치 — 'mise install trivy' 후 다시 실행하십시오"
+else
+  D=$(new_case fail-good-dockerfile-root)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Good]" 'FROM alpine:3.21
+CMD ["/bin/true"]'
+  check "fail-good-dockerfile-root ([Good] 예제가 root 실행)" 1 "컨테이너 하드닝 게이트에 걸립니다" "$D"
+
+  D=$(new_case ok-good-dockerfile-nonroot)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Good]" 'FROM alpine:3.21
+USER 10001
+CMD ["/bin/true"]'
+  check_clean "ok-good-dockerfile-nonroot (USER 있으면 통과)" "$D"
+
+  # 오탐 회귀 (a): [Bad] 예제는 위반을 시연하는 것이 목적이므로 대상이 아니다.
+  D=$(new_case ok-bad-dockerfile-ignored)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Bad]" 'FROM alpine:3.21
+CMD ["/bin/true"]'
+  check_clean "ok-bad-dockerfile-ignored ([Bad] 는 대상 아님)" "$D"
+
+  # 오탐 회귀 (b): FROM 없는 부분 스니펫은 Dockerfile 로서 미완성인 게 정상이다.
+  #      이걸 태우면 고칠 수 없는 오탐이 나서 경고가 무의미해진다.
+  #      본문에 USER 를 두면 완결성 기준이 없어도 게이트를 통과해 이 축이 검증되지 않는다
+  #      (실측: USER 가 있는 스니펫으로는 기준을 제거해도 테스트가 통과했다). 기준이
+  #      실제로 막아야 하는 것 — FROM 도 USER 도 없어 그대로 태우면 DS-0002 로 걸리는
+  #      조각 — 을 픽스처로 쓴다.
+  D=$(new_case ok-partial-dockerfile-ignored)
+  add_hardening_gate "$D"
+  append_dockerfile_example "$D" "[Good]" 'COPY --from=build /app/dist /app
+ENTRYPOINT ["/app/server"]'
+  check_clean "ok-partial-dockerfile-ignored (FROM 없으면 대상 아님)" "$D"
+fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
