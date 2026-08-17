@@ -114,6 +114,52 @@ else
   report "print_unavailable_tools 모든 줄이 [WARNING]로 시작" 1 "out=$OUT"
 fi
 
+# 4b. has_tool() 자신의 동작 계약.
+#
+# 위 4번은 UNAVAILABLE_TOOLS 를 손으로 채워 넣고 출력 포맷만 봤고, 나머지 케이스는 함수
+# 존재 여부·재정의 여부·심볼릭 링크 구동만 봤다. 정작 "미설치 도구를 만났을 때 has_tool 이
+# 그것을 기록하는가"는 어디에서도 검증되지 않아, record_unavailable 호출을 지워도 이
+# 스위트가 전부 통과했다(뮤테이션 테스트로 실측).
+#
+# 그 기록이 빠지면 print_unavailable_tools 가 빈 출력을 내고, 도구가 없어 검증을 통째로
+# 건너뛴 사실이 어디에도 남지 않는다 — 이 라이브러리가 막으려는 가짜 초록불 그 자체다.
+# 양방향으로 고정한다: 없는 도구는 기록되고, 있는 도구는 기록되지 않아야 한다.
+code=0
+OUT=$(bash -c '
+  set -uo pipefail
+  export QUIET=0
+  source "$1"
+  rc=0
+  has_tool definitely-not-a-real-tool-xyz123 || rc=$?
+  echo "rc=$rc"
+  print_unavailable_tools
+' _ "$LIB" 2>&1) || code=$?
+if [ "$code" -eq 0 ] &&
+  grep -qF "rc=1" <<<"$OUT" &&
+  grep -qF "definitely-not-a-real-tool-xyz123" <<<"$OUT"; then
+  report "has_tool: 미설치 도구 -> 실패 반환 + 미가용 목록에 기록" 0
+else
+  report "has_tool: 미설치 도구 -> 실패 반환 + 미가용 목록에 기록" 1 "out=$OUT"
+fi
+
+# 오탐 회귀: 실재하는 도구를 미가용으로 기록하면 매 검증마다 없는 경고가 뜬다.
+# bash 는 이 스위트를 구동하는 인터프리터 자신이라 어느 환경에서도 반드시 존재한다.
+code=0
+OUT=$(bash -c '
+  set -uo pipefail
+  export QUIET=0
+  source "$1"
+  rc=0
+  has_tool bash || rc=$?
+  echo "rc=$rc"
+  print_unavailable_tools
+' _ "$LIB" 2>&1) || code=$?
+if [ "$code" -eq 0 ] && grep -qF "rc=0" <<<"$OUT" && ! grep -qF "[WARNING]" <<<"$OUT"; then
+  report "has_tool: 설치된 도구 -> 성공 반환 + 기록 없음(오탐 회귀)" 0
+else
+  report "has_tool: 설치된 도구 -> 성공 반환 + 기록 없음(오탐 회귀)" 1 "out=$OUT"
+fi
+
 # 5. 플러그인(bin/hooks/plugins/*.sh)은 tool-probe.sh 를 "조건부"로 source 한다(파일이
 #    없으면 건너뜀). 그런데 print_unavailable_tools 를 무가드로 호출하면, 라이브러리를
 #    못 찾은 환경에서 set -e 가 그 자리에서 스크립트를 죽여 "검증 실패"로 오보고된다.

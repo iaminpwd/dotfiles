@@ -29,7 +29,7 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 지금 이 머신의 홈 상태를 보고 싶으면 직접 실행할 것:
 #   bash contexts/dotfiles/tests/check-symlinks.sh
 FAILED=()
-for suite in test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-safe-link-backup test-prune-orphan-skills test-git-relpath test-jq-resolve test-tool-probe-ssot test-script-init test-plugin-targets test-run-suite test-pre-flight-live-hook test-pre-flight-gate-hook test-commit-msg-hook test-pre-commit-hook test-pre-push-hook test-test-coverage-check test-zshrc-activation test-lint-commit-messages test-verify-bootstrap-env test-install-mise; do
+for suite in test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-safe-link-backup test-prune-orphan-skills test-git-relpath test-jq-resolve test-tool-probe-ssot test-script-init test-plugin-targets test-run-suite test-pre-flight-live-hook test-pre-flight-gate-hook test-commit-msg-hook test-pre-commit-hook test-pre-push-hook test-test-coverage-check test-zshrc-activation test-lint-commit-messages test-verify-bootstrap-env test-install-mise test-generate-context-index; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done

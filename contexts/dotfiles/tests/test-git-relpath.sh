@@ -71,7 +71,40 @@ else
   report "git 저장소 밖 파일 -> git_root 빈 문자열" 1 "resolved=$resolved git_root='$git_root'"
 fi
 
-# 4. 소비자(agent-edits-hook.sh, record-provenance.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
+# 4. 심볼릭 링크를 거쳐 들어온 경로는 실경로로 정규화되어야 한다.
+#
+# 이 라이브러리의 존재 이유가 바로 이 정규화인데(헤더 주석: "모노레포 환경 통합 기록 및
+# 심볼릭 링크 경로 불일치 방지"), 위 2·3번은 mktemp 가 만든 "이미 정규화된" 경로만 넘겨서
+# readlink -f 가 no-op 이었다 — 즉 resolved="$input" 로 바꿔도 네 케이스가 전부 통과했다
+# (뮤테이션 테스트로 실측). 계약이 있는데 그것을 깨뜨려도 아무도 못 잡는 상태였다.
+#
+# 정규화가 빠지면 무엇이 깨지는지가 이 케이스의 요점이다. git_root 는 어느 쪽이든 실경로
+# (.../real)로 나오는데 resolved 만 링크 경로(.../linkdir/...)로 남으면, 소비자의
+# "root 가 target 을 포함하는가" 판정이 실패해 agent-edits-hook.sh 가 저장소 루트가 아닌
+# 파일 자신의 디렉토리로 로그를 재라우팅한다 — 감사 로그가 엉뚱한 곳에 쌓인다.
+LINK_BASE="$TMP/symlink-case"
+mkdir -p "$LINK_BASE/real/sub"
+git -C "$LINK_BASE/real" init -q
+echo hi >"$LINK_BASE/real/sub/file.txt"
+ln -s real "$LINK_BASE/linkdir"
+
+out=$(bash -c 'source "$1"; resolve_target_and_git_root "$2"' _ "$LIB" "$LINK_BASE/linkdir/sub/file.txt")
+IFS=$'\t' read -r resolved git_root <<<"$out"
+EXPECTED_REAL="$(readlink -f "$LINK_BASE/real/sub/file.txt")"
+if [ "$resolved" = "$EXPECTED_REAL" ]; then
+  report "심볼릭 링크 경로 -> 실경로로 정규화" 0
+else
+  report "심볼릭 링크 경로 -> 실경로로 정규화" 1 "기대 '$EXPECTED_REAL' / 실제 '$resolved'"
+fi
+
+# 정규화된 resolved 는 반드시 같이 반환된 git_root 아래에 있어야 한다. 소비자의 컨테인먼트
+# 판정이 이 불변식에 기대고 있으므로 함께 고정한다.
+case "$resolved" in
+"$git_root"/*) report "정규화 결과가 git_root 하위에 위치(컨테인먼트 불변식)" 0 ;;
+*) report "정규화 결과가 git_root 하위에 위치(컨테인먼트 불변식)" 1 "resolved=$resolved git_root=$git_root" ;;
+esac
+
+# 5. 소비자(agent-edits-hook.sh, record-provenance.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
 CONSUMERS=(
   "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
   "$REPO_ROOT/bin/utils/record-provenance.sh"
