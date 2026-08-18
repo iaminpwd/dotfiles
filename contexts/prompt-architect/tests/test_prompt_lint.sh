@@ -310,6 +310,45 @@ cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 EOF
 check "fail-exception-ghost-rule (실재하지 않는 룰 열거 차단)" 1 "base.AGENTS.md에 실재하지 않음" "$D"
 
+# 5d2~5d4. 마커 ↔ 근거 불릿 대응(양방향).
+#
+# 위 5b~5d 는 "불릿에 적힌 이름이 base.AGENTS.md 에 실재하는가" 한 방향만 본다. 그래서
+# 마커 쪽에서 낡은 선언은 한 건도 잡히지 않았다 — base.AGENTS.md 의 [예외 선언 필수 포맷]이
+# "마커에 열거됐지만 근거 불릿이 없는 이름은 무효"라고 규정하고 그 검증을 이 스크립트에
+# 위임했는데, 정작 아래 세 무효 상태가 전부 exit 0 으로 통과했다(실측).
+# 규정과 구현이 갈리면 규정 쪽이 거짓 보증이 되므로 세 축을 모두 고정한다.
+
+# 5d2. 마커에 2개 열거 / 불릿은 1개 -> 나머지 하나가 근거 없이 완화된 상태다.
+D=$(new_case fail-exception-marker-without-bullet)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: Caution Over Speed, Deterministic Output ]**
+> - **Caution Over Speed** (`base.AGENTS.md` 최상단): 근거 있음.
+EOF
+check "fail-exception-marker-without-bullet (마커에만 있고 근거 불릿 없음)" 1 "마커에 열거됐지만 근거 불릿이 없는 예외 대상" "$D"
+
+# 5d3. 마커에만 있는 유령 이름(불릿은 다른 정상 이름) -> 룰이 개명됐을 때 실제로 나는 형태다.
+#      5d 와 짝을 이룬다: 이름이 불릿 쪽에서 낡으면 5d 가, 마커 쪽에서 낡으면 이 케이스가 잡는다.
+D=$(new_case fail-exception-marker-ghost-name)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: Nonexistent Ghost Rule ]**
+> - **Caution Over Speed** (`base.AGENTS.md` 최상단): 근거 있음.
+EOF
+check "fail-exception-marker-ghost-name (마커 쪽 이름이 낡음)" 1 "근거 불릿은 있는데 마커에 열거되지 않은 이름" "$D"
+
+# 5d4. 마커만 있고 근거 불릿이 아예 없음(산문으로만 적음) -> 규정상 무효.
+D=$(new_case fail-exception-no-bullet-at-all)
+write_base_agents "$D"
+cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
+
+> **[ EXCEPTION APPLIED: Caution Over Speed ]**
+> 완화 근거: 그냥 산문으로만 적었습니다.
+EOF
+check "fail-exception-no-bullet-at-all (근거 불릿이 하나도 없음)" 1 "마커에 열거됐지만 근거 불릿이 없는 예외 대상" "$D"
+
 # 5e~5h. contexts/ 스캔의 숨김 디렉토리 제외 일관성(check_archive_scope_consistency).
 #
 # .archive/.shared 를 "어떤 소비자도 취급하지 않는다"는 규약은 셸 glob 에서만 자동으로

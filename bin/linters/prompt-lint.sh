@@ -234,16 +234,57 @@ check_exception_hook_integrity() {
       infound { if ($0 ~ /^>/) { print; next } else { exit } }
     ' "$skill_md")
 
+    # 근거 불릿 이름을 먼저 모아 둔다. 아래에서 두 방향으로 대조해야 하기 때문이다.
+    local bullet_names=()
     while IFS= read -r item_line; do
       [ -z "$item_line" ] && continue
       item_name=$(sed -E 's/^>[[:space:]]*-[[:space:]]+\*\*([^*]+)\*\*.*/\1/' <<<"$item_line")
       [ -z "$item_name" ] && continue
+      bullet_names+=("$item_name")
       grep -qxF -- "$item_name" "$names_file" || {
         echo "❌ [ERROR] 예외 대상으로 열거된 룰이 base.AGENTS.md에 실재하지 않음: $skill_md" >&2
         echo "    선언된 이름: '$item_name' (개명·삭제됐거나 오타일 수 있습니다)" >&2
         EXIT_CODE=1
       }
     done < <(grep -E '^>[[:space:]]*-[[:space:]]+\*\*' <<<"$block" || true)
+
+    # 마커에 열거된 이름 ↔ 근거 불릿의 대응을 양방향으로 대조한다.
+    #
+    # 위 불릿 검사만으로는 마커 쪽에서 낡은 선언을 한 건도 잡지 못했다. base.AGENTS.md 의
+    # [예외 선언 필수 포맷]은 "마커에 열거됐지만 근거 불릿이 없는 이름은 무효"라고 규정하고
+    # 그 형식 준수를 이 스크립트가 자동 검증한다고 선언하는데, 실제로는 검증되지 않아
+    # 아래 세 무효 상태가 전부 통과했다(격리 코퍼스 실측, 셋 다 rc=0):
+    #   - 마커에 2개 열거 / 불릿은 1개 -> 나머지 하나가 근거 없이 완화된 상태로 통과
+    #   - 마커에만 있는 유령 이름(불릿은 다른 정상 이름) -> 룰 개명 시 조용히 낡는 바로 그 경로
+    #   - 마커만 있고 불릿이 아예 없음 -> 규정상 무효인데 통과
+    # 반대 방향(불릿에만 있고 마커에 없는 이름)도 같이 본다. 적용 범위를 정하는 것은
+    # 마커이므로, 마커에 없는 불릿은 "완화됐다고 적어 뒀지만 실제로는 완화되지 않는" 선언이라
+    # 읽는 사람을 정확히 반대로 오도한다.
+    local marker_names marker_name found_bullet bn
+    marker_names=$(sed -E 's/.*EXCEPTION APPLIED:[[:space:]]*//; s/[[:space:]]*\].*//' <<<"$marker_line")
+    while IFS= read -r marker_name; do
+      [ -n "$marker_name" ] || continue
+      found_bullet=0
+      for bn in "${bullet_names[@]:-}"; do
+        [ "$bn" = "$marker_name" ] && found_bullet=1 && break
+      done
+      [ "$found_bullet" -eq 1 ] || {
+        echo "❌ [ERROR] 마커에 열거됐지만 근거 불릿이 없는 예외 대상: $skill_md" >&2
+        echo "    선언된 이름: '$marker_name' — base.AGENTS.md 규정상 무효이며 해당 룰은 그대로 적용됩니다." >&2
+        echo "    '> - **$marker_name** (\`base.AGENTS.md\` <위치>): <완화 근거>' 불릿을 같은 블록쿼트에 추가하십시오." >&2
+        EXIT_CODE=1
+      }
+    done < <(tr ',' '\n' <<<"$marker_names" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+
+    for bn in "${bullet_names[@]:-}"; do
+      [ -n "$bn" ] || continue
+      grep -qxF -- "$bn" < <(tr ',' '\n' <<<"$marker_names" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//') || {
+        echo "❌ [ERROR] 근거 불릿은 있는데 마커에 열거되지 않은 이름: $skill_md" >&2
+        echo "    선언된 이름: '$bn' — 적용 범위는 마커가 정하므로 이 룰은 실제로 완화되지 않습니다." >&2
+        echo "    마커의 'EXCEPTION APPLIED:' 목록에 추가하거나, 불릿을 지우십시오." >&2
+        EXIT_CODE=1
+      }
+    done
   done < <(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "SKILL.md" -print)
 
   rm -f "$names_file"
