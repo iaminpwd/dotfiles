@@ -157,6 +157,12 @@ validate_ansible() {
       # ansible-lint.yml이 ansible/ 하위(비표준 위치)에 있어 -c 없이 실행하면
       # auto-discovery가 안 돼 exclude_paths/offline 설정이 무시된다 -> -c로 명시 지정.
       # (참고: 과거 .config/ansible-lint.yml 위치는 auto-discovery 대상이라 -c가 불필요했음)
+      # 단, 그 배치는 이 저장소 고유라 파일이 실재할 때만 -c를 붙인다. 이 검증기는 전역
+      # core.hooksPath 훅이라 dotfiles 밖 임의 저장소에서도 도는데, 무조건 넘기면 그쪽에서는
+      # ansible-lint가 "Config file not found"로 죽고 그 종료 코드가 아래에서 "지적 사항
+      # 발견"으로 보고돼 무관한 커밋이 영구 차단된다 — 원인과 메시지가 어긋나 사용자는
+      # --no-verify 말고는 손쓸 방법이 없다(실측: playbook.yml 하나뿐인 저장소에서 재현).
+      # 없으면 ansible-lint 자신의 auto-discovery(.ansible-lint 등)에 맡긴다.
       # ansible-lint는 실행 중 CWD에 .ansible/ 캐시를 만들어 두고 스스로 치우지 않는다.
       # 그렇다고 무조건 rm -rf 하면 안 된다: 이 검증기는 전역 core.hooksPath 훅을 통해
       # ~/workspace 하위의 임의 저장소에서도 도는데, .ansible/ 은 우리 전용 경로가 아니라
@@ -169,7 +175,10 @@ validate_ansible() {
       local ansible_cache_owned=0
       [ -e ".ansible" ] || ansible_cache_owned=1
 
-      local lint_cmd=(ansible-lint -c ansible/ansible-lint.yml)
+      local lint_cmd=(ansible-lint)
+      if [ -f "ansible/ansible-lint.yml" ]; then
+        lint_cmd=(ansible-lint -c ansible/ansible-lint.yml)
+      fi
       local lint_rc=0
       "${lint_cmd[@]}" || lint_rc=$?
 
