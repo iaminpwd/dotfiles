@@ -53,12 +53,17 @@ fi
 
 # 2. 기능 검사: 낡은 가드를 환경에 물려받은 상태에서 중첩 zsh 를 띄워도 활성화가 되는가.
 #    .zshrc 가 oh-my-zsh 를 source 하므로 그것까지 있어야 의미 있는 실행이 된다.
+#
+#    아래 SKIP 안내는 반드시 [WARNING] 로 시작해야 한다. run-suite.sh 는 통과한 스크립트의
+#    출력에서 [WARNING]/⚠ 로 시작하는 줄만 남기고 나머지를 버리므로, 접두사가 없으면
+#    just verify·CI·pre-push 어디에서도 "이 회귀가 돌지 않았다"는 사실이 보이지 않는다
+#    (bin/lib/tool-probe.sh 의 print_unavailable_tools 와 동일한 규약).
 if ! command -v zsh >/dev/null 2>&1; then
-  echo "  SKIP  nested-shell-activation (zsh 미설치)"
+  echo "[WARNING] SKIP nested-shell-activation — zsh 미설치로 이 회귀가 수행되지 않았습니다"
 elif [ ! -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]; then
-  echo "  SKIP  nested-shell-activation (oh-my-zsh 미설치)"
+  echo "[WARNING] SKIP nested-shell-activation — oh-my-zsh 미설치로 이 회귀가 수행되지 않았습니다"
 elif ! command -v mise >/dev/null 2>&1 || [ ! -x "$HOME/.local/bin/mise" ]; then
-  echo "  SKIP  nested-shell-activation (mise 미설치)"
+  echo "[WARNING] SKIP nested-shell-activation — mise 미설치로 이 회귀가 수행되지 않았습니다"
 else
   # 사용자의 실제 ~/.zshrc 가 아니라 이 저장소의 원본을 SUT 로 삼기 위해 ZDOTDIR 로 격리한다.
   ZDOT="$TMP/zdot"
@@ -106,7 +111,7 @@ PROBE_EOF
       report "fzf-version-gate (0.48+ 에서 fzf 키바인딩 활성화)" 1 "L1='$L1' L2='$L2'"
     fi
   else
-    echo "  SKIP  fzf-version-gate (fzf 미설치 또는 0.48 미만)"
+    echo "[WARNING] SKIP fzf-version-gate — fzf 미설치 또는 0.48 미만이라 이 회귀가 수행되지 않았습니다"
   fi
 fi
 

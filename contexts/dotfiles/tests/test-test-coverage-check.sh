@@ -224,6 +224,62 @@ else
   report "comment-only-mention-blocks (주석 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 12~13. SKIP 안내 가시성 게이트.
+#
+# 등록된 테스트가 도구 부재로 케이스를 건너뛰면 스위트는 그대로 exit 0 이고,
+# run-suite.sh 는 통과한 스크립트의 출력에서 [WARNING]/⚠ 로 시작하는 줄만 남기고 나머지를
+# 버린다. 그래서 "  SKIP ..." 안내는 just verify·CI·pre-push·Stop 게이트 훅 어디에서도
+# 보이지 않고 "-> [✓]" 한 줄만 남는다(실측: trufflehog 없는 환경에서 시크릿 스캔 회귀
+# 2건이 통째로 건너뛰어졌는데 출력에 아무 표시가 없었다). 존재·등록에 이은 세 번째 고리다.
+
+# 12. 접두사 없는 SKIP 안내는 차단해야 한다.
+R12="$TMP/repo12"
+new_fixture_repo "$R12"
+cat >"$R12/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# example-check.sh 를 손보면 확인할 것
+for suite in test-skip; do
+  bash "$suite.sh"
+done
+EOF
+# 위반 픽스처는 반드시 동적으로 조립한다. 힙독에 그대로 써 넣으면 이 테스트 파일 자신이
+# contexts/*/tests/*.sh 라 게이트의 스캔 대상이 되어, 자기 픽스처를 실제 위반으로 신고하며
+# just verify 를 깨뜨린다(실측: 이 케이스를 힙독으로 처음 넣었을 때 그대로 발생했다).
+# printf 로 조립하면 이 파일 어디에도 위반 형태의 리터럴이 남지 않는다.
+{
+  echo '#!/usr/bin/env bash'
+  printf 'echo "  %s  some-case (도구 미설치)"\n' "SKIP"
+} >"$R12/contexts/fake/tests/test-skip.sh"
+status=$(run_checker "$R12")
+if [ "$status" -eq 1 ] && grep -qF "test-skip.sh" "$TMP/out" && grep -qF "압축 필터" "$TMP/out"; then
+  report "skip-without-warning-prefix-blocks (접두사 없는 SKIP 안내 차단)" 0
+else
+  report "skip-without-warning-prefix-blocks (접두사 없는 SKIP 안내 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 13. [WARNING] 로 시작하면 통과해야 한다(오탐 축). 주석에 SKIP 이 스쳐도 마찬가지다 —
+#     스위트 헤더의 "도구 미설치는 SKIP 이 아니라 실패로 처리한다" 같은 문장이 실제로 있다.
+R13="$TMP/repo13"
+new_fixture_repo "$R13"
+cat >"$R13/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# example-check.sh 를 손보면 확인할 것
+for suite in test-skip; do
+  bash "$suite.sh"
+done
+EOF
+cat >"$R13/contexts/fake/tests/test-skip.sh" <<'EOF'
+#!/usr/bin/env bash
+# 도구 미설치는 SKIP 이 아니라 실패로 처리한다는 설명 주석
+echo "[WARNING] SKIP some-case — 도구 미설치로 이 회귀가 수행되지 않았습니다"
+EOF
+status=$(run_checker "$R13")
+if [ "$status" -eq 0 ]; then
+  report "skip-with-warning-prefix-passes ([WARNING] 접두사와 주석은 오탐 없음)" 0
+else
+  report "skip-with-warning-prefix-passes ([WARNING] 접두사와 주석은 오탐 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

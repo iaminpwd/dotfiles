@@ -221,7 +221,13 @@ if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1
   git -C "$FIXTURE_REPO" reset -q
   rm -f "$FIXTURE_REPO/deploy_key"
 else
-  echo "  SKIP  fail-staged-secret-cleaned-in-worktree (trufflehog 또는 openssl 미설치)"
+  # 접두사가 반드시 [WARNING] 이어야 한다. run-suite.sh 는 통과한 스크립트의 출력에서
+  # [WARNING]/⚠ 로 시작하는 줄만 남기고 나머지를 버리므로(run-suite.sh 의 압축 필터),
+  # "  SKIP ..." 으로 적으면 just verify·CI·pre-push·Stop 게이트 훅 어디에서도 보이지
+  # 않는다 — 하필 사라지는 것이 시크릿 스캔 회귀 2건이라, 도구 하나 없으면 보안 축이
+  # 아무 표시 없이 증발한다(실측: run-suite 로 감싸면 "-> [✓]" 한 줄만 남았다).
+  # bin/lib/tool-probe.sh 의 print_unavailable_tools 가 같은 이유로 같은 접두사를 쓴다.
+  echo "[WARNING] SKIP fail-staged-secret-cleaned-in-worktree / fail-renamed-file-with-secret — trufflehog 또는 openssl 미설치로 시크릿 스캔 회귀 2건이 수행되지 않았습니다"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

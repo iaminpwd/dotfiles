@@ -138,6 +138,43 @@ if [ "${#UNREGISTERED[@]}" -gt 0 ] || [ "${#MISSING_RUNNERS[@]}" -gt 0 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# SKIP 안내 가시성 하드 게이트
+# -----------------------------------------------------------------------------
+# 위 두 게이트는 "테스트가 존재하는가"와 "실행 목록에 등록됐는가"를 본다. 그런데 등록된
+# 테스트가 실제로 돌았는지는 또 다른 문제다 — 도구가 없어 케이스를 건너뛰면 스위트는
+# 그대로 exit 0 이고, run-suite.sh 는 통과한 스크립트의 출력에서 [WARNING]/⚠ 로 시작하는
+# 줄만 남기고 나머지를 버린다. 그래서 "  SKIP ..." 형태의 안내는 just verify·CI·pre-push·
+# Stop 게이트 훅 어디에서도 보이지 않고, 화면에는 "-> [✓]" 한 줄만 남는다.
+#
+# 실측: trufflehog 가 없는 환경에서 test-pre-commit-hook.sh 를 run-suite 로 감쌌더니
+# 시크릿 스캔 회귀 2건(인덱스 내용 기준 스캔 / git mv 한 파일 스캔)이 통째로 건너뛰어졌는데
+# 출력은 "-> [✓]" 뿐이었다. 하필 사라지는 것이 보안 축이라 대가가 크다.
+#
+# 규약 자체는 bin/lib/tool-probe.sh 의 print_unavailable_tools 와 bin/linters/prompt-lint.sh
+# 헤더의 [출력 규약]이 이미 못 박아 뒀다("새 경고를 추가할 때 이 규약을 따를 것"). 문서
+# 규칙으로만 두면 새 SKIP 이 추가될 때마다 조용히 낡으므로 여기서 기계적으로 대조한다.
+#
+# 판정은 오탐 0을 우선해 좁게 잡는다: 줄이 echo 로 시작하고, 출력 문자열이 SKIP 으로
+# 시작하는 경우만 본다. 주석에 SKIP 이 스쳐 지나가는 줄(스위트 헤더의 "도구 미설치는
+# SKIP 이 아니라 실패로 처리한다" 등)은 구조적으로 배제된다.
+SKIP_NO_PREFIX=()
+while IFS= read -r -d '' tfile; do
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    SKIP_NO_PREFIX+=("${tfile#"$REPO_ROOT"/}:${hit%%:*}")
+  done < <(grep -nE '^[[:space:]]*echo[[:space:]]+"[[:space:]]*SKIP' "$tfile" 2>/dev/null || true)
+done < <(find "$REPO_ROOT/contexts" -path "$REPO_ROOT/contexts/.*" -prune -o -path '*/tests/*' -name '*.sh' -print0 2>/dev/null)
+
+if [ "${#SKIP_NO_PREFIX[@]}" -gt 0 ]; then
+  echo "[ERROR] 아래 SKIP 안내는 run-suite.sh 의 압축 필터를 통과하지 못해, 도구 부재로 회귀가 건너뛰어져도 자동화 경로에서 보이지 않습니다:" >&2
+  for f in "${SKIP_NO_PREFIX[@]}"; do
+    echo "  - $f" >&2
+  done
+  echo "  -> 출력을 '[WARNING] SKIP ...' 으로 시작하십시오 (bin/lib/tool-probe.sh 의 print_unavailable_tools 와 동일한 규약)." >&2
+  exit 1
+fi
+
+# -----------------------------------------------------------------------------
 # Plugin 전용 강화 검사 (경고 전용, 하드 블록 아님)
 # -----------------------------------------------------------------------------
 # bin/hooks/plugins/*.sh는 위 하드 게이트("이름이 어딘가 언급됐는가")만으로는 부족하다.
