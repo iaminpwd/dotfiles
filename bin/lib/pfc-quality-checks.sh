@@ -193,9 +193,37 @@ validate_conftest() {
   { [ "${#staged_rego[@]}" -gt 0 ] && [ -n "${staged_rego[0]}" ]; } && has_staged_rego=1
   { [ "${#staged_config[@]}" -gt 0 ] && [ -n "${staged_config[0]}" ]; } && has_staged_config=1
 
-  # 서브디렉토리 정책 탐지를 위해 추적 중인 .rego 파일 존재 여부로 검사 활성화 판정
+  # 서브디렉토리 정책 탐지를 위해 추적 중인 .rego 파일 존재 여부로 검사 활성화 판정.
+  #
+  # 픽스처(*/tests/fixtures*)는 제외한다. 회귀 테스트 픽스처의 정책은 "게이트가 실제로
+  # 차단하는가"를 확인하려고 일부러 흔한 조건을 거부하도록 쓰는 것이라, 실검증 규칙으로
+  # 승격되면 무관한 커밋이 통째로 막힌다(실측 재현: tests/fixtures/policy/ 에 ConfigMap 을
+  # 거부하는 픽스처 정책을 두고 평범한 ConfigMap 을 커밋 -> "Conftest 정책 위반" 으로 차단).
+  # 이 저장소도 이미 그 경로를 타고 있었다 — --all 실행 시 실제 YAML 62건이
+  # contexts/k8s/tests/fixtures-conftest 의 픽스처 정책으로 평가됐다(지금은 그 정책이
+  # 우연히 무해할 뿐이다).
+  # 같은 함수의 형제 검증기들은 전부 같은 제외를 갖고 있는데(checkov --skip-path
+  # 'tests/fixtures', trivy --skip-dirs '**/tests/fixtures*', db-sg-checker 의
+  # ! -path "*/tests/fixtures*", 그리고 filter_target_files 자신) conftest 만 빠져 있었다.
+  # 접미사형 디렉토리(fixtures-conftest 등)까지 덮어야 하므로 끝을 슬래시가 아니라 * 로 둔다.
+  #
+  # 픽스처 정책 자체의 판정 로직은 각 스킬의 회귀 테스트가 conftest 를 직접 호출해
+  # 검증하므로(contexts/k8s/tests/run.sh 의 --policy <픽스처> 호출) 여기서 빼도 커버리지가
+  # 줄지 않는다. db-sg-checker 가 "스캔 루트로 픽스처를 지목한 경우엔 제외하지 않는다"로
+  # 같은 균형을 잡은 것과 동일한 구조다.
+  local tracked_rego=()
+  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
+    mapfile -d '' -t tracked_rego < <(git ls-files -z -- '*.rego' 2>/dev/null |
+      { while IFS= read -r -d '' rego_path; do
+        case "$rego_path" in
+        */tests/fixtures* | tests/fixtures*) continue ;;
+        esac
+        printf '%s\0' "$rego_path"
+      done; })
+  fi
+
   local has_any_rego=0
-  if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ] && [ -n "$(git ls-files -- '*.rego' 2>/dev/null)" ]; then
+  if [ "${#tracked_rego[@]}" -gt 0 ] && [ -n "${tracked_rego[0]}" ]; then
     has_any_rego=1
   fi
 
@@ -203,10 +231,12 @@ validate_conftest() {
     if has_tool conftest; then
       log_info "--- Step: Conftest Policy Validation ---"
 
-      # 서브디렉토리 정책 적용을 위해 .rego 파일이 위치한 모든 디렉토리를 --policy 로 명시
-      local rego_files=() policy_dirs=() rf pd found existing
-      mapfile -d '' -t rego_files < <(git ls-files -z -- '*.rego' 2>/dev/null)
-      for rf in "${rego_files[@]}"; do
+      # 서브디렉토리 정책 적용을 위해 .rego 파일이 위치한 모든 디렉토리를 --policy 로 명시.
+      # 목록은 위에서 픽스처를 걸러 둔 tracked_rego 를 그대로 쓴다 — 활성화 판정과 정책
+      # 집합이 서로 다른 목록을 보면 "게이트는 켜졌는데 정책은 다른 것"이 되어 한쪽만
+      # 고쳤을 때 조용히 어긋난다.
+      local policy_dirs=() rf pd found existing
+      for rf in "${tracked_rego[@]}"; do
         [ -z "$rf" ] && continue
         pd=$(dirname "$rf")
         found=0

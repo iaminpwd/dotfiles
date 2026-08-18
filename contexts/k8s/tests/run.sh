@@ -426,6 +426,73 @@ if require_tool conftest; then
     report "fail-pod (hostNetwork 정책 위반 차단)" 1 "기대 exit≠0 + 정책 위반 문구 / 실제 exit=$status"
   fi
 
+  # 위 두 케이스는 conftest 를 직접 불러 "정책 판정이 맞는가"만 본다. 정작 validate_conftest
+  # 가 정책 파일을 "어디서 모으는가"는 덮이지 않아, 픽스처 정책이 실검증 규칙으로 승격되는
+  # 결함이 살아 있었다 — 정책 수집이 git ls-files 무필터라 */tests/fixtures* 하위의 정책이
+  # --policy 로 실려 나갔다. 픽스처 정책은 "게이트가 실제로 차단하는가"를 확인하려고 일부러
+  # 흔한 조건을 거부하도록 쓰는 것이라, 그대로 적용되면 무관한 커밋이 통째로 막힌다
+  # (실측: tests/fixtures/policy/ 에 ConfigMap 을 거부하는 정책을 두자 평범한 ConfigMap
+  # 커밋이 차단됐다. 이 저장소도 --all 실행 시 실제 YAML 62건이 fixtures-conftest 의
+  # 정책으로 평가되고 있었다). 형제 검증기(checkov/trivy/db-sg-checker/filter_target_files)는
+  # 전부 같은 제외를 갖고 있는데 conftest 만 빠져 있었다.
+  #
+  # 두 축을 함께 고정한다. 통과 케이스만 두면 "픽스처를 빼는" 대신 "conftest 를 아예 안
+  # 도는" 회귀도 통과하므로, 픽스처 밖 정책은 여전히 차단하는지를 나란히 본다.
+  PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
+  if [ -f "$PFC" ]; then
+    CONFTEST_TMP=$(mktemp -d)
+
+    new_rego_repo() {
+      local root=$1 policy_dir=$2
+      mkdir -p "$root/$policy_dir"
+      git -C "$root" init -q 2>/dev/null || { mkdir -p "$root" && git -C "$root" init -q; }
+      git -C "$root" config user.email test@example.com
+      git -C "$root" config user.name Test
+      # 흔한 kind 를 무조건 거부하는 정책 — 픽스처가 실제로 그렇게 쓰인다.
+      cat >"$root/$policy_dir/deny-configmap.rego" <<'REGO'
+package main
+
+deny contains msg if {
+	input.kind == "ConfigMap"
+	msg := "픽스처 전용 정책"
+}
+REGO
+      cat >"$root/app.yaml" <<'YAML'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app
+data:
+  k: v
+YAML
+      git -C "$root" add -A
+    }
+
+    # Case 1: 정책이 픽스처 하위면 무시해야 한다(실검증 규칙으로 승격 금지).
+    CR1="$CONFTEST_TMP/repo-fixture"
+    new_rego_repo "$CR1" "tests/fixtures/policy"
+    status=0
+    out=$( (cd "$CR1" && QUIET=0 bash "$PFC") 2>&1) || status=$?
+    if [ "$status" -eq 0 ]; then
+      report "fixture-policy-excluded (픽스처 정책은 실검증에 쓰이지 않음)" 0
+    else
+      report "fixture-policy-excluded (픽스처 정책은 실검증에 쓰이지 않음)" 1 "기대 exit=0 / 실제 exit=$status out=$out"
+    fi
+
+    # Case 2: 같은 정책이 픽스처 밖이면 그대로 차단해야 한다(제외가 "정책을 봐주는 것"이
+    # 아니라 "경로 때문"임을 증명).
+    CR2="$CONFTEST_TMP/repo-real"
+    new_rego_repo "$CR2" "policy"
+    status=0
+    out=$( (cd "$CR2" && QUIET=0 bash "$PFC") 2>&1) || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "Conftest 정책 위반" <<<"$out"; then
+      report "real-policy-still-enforced (픽스처 밖 정책은 그대로 차단)" 0
+    else
+      report "real-policy-still-enforced (픽스처 밖 정책은 그대로 차단)" 1 "기대 exit≠0 + 정책 위반 문구 / 실제 exit=$status out=$out"
+    fi
+
+    rm -rf "$CONFTEST_TMP"
+  fi
 fi
 
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.
