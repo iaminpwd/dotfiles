@@ -195,6 +195,46 @@ else
   report "skill-examples-change (contexts/<skill>/examples 변경 시 해당 스킬만 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 1h. bin/ 하위 스크립트는 "어느 스킬이 이걸 테스트하는가"가 경로에 드러나지 않는다.
+#     예전엔 전부 dotfiles 스위트로 보냈는데, 실제 회귀 테스트는 스킬별로 흩어져 있다
+#     (실측 매핑: bin/hooks/plugins/k8s-check.sh -> k8s + pre-flight-check,
+#     bin/linters/idempotency-check.sh -> pre-flight-check 한 곳뿐,
+#     bin/linters/prompt-lint.sh -> prompt-architect). 그래서 그 파일들을 고쳐도 정작
+#     그것을 검증하는 스위트는 한 번도 돌지 않고 dotfiles 스위트만 초록불로 지나갔다
+#     — test-coverage-check.sh 가 "회귀 테스트가 존재하는가"를 하드 게이트로 강제해 놓고
+#     실행은 다른 곳을 돌리던 셈이다(실측: 플러그인 변경 -> "건드린 스킬: dotfiles" 한 줄).
+#
+#     이름으로 소유 스위트를 역추적하는지 고정한다. 픽스처의 aws 스위트에만 그 이름을
+#     언급하는 테스트를 심어, "aws 는 돌고 azure 는 안 도는" 선택성까지 함께 본다
+#     (무조건 전 스킬을 태우는 구현으로 바뀌어도 이 케이스가 깨지도록).
+#     마커 파일(aws 스위트가 그 이름을 언급하는 테스트)은 반드시 "별도 커밋"으로 먼저
+#     심는다. 같은 커밋에 넣으면 그 파일이 contexts/*/tests/* 케이스에 걸려 aws 를
+#     독립적으로 트리거하므로, 역추적이 죽어도 이 케이스가 통과한다(실측: 역추적 호출을
+#     add_skill dotfiles 로 되돌린 뮤테이션이 그대로 통과했다).
+cat >"$FIXTURE_REPO/contexts/aws/tests/test-plugin-owner.sh" <<'EOF'
+#!/usr/bin/env bash
+# 이 스위트가 bin/hooks/plugins/k8s-check.sh 를 검증한다는 표시(역추적 대상).
+exit 0
+EOF
+git -C "$FIXTURE_REPO" add contexts/aws/tests/test-plugin-owner.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "test(aws): 플러그인 소유 표시 테스트 추가"
+MARKER_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+mkdir -p "$FIXTURE_REPO/bin/hooks/plugins"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/bin/hooks/plugins/k8s-check.sh"
+git -C "$FIXTURE_REPO" add bin/hooks/plugins/k8s-check.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(k8s): 플러그인 판정 로직 수정"
+PLUGIN_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+# 범위는 마커 커밋 이후로 잡아, 이 push 의 변경분이 bin/ 파일 하나뿐이 되게 한다.
+status=$(run_hook_with_refline "refs/heads/main $PLUGIN_SHA refs/heads/main $MARKER_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" &&
+  ! grep -qF "azure/tests/run.sh" "$TMP/out"; then
+  report "bin-script-owner-lookup (bin/ 스크립트를 참조하는 스위트를 이름으로 역추적)" 0
+else
+  report "bin-script-owner-lookup (bin/ 스크립트를 참조하는 스위트를 이름으로 역추적)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 2. 새 브랜치 최초 push(remote_sha=0000...)도 동일하게 감지되어야 한다(EMPTY_TREE 비교 분기).
 status=$(run_hook_with_refline "refs/heads/feature $NEW_SHA refs/heads/feature $ZERO_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out"; then
@@ -211,9 +251,10 @@ git -C "$FIXTURE_REPO" add README_UNRELATED.md
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "docs: 무관한 문서 추가"
 UNRELATED_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-# 비교 기준은 직전 커밋(EXAMPLE_SHA)이어야 한다. 더 앞을 기준으로 잡으면 그 사이의
-# 1c~1g 커밋까지 범위에 들어와 "무관한 변경만" 이라는 전제가 깨진다.
-status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $EXAMPLE_SHA")
+# 비교 기준은 직전 커밋(PLUGIN_SHA)이어야 한다. 더 앞을 기준으로 잡으면 그 사이의
+# 1c~1h 커밋까지 범위에 들어와 "무관한 변경만" 이라는 전제가 깨진다.
+# (케이스를 추가할 때는 이 기준 변수도 함께 옮길 것 — 체인이 끊기면 이 케이스가 대신 깨진다.)
+status=$(run_hook_with_refline "refs/heads/main $UNRELATED_SHA refs/heads/main $PLUGIN_SHA")
 if [ "$status" -eq 0 ] && [ ! -s "$TMP/out" ]; then
   report "no-skill-match (무관한 변경은 회귀 스위트 미실행 + exit 0)" 0
 else

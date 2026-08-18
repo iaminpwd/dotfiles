@@ -42,6 +42,36 @@ add_skill() {
   CHANGED_SKILLS+=("$s")
 }
 
+# add_skills_testing <파일명>
+# 그 파일을 참조하는 회귀 테스트를 가진 스킬을 이름으로 역추적해 전부 대상에 넣는다.
+#
+# bin/ 하위 스크립트는 "어느 스킬이 이걸 테스트하는가"가 경로에 드러나지 않는다. 예전엔
+# 전부 dotfiles 스위트로 보냈는데, 실제 회귀 테스트는 스킬별로 흩어져 있다(실측 매핑:
+# idempotency-check.sh -> pre-flight-check 한 곳뿐, db-sg-checker.sh -> containers +
+# pre-flight-check, k8s-check.sh -> k8s + pre-flight-check, prompt-lint.sh ->
+# prompt-architect). 그래서 그 파일들을 고쳐도 정작 그것을 검증하는 스위트는 한 번도 돌지
+# 않고 dotfiles 스위트만 초록불로 지나갔다 — test-coverage-check.sh 가 "회귀 테스트가
+# 존재하는가"를 하드 게이트로 강제해 놓고, 정작 실행은 다른 곳을 돌리고 있던 셈이다.
+#
+# 소유 스킬을 파일명 규칙으로 유추(k8s-check.sh -> k8s)하지 않는다. 그 매핑은 스크립트가
+# 늘거나 이름 규칙이 바뀌면 조용히 낡는다(같은 이유로 위 코어 케이스도 소비자 목록을
+# 나열하지 않는다). 대신 test-coverage-check.sh 가 커버리지를 판정할 때 쓰는 것과 똑같은
+# 기준 — "그 이름이 contexts/<skill>/tests 안에서 언급되는가" — 을 그대로 역방향으로 쓴다.
+# 두 게이트가 같은 기준을 공유하므로 한쪽만 낡는 드리프트가 생기지 않는다.
+#
+# 어느 스위트도 참조하지 않으면 종전대로 dotfiles 로 보낸다(신규 스크립트 등). 그 상태
+# 자체는 test-coverage-check.sh 가 별도로 차단한다.
+add_skills_testing() {
+  local name=$1 tdir found=0
+  for tdir in "$REPO_ROOT"/contexts/*/tests; do
+    [ -d "$tdir" ] || continue
+    grep -qrF --binary-files=without-match -- "$name" "$tdir" 2>/dev/null || continue
+    add_skill "$(basename "$(dirname "$tdir")")"
+    found=1
+  done
+  [ "$found" -eq 1 ] || add_skill dotfiles
+}
+
 collect_changed_skills_from_range() {
   local base=$1 tip=$2 FILE SKILL
   while IFS= read -r FILE; do
@@ -71,12 +101,23 @@ collect_changed_skills_from_range() {
         add_skill "$(basename "$(dirname "$CORE_SKILL_DIR")")"
       done
       ;;
-    bin/* | stow/* | ansible/* | .github/scripts/*)
+    bin/*)
       # 위 코어 패턴에 안 걸리는 나머지 검사 스크립트(bin/linters/*, bin/utils/*,
-      # bin/hooks/run-suite.sh 등)와 git 훅 본체, ansible 롤. 정작 이 파일들에는
-      # contexts/dotfiles/tests/ 에 전용 회귀 테스트가 다 있고 test-coverage-check.sh 가
-      # 그 존재를 하드 게이트로 강제하는데, 트리거 패턴에만 빠져 있어서 고쳐도 push 시
-      # 아무 테스트가 돌지 않았다 — 커버리지를 강제해 놓고 실행은 안 하는 상태였다.
+      # bin/hooks/plugins/*, bin/hooks/run-suite.sh 등). 예전엔 여기서도 dotfiles 스위트
+      # 하나로 보냈는데, 이 파일들의 회귀 테스트는 dotfiles 에만 있는 게 아니라 스킬별로
+      # 흩어져 있다. 그래서 "커버리지는 강제하면서 정작 그 커버리지를 실행하지는 않는"
+      # 상태가 남아 있었다(실측: bin/hooks/plugins/k8s-check.sh 를 고치고 push 하면
+      # "건드린 스킬: dotfiles" 한 줄만 뜨고, 그 플러그인을 실제로 검증하는 k8s 스위트의
+      # 서브테스트 12건은 한 번도 돌지 않았다). 이름으로 소유 스위트를 역추적한다.
+      add_skills_testing "${FILE##*/}"
+      ;;
+    stow/* | ansible/* | .github/scripts/*)
+      # git 훅 본체, ansible 롤, CI 게이트 스크립트. 이쪽은 전용 회귀 테스트가 전부
+      # contexts/dotfiles/tests/ 에 모여 있어(test-pre-commit-hook.sh, test-ansible.sh,
+      # test-lint-commit-messages.sh 등) 경로만으로 소유 스위트가 확정된다.
+      # 파일명 역추적을 쓰지 않는 이유는 basename 이 변별력을 잃기 때문이다 —
+      # ansible/roles/*/tasks/main.yml 은 전부 "main.yml", git 훅은 "pre-commit" 처럼
+      # 테스트 본문에 산문으로도 흔히 등장하는 낱말이라 무관한 스위트까지 딸려온다.
       #
       # stow/ 는 예전에 stow/git/.githooks/* 로만 좁혀져 있었다. 그러면 같은 디렉토리의
       # stow/zsh/.zshrc(test-zshrc-activation.sh 가 검증)와 stow 패키지 배치 자체
