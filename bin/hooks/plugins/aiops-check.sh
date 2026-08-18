@@ -75,6 +75,18 @@ check_telemetry_manifests() {
 
   log_info "--- Step: AIOps Telemetry Manifest Validation ---"
 
+  # 위임 대상(validate-telemetry-schema.sh)은 yamllint 가 없으면 YAML 문법 검사 블록을
+  # 통째로 건너뛰는데, 그 사실은 아무 데도 남지 않는다. 게다가 그쪽은 별도 프로세스라
+  # UNAVAILABLE_TOOLS 가 이 프로세스로 전파될 수도 없어서, 아래 main() 의
+  # print_unavailable_tools 는 지금까지 어떤 경우에도 한 줄도 출력할 수 없었다(이 파일
+  # 상단 주석이 선언한 목적이 구조적으로 달성 불가능한 상태였다 — 발동하지 않는 안전장치는
+  # 없는 것과 같다). 여기서 같은 도구의 가용성을 직접 판정해 요약 배너에 싣는다.
+  # 판정만 하고 진행 여부는 바꾸지 않는다: 평문 시크릿 검사(하드 블록)는 grep 만 쓰므로
+  # yamllint 부재로 건너뛰어서는 안 된다.
+  if declare -F has_tool >/dev/null && ! has_tool yamllint; then
+    log_info "[WARNING] yamllint 이 없어 위임 검증의 YAML 문법 검사는 수행되지 않습니다."
+  fi
+
   # 트리거된 경우, 같은 커밋에 함께 스테이징된 yaml/yml/json/tf 전체를 대상으로 삼는다
   # (시크릿이 kind: 매니페스트가 아니라 옆에 딸린 .tf/.json에 있을 수도 있으므로).
   for f in "${staged[@]}"; do

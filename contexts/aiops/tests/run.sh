@@ -156,6 +156,32 @@ EOF
     report "batch-scan-sibling-tf (kind: 파일은 깨끗해도 동반 .tf 시크릿을 함께 잡음)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
   fi
 
+  # Case 5: 위임 대상(validate-telemetry-schema.sh)은 yamllint 가 없으면 YAML 문법 검사를
+  # 조용히 건너뛴다. 그 사실이 출력에 남지 않으면 "검사했는데 깨끗함"과 "검사를 안 함"이
+  # 구분되지 않는다 — 이 저장소가 반복해서 제거해 온 무검증 초록불이다. 게다가 위임 대상은
+  # 별도 프로세스라 UNAVAILABLE_TOOLS 가 이쪽으로 전파될 수 없어서, 플러그인이 로드해 둔
+  # print_unavailable_tools 는 지금까지 어떤 경우에도 한 줄도 출력할 수 없었다(발동하지
+  # 않는 안전장치는 없는 것과 같다).
+  #
+  # QUIET=1(훅·run-suite·CI 의 기본값)로 돌린다. log_info 는 그 값에서 억제되므로, 여기서
+  # 무언가 보이려면 배너가 실제로 발동해야만 한다 — QUIET=0 으로 검사하면 억제 여부를
+  # 함께 확인하지 못해 이 축이 헐거워진다.
+  R5="$PLUGIN_TMP/repo5"
+  mkdir -p "$R5"
+  git -C "$R5" init -q
+  git -C "$R5" config user.email test@example.com
+  git -C "$R5" config user.name Test
+  cp "$FIXTURES/ok-baseline/manifest.yaml" "$R5/manifest.yaml"
+  git -C "$R5" add manifest.yaml
+  status=0
+  # PATH 를 시스템 경로로 좁혀 yamllint 만 사라진 환경을 만든다(mise 설치분이 빠진다).
+  out=$( (cd "$R5" && PATH="/usr/bin:/bin" QUIET=1 bash "$AIOPS_PLUGIN") 2>&1) || status=$?
+  if [ "$status" -eq 0 ] && grep -qF "[WARNING]" <<<"$out" && grep -qF "yamllint" <<<"$out"; then
+    report "unavailable-tool-is-surfaced (yamllint 부재 -> 통과시키되 배너로 드러냄)" 0
+  else
+    report "unavailable-tool-is-surfaced (yamllint 부재 -> 통과시키되 배너로 드러냄)" 1 "기대 exit=0 + yamllint 경고 / 실제 exit=$status out=$out"
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "aiops-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/aiops-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
