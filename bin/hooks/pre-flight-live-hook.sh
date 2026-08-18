@@ -73,8 +73,14 @@ rs="$git_root/bin/hooks/run-suite.sh"
 # 필요 없다. 반면 rs 는 `"$rs" ...` 로 직접 호출하니 -x 여야 한다.
 # 예전엔 pfc 도 -x 였는데, 그러면 루트에 옵트인 스크립트를 실행 권한 없이 둔 저장소에서
 # (심볼릭 링크가 아니라 복사본을 배치한 경우) 이 훅만 조용히 exit 0 했다 — 정작
-# git/.githooks/pre-commit 은 -f 라 같은 저장소를 검증하고 있었고, 아래 주석이 두 로직을
-# "의도적으로 동일하게 맞췄다"고 선언한 것과도 어긋났다(실측 재현).
+# git/.githooks/pre-commit 의 옵트인 분기는 -f 라 같은 저장소를 검증하고 있었고, 아래 주석이
+# 두 로직을 "의도적으로 동일하게 맞췄다"고 선언한 것과도 어긋났다(실측 재현).
+#
+# [정정] 그때 고친 것은 "옵트인 분기" 한쪽뿐이었다. pre-commit 의 상시 대상 분기
+# (~/workspace 하위 또는 dotfiles 자신)는 그대로 -x 로 남아, 같은 불변식이 반대 방향으로
+# 깨져 있었다 — 실행 비트 없는 정본을 두면 커밋 게이트가 경고만 남기고 건너뛰는데
+# fail-open 인 이 훅만 차단해, 하드 게이트와 2차 방어선의 역할이 뒤집혔다(실측 재현).
+# 지금은 양쪽 분기 모두 -f 다. "동일하게"는 이렇게 두 분기를 각각 대조해야 유지된다.
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
   [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"

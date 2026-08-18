@@ -230,6 +230,35 @@ else
   echo "[WARNING] SKIP fail-staged-secret-cleaned-in-worktree / fail-renamed-file-with-secret — trufflehog 또는 openssl 미설치로 시크릿 스캔 회귀 2건이 수행되지 않았습니다"
 fi
 
+# 6. 정본에 실행 비트가 없어도 사전 검증은 수행돼야 한다.
+#
+#    PFC_TARGET 은 직접 실행되지 않고 run-suite.sh 에 인자로 넘어가며, run_script 는
+#    `[ -f "$script" ]` 이면 `bash "$script"` 로 돌리므로 실행 비트가 애초에 필요 없다.
+#    그런데 상시 대상 분기만 -x 로 판정해, 비트가 없으면 이 하드 게이트가 경고 한 줄만
+#    남기고 통째로 빠졌다(core.fileMode=false 환경, 권한 미보존 복사, 심볼릭 링크 대신
+#    복사본 배치에서 발현). 정작 fail-open 으로 설계된 pre-flight-live-hook.sh 는 -f 라
+#    같은 저장소를 차단하고 있어 하드 게이트와 2차 방어선의 역할이 뒤집혔다(실측 재현).
+#    bin/hooks/pre-flight-live-hook.sh 헤더가 "두 판정을 의도적으로 동일하게 맞췄다"고
+#    선언한 불변식이라, 그 선언이 사실로 유지되는지를 여기서 고정한다.
+git -C "$FIXTURE_REPO" reset -q
+cat >"$FIXTURE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "[STUB] pre-flight-check.sh 스텁 실행됨 (실행 비트 없음)"
+exit 0
+EOF
+chmod -x "$FIXTURE_REPO/bin/hooks/pre-flight-check.sh"
+echo "# 실행 비트 없는 정본 케이스" >"$FIXTURE_REPO/trigger.txt"
+git -C "$FIXTURE_REPO" add trigger.txt bin/hooks/pre-flight-check.sh
+status=$(run_hook_allow_fail)
+if [ "$status" -eq 0 ] && grep -qF "[STUB] pre-flight-check.sh 스텁 실행됨" "$TMP/out" &&
+  ! grep -qF "정본을 실행할 수 없어" "$TMP/out"; then
+  report "non-executable-pfc-still-runs (실행 비트 없는 정본도 사전 검증 수행)" 0
+else
+  report "non-executable-pfc-still-runs (실행 비트 없는 정본도 사전 검증 수행)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+git -C "$FIXTURE_REPO" reset -q
+rm -f "$FIXTURE_REPO/trigger.txt"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

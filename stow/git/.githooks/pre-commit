@@ -227,7 +227,20 @@ if [ ! -f "$DOTFILES_PFC" ]; then
 fi
 PFC_TARGET=""
 if [[ "$REPO_ROOT/" == "$HOME/workspace/"* || "$(basename "$REPO_ROOT")" == "dotfiles" ]]; then
-  if [ -x "$DOTFILES_PFC" ]; then
+  # -x 가 아니라 -f 로 본다. PFC_TARGET 은 직접 실행되지 않고 아래에서 "$RUN_SUITE" 에
+  # 인자로 넘어가며, run-suite.sh 의 run_script 는 `[ -f "$script" ]` 이면 `bash "$script"`
+  # 로 돌리므로 실행 비트가 애초에 필요 없다. -x 로 판정하면 비트가 없는 순간 이 하드
+  # 게이트가 통째로 빠진다 — core.fileMode=false 환경, 권한을 보존하지 않는 복사 경로,
+  # 심볼릭 링크 대신 복사본을 배치한 환경에서 실제로 발현한다.
+  #
+  # 이 결함은 옵트인 분기(아래 elif)에서 한 번 고쳐졌는데 이 상시 대상 분기만 -x 로 남아
+  # 있었다. 그래서 bin/hooks/pre-flight-live-hook.sh 헤더가 "두 판정을 의도적으로 동일하게
+  # 맞췄다"고 선언한 불변식이 실제로는 깨져 있었다 — 실측: ~/workspace 하위 저장소에
+  # 실행 비트 없는 정본을 두면 커밋 게이트(이쪽)는 경고만 남기고 건너뛰는데, fail-open 으로
+  # 설계된 2차 방어선(live 훅)만 SC2086 을 잡아 차단했다. 방어선이 뒤집힌 상태였다.
+  # (같은 파일 아래의 RUN_SUITE 는 직접 호출하므로 -x 가 맞다 — 두 판정의 기준이 다른 것은
+  #  의도이며, live 훅도 pfc 는 -f / rs 는 -x 로 같은 구분을 쓴다.)
+  if [ -f "$DOTFILES_PFC" ]; then
     PFC_TARGET="$DOTFILES_PFC"
   else
     # 상시 대상인데 정본 스크립트가 없을 경우 경고 노출
