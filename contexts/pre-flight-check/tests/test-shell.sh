@@ -147,6 +147,49 @@ if [ -x "$PFC" ]; then
     fi
   fi
 
+  # Case 2b: `git mv` 로 옮기면서 함께 고친 파일도 검증 대상이어야 한다.
+  #
+  # git 은 유사도 50% 이상이면 변경을 R(rename)로 판정하는데, 대상 수집이
+  # --diff-filter=ACM 이라 R 이 통째로 빠졌다. 그러면 대상 0건이 되어 게이트가 아무것도
+  # 보지 않고 exit 0 을 낸다 — 출력 한 줄 없는 무검증 통과다(실측: old.sh 를 new.sh 로
+  # 옮기며 SC2086 위반을 추가하니 R091 로 잡혀 통과. 같은 변경을 rename 없이 하면 차단).
+  # 이 저장소도 stow 패키지 이관처럼 파일을 옮긴 커밋이 있었고, 그 커밋들은 이 게이트를
+  # 통과한 게 아니라 거쳐 가지 않았다.
+  if require_tool shellcheck; then
+    SR2B="$PLUGIN_TMP/repo2b"
+    new_repo "$SR2B"
+    # 유사도가 임계값 위로 유지되도록 원본을 충분히 채운다. 전체를 갈아치우면 git 이
+    # D+A 로 분해해 이 사각지대를 재현하지 못한다.
+    {
+      echo '#!/usr/bin/env bash'
+      echo 'set -euo pipefail'
+      for i in $(seq 1 40); do echo "echo \"line $i\""; done
+    } >"$SR2B/old.sh"
+    git -C "$SR2B" add old.sh
+    git -C "$SR2B" -c core.hooksPath=/dev/null commit -q -m "chore: 이름 변경 픽스처"
+    git -C "$SR2B" mv old.sh new.sh
+    # SC2086 위반(따옴표 없는 변수 전개)을 추가한다.
+    # (주석 줄을 그 린터 이름으로 시작하면 지시어로 파싱돼 SC1072/SC1073 으로 죽으므로
+    #  이 줄들은 이름을 문두에 두지 않는다.)
+    # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
+    # shellcheck disable=SC2016 # 픽스처에 리터럴로 써야 하는 문자열이라 전개되면 안 된다
+    printf 'f=$1\necho $f\n' >>"$SR2B/new.sh"
+    git -C "$SR2B" add new.sh
+
+    # 실제로 R 로 잡히는 상태인지 먼저 확인한다. D+A 로 분해됐다면 의도한 사각지대를
+    # 재현하지 못한 것이라, 통과하더라도 이 케이스는 아무것도 지키지 못한다.
+    if git -C "$SR2B" diff --cached --name-status | grep -q '^R'; then
+      status=$(run_pfc "$SR2B")
+      if [ "$status" -eq 1 ] && grep -qF "shellcheck 지적 사항이 발견되어" "$PLUGIN_TMP/out"; then
+        report "renamed-file-is-validated (git mv 한 파일도 검증 대상)" 0
+      else
+        report "renamed-file-is-validated (git mv 한 파일도 검증 대상)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+      fi
+    else
+      report "renamed-file-is-validated (git mv 한 파일도 검증 대상)" 1 "픽스처가 rename(R)으로 잡히지 않아 사각지대를 재현하지 못했습니다"
+    fi
+  fi
+
   # Case 3: explicit 모드의 상대 경로는 "명령을 친 위치" 기준으로 해석되어야 한다.
   # pre-flight-check.sh 는 인자 검증 전에 저장소 루트로 cd 하므로, 그 전의 CWD 를 기억해
   # 두지 않으면 서브디렉토리에서 실행했을 때 같은 이름의 루트 파일이 대신 검증된다.

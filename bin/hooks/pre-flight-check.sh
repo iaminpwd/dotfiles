@@ -265,7 +265,18 @@ main() {
   staged)
     if [ "$GLOBAL_IS_GIT_REPO" -eq 1 ]; then
       GLOBAL_CACHE_ENABLED=1
-      collect_target_files < <(git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null)
+      # --no-renames 필수. git 은 유사도 50% 이상이면 변경을 R(rename)로 판정하는데,
+      # --diff-filter=ACM 에는 R 이 없어 `git mv` 로 옮기면서 함께 고친 파일이 대상 목록에서
+      # 통째로 사라진다 — 커밋 게이트가 아무것도 보지 않고 exit 0 을 낸다(실측: old.sh 를
+      # new.sh 로 옮기며 SC2086 위반을 추가하니 R091 로 잡혀 대상 0건, 출력 한 줄 없이 통과.
+      # 같은 내용 변경을 rename 없이 하면 shellcheck 가 정상 차단). 이 저장소도 stow 패키지
+      # 이관처럼 파일을 옮긴 커밋이 실제로 있었고, 그 커밋들은 게이트를 통과한 게 아니라
+      # 거쳐 가지 않았다.
+      # --no-renames 를 붙이면 rename 이 D(옛 경로) + A(새 경로) 로 분해되어 새 경로가 A 로
+      # 잡힌다. 삭제분은 여전히 ACM 이 걸러 낸다. (--diff-filter 에 R 을 더하는 방법도 있지만,
+      # 그건 `--name-only -z` 가 rename 항목에서 목적지 경로만 내보내는 동작에 기대는 것이라
+      # 분해 방식이 의미가 더 분명하다.)
+      collect_target_files < <(git diff --cached --name-only -z --no-renames --diff-filter=ACM 2>/dev/null)
     else
       # 대상 0건으로 조용히 통과하지 않도록 경고를 남긴다. 파일을 직접 지정하면 검증된다.
       echo "[WARNING] Git 저장소가 아니어서 스테이징 기준 대상이 없습니다. 검증할 경로를 인자로 지정하십시오." >&2
@@ -282,9 +293,11 @@ main() {
         git ls-files -z --others --exclude-standard 2>/dev/null
       )
     else
+      # --no-renames 를 쓰는 이유는 위 staged 분기 주석 참조(rename 이 ACM 에서 통째로
+      # 빠져 무검증 통과가 난다). 스테이징/워킹트리 양쪽 다 같은 함정을 갖는다.
       collect_target_files < <(
-        git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null
-        git diff --name-only -z --diff-filter=ACM 2>/dev/null
+        git diff --cached --name-only -z --no-renames --diff-filter=ACM 2>/dev/null
+        git diff --name-only -z --no-renames --diff-filter=ACM 2>/dev/null
         git ls-files -z --others --exclude-standard 2>/dev/null
       )
     fi

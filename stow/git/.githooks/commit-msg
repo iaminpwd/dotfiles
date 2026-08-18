@@ -104,7 +104,9 @@ if [ -f "$LINT_SCRIPT" ]; then
   STAGED_FILES=()
   while IFS= read -r -d '' STAGED_FILE; do
     STAGED_FILES+=("$STAGED_FILE")
-  done < <(git diff --cached --name-only -z --diff-filter=ACM 2>/dev/null)
+    # --no-renames 를 쓰는 이유는 git/.githooks/pre-commit 의 같은 수집부 주석 참조
+    # (rename 이 --diff-filter=ACM 에서 빠져 목록이 비면 Atomic Commit 분석 대상도 사라진다).
+  done < <(git diff --cached --name-only -z --no-renames --diff-filter=ACM 2>/dev/null)
 
   if [ ${#STAGED_FILES[@]} -gt 0 ]; then
     bash "$LINT_SCRIPT" "${STAGED_FILES[@]}" || true

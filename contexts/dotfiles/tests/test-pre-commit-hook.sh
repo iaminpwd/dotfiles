@@ -186,6 +186,38 @@ if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1
   else
     report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 1 "exit=$status out=$(cat "$TMP/out")"
   fi
+  # 5. [보안] `git mv` 로 옮기면서 시크릿을 넣은 경우도 차단해야 한다.
+  #    git 은 유사도 50% 이상이면 변경을 R(rename)로 판정하는데, 스테이징 목록 수집이
+  #    --diff-filter=ACM 이라 R 이 통째로 빠졌다. 그러면 STAGED_FILES 가 0건이 되어
+  #    trufflehog 스캔이 아예 실행되지 않는다 — 위 4번이 "스캔한 바이트와 커밋될 바이트를
+  #    일치시킨다"고 맞춰 둔 전제가 목록 단계에서 깨져 있었다(실측: rename 커밋에서 훅
+  #    출력이 한 줄도 없었고, 같은 내용 변경을 rename 없이 하면 스캔이 정상 실행됐다).
+  #    유사도가 임계값 위로 유지되도록 원본을 채운 뒤 rename + 키 추가로 재현한다
+  #    (전체를 키로 갈아치우면 유사도가 낮아 git 이 D+A 로 분해해 이 경로를 안 탄다).
+  for i in $(seq 1 200); do echo "filler line $i for rename similarity"; done >"$FIXTURE_REPO/notes.txt"
+  git -C "$FIXTURE_REPO" add notes.txt
+  git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 이름 변경 픽스처 추가"
+  git -C "$FIXTURE_REPO" mv notes.txt notes-renamed.txt
+  openssl genrsa -out "$TMP/rename_key" 2048 2>/dev/null
+  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
+  cat "$TMP/rename_key" >>"$FIXTURE_REPO/notes-renamed.txt"
+  git -C "$FIXTURE_REPO" add -f notes-renamed.txt
+  # 실제로 R 로 잡히는 상태인지 먼저 확인한다. D+A 로 분해됐다면 이 케이스는 의도한
+  # 사각지대를 재현하지 못한 것이므로, 통과하더라도 의미가 없다.
+  if git -C "$FIXTURE_REPO" diff --cached --name-status | grep -q '^R'; then
+    status=$(run_hook_allow_fail)
+    if [ "$status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/out"; then
+      report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 0
+    else
+      report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 1 "exit=$status out=$(cat "$TMP/out")"
+    fi
+  else
+    report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 1 "픽스처가 rename(R)으로 잡히지 않아 사각지대를 재현하지 못했습니다"
+  fi
+  git -C "$FIXTURE_REPO" reset -q
+  rm -f "$FIXTURE_REPO/notes-renamed.txt" "$TMP/rename_key"
+  git -C "$FIXTURE_REPO" checkout -q -- notes.txt 2>/dev/null || true
+
   git -C "$FIXTURE_REPO" reset -q
   rm -f "$FIXTURE_REPO/deploy_key"
 else

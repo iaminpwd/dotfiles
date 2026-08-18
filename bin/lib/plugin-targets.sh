@@ -55,6 +55,8 @@ plugin_target_files() {
   fi
 
   # 인자 없이 직접 호출된 경우: 종전과 동일하게 스테이징 기준으로 폴백한다.
+  # --no-renames 를 쓰는 이유는 pre-flight-check.sh 의 staged 수집부 주석 참조
+  # (rename 이 --diff-filter=ACM 에서 통째로 빠져 대상 0건이 된다).
   [ "${GLOBAL_IS_GIT_REPO:-0}" -eq 1 ] || return 0
-  git diff --cached --name-only -z --diff-filter=ACM -- "$@" 2>/dev/null
+  git diff --cached --name-only -z --no-renames --diff-filter=ACM -- "$@" 2>/dev/null
 }
