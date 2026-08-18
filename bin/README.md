@@ -35,7 +35,7 @@ bin/
 |---|---|---|
 | **`prompt-lint.sh`** | 마크다운 룰북(`AGENTS.md`, `SKILL.md`) 및 프롬프트의 구조, YAML 린트, 필수 태그, `EXCEPTION APPLIED` 마커의 형식 준수 및 완화 대상 룰 실재성을 정적 분석 | `bin/linters/prompt-lint.sh` |
 | **`semantic-commit-lint.sh`** | `feat:`, `fix:`, `docs:` 등 시맨틱 커밋 메시지 컨벤션을 검증하는 `commit-msg` 훅 | `bin/linters/semantic-commit-lint.sh .git/COMMIT_EDITMSG` |
-| **`idempotency-check.sh`** | Ansible 플레이북 재실행 시 변경(changed=0)이 없는지 멱등성 검증 | `bin/linters/idempotency-check.sh` |
+| **`idempotency-check.sh`** | 셸 스크립트를 정적 분석해 가드 없는 append(`>>`/`tee -a`)를 경고 (재실행 시 설정이 중복 증식하는 비멱등 패턴 탐지). 파일 인자를 받으며, 인자가 없으면 아무것도 하지 않음 | `bin/linters/idempotency-check.sh <파일...>` 또는 `just check-idempotency <파일>` |
 | **`container-hardening-gate.sh`** | 컨테이너 이미지 및 Dockerfile non-root/distroless 하드닝 검증 게이트 | `bin/linters/container-hardening-gate.sh` |
 | **`db-sg-checker.sh`** | IaC 코드 내 DB 보안그룹 인바운드 0.0.0.0/0 노출 오구성 검증 | `bin/linters/db-sg-checker.sh` |
 | **`test-coverage-check.sh`** | `bin/` 하위 검사 스크립트가 `contexts/*/tests`에서 최소 1개 이상 회귀 테스트로 참조되는지 게이트 (정적분석이 못 잡는 판정 로직 결함 대비) | `bin/linters/test-coverage-check.sh` |
@@ -49,7 +49,7 @@ bin/
 | **`record-provenance.sh`** | 파일 변경 시 근거 룰북 및 수정 목적 1줄을 `.agent-state/edits.log`에 기록 | `bin/utils/record-provenance.sh <file> <rule_source> <purpose>` |
 | **`merge-agent-hooks.sh`** | Claude Code와 Antigravity의 PostToolUse 훅 설정을 안전하게 병합 | `bin/utils/merge-agent-hooks.sh` |
 | **`stow-backup.sh`** | Stow 심볼릭 링크 생성 전 기존 파일 백업 | `bin/utils/stow-backup.sh` |
-| **`broken-symlink-detector.sh`** | 홈 디렉토리 및 저장소 내 끊긴(Broken) 심볼릭 링크 탐지 | `bin/utils/broken-symlink-detector.sh` |
+| **`broken-symlink-detector.sh`** | 홈 디렉토리(깊이 5)의 끊긴(Broken) 심볼릭 링크 탐지 — **수동 진단 전용**. 어떤 훅·게이트에서도 자동 호출하지 않는다: 판정 대상이 저장소가 아니라 `$HOME` 전체라, 이 저장소와 무관한 링크 하나가 임의 저장소의 커밋을 막게 된다. 스킬 정리(`prune-orphan-skills.sh`) 후 잔재 확인용으로 직접 실행할 것 | `bin/utils/broken-symlink-detector.sh` |
 | **`check-agent-collision.sh`** | AI 에이전트 설정 간 충돌 여부 점검 | `bin/utils/check-agent-collision.sh` |
 
 ---

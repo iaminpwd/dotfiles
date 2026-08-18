@@ -123,9 +123,18 @@ observe_one() {
     [ "$(canon "$got")" = "$want" ] && hits=$((hits + 1))
   done
 
-  # 다수결(최빈값). 동률이면 먼저 관측된 것을 택한다.
+  # 다수결(최빈값). 반드시 canon 으로 정규화한 값 위에서 센다.
+  # 스킬 로드 "순서"는 라우팅 판정과 무관해서 이 스크립트는 이미 canon() 으로 순서를
+  # 지운 뒤 hits 를 세는데, 정작 다수결만 원문 문자열로 투표하고 있었다. 그러면 같은
+  # 집합이 순서만 달라 표가 쪼개진다(실측: k8s,aws / aws,k8s / k8s,aws -> 집합 기준이면
+  # 3표 만장일치인데 원문 기준으로는 2표). 그 결과가 observed.tsv 에 기록되고 run.sh 의
+  # 채점 대상이 되므로, 안정성 통계(hits)와 기록값이 서로 다른 기준을 쓰게 된다.
+  # 동률 처리도 함께 바로잡아 적는다: sort|uniq -c|sort -k1,1nr 는 GNU sort 의 최후 비교가
+  # 줄 전체를 보므로 "먼저 관측된 것"이 아니라 사전순으로 갈린다(실측). canon 이 이미
+  # 값을 정렬해 두므로 동률 시 선택은 사전순으로 결정적이며, 그 사실을 그대로 적는다.
   local majority
-  majority=$(cut -f3 "$WORK/runs.$cid" | sort | uniq -c | sort -k1,1nr | head -1 | sed 's/^ *[0-9]* //')
+  majority=$(cut -f3 "$WORK/runs.$cid" | while IFS= read -r line; do canon "$line"; done |
+    sort | uniq -c | sort -k1,1nr | head -1 | sed 's/^ *[0-9]* //')
   printf '%s\t%s\n' "$cid" "$majority" >"$WORK/res.$cid"
   printf '%s\t%s\t%s\n' "$cid" "$hits" "$REPEATS" >"$WORK/stat.$cid"
 

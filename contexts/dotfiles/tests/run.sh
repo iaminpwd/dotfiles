@@ -14,16 +14,18 @@ export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# [주의] 이 디렉토리의 test-*.sh 는 아래 목록에 빠짐없이 등록돼야 한다. 등록을 빠뜨려도
-# test-coverage-check.sh 의 하드 게이트는 "스크립트 이름이 tests/ 어딘가에 언급되는가"만
-# 보므로 그대로 초록불이 뜬다 — 즉 커버리지 게이트가 누락을 잡아주지 못한다(실측:
+# [주의] 이 디렉토리의 test-*.sh 는 아래 목록에 빠짐없이 등록돼야 한다. 등록 누락은
+# test-coverage-check.sh 의 "회귀 스위트 등록 누락 하드 게이트"가 차단한다 — 파일은 있는데
+# run.sh 목록에 없으면 exit 1 로 이름을 지목한다(실측 확인). 그 게이트는
 # test-pre-flight-live-hook / test-pre-flight-gate-hook 이 등록 누락 상태로 just test /
-# pre-push / CI 어디서도 실행되지 않았는데 커버리지는 통과였다).
-# 대조: bash -c 'for t in contexts/dotfiles/tests/test-*.sh; do grep -q "$(basename "$t" .sh)" contexts/dotfiles/tests/run.sh || echo "미등록: $t"; done'
+# pre-push / CI 어디서도 실행되지 않았던 사고 이후에 추가됐고, 전용 회귀 테스트도 있다
+# (test-test-coverage-check.sh 의 registered-suite-passes / comment-only-mention-blocks 등).
+# 손으로 대조할 필요는 없다.
 #
-# check-symlinks 는 이 목록에 없다(파일 자체는 진단용으로 남겨둠).
+# check-symlinks 는 이 목록에 없다(파일 자체는 진단용으로 남겨둠 — 이름이 test-*.sh 가
+# 아니라 위 등록 게이트의 대상도 아니다).
 # 그 스위트는 broken-symlink-detector.sh 를 인자 없이 불러 개발자의 실제 $HOME 을
-# depth 2 까지 훑는데, dotfiles 와 아무 상관 없는 끊긴 링크 하나만 있어도 exit 1 이라
+# depth 5 까지 훑는데, dotfiles 와 아무 상관 없는 끊긴 링크 하나만 있어도 exit 1 이라
 # 회귀 스위트 전체가(따라서 just test / pre-push / CI 가) 환경 탓으로 실패했다.
 # 판정 로직 자체는 바로 다음의 test-detector-logic 이 격리된 픽스처로 이미 검증한다.
 # 지금 이 머신의 홈 상태를 보고 싶으면 직접 실행할 것:

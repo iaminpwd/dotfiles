@@ -37,7 +37,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 커밋 전 린트 통과 (Pre-Commit Lint):** `030-prompt-engineering-standard.md`의 제약 사항을 자동 검증하기 위해, 변경된 모든 프롬프트 파일은 터미널에서 `prompt-lint.sh` 검증을 반드시 통과할 것. 수동으로 `prompt-lint.sh` 명령어를 실행하여 린트 오류(예: 누락된 `<self_critique>`, 크기 초과, SSOT 목록 불일치)를 사전에 수정할 것. 변경된 스킬의 회귀 테스트는 `pre-commit` 훅이 자동 선택 실행함.
+- **[MUST] 커밋 전 린트 통과 (Pre-Commit Lint):** `030-prompt-engineering-standard.md`의 제약 사항을 자동 검증하기 위해, 변경된 모든 프롬프트 파일은 터미널에서 `prompt-lint.sh` 검증을 반드시 통과할 것. 수동으로 `prompt-lint.sh` 명령어를 실행하여 린트 오류(예: 크기 초과, SSOT 목록 불일치, 깨진 참조 링크, 코드펜스 짝 불일치, 예외 마커 무결성 위반)를 사전에 수정할 것. 변경된 스킬의 회귀 테스트는 `pre-commit` 훅이 자동 선택 실행함.
 - **[MUST] 조항 품질은 사람이 판정:** 조항 리뷰는 사람이 직접 수행할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
