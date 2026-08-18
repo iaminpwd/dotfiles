@@ -29,6 +29,8 @@ references:
 ```bash
 # ~/.zshrc (Git으로 추적됨)
 if [ -f ~/.zshrc.local ]; then
+    # 실행 시점에만 존재하는 로컬 파일이라 정적 추적이 불가능하다
+    # shellcheck source=/dev/null
     source ~/.zshrc.local
 fi
 

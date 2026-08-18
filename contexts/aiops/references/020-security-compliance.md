@@ -26,9 +26,10 @@ DevSecOps 파이프라인 설계, PaC 검증 및 PII 보호 시 적용되는 보
 <examples>
 <example>
 [Good]
-- 런타임 시크릿 로드:
+- 런타임 시크릿 로드 (대입과 export 를 분리해 조회 실패가 드러나게 할 것):
 ```bash
-export DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id prod/db --query SecretString --output text)
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id prod/db --query SecretString --output text)
+export DB_PASSWORD
 ```
 </example>
 <example>

@@ -167,6 +167,25 @@ append_dockerfile_example() {
   } >>"$dir/contexts/demo/references/010-demo-core.md"
 }
 
+# append_bash_example <케이스디렉토리> <라벨> <bash 본문>
+# Dockerfile 헬퍼와 같은 골격이라 언어와 펜스 표기만 다르다.
+append_bash_example() {
+  local dir=$1 label=$2 body=$3
+  {
+    echo
+    echo "### 예시 코드 및 패턴 (Few-Shot Examples)"
+    echo "<examples>"
+    echo "<example>"
+    echo "$label"
+    echo '```bash'
+    echo "$body"
+    echo '```'
+    echo "</example>"
+    echo "</examples>"
+    # idempotency:bypass (케이스마다 새로 만든 디렉토리에 1회 기록)
+  } >>"$dir/contexts/demo/references/010-demo-core.md"
+}
+
 build_base
 
 echo "=== prompt-lint.sh 회귀 테스트 ==="
@@ -670,6 +689,40 @@ CMD ["/bin/true"]'
 USER 65532:65532
 ENTRYPOINT ["/app/server"]'
   check_clean "ok-good-dockerfile-role-tag (역할 태그는 정상)" "$D"
+fi
+
+# 19. [Good] bash 예제도 같은 판정을 받는가.
+#     예전에는 Dockerfile 한 언어만 봤는데, 이 저장소에서 가장 많이 쓰이는 언어는 bash 이고
+#     게이트(shellcheck -x)도 이미 있어 정작 가장 값싼 축이 비어 있었다. 그 사이에 실제로
+#     두 건이 드리프트했다 — aiops/020 의 `export VAR=$(...)`(SC2155: 시크릿 조회 실패를
+#     export 가 삼켜 빈 비밀번호가 전파된다)와 dotfiles/050 의 `source ~/.zshrc.local`(SC1090).
+#     차단·통과 양축과 오탐 축을 함께 고정한다.
+if ! command -v shellcheck >/dev/null 2>&1; then
+  report "[Good] bash 게이트 검사" 1 "shellcheck 미설치 — 'mise install shellcheck' 후 다시 실행하십시오"
+else
+  D=$(new_case fail-good-bash-sc2155)
+  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
+  append_bash_example "$D" "[Good]" 'export DB_PASSWORD=$(get-secret prod/db)'
+  check "fail-good-bash-sc2155 ([Good] 예제가 종료 코드를 삼킴)" 1 "shellcheck 게이트에 걸립니다" "$D"
+
+  D=$(new_case ok-good-bash-split-assign)
+  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
+  append_bash_example "$D" "[Good]" 'DB_PASSWORD=$(get-secret prod/db)
+export DB_PASSWORD'
+  check_clean "ok-good-bash-split-assign (대입과 export 분리는 통과)" "$D"
+
+  # 오탐 회귀 (a): [Bad] 예제는 위반 시연이 목적이라 대상이 아니다.
+  D=$(new_case ok-bad-bash-ignored)
+  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
+  append_bash_example "$D" "[Bad]" 'export DB_PASSWORD=$(get-secret prod/db)'
+  check_clean "ok-bad-bash-ignored ([Bad] 는 대상 아님)" "$D"
+
+  # 오탐 회귀 (b): 셰방 없는 예제가 SC2148 로 무조건 걸리면 모든 예제가 같은 이유로
+  #      막혀 판정이 무의미해진다. 셰방 주입이 실제로 동작하는지 고정한다(위 통과
+  #      케이스들도 셰방이 없지만, 그건 다른 이유로도 통과할 수 있어 이 축을 따로 둔다).
+  D=$(new_case ok-good-bash-no-shebang)
+  append_bash_example "$D" "[Good]" 'echo "hello"'
+  check_clean "ok-good-bash-no-shebang (셰방 없어도 SC2148 로 걸리지 않음)" "$D"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

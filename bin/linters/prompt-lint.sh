@@ -654,27 +654,44 @@ check_dangling_file_references() {
 # 8줄 위의 [MUST] Pinned Versions 가, 비루트는 020 의 [MUST] Non-Root by Default 가
 # 요구하던 것이다. 사람이 두 문서를 나란히 놓고 대조해야만 보이던 종류라 기계로 옮긴다.
 #
-# 검사 축은 둘이다: container-hardening-gate.sh(비루트, trivy DS-0002)와 hadolint(핀
-# 고정, DL3006/DL3007). 위 두 [MUST] 가 각각 이 둘에 대응한다.
+# Dockerfile 검사 축은 둘이다: container-hardening-gate.sh(비루트, trivy DS-0002)와
+# hadolint(핀 고정, DL3006/DL3007). 위 두 [MUST] 가 각각 이 둘에 대응한다.
 #
 # 완결된 예제만 태운다("FROM 이 있는가"). 이 코퍼스에는 USER 지시어 하나만 보여 주는
 # 의도적 부분 스니펫이 있는데, 그건 Dockerfile 로서 미완성인 게 정상이라 게이트에
 # 넣으면 고칠 수 없는 오탐(DL3061 류)이 된다. [Bad] 예제도 당연히 제외한다 — 위반을
 # 시연하는 것이 그 예제의 목적이다.
-check_good_dockerfile_examples() {
-  log_info "--- Step: [Good] Dockerfile 예제의 하드 게이트 준수 ---"
+#
+# [bash 축] 같은 판정을 ```bash [Good] 예제에도 적용한다. 예전에는 Dockerfile 한 언어만
+# 봤는데, 이 저장소에서 가장 많이 쓰이는 언어는 bash 이고 게이트(shellcheck -x)도 이미
+# 갖춰져 있어 정작 가장 값싼 축이 비어 있었다. 그 사이에 실제로 두 건이 드리프트했다:
+#   - aiops/020: `export DB_PASSWORD=$(aws secretsmanager ...)` (SC2155). 린트 지적으로
+#     끝나지 않는다 — export 가 명령의 종료 코드를 삼켜 시크릿 조회 실패가 성공으로 보이고
+#     빈 비밀번호가 그대로 전파된다(실측: `export FOO=$(false)` -> $?=0). 시크릿 관리를
+#     다루는 보안 룰북의 [Good] 예제가 실패를 삼키는 패턴을 시연하고 있었다.
+#   - dotfiles/050: `source ~/.zshrc.local` (SC1090). 저장소의 실제 .zshrc 도 같은 코드지만
+#     .zsh* 라 zsh -n 으로만 검사돼 게이트를 비껴갔다 — 정본이 통과하는 이유가 "코드가
+#     옳아서"가 아니라 "확장자가 달라서"였다.
+# 스캐너를 두 벌 두지 않고 언어 디스패치로 처리한다(같은 파싱을 복제하면 한쪽만 고쳐진다).
+#
+# bash 도 Dockerfile 과 같은 전제를 요구한다: 부분 스니펫이 아니라 그 자체로 유효한
+# 스크립트여야 한다. 셰방이 없으면 주입해 문법 단위로만 판정하고, 문법이 깨진 [Good]
+# 예제는 그것대로 결함이므로 보고한다(부분 스니펫을 보이려면 ```text 로 표기할 것).
+check_good_examples() {
+  log_info "--- Step: [Good] 예제의 하드 게이트 준수 (Dockerfile/bash) ---"
+  # 게이트 부재 판정은 Dockerfile 분기 안에서만 한다. 예전엔 여기서 곧바로 return 했는데,
+  # 그러면 container-hardening-gate.sh 가 없는 환경에서 bash 축까지 함께 사라진다 —
+  # 서로 다른 언어의 검사가 한쪽 도구의 존재에 묶이는 셈이라, 회귀 테스트가 그 축을
+  # 진공에서 통과시킨다(실측: 이 검사를 처음 넣었을 때 bash 케이스 4건이 전부 gate 부재로
+  # 건너뛰어진 채 3건이 "통과"로 집계됐다).
   local gate="$PROMPT_LINT_SCRIPT_DIR/container-hardening-gate.sh"
-  if [ ! -f "$gate" ]; then
-    log_info "[INFO] container-hardening-gate.sh 를 찾지 못해 건너뜁니다."
-    return
-  fi
 
-  local tmpdir md line trimmed label inany indocker buf start lineno n=0 out
+  local tmpdir md line trimmed label inany blocklang buf start lineno n=0 out
   tmpdir=$(mktemp -d)
   while IFS= read -r md; do
     label=""
     inany=0
-    indocker=0
+    blocklang=""
     buf=""
     start=0
     lineno=0
@@ -685,8 +702,36 @@ check_good_dockerfile_examples() {
         case "$trimmed" in
         '```'*)
           inany=0
-          if [ "$indocker" -eq 1 ]; then
-            indocker=0
+          if [ "$blocklang" = "bash" ]; then
+            blocklang=""
+            n=$((n + 1))
+            out="$tmpdir/$n.sh"
+            # 셰방이 없으면 주입한다. shellcheck 는 셰방으로 방언을 정하는데, 룰북 예제는
+            # 대개 명령 몇 줄이라 셰방을 적지 않는다. 없으면 shellcheck 가 SC2148 로
+            # 거절해 모든 예제가 같은 이유로 걸리므로 판정이 무의미해진다.
+            if grep -q '^[[:space:]]*#!' <<<"$buf"; then
+              printf '%s' "$buf" >"$out"
+            else
+              {
+                echo '#!/usr/bin/env bash'
+                printf '%s' "$buf"
+              } >"$out"
+            fi
+            if ! shellcheck -x "$out" >"$tmpdir/sc.$n" 2>&1; then
+              echo "❌ [ERROR] [Good] bash 예제가 shellcheck 게이트에 걸립니다: ${md#"$REPO_ROOT"/}:$start" >&2
+              # 추출된 임시 파일 경로를 원본 위치로 되돌린다(Dockerfile 축과 동일한 관용구).
+              sed -e "s#$out#${md#"$REPO_ROOT"/}:$start#g" -e 's/^/    /' "$tmpdir/sc.$n" >&2
+              echo "    -> 이 예제를 그대로 따르면 커밋이 막힙니다. 예제를 고치거나, 규칙 쪽이 현실과 다르면 규칙을 고치십시오." >&2
+              EXIT_CODE=1
+            fi
+            continue
+          fi
+          if [ "$blocklang" = "dockerfile" ]; then
+            blocklang=""
+            if [ ! -f "$gate" ]; then
+              log_info "[INFO] container-hardening-gate.sh 를 찾지 못해 [Good] Dockerfile 예제 검사를 건너뜁니다."
+              continue
+            fi
             grep -q '^[[:space:]]*FROM[[:space:]]' <<<"$buf" || continue
             n=$((n + 1))
             out="$tmpdir/$n.Dockerfile"
@@ -721,31 +766,37 @@ check_good_dockerfile_examples() {
           continue
           ;;
         esac
-        [ "$indocker" -eq 1 ] && buf="${buf}${line}"$'\n'
+        [ -n "$blocklang" ] && buf="${buf}${line}"$'\n'
         continue
       fi
       case "$trimmed" in
       '```dockerfile'*)
         inany=1
-        indocker=1
+        blocklang="dockerfile"
+        buf=""
+        start=$lineno
+        ;;
+      '```bash'*)
+        inany=1
+        blocklang="bash"
         buf=""
         start=$lineno
         ;;
       '```'*)
         inany=1
-        indocker=0
+        blocklang=""
         ;;
       '[Good]'*) label="Good" ;;
       '[Bad]'*) label="Bad" ;;
       esac
       # 여는 펜스를 만난 시점의 라벨만 유효하다. [Bad] 블록이면 아예 수집하지 않는다.
-      if [ "$indocker" -eq 1 ] && [ "$label" != "Good" ]; then
-        indocker=0
+      if [ -n "$blocklang" ] && [ "$label" != "Good" ]; then
+        blocklang=""
       fi
     done <"$md"
   done < <(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "*.md" -print)
   rm -rf "$tmpdir"
-  log_info "[INFO] [Good] Dockerfile 예제 검사 완료(대상 ${n}건)."
+  log_info "[INFO] [Good] 예제 검사 완료(대상 ${n}건)."
 }
 
 main() {
@@ -763,7 +814,7 @@ main() {
   check_readme_skill_counts
   check_archive_scope_consistency
   check_dangling_file_references
-  check_good_dockerfile_examples
+  check_good_examples
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then
