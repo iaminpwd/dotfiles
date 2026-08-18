@@ -378,7 +378,36 @@ if require_tool helm; then
     else
       report "root-chart-is-linted (루트 배치 차트도 helm lint 대상)" 1 "기대 exit≠0 + Helm lint / 실제 exit=$status out=$out"
     fi
+
     rm -rf "$HELM_TMP"
+
+    # 위 케이스는 staged 모드만 본다. 같은 차트를 explicit 모드(파일 경로 지정)로 넘기면
+    # 대상 목록이 절대경로가 되는데(pre-flight-check.sh 의 parse_target_args), validate_helm
+    # 의 차트 디렉토리 판정은 git ls-files 가 주는 상대경로와 접두사를 맞춰 보는 구조라
+    # 매치가 전부 빗나가 helm lint 가 한 번도 돌지 않은 채 exit 0 이 났다(실측: 같은 차트가
+    # staged 에서는 차단, explicit 에서는 "Step: Helm Chart Validation" 줄조차 없이 통과).
+    # explicit 는 pre-flight-live-hook.sh 가 AI 편집 1회마다 쓰는 경로라, 편집 직후 피드백이
+    # 통째로 비어 있으면서 초록불만 떴다. 두 모드의 판정이 같아야 함을 축으로 고정한다.
+    #
+    # 차트를 반드시 하위 디렉토리에 둔다. 루트 배치(바로 위 케이스)는 dirname 이 "." 라
+    # 비교 접두사가 빈 문자열이 되어 어떤 절대경로와도 매치되므로, 이 결함이 구조적으로
+    # 드러나지 않는다 — 루트 픽스처로 이 케이스를 쓰면 수정을 되돌려도 통과한다(실측).
+    HELM_SUB_TMP=$(mktemp -d)
+    mkdir -p "$HELM_SUB_TMP/charts/sample"
+    cp -r "$HELM_FIXTURES/fail-chart/." "$HELM_SUB_TMP/charts/sample/"
+    git -C "$HELM_SUB_TMP" init -q
+    git -C "$HELM_SUB_TMP" config user.email test@example.com
+    git -C "$HELM_SUB_TMP" config user.name Test
+    git -C "$HELM_SUB_TMP" add -A
+
+    status=0
+    out=$( (cd "$HELM_SUB_TMP" && QUIET=0 bash "$PFC" "$HELM_SUB_TMP/charts/sample/Chart.yaml") 2>&1) || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "Helm lint" <<<"$out"; then
+      report "explicit-mode-chart-is-linted (파일 지정 모드도 staged 와 동일 판정)" 0
+    else
+      report "explicit-mode-chart-is-linted (파일 지정 모드도 staged 와 동일 판정)" 1 "기대 exit≠0 + Helm lint / 실제 exit=$status out=$out"
+    fi
+    rm -rf "$HELM_SUB_TMP"
   fi
 fi
 
@@ -396,6 +425,7 @@ if require_tool conftest; then
   else
     report "fail-pod (hostNetwork 정책 위반 차단)" 1 "기대 exit≠0 + 정책 위반 문구 / 실제 exit=$status"
   fi
+
 fi
 
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.

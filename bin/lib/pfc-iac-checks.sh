@@ -205,6 +205,19 @@ validate_helm() {
     return 0
   fi
 
+  # 비교 기준을 저장소 상대경로 한쪽으로 맞춘다. filter_target_files 는 explicit 모드에서
+  # 절대경로를 돌려주는데(pre-flight-check.sh 의 parse_target_args — 호출 시점 CWD 기준으로
+  # 해석해야 해서 그렇다), 아래 차트 디렉토리 판정은 git ls-files 가 주는 상대경로와
+  # 접두사를 맞춰 보는 구조라 절대경로가 섞이면 어떤 차트도 매치되지 않는다. 그러면
+  # chart_dirs 가 0건이 되어 helm lint 를 한 번도 돌리지 않은 채 조용히 통과한다
+  # (실측: 같은 깨진 차트가 staged/--changed 에서는 exit 1 인데 explicit 에서는 "Step: Helm
+  # Chart Validation" 줄조차 없이 exit 0 — explicit 는 pre-flight-live-hook.sh 가 AI 편집
+  # 1회마다 쓰는 경로다). 이 저장소가 반복해서 제거해 온 무검증 초록불과 같은 클래스다.
+  local hf_idx
+  for hf_idx in "${!helm_changed[@]}"; do
+    helm_changed[hf_idx]="${helm_changed[hf_idx]#"$REPO_ROOT/"}"
+  done
+
   # 변경된 파일들이 속한 차트 디렉토리(Chart.yaml이 있는 저장소 내 위치)를 중복 없이 수집
   local chart_files=() chart_dirs=() cf d found existing
   mapfile -d '' -t chart_files < <(git ls-files -z -- '*Chart.yaml' 2>/dev/null)
