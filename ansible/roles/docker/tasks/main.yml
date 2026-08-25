@@ -120,6 +120,7 @@
       - docker-buildx-plugin
       - docker-compose-plugin
     state: present
+    allowerasing: true
   become: true
   when: ansible_os_family == "RedHat"
 

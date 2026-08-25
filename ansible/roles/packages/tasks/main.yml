@@ -18,6 +18,15 @@
   become: true
   when: ansible_os_family == "Debian"
 
+- name: EPEL 저장소 활성화 (RHEL/Rocky/CentOS)
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Fedora"
+
 - name: OS 패키지 설치 (RedHat 계열)
   ansible.builtin.dnf:
     name:
