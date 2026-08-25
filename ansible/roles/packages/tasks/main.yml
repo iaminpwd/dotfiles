@@ -12,6 +12,7 @@
       - ca-certificates
       - gnupg
       - dnsutils
+      - gawk
     state: present
     update_cache: true
     cache_valid_time: 3600 # 1시간 이내 재실행 시 apt update 스킵
@@ -40,6 +41,7 @@
       - ca-certificates
       - gnupg2
       - bind-utils
+      - gawk
     state: present
   become: true
   when: ansible_os_family == "RedHat"

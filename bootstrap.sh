@@ -67,13 +67,13 @@ fi
 # ansible packages 롤(Docker GPG 검증용)보다 먼저 여기서 확보해둔다.
 if command -v apt-get &>/dev/null; then
   sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg gawk
 elif command -v dnf &>/dev/null; then
   # Fedora 외의 RHEL/Rocky/CentOS 계열은 stow 패키지를 위해 EPEL 저장소가 필요함
   if ! command -v stow &>/dev/null; then
     sudo dnf install -y epel-release 2>/dev/null || true
   fi
-  sudo dnf install -y curl git unzip stow gnupg2
+  sudo dnf install -y curl git unzip stow gnupg2 gawk
 elif command -v brew &>/dev/null; then
   # macOS는 기본 내장 도구 활용, stow/gnupg만 별도 설치
   if ! command -v stow &>/dev/null; then
