@@ -90,6 +90,27 @@ else
   report "fail-shift-not-heredoc (좌시프트를 히어독으로 오인하지 않음)" 1 "이후 라인이 무검사 처리되었습니다"
 fi
 
+# 히어독 시작과 append 리다이렉트가 한 줄에 같이 있는 형태는 dotfiles 의 대표적인 비멱등
+# 패턴인데, 히어독 본문 스킵이 시작 줄까지 삼켜 append 후보 등록 자체가 되지 않아 통째로
+# 면제돼 있었다(실측: 같은 내용을 echo 로 쓰면 경고, 히어독으로 쓰면 무경고).
+# (주석에 검사 대상 리터럴 연산자를 쓰지 않는다 — 이 파일 자신이 검사 대상이라 주석이
+#  그대로 오탐을 만든다. 픽스처와 같은 관례.)
+out=$(bash "$IDEMPOTENCY_SCRIPT" "$IDEMPOTENCY_FIXTURES/fail-heredoc-append.sh" 2>&1 >/dev/null) || true
+if grep -qF "Idempotency check" <<<"$out"; then
+  report "fail-heredoc-append (히어독 시작 줄의 append 도 경고 떠야 함)" 0
+else
+  report "fail-heredoc-append (히어독 시작 줄의 append 도 경고 떠야 함)" 1 "경고가 떠야 하는데 안 떴습니다"
+fi
+
+# 위 케이스의 짝. "히어독 시작 줄이면 무조건 위반"으로 퇴화하면 정상 멱등 코드까지
+# 경고하게 되므로, 가드가 함께 있는 같은 형태는 조용해야 한다.
+out=$(bash "$IDEMPOTENCY_SCRIPT" "$IDEMPOTENCY_FIXTURES/ok-heredoc-append-guarded.sh" 2>&1 >/dev/null) || true
+if grep -qF "Idempotency check" <<<"$out"; then
+  report "ok-heredoc-append-guarded (가드 있는 히어독 append 는 경고 없어야 함)" 1 "경고가 뜨면 안 되는데 떴습니다: $out"
+else
+  report "ok-heredoc-append-guarded (가드 있는 히어독 append 는 경고 없어야 함)" 0
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

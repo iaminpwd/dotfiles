@@ -18,6 +18,7 @@ for FILE in "${FILES[@]}"; do
   awk '
     BEGIN { window_size = 3; in_heredoc = 0 }
     {
+      opened_heredoc = 0
       # heredoc 시작 탐지: <<EOF, <<EOL 뿐 아니라 대시 형식(탭 들여쓰기 허용)과
       # 구분자를 따옴표로 감싼 형식까지 받는다. 이들을 놓치면 히어독 본문을 코드로
       # 오인해 본문 안의 >> 를 멱등성 위반으로 오탐한다(실측 재현).
@@ -39,7 +40,7 @@ for FILE in "${FILES[@]}"; do
         sub(/^-/, "", rest)
         sub(/^["'"'"']/, "", rest)
         sub(/[^A-Z_a-z0-9].*/, "", rest)
-        if (rest != "") { heredoc_end = rest; in_heredoc = 1 }
+        if (rest != "") { heredoc_end = rest; in_heredoc = 1; opened_heredoc = 1 }
       } else if (in_heredoc) {
         # <<- 형식은 종료 구분자 앞의 탭 들여쓰기가 허용되므로 비교 전에 벗겨낸다.
         end_line = $0
@@ -49,7 +50,12 @@ for FILE in "${FILES[@]}"; do
           next
         }
       }
-      if (in_heredoc) next
+      # 건너뛰는 것은 히어독 "본문"뿐이다. 시작 줄 자체는 검사 대상으로 남긴다 —
+      # `cat >> ~/.zshrc <<'"'"'EOF'"'"'` 처럼 append 와 히어독 시작이 한 줄에 있는 형태는
+      # 이 린터가 잡으라고 존재하는 가장 전형적인 비멱등 패턴인데, 예전에는 그 줄이
+      # in_heredoc 표시 직후 여기서 걸러져 append 후보로 등록조차 되지 못했다(실측:
+      # `echo ... >> ~/.zshrc` 는 경고, `cat >> ~/.zshrc <<'"'"'EOF'"'"'` 는 무경고).
+      if (in_heredoc && !opened_heredoc) next
       if ($0 ~ />>|tee -a/) { append_lines[NR] = 1 }
       if ($0 ~ /grep -q|if \[|if test|idempotency:bypass/) { guard_lines[NR] = 1 }
     }
