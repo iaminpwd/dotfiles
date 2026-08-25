@@ -97,6 +97,67 @@ else
   report "claude (재실행해도 훅 중복 누적 없음, 멱등성)" 1 "기대 PostToolUse 2개/Stop 1개 / 실제 ${COUNT}개/${STOP_COUNT}개: $(cat "$CLAUDE_JSON")"
 fi
 
+# -----------------------------------------------------------------------------
+# 실패를 드러내는가 (조용한 미등록 방지)
+# -----------------------------------------------------------------------------
+# 예전에는 네 병합이 각각 `if [ -n "$JQ" ] && "$JQ" empty "$FILE"; then ... fi` 였고
+# else 가 없어서, jq 미해석/손상된 설정 파일이면 아무 출력 없이 exit 0 으로 끝났다.
+# ansible 태스크는 성공으로 보고하고 사용자는 PostToolUse 실시간 검증 훅과 Stop
+# Pre-Flight 게이트가 통째로 없는 상태로 "셋업 완료"를 받는다(실측: rc=0, Stop 0건).
+# 위 6개 케이스는 정상 경로만 보므로 이 무음 경로를 전혀 잡지 못했다.
+
+# 7. 손상된 Claude settings.json 이면 실패로 끝나야 한다.
+BROKEN_HOME="$TMP/broken-claude"
+mkdir -p "$BROKEN_HOME/.claude" "$BROKEN_HOME/.gemini/config"
+printf '{ "hooks": broken,,, }' >"$BROKEN_HOME/.claude/settings.json"
+code=0
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$BROKEN_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null 2>&1 || code=$?
+if [ "$code" -ne 0 ]; then
+  report "broken-claude-settings (손상된 설정은 조용히 넘어가지 않고 실패)" 0
+else
+  report "broken-claude-settings (손상된 설정은 조용히 넘어가지 않고 실패)" 1 "기대 exit!=0 / 실제 exit=$code"
+fi
+
+# 8. 손상된 Gemini hooks.json 이어도 실패해야 하고, 그때 Claude settings.json 은
+#    아직 손대지 않은 상태여야 한다(절반만 병합된 어중간한 상태 금지).
+BROKEN_GEMINI_HOME="$TMP/broken-gemini"
+mkdir -p "$BROKEN_GEMINI_HOME/.claude" "$BROKEN_GEMINI_HOME/.gemini/config"
+printf '{ not json' >"$BROKEN_GEMINI_HOME/.gemini/config/hooks.json"
+echo '{"untouched": true}' >"$BROKEN_GEMINI_HOME/.claude/settings.json"
+code=0
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$BROKEN_GEMINI_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null 2>&1 || code=$?
+if [ "$code" -ne 0 ] && [ "$(cat "$BROKEN_GEMINI_HOME/.claude/settings.json")" = '{"untouched": true}' ]; then
+  report "broken-gemini-hooks (실패 시 Claude 설정을 건드리지 않음)" 0
+else
+  report "broken-gemini-hooks (실패 시 Claude 설정을 건드리지 않음)" 1 \
+    "기대 exit!=0 + settings.json 원형 유지 / 실제 exit=$code, $(cat "$BROKEN_GEMINI_HOME/.claude/settings.json")"
+fi
+
+# 9. jq 를 전혀 해석할 수 없는 환경이면 조용히 통과하지 말고 실패해야 한다.
+#    resolve_jq 는 PATH 다음으로 $HOME/.local/share/mise/installs/jq 를 보므로,
+#    PATH 에서 jq 만 빼고 HOME 도 mise 설치본이 없는 곳으로 두어 양쪽을 막는다.
+#    PATH 를 통째로 비우면 안 된다 — mktemp/readlink 까지 같이 사라져 스크립트가 jq 와
+#    무관한 이유로 죽고, 그러면 수정을 되돌려도 이 케이스가 그대로 통과한다(실측:
+#    빈 PATH 로 짰을 때 원본 코드에서도 PASS 가 나와 판정력이 없었다).
+NOJQ_HOME="$TMP/no-jq"
+NOJQ_BIN="$TMP/no-jq-bin"
+mkdir -p "$NOJQ_HOME" "$NOJQ_BIN"
+for _tool in readlink dirname basename mkdir mktemp mv rm cat find sort tail; do
+  _resolved=$(command -v "$_tool" 2>/dev/null) || continue
+  ln -sf "$_resolved" "$NOJQ_BIN/$_tool"
+done
+unset _tool _resolved
+#    인터프리터도 절대 경로로 부른다. `PATH=... bash ...` 는 그 PATH 로 bash 자신을
+#    찾으므로, 목록에 bash 가 없으면 127(command not found)로 끝나 역시 판정력이 사라진다.
+BASH_ABS=$(command -v bash)
+code=0
+PATH="$NOJQ_BIN" HOME="$NOJQ_HOME" "$BASH_ABS" "$MERGER" "$PLAYBOOK_DIR" >/dev/null 2>&1 || code=$?
+if [ "$code" -ne 0 ]; then
+  report "no-jq (jq 미해석 시 조용히 통과하지 않고 실패)" 0
+else
+  report "no-jq (jq 미해석 시 조용히 통과하지 않고 실패)" 1 "기대 exit!=0 / 실제 exit=$code"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
