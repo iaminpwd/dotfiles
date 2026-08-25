@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # db-sg-checker.sh
 # Terraform 코드를 정적 스캔하여 DB 인바운드 보안 그룹 소스가 Web/WAS로 한정되어 있는지 확인
+# (DB 포트를 직접 지정한 규칙뿐 아니라, 포트 범위·protocol "-1" 로 그 포트를 포함해 여는
+#  상위집합과 IPv6 전체 대역 개방까지 같은 위반으로 본다)
 
 set -euo pipefail
 
@@ -74,6 +76,7 @@ MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print
           line ~ /resource[[:space:]]+"aws_vpc_security_group_ingress_rule"/ ||
           line ~ /resource[[:space:]]+"aws_security_group_rule"/) {
         in_block = 1; depth = 0; has_port = 0; has_open = 0; is_egress = 0
+        from_port = ""; to_port = ""; all_protocol = 0
         block_start = FILENAME ":" FNR
       } else {
         next
@@ -82,7 +85,23 @@ MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print
 
     # 블록 내부 판정
     if (line ~ /(3306|5432)/) has_port = 1
-    if (line ~ /0\.0\.0\.0\/0/) has_open = 1
+
+    # 포트 "리터럴"만 보면 더 심한 위반이 오히려 통과한다. from_port = 0 / to_port = 65535
+    # 처럼 범위로 여는 규칙은 3306·5432 를 포함하는 상위집합인데도 숫자가 안 보여 미탐이었다
+    # (실측: 전 포트를 0.0.0.0/0 에 개방한 ingress 가 exit 0). 범위를 실제로 해석해 판정한다.
+    if (match(line, /from_port[[:space:]]*=[[:space:]]*[0-9]+/)) {
+      num = substr(line, RSTART, RLENGTH); sub(/.*=[[:space:]]*/, "", num); from_port = num + 0
+    }
+    if (match(line, /to_port[[:space:]]*=[[:space:]]*[0-9]+/)) {
+      num = substr(line, RSTART, RLENGTH); sub(/.*=[[:space:]]*/, "", num); to_port = num + 0
+    }
+    # protocol = "-1"(신형 리소스는 ip_protocol)은 "모든 프로토콜·모든 포트"를 뜻하며
+    # from_port/to_port 는 0 으로 적는 것이 관례라 위 범위 판정에도 걸리지 않는다.
+    if (line ~ /(^|[^_a-zA-Z])(ip_)?protocol[[:space:]]*=[[:space:]]*"?-1"?/) all_protocol = 1
+
+    # 개방 대역은 IPv4 뿐 아니라 IPv6 전체 대역(::/0)도 같이 본다. cidr_ipv6 / ipv6_cidr_blocks
+    # 로 여는 쪽만 쓰면 IPv4 리터럴이 없어 통째로 미탐이었다.
+    if (line ~ /0\.0\.0\.0\/0/ || line ~ /::\/0/) has_open = 1
     # aws_security_group_rule 은 type 인자로 방향이 갈리므로 egress 면 대상에서 뺀다.
     if (line ~ /type[[:space:]]*=[[:space:]]*"egress"/) is_egress = 1
 
@@ -92,13 +111,18 @@ MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print
     depth += n_open - n_close
 
     if (depth <= 0) {
+      if (all_protocol) has_port = 1
+      if (from_port != "" && to_port != "") {
+        if (from_port <= 3306 && to_port >= 3306) has_port = 1
+        if (from_port <= 5432 && to_port >= 5432) has_port = 1
+      }
       if (has_port && has_open && !is_egress) print block_start
       in_block = 0
     }
   }
 ' 2>/dev/null || true)
 if [ -n "$MATCHES" ]; then
-  echo "[ERROR] DB 포트(3306/5432)가 0.0.0.0/0으로 열려있습니다. Web/WAS SG로 한정하십시오."
+  echo "[ERROR] DB 포트(3306/5432)가 인터넷 전체(0.0.0.0/0 또는 ::/0)에 열려있습니다. Web/WAS SG로 한정하십시오."
   while IFS= read -r loc; do
     [ -n "$loc" ] && echo "         위반 위치: $loc"
   done <<<"$MATCHES"

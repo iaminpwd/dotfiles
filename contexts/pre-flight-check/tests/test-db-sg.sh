@@ -68,6 +68,27 @@ code=0
 bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/ok-sg-rule-egress" >/dev/null 2>&1 || code=$?
 report "ok-sg-rule-egress (aws_security_group_rule type=egress 는 제외)" "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
 
+# 아래 넷은 "포트 리터럴이 안 보이는" 개방 형태들이다. 예전 판정은 블록 안에서
+# 3306/5432 숫자와 IPv4 전체 대역 리터럴만 찾았기 때문에, DB 포트만 콕 집어 연
+# 규칙보다 오히려 더 심한 위반이 통과했다(실측: 전 포트 개방 exit 0).
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-port-range" >/dev/null 2>&1 || code=$?
+report "fail-port-range (포트 범위로 DB 포트를 포함해 개방)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-all-protocol" >/dev/null 2>&1 || code=$?
+report "fail-all-protocol (모든 프로토콜 개방, 포트 인자는 0)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/fail-ipv6-open" >/dev/null 2>&1 || code=$?
+report "fail-ipv6-open (IPv6 전체 대역 개방)" "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
+
+# 위 fail-port-range 의 짝. 범위 판정이 "범위가 있으면 무조건 위반"으로 퇴화하면
+# DB 포트를 포함하지 않는 정상 웹 SG 까지 막히므로 반대 방향도 함께 고정한다.
+code=0
+bash "$DB_SG_SCRIPT" "$DB_SG_FIXTURES/ok-web-port-range" >/dev/null 2>&1 || code=$?
+report "ok-web-port-range (DB 포트를 포함하지 않는 범위는 오탐 없음)" "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
+
 # -----------------------------------------------------------------------------
 # 저장소 루트 스캔 시 회귀 픽스처 제외 (validate_terraform 의 실제 호출 형태)
 # -----------------------------------------------------------------------------
