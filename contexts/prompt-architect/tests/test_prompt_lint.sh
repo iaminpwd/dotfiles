@@ -300,6 +300,8 @@ EOF
 # 5b. 정상 선언: 실재하는 룰 이름을 개별 열거하면 통과해야 한다(오탐 회귀).
 D=$(new_case ok-exception-marker)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: Caution Over Speed ]**
@@ -310,6 +312,8 @@ check "ok-exception-marker (실재 룰 개별 열거는 통과)" 0 "예외 마�
 # 5c. 범위를 특정하지 않은 블랑켓 선언은 차단해야 한다.
 D=$(new_case fail-exception-blanket)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: 전체 무효화 ]**
@@ -322,6 +326,8 @@ check "fail-exception-blanket (범위 미특정 무효화 차단)" 1 "범위를 
 #     아무 룰도 완화하지 않으면서 완화한 것처럼 보이는 상태가 된다.
 D=$(new_case fail-exception-ghost-rule)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: Exhaustive Review ]**
@@ -340,6 +346,8 @@ check "fail-exception-ghost-rule (실재하지 않는 룰 열거 차단)" 1 "bas
 # 5d2. 마커에 2개 열거 / 불릿은 1개 -> 나머지 하나가 근거 없이 완화된 상태다.
 D=$(new_case fail-exception-marker-without-bullet)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: Caution Over Speed, Deterministic Output ]**
@@ -351,6 +359,8 @@ check "fail-exception-marker-without-bullet (마커에만 있고 근거 불릿 �
 #      5d 와 짝을 이룬다: 이름이 불릿 쪽에서 낡으면 5d 가, 마커 쪽에서 낡으면 이 케이스가 잡는다.
 D=$(new_case fail-exception-marker-ghost-name)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: Nonexistent Ghost Rule ]**
@@ -361,6 +371,8 @@ check "fail-exception-marker-ghost-name (마커 쪽 이름이 낡음)" 1 "근거
 # 5d4. 마커만 있고 근거 불릿이 아예 없음(산문으로만 적음) -> 규정상 무효.
 D=$(new_case fail-exception-no-bullet-at-all)
 write_base_agents "$D"
+# idempotency:bypass — new_case 가 케이스마다 새로 만드는 임시 디렉토리에 픽스처를
+# 조립하는 것이라 재실행 누적이 발생할 수 없다(가드를 넣을 상태 자체가 없다).
 cat >>"$D/contexts/demo/SKILL.md" <<'EOF'
 
 > **[ EXCEPTION APPLIED: Caution Over Speed ]**

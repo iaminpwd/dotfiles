@@ -257,6 +257,38 @@ else
   report "skip-without-warning-prefix-blocks (접두사 없는 SKIP 안내 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 12b. echo+겹따옴표 외의 표기도 잡아야 한다. run-suite.sh 의 압축 필터는 "출력 문자열"만
+#      보므로 printf 로 찍든 홑따옴표를 쓰든 결과는 똑같이 버려진다. 판정을 echo+겹따옴표로
+#      좁히면 게이트가 막으려는 상태를 흔한 표기 두 가지로 그대로 만들 수 있다(실측: 이
+#      게이트를 처음 넣었을 때 두 형태 다 통과했다). 픽스처는 위 12번과 같은 이유로 printf
+#      인자 조립으로 만든다 — 힙독에 그대로 쓰면 이 파일 자신이 스캔 대상이라 자기 픽스처를
+#      실제 위반으로 신고한다.
+for variant in printf-form single-quote-form; do
+  RV="$TMP/repo12-$variant"
+  new_fixture_repo "$RV"
+  cat >"$RV/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# example-check.sh 를 손보면 확인할 것
+for suite in test-skip; do
+  bash "$suite.sh"
+done
+EOF
+  {
+    echo '#!/usr/bin/env bash'
+    if [ "$variant" = "printf-form" ]; then
+      printf 'printf "  %s  some-case (도구 미설치)\\n"\n' "SKIP"
+    else
+      printf "echo '  %s  some-case (도구 미설치)'\n" "SKIP"
+    fi
+  } >"$RV/contexts/fake/tests/test-skip.sh"
+  status=$(run_checker "$RV")
+  if [ "$status" -eq 1 ] && grep -qF "압축 필터" "$TMP/out"; then
+    report "skip-$variant-blocks ($variant 표기도 차단)" 0
+  else
+    report "skip-$variant-blocks ($variant 표기도 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
+  fi
+done
+
 # 13. [WARNING] 로 시작하면 통과해야 한다(오탐 축). 주석에 SKIP 이 스쳐도 마찬가지다 —
 #     스위트 헤더의 "도구 미설치는 SKIP 이 아니라 실패로 처리한다" 같은 문장이 실제로 있다.
 R13="$TMP/repo13"

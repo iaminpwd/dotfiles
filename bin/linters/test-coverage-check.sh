@@ -154,7 +154,17 @@ fi
 # 헤더의 [출력 규약]이 이미 못 박아 뒀다("새 경고를 추가할 때 이 규약을 따를 것"). 문서
 # 규칙으로만 두면 새 SKIP 이 추가될 때마다 조용히 낡으므로 여기서 기계적으로 대조한다.
 #
-# 판정은 오탐 0을 우선해 좁게 잡는다: 줄이 echo 로 시작하고, 출력 문자열이 SKIP 으로
+# [주의] 출력 방식을 echo 하나로 좁히면 안 된다. run-suite.sh 의 압축 필터는 "출력 문자열"만
+# 보므로, printf 로 찍든 홑따옴표를 쓰든 결과는 똑같이 버려진다 — 즉 게이트가 막으려는 상태를
+# 흔한 표기 두 가지로 그대로 만들 수 있다(실측: printf "  SKIP ..." 과 echo '  SKIP ...' 이
+# 동일한 출력을 내는데 echo+겹따옴표만 보던 판정은 둘 다 통과시켰다). 이 저장소는 실제로
+# printf 와 홑따옴표를 곳곳에서 쓴다. 두 출력 명령과 두 따옴표를 모두 받는다.
+#
+# [한계] 문자열 리터럴 안의 SKIP 만 본다. `printf '  %s ...' "SKIP"` 처럼 인자로 조립하는
+# 형태는 잡지 못하는데, 그 형태는 이 게이트의 회귀 테스트가 자기 픽스처를 스스로 신고하지
+# 않으려고 의도적으로 쓰는 관용구이기도 하다(test-test-coverage-check.sh 참조).
+#
+# 판정은 오탐 0을 우선해 좁게 잡는다: 줄이 출력 명령으로 시작하고, 출력 문자열이 SKIP 으로
 # 시작하는 경우만 본다. 주석에 SKIP 이 스쳐 지나가는 줄(스위트 헤더의 "도구 미설치는
 # SKIP 이 아니라 실패로 처리한다" 등)은 구조적으로 배제된다.
 SKIP_NO_PREFIX=()
@@ -162,7 +172,7 @@ while IFS= read -r -d '' tfile; do
   while IFS= read -r hit; do
     [ -n "$hit" ] || continue
     SKIP_NO_PREFIX+=("${tfile#"$REPO_ROOT"/}:${hit%%:*}")
-  done < <(grep -nE '^[[:space:]]*echo[[:space:]]+"[[:space:]]*SKIP' "$tfile" 2>/dev/null || true)
+  done < <(grep -nE "^[[:space:]]*(echo|printf)[[:space:]]+['\"][[:space:]]*SKIP" "$tfile" 2>/dev/null || true)
 done < <(find "$REPO_ROOT/contexts" -path "$REPO_ROOT/contexts/.*" -prune -o -path '*/tests/*' -name '*.sh' -print0 2>/dev/null)
 
 if [ "${#SKIP_NO_PREFIX[@]}" -gt 0 ]; then
