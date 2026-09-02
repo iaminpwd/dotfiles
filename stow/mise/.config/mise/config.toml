@@ -3,45 +3,45 @@
 trivy = "0.74.0"
 conftest = "0.69.0"
 cosign = "3.1.3"
-trufflehog = "3.97.0"
+trufflehog = "3.97.1"
 shellcheck = "0.11.0"
-shfmt = "3.13.1"
+shfmt = "3.14.0"
 # checkov는 aqua 백엔드가 있어 도구명 그대로 선언한다(040-toolchain-management-standard.md §1
 # "Pipx via Mise"). 과거 pipx: 선언이 중복으로 같이 있어 같은 3.3.9를 두 번 설치했고
 # (실측 66M + 187M), `mise which checkov`는 aqua 쪽만 쓰므로 pipx 사본은 전량 사용되지 않았다.
-checkov = "3.3.13"
+checkov = "3.3.16"
 "pipx:yamllint" = "1.38.0"
 # ansible/ansible-lint/yamllint 등 pipx 계열 도구는 aqua 바이너리가 없어 pip 기반 설치가 불가피함.
 # 대신 uv를 설치해두면 mise pipx 백엔드가 자동으로 uvx를 사용해 설치 로그/속도가 개선됨.
-uv = "0.12.5"
+uv = "0.12.9"
 # ansible은 mise 레지스트리에서 uvx=false로 고정돼 있어 uv가 있어도 uvx로 대체되지 않고
 # 반드시 실제 pipx 바이너리를 요구함. 위 uv만으로는 부족해 별도로 설치해둔다.
-pipx = "1.16.7"
+pipx = "1.17.2"
 
 # Container Image Supply Chain (SBOM/Vuln/Layer Analysis)
-syft = "1.51.0"
-grype = "0.117.0"
+syft = "1.51.1"
+grype = "0.118.0"
 dive = "0.13.1"
 
 # Observability
-loki-logcli = "3.7.6"
+loki-logcli = "3.7.7"
 
 
 # IaC & Configuration Management
-terraform = "1.15.9"
+terraform = "1.16.0"
 ansible = "14.3.1"
 "pipx:ansible-lint" = "26.8.0"
-terragrunt = "1.1.3"
+terragrunt = "1.1.4"
 tflint = "0.64.0"
 infracost = "0.10.45"
 terraform-docs = "0.24.0"
 
 # Cloud Services
-awscli = "2.36.29"
+awscli = "2.36.37"
 "pipx:aws-sam-cli" = "1.165.0"
 
 # Kubernetes & Containers
-kubectl = "1.36.4"
+kubectl = "1.37.0"
 kubectx = "0.11.0"
 k9s = "0.51.0"
 helm = "4.2.4"
@@ -59,15 +59,15 @@ k3d = "5.9.0"
 act = "0.2.89"
 
 # Runtimes / Programming Languages
-node = "24.19.0"
+node = "24.20.0"
 python = "3.14.7"
-go = "1.27.0"
+go = "1.27.1"
 
 # CLI Utilities
-gh = "2.98.0"
+gh = "2.99.0"
 fzf = "0.74.3"
 jq = "1.8.2"
 bat = "0.26.1"
-fd = "10.4.2"
+fd = "10.5.0"
 just = "1.58.0"
-helm-diff = "3.15.11"
+helm-diff = "3.15.12"
