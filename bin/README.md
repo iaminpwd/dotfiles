@@ -48,6 +48,7 @@ bin/
 |---|---|---|
 | **`record-provenance.sh`** | 파일 변경 시 근거 룰북 및 수정 목적 1줄을 `.agent-state/edits.log`에 기록 | `bin/utils/record-provenance.sh <file> <rule_source> <purpose>` |
 | **`merge-agent-hooks.sh`** | Claude Code와 Antigravity의 PostToolUse 훅 설정을 안전하게 병합 | `bin/utils/merge-agent-hooks.sh` |
+| **`run-setup.sh`** | 시스템 sudo 정책 변경 없이 Ansible 설치·dry-run 실행 | `bash bin/utils/run-setup.sh --check` |
 | **`stow-backup.sh`** | Stow 심볼릭 링크 생성 전 기존 파일 백업 | `bin/utils/stow-backup.sh` |
 | **`broken-symlink-detector.sh`** | 홈 디렉토리(깊이 5)의 끊긴(Broken) 심볼릭 링크 탐지 — **수동 진단 전용**. 어떤 훅·게이트에서도 자동 호출하지 않는다: 판정 대상이 저장소가 아니라 `$HOME` 전체라, 이 저장소와 무관한 링크 하나가 임의 저장소의 커밋을 막게 된다. 스킬 정리(`prune-orphan-skills.sh`) 후 잔재 확인용으로 직접 실행할 것 | `bin/utils/broken-symlink-detector.sh` |
 | **`check-agent-collision.sh`** | AI 에이전트 설정 간 충돌 여부 점검 | `bin/utils/check-agent-collision.sh` |

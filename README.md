@@ -20,7 +20,7 @@
 ## 핵심 기능
 
 ### 1. Zero-Trust 보안 및 격리
-- **글로벌 `.gitignore_global` 강제 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 원격 저장소로 유출되는 사고를 시스템 전역에서 원천 차단합니다.
+- **글로벌 `.gitignore_global` 적용:** `terraform.tfstate`, `.env`, `.pem` 키가 실수로 추적하는 것을 줄입니다. 이미 추적된 파일이나 강제 추가는 별도 시크릿 검사로 확인합니다.
 - **도구 완전 격리:** `mise` 하나로 런타임/CLI 도구는 물론 Python 기반 도구(`pipx:` 백엔드, 내부적으로 `uv` 사용)까지 시스템 전역을 오염시키지 않고 선언적으로 버전을 관리합니다.
 - **버전 자동 최신화:** `Renovate`(`.github/renovate.json`)가 `mise` 도구·GitHub Actions·Ansible Galaxy 컬렉션의 뒤처진 버전을 주기적으로 스캔해 PR로 자동 제안하므로, 명시적 버전 고정이 시간이 지나며 방치되어 구버전에 고착되는 걸 막습니다.
 - **시크릿 히스토리 차단:** `HIST_IGNORE_SPACE` 설정으로 공백으로 시작하는 커맨드는 터미널 히스토리에 기록되지 않습니다.
@@ -29,7 +29,7 @@
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
 - **정적 분석 및 문법 검증:** `bin/hooks/pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `bin/hooks/plugins/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
 - **의존성 취약점 스캔 (소스 레벨):** `trivy fs --scanners vuln`이 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, 취약점은 경고만 남기고 커밋을 막지는 않습니다. 이미지 레이어 자체의 SBOM/취약점/서명은 커밋이 아니라 릴리즈 단계의 책임이며 `syft`/`grype`/`cosign`이 담당합니다.
-- **FinOps 비용 게이트:** 커밋 전 `infracost breakdown` 결과에서 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
+- **FinOps 비용 게이트:** `RUN_COST_CHECK=true`로 요청한 검사에서 `infracost breakdown` 결과의 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
 - **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `bin/hooks/pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
 - **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하여 커밋 지연을 단축했습니다(직접 재현 실측: DB 캐시 미스 10.56초 → 캐시 적중 1.17초, 약 89% 단축). 파일 대상 수집은 `find` 전체 탐색이 아니라 `git diff --cached`/`git ls-files` 기반이라 `.git/`, `.terraform/` 등은 애초에 스캔 대상에 들어오지 않습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
@@ -40,9 +40,9 @@
 
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
-- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`), Codex 글로벌 룰(`~/.codex/AGENTS.md`)에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
+- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`), Codex 글로벌 룰(`~/.codex/AGENTS.md`)에 심볼릭 링크로 연결됩니다.
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
-- **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이·클로드·Codex 에이전트가 100% 무인식 룰 로딩을 지원합니다.
+- **프로젝트 루트 단독 매핑:** dotfiles 루트의 `AGENTS.md`와 `CLAUDE.md`를 생성하고 저장소 `.gitignore`에서 제외합니다. 다른 프로젝트의 공유 룰 파일은 전역에서 숨기지 않습니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
 - **편집 직후 검사:** 기본 등록하지 않습니다. `merge-agent-hooks.sh` 재실행 시 이전 `pre-flight-live-hook.sh` 등록만 제거하고 사용자 훅과 편집 이력 기록은 유지합니다.
 - **변경 감지 기반 종료 검사:** Claude Code `Stop` 훅은 마지막 성공 검사 이후 변경 내용·검증기가 달라진 경우에만 실행합니다. tracked diff와 untracked 내용을 비교하고, 실패·검사 중 변경·검사 경고는 캐시하지 않습니다. 성공 상태는 Git 메타데이터의 `pre-flight-stop-success`에 저장하며, 전체 회귀 스위트는 이 훅에서 실행하지 않습니다.
@@ -320,3 +320,69 @@ src
 종료 훅은 `[ADVISORY]`로 분류한 단순 권고가 있어도 성공 캐시를 재사용합니다. 검사 누락이나 분류되지 않은 경고는 재검사합니다.
 
 검증 CI는 `.github/scripts/ci-tool-config.py`가 정본 mise 설정에서 검사·테스트용 도구만 추출해 설치합니다. 기본 검사기는 저장소 내부 경로를 우선 사용하며, CI에서 필수 검사기가 누락되면 실패합니다.
+
+## 작업 환경 복구와 업데이트
+
+이 저장소는 추적한 설정과 도구를 재설치합니다. 인증 정보, `.local` 파일 내용,
+작업 저장소의 미커밋 변경, Docker 볼륨과 데이터베이스 데이터는 별도 백업 대상입니다.
+
+### 새 PC에서 복구
+
+1. 저장소를 최종 위치에 복제한 뒤 `./bootstrap.sh`를 실행합니다. 링크가 원본을
+   가리키므로 설치 후 저장소를 이동했다면 새 위치에서 다시 실행합니다.
+2. `.gitconfig.local`의 사용자 정보와 필요한 `.zshrc.local` 내용을 개인 백업에서
+   복원합니다. 시크릿 백업은 암호화된 저장소에 보관하며 Git에 추가하지 않습니다.
+   `.zshrc.local` 권한은 `chmod 600 ~/.zshrc.local`로 제한합니다.
+3. GitHub·AWS·기타 서비스는 필요한 계정으로 다시 인증합니다. macOS 컨테이너
+   런타임과 IDE 등 자동 설치에 포함되지 않은 앱도 복원합니다.
+4. `exec zsh` 후 `bash .github/scripts/verify-bootstrap-env.sh`로 설치 상태를 확인합니다.
+   이 검사는 실제 에이전트의 스킬 선택이나 인증 성공을 보장하지 않습니다.
+
+### 기존 PC 업데이트
+
+변경을 검토한 뒤 저장소를 갱신하고 `./bootstrap.sh`를 실행하면 도구와 링크를
+재적용합니다. Zsh 본체·플러그인은 고정된 선언 버전으로 갱신되며, 해당 체크아웃에
+직접 수정한 파일이 있다면 강제 삭제하지 않고 Ansible이 충돌을 보고합니다.
+개인 커스터마이징은 `.zshrc.local` 또는 별도 플러그인으로 분리합니다.
+
+이미 도구가 설치됐다면 아래처럼 필요한 역할만 적용할 수 있습니다.
+
+```bash
+bash bin/utils/run-setup.sh --check --tags stow,ai
+bash bin/utils/run-setup.sh --tags stow,ai
+```
+
+`mise install`은 선언된 전체 도구를 설치합니다. 도구를 삭제하거나 새 설치 프로필을
+추가할 때는 실제 사용 여부와 검사 의존성을 먼저 확인합니다.
+
+### 기존 파일과 권한 정책
+
+설치 충돌 백업은 원래 파일 옆의 `.backup.<시각>` 또는 `.bak.*`에 있습니다.
+복원 전 현재 링크와 백업 대상을 확인하고, 필요한 파일 하나씩 복원합니다.
+훅 설정 백업에는 개인 설정이 포함될 수 있으므로 공유 저장소에 넣지 않습니다.
+
+bootstrap은 시스템 sudo 구현이나 sudoers 정책을 변경하지 않습니다. 일반 터미널의
+Ansible 실행은 시작 시 become 비밀번호를 요청합니다. 비대화형 환경에는 미리 준비된
+권한 설정이 필요하며, 권한이 없으면 실패합니다. sudo-rs와 classic sudo가 함께 있으면
+이번 Ansible 실행에만 classic sudo를 사용합니다. 다른 실행 파일은
+`ANSIBLE_BECOME_EXE`로 지정할 수 있습니다.
+
+이전 bootstrap이 만든 `/etc/sudoers.d/99-dotfiles-<사용자>-shared-timestamp`는
+자동 삭제하지 않습니다. 원복하려면 관리자 세션에서 해당 파일이 이 저장소가 만든
+`Defaults:<사용자> !tty_tickets`만 담고 있는지 확인하고 백업한 뒤 제거하고,
+`sudo visudo -c`로 전체 설정을 검사합니다. 기존 sudo 구현 전환도 배포판의
+대체 실행 파일 설정을 확인한 뒤 별도로 원복합니다.
+
+### Git·AI 설정의 공유 범위
+
+전역 ignore는 시크릿·캐시·개인 설정을 제외합니다. `.terraform.lock.hcl`,
+`AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, `.agents/skills/`는 팀과 공유할 수 있습니다.
+이 저장소가 생성하는 루트 룰 링크는 저장소의 `.gitignore`에서만 제외합니다.
+다른 프로젝트의 개인용 링크는 그 프로젝트의 `.git/info/exclude`에 등록합니다.
+
+전역 Git 훅은 모든 저장소에 적용됩니다. 프로젝트가 별도 훅 시스템을 사용하면
+그 프로젝트의 `core.hooksPath` 설정과 통합 여부를 확인합니다. 이 저장소 전용
+검사는 현재 저장소와 실행 스크립트 원본의 실제 경로를 비교해 판정합니다.
+디렉토리 이름을 바꾸거나 심볼릭 링크를 통해 실행해도 같은 원본을 식별합니다.
+
+라우팅 정답지 검사는 무료이며 `bash contexts/prompt-architect/evals/routing/run.sh --check-cases-only`로 실행합니다. 실제 모델 측정은 별도 요청이 있을 때만 실행합니다.

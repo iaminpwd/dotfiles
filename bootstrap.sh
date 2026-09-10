@@ -8,57 +8,8 @@ export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 0. sudo 인증 티켓을 스크립트 맨 앞에서 계정 전체로 공유되게 만들어(!tty_tickets)
-# 뒷단(ansible)에서 다시 묻지 않게 한다. ansible-core 2.19+가 become(sudo) 워커를
-# setsid()로 분리된 세션에서 실행하면서(ansible/ansible#86149, #85536 — 의도된 사양
-# 변경) 기본 정책(tty_tickets)상 그 세션이 이 티켓을 못 보고 "sudo: a password is
-# required"로 실패하는 실제 재현된 버그를 막는다. 비밀번호를 캡처해 재사용하는
-# 대신(노출 구간 생김) sudo 자체 캐시 범위를 넓히는 방식이며, Homebrew install.sh와
-# 동일하게 sudo -v를 한 번만 받는다. 이미 티켓이 있는지 미리 걸러내지 않는 이유:
-# 걸러내면 아래 sudo-rs 전환·드롭인 설치가 스킵돼 이 블록이 막으려는 문제가 그대로
-# 재현되는데, sudo -v는 티켓이 유효해도 프롬프트 없이 갱신만 하는 멱등 호출이라
-# 무조건 호출해도 안전하다.
-if command -v apt-get &>/dev/null || command -v dnf &>/dev/null; then
-  sudo -v
-
-  # Ubuntu가 기본 sudo를 sudo-rs(Rust 재구현)로 넘기는 과도기라 이 계정에서 활성화돼
-  # 있을 수 있다. sudo-rs는 -S(stdin) 비밀번호 프롬프트를 "[sudo: <prompt>] Password:"로
-  # 감싸는데, Ansible sudo become 플러그인은 자신이 -p로 넘긴 문자열이 줄 맨 앞에 그대로
-  # 나오길 기대해 이를 인식 못 하고 "Timed out waiting for become success..."로 멈춘다
-  # (실제 재현된 버그, ansible/ansible#85837). classic sudo(sudo.ws)는 래핑 없이 그대로
-  # 출력하므로, sudo-rs가 활성 상태고 sudo.ws가 같이 설치돼 있으면(Ubuntu 전환기 동안
-  # 둘 다 패키지로 제공) 자동 전환해둔다.
-  if sudo --version 2>/dev/null | grep -qi 'sudo-rs' && [ -x /usr/bin/sudo.ws ]; then
-    sudo update-alternatives --set sudo /usr/bin/sudo.ws >/dev/null
-    echo "✅ sudo-rs → classic sudo(sudo.ws)로 전환했습니다 (Ansible become 프롬프트 호환성 문제 회피, ansible/ansible#85837)."
-  fi
-
-  SUDOERS_DROPIN="/etc/sudoers.d/99-dotfiles-$(whoami)-shared-timestamp"
-  if [ ! -f "$SUDOERS_DROPIN" ]; then
-    if sudo --version 2>/dev/null | grep -qi 'sudo-rs'; then
-      # classic sudo 전환 시도 후에도 여전히 sudo-rs라면(sudo.ws가 없는 배포판 등)
-      # 사용자별(Defaults:user) 항목 자체를 아직 지원하지 않아(trifectatechfoundation/
-      # sudo-rs FAQ) 이 드롭인을 설치할 수 없으므로 실패가 뻔한 visudo 호출 없이 바로
-      # 건너뛴다. Justfile의 setup/setup-dryrun이 드롭인 파일 유무를 보고
-      # --ask-become-pass로 미리 물어보도록 처리돼 있어 Ansible 단계 도중 예고 없이
-      # 끊기진 않는다(단, 위 프롬프트 래핑 버그 자체는 --ask-become-pass로도 우회 안 돼
-      # classic sudo 전환이 유일한 해결책).
-      echo "ℹ️ sudo-rs 환경이라 세션 간 sudo 티켓 공유는 지원되지 않습니다 — 건너뜁니다. Ansible 단계 시작 시 비밀번호를 한 번 더 입력하게 됩니다."
-    else
-      TMP_SUDOERS=$(mktemp)
-      echo "Defaults:$(whoami) !tty_tickets" >"$TMP_SUDOERS"
-      # visudo -c로 문법을 먼저 검증하지 않고 /etc/sudoers.d/에 바로 설치하면, 오타 하나로
-      # 시스템 전체의 sudo가 깨질 위험이 있다(하드 블록해야 하는 이유).
-      if sudo visudo -cf "$TMP_SUDOERS" >/dev/null 2>&1; then
-        sudo install -m 0440 -o root -g root "$TMP_SUDOERS" "$SUDOERS_DROPIN"
-        echo "✅ sudo 인증 티켓이 이 계정 전체에서 공유되도록 설정했습니다 ($SUDOERS_DROPIN)."
-      else
-        echo "⚠️ sudoers 드롭인 문법 검증 실패 — 자동 설정을 건너뜁니다. 뒤에서 Ansible 단계가 비밀번호를 다시 요구할 수 있습니다." >&2
-      fi
-      rm -f "$TMP_SUDOERS"
-    fi
-  fi
-fi
+# sudo 정책과 시스템 대체 실행 파일은 변경하지 않는다.
+# Ansible의 sudo 호환성은 run-setup.sh가 해당 실행에만 적용한다.
 
 # 1. OS 패키지 매니저 판별
 # stow는 ansible의 packages 역할이 나중에 다시 설치하지만(멱등), mise config.toml을
@@ -178,17 +129,22 @@ fi
 if [ ! -f "$HOME/.zshrc.local" ]; then
   echo ""
   echo "🔒 시크릿 환경 변수 관리를 위한 ~/.zshrc.local 파일을 생성합니다."
-  cat >"$HOME/.zshrc.local" <<EOF
+  (
+    umask 077
+    cat >"$HOME/.zshrc.local" <<EOF
 # 로컬 전용 시크릿 환경 변수 및 오버라이드 설정
 # 이 파일은 Git에 커밋되지 않아야 합니다. (.gitignore 규칙 확인)
 
 # export GITHUB_TOKEN="your_token_here"
 # export OPENAI_API_KEY="your_api_key_here"
 EOF
+  )
   echo "✅ ~/.zshrc.local 생성 완료. (이 파일에 필요한 시크릿 값을 추가하세요)"
 else
   echo "✅ ~/.zshrc.local 이 이미 존재합니다."
 fi
+
+chmod 600 "$HOME/.zshrc.local"
 
 # 3. Infracost 설정 연동 가이드
 if [ -x "$HOME/.local/bin/mise" ]; then
@@ -227,6 +183,7 @@ if [ -x "$HOME/.local/bin/mise" ]; then
 fi
 
 echo "========================================================="
+bash "$SCRIPT_DIR/.github/scripts/verify-bootstrap-env.sh"
 echo "✅ Bootstrap 및 전체 환경 셋업(Ansible & mise)이 성공적으로 완료되었습니다!"
 echo "💡 변경된 환경 변수 및 쉘 환경을 적용하려면 'exec zsh' 를 실행하세요."
 # ansible docker 롤의 안내 태스크는 다른 롤들 출력에 파묻혀 놓치기 쉬우므로,

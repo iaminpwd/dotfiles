@@ -1,162 +1,88 @@
 #!/usr/bin/env bash
-# test-verify-bootstrap-env.sh
-#
-# .github/scripts/verify-bootstrap-env.sh 는 ci.yml 의 bootstrap-smoke job 이
-# "bootstrap.sh 가 exit 0 으로 끝났다"를 넘어 README 가 약속한 실제 환경 상태(도구 설치,
-# stow 심볼릭 링크, AI 룰/스킬 주입)까지 확인하는 유일한 지점이다. 그런데 이 스크립트는
-# test-coverage-check.sh 의 스캔 범위(bin/, stow/git/.githooks/) 밖에 있어 회귀 테스트가
-# 없었다.
-#
-# 이런 "존재를 단언하는" 검증 스크립트의 가장 위험한 고장 방식은 조건을 조용히 잃어버려
-# 무엇이 없어도 통과하는 것이다(무검증 통과). 그래서 이 스위트는 통과 경로 하나와
-# "필요한 것이 하나씩 빠졌을 때 반드시 실패하는가"를 항목별로 고정한다.
-#
-# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-verify-bootstrap-env.sh
-
+# 원본과 설치 상태가 다르면 검증기가 실패하는지 격리된 홈에서 확인한다.
 set -euo pipefail
-export QUIET=0
-
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-SUT="$REPO_ROOT/.github/scripts/verify-bootstrap-env.sh"
-
-PASS_COUNT=0
-FAIL_COUNT=0
-
-report() {
-  local name=$1 ok=$2 detail=${3:-}
-  if [ "$ok" -eq 0 ]; then
-    echo "  PASS  $name"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo "  FAIL  $name"
-    [ -n "$detail" ] && echo "        $detail"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-
-# bootstrap.sh 가 만들어 놓았어야 할 홈 디렉토리 상태를 통째로 재현한다.
-# mise 는 스텁으로 대체한다. SUT 가 PATH 앞단에 $HOME/.local/bin 을 넣으므로 그 자리에
-# 두면 실제 mise 대신 이 스텁이 잡힌다(테스트가 실제 개발 머신 상태에 좌우되지 않게 함).
-build_home() {
-  local home=$1
-  rm -rf "$home"
-  mkdir -p "$home/.local/bin" "$home/.local/share/mise/shims" \
-    "$home/.config/mise" "$home/.gemini/config/skills/aws" "$home/.claude/skills/aws" \
-    "$home/src"
-
-  cat >"$home/.local/bin/mise" <<'EOF'
-#!/usr/bin/env bash
-# `mise which <tool>` 만 흉내내는 스텁
-[ "${1:-}" = "which" ] && exit 0
-exit 0
-EOF
-  chmod +x "$home/.local/bin/mise"
-
-  # 링크 대상 실체 파일들(내용이 있어야 -s 검사를 통과한다)
-  local f
-  for f in zshrc gitconfig vimrc tflint.hcl mise-config AGENTS.md CLAUDE.md; do
-    echo "content" >"$home/src/$f"
-  done
-
-  ln -sf "$home/src/zshrc" "$home/.zshrc"
-  ln -sf "$home/src/gitconfig" "$home/.gitconfig"
-  ln -sf "$home/src/vimrc" "$home/.vimrc"
-  ln -sf "$home/src/tflint.hcl" "$home/.tflint.hcl"
-  ln -sf "$home/src/mise-config" "$home/.config/mise/config.toml"
-  ln -sf "$home/src/AGENTS.md" "$home/.gemini/config/AGENTS.md"
-  ln -sf "$home/src/CLAUDE.md" "$home/.claude/CLAUDE.md"
-  # 스킬 레지스트리는 "비어 있지 않음"만 검사하므로 더미 항목 하나면 충분하다.
-  echo "x" >"$home/.gemini/config/skills/aws/SKILL.md"
-  echo "x" >"$home/.claude/skills/aws/SKILL.md"
-}
-
-run_sut() {
-  local home=$1 status=0
-  HOME="$home" bash "$SUT" >"$TMP/out" 2>&1 || status=$?
-  echo "$status"
-}
-
-echo "=== verify-bootstrap-env.sh (bootstrap 성공 기준 검증) 회귀 테스트 ==="
-
+PYTHON=$(mise which python3)
 FAKE="$TMP/home"
+REPO="$TMP/source"
+mkdir -p "$REPO/.github/scripts"
+cp "$ROOT/.github/scripts/verify-bootstrap-env.sh" "$REPO/.github/scripts/"
 
-# 1. 모든 조건이 갖춰지면 통과해야 한다(오탐 방지 기준선).
-build_home "$FAKE"
-status=$(run_sut "$FAKE")
-if [ "$status" -eq 0 ]; then
-  report "pass-complete-env (완비된 환경은 통과)" 0
-else
-  report "pass-complete-env (완비된 환경은 통과)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 2. stow 심볼릭 링크가 하나라도 없으면 반드시 실패해야 한다.
-#    (조건을 조용히 잃어버려 통과시키는 무검증 통과 방지)
-for missing in .zshrc .gitconfig .vimrc .tflint.hcl .config/mise/config.toml; do
-  build_home "$FAKE"
-  rm -f "$FAKE/$missing"
-  status=$(run_sut "$FAKE")
-  if [ "$status" -ne 0 ]; then
-    report "fail-missing-symlink ($missing 누락 시 차단)" 0
+build_home() {
+  "$PYTHON" - "$REPO" "$FAKE" "$PYTHON" <<'PY'
+import json
+from pathlib import Path
+import shutil
+import sys
+r, h = map(Path, sys.argv[1:3])
+shutil.rmtree(h, ignore_errors=True)
+h.mkdir()
+for rel in ['stow/zsh/.zshrc', 'contexts/base.AGENTS.md', 'contexts/dotfiles/SKILL.md',
+            'contexts/aws/SKILL.md', 'contexts/k8s/SKILL.md',
+            'contexts/aws/references/core.md', 'bin/hooks/agent-edits-hook.sh',
+            'bin/hooks/pre-flight-gate-hook.sh']:
+    p = r / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text('fixture\n')
+    if p.suffix == '.sh':
+        p.chmod(0o755)
+def link(target, source):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.unlink(missing_ok=True)
+    target.symlink_to(source)
+link(h / '.zshrc', r / 'stow/zsh/.zshrc')
+for parent, name in [('.gemini/config', 'AGENTS.md'), ('.claude', 'CLAUDE.md'), ('.codex', 'AGENTS.md')]:
+    link(h / parent / name, r / 'contexts/base.AGENTS.md')
+for skill in ['aws', 'k8s']:
+    for parent in ['.gemini/config', '.claude', '.agents']:
+        link(h / parent / 'skills' / skill / 'SKILL.md', r / 'contexts' / skill / 'SKILL.md')
+        if skill == 'aws':
+            link(h / parent / 'skills' / skill / 'references', r / 'contexts/aws/references')
+for name in ['AGENTS.md', 'CLAUDE.md']:
+    link(r / name, r / 'contexts/dotfiles/SKILL.md')
+for name in ['agent-edits-hook.sh', 'pre-flight-gate-hook.sh']:
+    link(h / '.local/bin' / name, r / 'bin/hooks' / name)
+link(h / '.local/bin/python3', Path(sys.argv[3]))
+p = h / '.local/bin/mise'
+p.write_text('#!/bin/sh\nexit 0\n')
+p.chmod(0o755)
+p = h / '.zshrc.local'
+p.write_text('# fixture\n')
+p.chmod(0o600)
+def group(name):
+    return [{'hooks': [{'command': str(r / 'bin/hooks' / name)}]}]
+(h / '.claude/settings.json').write_text(json.dumps({'hooks': {
+    'PostToolUse': group('agent-edits-hook.sh'), 'Stop': group('pre-flight-gate-hook.sh')}}))
+(h / '.gemini/config/hooks.json').write_text(json.dumps({'agent-edits-log': {
+    'PostToolUse': group('agent-edits-hook.sh')}}))
+PY
+}
+run_sut() {
+  HOME="$FAKE" bash "$REPO/.github/scripts/verify-bootstrap-env.sh" >"$TMP/out" 2>&1
+}
+failures=0
+for case in complete wrong-link missing-rule missing-skill missing-asset missing-script missing-hook unsafe-mode missing-tool; do
+  build_home
+  case "$case" in
+  wrong-link) ln -sf "$REPO/contexts/base.AGENTS.md" "$FAKE/.zshrc" ;;
+  missing-rule) rm "$FAKE/.codex/AGENTS.md" ;;
+  missing-skill) rm "$FAKE/.agents/skills/k8s/SKILL.md" ;;
+  missing-asset) rm "$FAKE/.claude/skills/aws/references" ;;
+  missing-script) rm "$FAKE/.local/bin/agent-edits-hook.sh" ;;
+  missing-hook) echo '{}' >"$FAKE/.claude/settings.json" ;;
+  unsafe-mode) chmod 644 "$FAKE/.zshrc.local" ;;
+  missing-tool) printf '#!/bin/sh\nexit 1\n' >"$FAKE/.local/bin/mise" ;;
+  esac
+  rc=0
+  run_sut || rc=$?
+  if { [ "$case" = complete ] && [ "$rc" = 0 ]; } || { [ "$case" != complete ] && [ "$rc" != 0 ]; }; then
+    echo "PASS: $case"
   else
-    report "fail-missing-symlink ($missing 누락 시 차단)" 1 "exit=$status"
+    echo "FAIL: $case"
+    cat "$TMP/out"
+    failures=$((failures + 1))
   fi
 done
-
-# 3. AI 글로벌 룰 링크가 없으면 실패해야 한다.
-for missing in .gemini/config/AGENTS.md .claude/CLAUDE.md; do
-  build_home "$FAKE"
-  rm -f "$FAKE/$missing"
-  status=$(run_sut "$FAKE")
-  if [ "$status" -ne 0 ]; then
-    report "fail-missing-ai-rule ($missing 누락 시 차단)" 0
-  else
-    report "fail-missing-ai-rule ($missing 누락 시 차단)" 1 "exit=$status"
-  fi
-done
-
-# 4. 링크는 있는데 내용이 비어 있으면(끊긴 링크·빈 파일) 실패해야 한다.
-#    링크 존재만 보고 통과시키면 "주입은 됐는데 내용이 없는" 상태를 놓친다.
-build_home "$FAKE"
-: >"$FAKE/src/AGENTS.md"
-status=$(run_sut "$FAKE")
-if [ "$status" -ne 0 ]; then
-  report "fail-empty-rule-content (AGENTS.md 내용이 비면 차단)" 0
-else
-  report "fail-empty-rule-content (AGENTS.md 내용이 비면 차단)" 1 "exit=$status"
-fi
-
-# 5. 스킬 레지스트리가 비어 있으면 실패해야 한다.
-for skills in .gemini/config/skills .claude/skills; do
-  build_home "$FAKE"
-  rm -rf "${FAKE:?}/$skills"
-  mkdir -p "$FAKE/$skills"
-  status=$(run_sut "$FAKE")
-  if [ "$status" -ne 0 ]; then
-    report "fail-empty-skill-registry ($skills 비면 차단)" 0
-  else
-    report "fail-empty-skill-registry ($skills 비면 차단)" 1 "exit=$status"
-  fi
-done
-
-# 6. mise 도구 조회가 실패하면(도구 미설치) 실패해야 한다.
-build_home "$FAKE"
-cat >"$FAKE/.local/bin/mise" <<'EOF'
-#!/usr/bin/env bash
-exit 1
-EOF
-chmod +x "$FAKE/.local/bin/mise"
-status=$(run_sut "$FAKE")
-if [ "$status" -ne 0 ]; then
-  report "fail-tool-missing (mise which 실패 시 차단)" 0
-else
-  report "fail-tool-missing (mise which 실패 시 차단)" 1 "exit=$status"
-fi
-
-TOTAL=$((PASS_COUNT + FAIL_COUNT))
-echo
-echo "$PASS_COUNT/$TOTAL 통과"
-[ "$FAIL_COUNT" -eq 0 ] || exit 1
+[ "$failures" = 0 ]
