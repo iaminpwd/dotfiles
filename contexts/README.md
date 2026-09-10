@@ -1,301 +1,39 @@
-# Agentic Workflow & Prompt Architecture
+# 프롬프트와 검증 자산
 
-> [!WARNING]
-> **Workspace Status Note**
-> 현재 **AWS(`aws/`)**, 그리고 **Dotfiles(`dotfiles/`)** 워크스페이스의 프롬프트 세트는 최적화 및 튜닝이 완전히 끝난 🟢 **프로덕션(Production) 레벨**입니다.
-> (그 외 K8s, AIOps, Containers, Observability, Drawio-gen은 현재 🟡 **Draft** 상태로 튜닝 진행 중입니다.)
-> **Azure · Multi-Cloud · OpenStack**은 현재 사용하지 않아 워킹 트리에서 지웠습니다(룰북은 git 히스토리에 남아 있습니다) — 아래 본문에 이 셋을 사례로 든 설명이 남아 있으나, 설계 원리를 보이기 위한 예시이므로 그대로 둡니다.
+`contexts/`는 공통 지침, 작업별 스킬, 참조 문서와 검증 자산의 원본입니다.
+작업별 진입점과 참조 경로는 [INDEX.md](INDEX.md)에서 확인할 수 있습니다.
 
-> [!NOTE]
-> 이 문서는 최신 대형 언어 모델(LLM)의 성능을 극대화하고, 단순한 챗봇을 넘어 자율형 에이전트(Autonomous Agent)로 진화시키기 위해 업계 학계에서 검증된 **SOTA(State-of-the-Art) 프롬프트 및 워크플로우 이론**을 집대성한 백과사전입니다.  
-> 
-> 동시에 **우리의 통합 워크스페이스(AWS, Azure, K8s, Dotfiles)에 이 이론들이 어떻게 실제 룰(Rule)로 1:1 매핑되어 작동하고 있는지**를 명확한 가이드로 제공합니다.
+## 적용 방식
 
----
+- `base.AGENTS.md`: 언어 선호, 변경 범위, 권한·시크릿 경계, 검증과 변경 근거 기록.
+- 각 `SKILL.md`: 사용 조건과 작업별 참조 문서 안내.
+- `references/`: 현재 작업에 필요한 고유 정책·형식·절차. 연결된 문서를 전부 사전 로드하지 않습니다.
+- `scripts/`, `tests/`, `evals/`: 실행 도구, 회귀 테스트, 평가 자산. 지침을 줄일 때도 별도로 유지합니다.
 
-## 1. Andrew Ng의 Agentic Workflow 4대 디자인 패턴
-> [!NOTE] 
-> **기원(Origin):** Landing AI 창립자 및 스탠포드 대학교 Andrew Ng 교수의 Agentic Design Patterns (2024)
+## 유지보수 기준
 
-AI의 대부 앤드류 응(Andrew Ng) 교수가 제시한, LLM을 자율형 에이전트로 활용하기 위한 핵심 워크플로우 4가지입니다.
+일반적인 역할 선언이나 반복되는 코딩 상식보다, 저장소만 보고 알기 어려운 정보와 실제 실패 방지책을 남깁니다.
+전보체·XML 자가비판·고정 설명 비율은 필수가 아닙니다. 문서 분할은 독립적으로 읽을 필요가 있을 때 선택합니다.
+보안·권한 경계와 실행 가능한 검증은 유지하고, 불필요한 확인 질문과 문서 조회를 줄입니다.
 
-### 1.1. Reflection (자가 반성 및 수정)
-**이론:** 모델이 생성한 코드나 텍스트를 스스로 비판(Self-Critique)하고, 발견된 오류를 바탕으로 결과물을 개선하는 반복 루프.
+규칙을 없애거나 바꿀 때는 이를 인용하는 문서와 호출부도 함께 확인합니다.
+문서 길이 감소나 린트 통과만으로 에이전트 성능 개선을 입증할 수는 없습니다.
+대표 작업에서 기존 지침과 변경 지침의 성공 여부, 질문 수, 도구 호출, 시간·비용을 비교합니다.
 
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[Trigger: RCA Completed] 자가 비판 (Self-Critique):** 장애 사후 분석(Post-Mortem) 보고서 작성을 완료한 직후, 스스로 `<self_critique>` 태그를 열어 장애 원인을 사람의 실수로 단정짓지 않았는지 집중 비판하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before K8s Apply] 자가 비판 및 편차 검증 (Self-Critique):** K8s 배포 전 `kubectl diff`로 편차를 확인하고, 스스로 `<self_critique>` 태그를 열어 메모리 Limit 누락 위험성을 집중 비판하십시오. (출처: 060-autoscaling-finops-standard.md)
+## 검증 명령
+
+저장소 루트에서 실행합니다.
+
+```bash
+bash bin/linters/prompt-lint.sh
+bash contexts/prompt-architect/tests/run.sh
 ```
 
-### 1.2. Tool Use (도구 사용)
-**이론:** LLM의 태생적 한계(환각, 최신 정보 부재, 연산 오류)를 로컬 터미널, 웹 검색 등 외부 API로 오프로딩(Off-loading)하는 기법.
+라우팅 표를 수정하면 색인을 재생성합니다.
 
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Before Code Review / Commit] 시크릿 스캐닝:** 코드를 작성하거나 리뷰할 때 반드시 터미널에서 `run-suite.sh` (또는 `just check`) 사전 검증기를 단일 실행하여 하드코딩된 시크릿 및 취약점을 사전에 격리하십시오. (출처: 020-security-compliance.md)
+```bash
+bash bin/utils/generate-context-index.sh > contexts/INDEX.md
 ```
 
-### 1.3. Planning (계획 수립)
-**이론:** 거대하고 모호한 목표를 주었을 때, 다단계(Multi-step) 실행 계획을 먼저 수립하는 패턴.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Explicit Planning:** 다단계 작업 시 "작업 -> 검증"의 3단계 이내의 간결한 단계별 계획을 명시하십시오. (출처: base.AGENTS.md)
-- **[MUST] Explicit Assumptions:** 구현 전 가정을 명시하십시오. 불확실한 부분은 반드시 사용자 질문을 통해 명확히 확인할 것. (출처: base.AGENTS.md)
-```
-
-### 1.4. Multi-Agent Collaboration (다중 에이전트 협업)
-**이론:** 여러 개의 각기 다른 페르소나를 가진 에이전트들이 서로 핑퐁(토론 및 비판)하며 최적해를 도출하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-현재 이 패턴은 단일 에이전트 내 역할 분리 수준까지만 적용되어 있습니다. 도메인별 `SKILL.md`가 서로 다른 `role`(예: `Senior Cloud Architect`, `Senior Prompt Architect`)을 선언해 작업 맥락마다 페르소나를 교체하지만, 복수 에이전트가 서로를 비판하는 핑퐁 루프는 구현하지 않았습니다. 검증은 에이전트 토론 대신 기계적 게이트(`run-suite.sh`, 스킬별 회귀 픽스처)에 위임하는 설계 선택입니다.
-
----
-
-## 2. 최고 수준의 추론 아키텍처 (Advanced Inference Architectures)
-> [!NOTE] 
-> **기원(Origin):** Princeton University & Google Brain(현 DeepMind) 공동 연구 논문 (ReAct: 2022, ToT: 2023)
-
-단일 프롬프트를 넘어 시스템 레벨에서 모델의 지능을 끌어올리는 학계의 SOTA 프레임워크들입니다.
-
-### 2.1. ReAct (Reasoning + Acting)
-**이론:** `생각(Thought) -> 행동(Action) -> 관찰(Observation)` 사이클을 무한 반복. Tool Use와 Chain-of-Thought가 결합된 가장 표준적인 에이전트 엔진.
-
-**통합 워크스페이스 적용 사례:** (퓨샷 예제 적용)
-```markdown
-- [Good]: "이 작업은 CloudWatch Logs 조회가 선행되어야 하므로, 먼저 `aws logs filter-log-events`를 실행하겠습니다." (출처: 100-incident-response.md)
-```
-
-### 2.2. Tree of Thoughts (ToT, 생각의 트리)
-**이론:** 여러 갈래의 풀이 경로(Path)를 생성하고 스스로 평가하며, 잘못된 길에서 이전 분기점으로 Backtracking하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Present Alternatives:** 여러 해석이 가능할 경우, 가능한 모든 대안과 장단점을 명시적으로 제시하여 사용자의 선택을 유도하십시오. (출처: base.AGENTS.md)
-```
-
----
-
-## 3. 제조사별 (Anthropic, OpenAI, Gemini) 공식 프롬프트 가이드
-> [!NOTE] 
-> **기원(Origin):** Anthropic, OpenAI, Google 등 최상위 LLM 벤더들의 공식 프롬프트 엔지니어링 가이드라인 백서
-
-제조사에서 직접 권장하는 토큰 최적화 및 지시 이행률 극대화 패턴입니다.
-
-### 3.1. Anthropic (Claude) 핵심 기법
-#### 3.1.1. XML 태그 구조화 및 속성 맵핑 (Use XML tags & Attributes)
-**이론:** Anthropic 공식 가이드에서는 지시사항, 참고 문서, 출력 예시를 XML 태그로 격리하고, 태그의 속성(`role`, `priority`)을 주입하여 어텐션(Attention)을 입체적으로 구성할 것을 권장합니다.
-
-**통합 워크스페이스 적용 사례 (YAML Frontmatter 변형):**
-우리 환경에서는 마크다운 시스템과의 호환성을 위해, 최상단 XML 태그 대신 **YAML Frontmatter**를 사용하여 전역 메타데이터(`role`, `priority`)를 맵핑하고, 내부 데이터 격리에만 XML 태그를 사용하는 형태로 변형하여 적용하고 있습니다.
-```yaml
----
-role: Universal Meta-Cognitive Engine
-priority: highest
----
-```
-
-#### 3.1.2. 격리된 퓨샷 프롬프팅 (Use examples - Few-shot)
-**이론:** "이것은 지시가 아니라 예시이다"를 확실히 하기 위해 본문과 물리적으로 완전히 분리된 래핑.
-
-**통합 워크스페이스 적용 사례:**
-```xml
-<examples>
-  <example> ... </example>
-</examples>
-```
-
-#### 3.1.3. 생각의 시간 벌어주기 (Let AI think / CoT)
-**이론:** 답을 내리기 전에 충분히 텍스트를 나불거리게 만들어(연산력 증폭), 최종 퀄리티를 상승시키는 기법.
-
-
-### 3.2. OpenAI 핵심 기법
-#### 3.2.1. 페르소나 부여 (Role Prompting)
-**이론:** 단순한 지시 대신 모델에게 명확한 직업과 역할을 부여하면 답변의 전문성과 일관성이 비약적으로 상승함.
-
-**통합 워크스페이스 적용 사례:**
-```yaml
-role: Senior Cloud Architect
-priority: high
-```
-(출처: `contexts/aws/references/010-aws-core.md`의 Frontmatter 구조)
-
-#### 3.2.2. 복잡한 작업 분할 (Split Complex Tasks)
-**이론:** 복잡한 요청을 한 번에 던지지 않고, 모델이 이해하기 쉽도록 Step-by-Step으로 쪼개서 지시하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- [PREFER] Split Complex Tasks: 복잡한 셋업은 단계별 넘버링(Step-by-Step)으로 분할하여 순차 실행하도록 강제. (출처: 030-prompt-engineering-standard.md)
-```
-
-#### 3.2.3. 출력 포맷 엄격화 (Output Constraints)
-**이론:** 모델이 서론/결론을 길게 말하는 대신 간결하게 답변하도록 유도하고, 출력 형태(JSON, Markdown 등)를 강제하여 파서(Parser)의 일관성을 보장하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- [MUST] Output Constraints: 산출물 형태(JSON 등)를 인터페이스 수준으로 엄수할 것.
-```
-
-### 3.3. Google Gemini 핵심 기법
-#### 3.3.1. 전역 시스템 지시어 권한 부여 (Global Customizations Root)
-**이론:** 시스템 지시어(System Instructions)를 활용해 가장 강력한 베이스 룰을 모델 뇌리에 깊숙이 주입하는 아키텍처.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- `base.AGENTS.md` 마스터 룰을 글로벌 Customizations Root인 `~/.gemini/config/AGENTS.md`에 주입하여 모든 환경에서 전역 시스템 지시어로 동작하게 하는 아키텍처.
-```
-
-#### 3.3.2. 동적 스킬 할당 메커니즘 (Customization Skills)
-**이론:** 모든 룰을 하나의 거대한 프롬프트로 병합하는 대신, 각 지식 모듈을 `SKILL.md`와 참조 마크다운 파일(`references/*.md`)로 분리하여 필요할 때만 발동되도록 책임을 위임하는 객체지향적 프롬프트 관리 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- `just setup`(Ansible) 실행 시 글로벌 스킬 디렉토리(`~/.gemini/config/skills/<도메인>/`, `~/.claude/skills/<도메인>/`)에 `SKILL.md`와 `references/`를 심볼릭 링크로 등록하여, 로컬 폴더 조작 없이도 AI가 맥락에 맞는 스킬을 자율적으로 호출하도록 라우팅함.
-```
-
-#### 3.3.3. 동적 어텐션 가지치기 및 SNR 최적화 (Dynamic Attention Pruning)
-**이론:** Gemini는 최대 200만 토큰의 방대한 Context Window를 가졌지만, 모든 정보에 억지로 집중력을 강제하면 환각(Hallucination)이 발생할 수 있습니다. 이를 막기 위해 조건부 태그(`<domain_specific_rules instruction="...">`) 등을 통해 현재 태스크와 무관한 룰은 어텐션에서 숨김 처리(Mute)하여 신호 대 잡음비(SNR)를 극대화하는 것이 공식 권장 기법입니다.
-
-**통합 워크스페이스 적용 사례 (물리적 SNR 최적화로 진화):**
-```markdown
-- 우리 환경은 이 "SNR 최적화 철학"을 수용하되, 통짜 프롬프트 내에서 태그로 가리는(Mute) 방식을 넘어 아예 **물리적으로 컨텍스트를 분리(Dynamic RAG)**하도록 진화시켰습니다.
-- `SKILL.md`의 라우팅 지시("쉘 스크립팅 시 `020-shell-scripting-standard.md`만 로드하라")를 통해 불필요한 인프라 룰이 애초에 메모리에 올라오지 않게 완벽히 분리하여, Gemini가 코어 룰에 100% 연산력을 집중하게 만듭니다.
-```
-
-#### 3.3.4. 부정어보다 긍정어 우선 (Positive Directives)
-**이론:** "무엇을 하지 마라"보다 "대신 무엇을 해라"라고 긍정형으로 지시를 덮어쓰는 것이 지시 이행률이 훨씬 높음.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- [PREFER] Positive Action Override: 대체 가능한 구체적 행동을 명시하는 긍정 지시어 위주로 프롬프트를 작성할 것. (출처: 030-prompt-engineering-standard.md)
-```
-
----
-
-## 4. Engineering-Driven Prompting (독자적 SOTA 발굴)
-> [!NOTE] 
-> **기원(Origin):** Google SRE(사이트 신뢰성 엔지니어링), Cloud DevOps 커뮤니티 및 12-Factor App 설계 철학
-
-일반적인 언어 모델 연구를 넘어, **데브옵스/클라우드 엔지니어링 철학**이 결합된 최고 수준의 프롬프트 제약 조건들입니다. 아래 룰들은 LLM의 환각을 넘어, 실제 프로덕션 환경의 **시스템 무결성 및 신뢰성 보장**을 최우선으로 합니다.
-
-### 4.1. Idempotency (멱등성 보장 패턴)
-**개념:** 스크립트나 명령어를 여러 번 반복 실행하더라도 시스템 상태가 오염되지 않고 동일한 결과를 유지하도록 강제하는 패턴.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Idempotency First:** 여러 번 실행해도 동일한 결과를 나타내도록 스크립트 작성 시 멱등성을 달성하십시오. (pre-flight-check 훅이 자동 검증함)
-- **[MUST] Safe Configuration Appending:** 설정 추가 시 반드시 `grep -q "문자열"`로 중복 여부를 사전 검사할 것. (출처: prompt-architect/references/020-shell-scripting-standard.md)
-```
-
-### 4.2. Fail-Fast & Safety Boundary (빠른 실패와 안전선 패턴)
-**개념:** 에이전트가 무한 루프에 빠지거나 위험한 조작을 하기 전에, 스스로 실패를 인지하고 사람에게 개입을 요청하는 패턴.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[Trigger: Validation Failed 3 Times] Fast Fail & Halt (빠른 실패 및 중단):** 3회 재시도 실패 시 모든 도구 호출을 멈추고 사용자에게 명확한 오류 요약과 함께 개입을 요청하십시오. (출처: base.AGENTS.md)
-- **[MUST] Permission Boundary (로컬 파일):** sudo 등 로컬 관리자 권한 요청 시 최소 경로 권한만 요청하여 확보하십시오. (출처: base.AGENTS.md)
-```
-
-### 4.3. Eval-Driven Verification (평가 주도 검증 패턴)
-**개념:** 텍스트를 "눈으로만" 검증하는 것을 막고, 코드를 물리적으로 실행하거나 린터를 돌려 기계적 검증을 통과하도록 강제.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Eval-Driven Testing (테스트 자동화 기반 설계):** 단순 설정 파일이나 텍스트 수정을 제외한, 복잡한 연산 로직이나 핵심 모듈을 개발할 때는 프로그램적으로 자동 검증이 가능한 '테스트 스크립트(Eval)' 코드를 작성하여 팩트를 검증하십시오.
-- **[MUST] Success Criteria:** 작업 완료 보고 시 사용자가 수동으로 칠 수 있는 검증 명령어(성공 기준)를 함께 제공하십시오. (출처: base.AGENTS.md)
-```
-
-### 4.4. Break-Glass & Compliance (예외 로깅 및 기술 부채 패턴)
-**개념:** 사용자가 원칙에 위배되는 행동을 지시할 때, 그냥 실행하지 않고 "기술 부채(Tech-Debt)" 기록을 강제하는 감사(Audit) 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Break-Glass (예외 승인 및 기술 부채 기록):** 사용자가 보안/아키텍처 규칙 위반 지시를 고집할 경우, 반드시 템플릿 구조를 사용하여 `tech-debt-log.md`를 생성해 감사(Audit) 기록을 남기십시오. (출처: base.AGENTS.md)
-```
-
----
-
-## 5. 실전 방어적 프롬프팅 (Defensive Prompting & Pragmatism)
-> [!NOTE] 
-> **기원(Origin):** 상용 AI 코딩 에이전트(Cursor, Devin, Aider 등) 스타트업 씬 및 실전 해커 커뮤니티의 경험칙
-
-LLM이 오지랖을 부려 환경을 망치거나 무분별하게 동작하는 것을 방어하기 위한 마이크로 제어 패턴들입니다.
-
-### 5.1. Surgical Precision (외과적 수정 패턴)
-**이론:** 지시받은 영역 외의 코드(포매팅, 주석 등)를 임의로 건드리지 않고, 지정된 범위만 외과적으로 수정하여 Git 히스토리 무결성을 보장하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Strict Scope Isolation:** 지시받은 로직 영역 내부만 수정하고 주변 코드의 포매팅과 주석은 원형 그대로 보존하십시오. 새로 쓰는 코드도 그 파일의 기존 스타일을 그대로 따르십시오. (출처: base.AGENTS.md)
-```
-
-### 5.2. Push-Back & Simplicity (단순성 방어 패턴)
-**이론:** 사용자가 과도하게 복잡한 아키텍처를 요구할 때, AI가 더 단순한 대안을 능동적으로 역제안하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Push Back for Simplicity:** 불필요한 복잡성을 유발하는 지시를 경계하십시오. 더 단순한 아키텍처를 능동적으로 역제안하십시오. (출처: base.AGENTS.md)
-```
-
-### 5.3. Artifact-Driven Communication (산출물 기반 커뮤니케이션 패턴)
-**이론:** 디버깅 내역이나 분석 결과를 텍스트 채팅으로 나열하는 대신, 마크다운 문서로 영구 보존하게 강제하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[Trigger: User requests bug fix or error analysis] 분석 결과 구조화:** 에러 분석 완료 시 반드시 지정된 템플릿을 사용하여 `troubleshooting-report.md`를 생성하십시오. (출처: 100-incident-response.md)
-- **[Trigger: Major Task Completion] Generate Artifacts (산출물 생성):** 신규 기능 구현, 대규모 리팩토링, 인프라 코드 변경 등 중대한 작업이 완료되었을 때만 도메인 특화 산출물(Artifact)을 생성하고, 사소한 수정에는 생략하십시오. (출처: base.AGENTS.md)
-```
-
-### 5.4. Pragmatic Verification (실용적 검증 및 팩트 수집 패턴)
-**이론:** 머릿속 파라미터 지식에 의존한 이론적 에러 핸들링 대신 로컬 터미널 명령을 통해 팩트부터 수집하도록 유도하는 기법.
-
-**통합 워크스페이스 적용 사례:**
-```markdown
-- **[MUST] Active Data Gathering:** 문제 분석 시 반드시 터미널에서 CloudWatch Logs(`aws logs`) 등 실제 데이터를 먼저 조회하여 팩트 기반으로 원인을 파악하십시오. (출처: 100-incident-response.md)
-```
-
----
-
-## 6. 2026 Ultimate Prompt Architecture (독자적 SOTA의 정점)
-> [!IMPORTANT]
-> **기원(Origin):** 본 시스템(Dotfiles/AWS Workspace) 내부 설계팀의 독자적인 메타-인지 제어 및 트러블슈팅 경험칙 집대성
-
-타사의 범용 프레임워크를 뛰어넘어, 수많은 복잡한 인프라 도메인(AWS, Azure, K8s, FinOps 등) 룰들이 충돌 없이 작동하도록 고안해 낸 **우리의 독보적인 에이전틱(Agentic) 설계**입니다.
-
-### 6.1. Rule Conflict Resolution (계급 기반 충돌 강제 해석기)
-**이론:** 수많은 도메인 참조 룰들이 발동되어 동시에 로드되었을 때, 지시 간 모순이 발생할 경우 에이전트가 우왕좌왕하지 않고 스스로 계급을 판단하여 하위 룰을 가차 없이 덮어쓰도록(Override) 강제하는 논리 회로.
-
-**통합 워크스페이스 적용 사례:**
-- 각 룰 파일 최상단 YAML Frontmatter의 `priority` 속성(`highest`, `critical`, `high`)을 기계적으로 해석.
-- `AGENTS.md`를 통해 전역으로 주입되는 000번 마스터 코어(`highest`)의 룰은 그 어떤 예외도 허용하지 않는 **절대적인 최우선 헌법(Hard Constraint)**으로 작동하여 모든 스킬 모듈 간의 충돌을 종식시킵니다.
-
-### 6.2. Prompt Self-Evolution (프롬프트 자가 진화 메타인지)
-**이론:** 에러가 났을 때 무한히 '코드'만 고치는 한계를 극복하기 위한 자가 진화 트리거. 실패가 반복되면 코드 탓을 멈추고 **"현재 프롬프트 규정 원본 자체에 사각지대가 있다"**고 스스로 의심하게 만드는 기법.
-
-**통합 워크스페이스 적용 사례 (증거 기반으로 진화):**
-초기 판본은 "3회 실패 시 의심하라"는 지시뿐이라 근거로 삼을 데이터가 없었습니다. 현재는 관찰 기록을 남기고 그것을 입력으로 삼는 구조입니다.
-
-```markdown
-- **[Trigger: After Code Change] Provenance Logging:** 파일 변경 후 `record-provenance.sh` 를 실행해 근거를 기록한다. (출처: base.AGENTS.md 9장)
-- **[Trigger: 자가치유 2회 이상 | Fast Fail & Halt | 사용자의 지적] Quality Flywheel:** 계속 실패 시 `.agent-state/edits.log` 최근 20줄을 직접 읽어 분석 및 개정안을 제안한다. (출처: base.AGENTS.md 9장)
-```
-
-핵심은 **기록과 판정을 사람의 기억이 아니라 기계적 산출물에 위임**했다는 점입니다. 훅이 남긴 이력은 토큰을 소비하지 않고, 조항 개정 여부는 로그 일시와 룰북 git 이력을 대조해 판정하므로 별도의 상태 관리가 필요 없습니다.
-
-### 6.3. Lazy Routing & Agentic RAG (능동적 지식 검색 및 라우팅)
-**이론:** 200만 토큰을 감당할 수 있더라도 불필요한 정보는 Mute 처리하고, 최상위 코어 룰에 특수 트리거를 심어두어 필요할 때만 스스로 030(FinOps) 등의 특정 도메인을 찾아 읽게 만드는 컨텍스트 통제 기법.
-
-**통합 워크스페이스 적용 사례:**
-- `[MUST] FinOps Delegation`: "비용 추정은 `030-finops-optimization` 모듈을 참조하라"고 최상위 아키텍처 룰(`010-aws-core`)에 강제하여, 에이전트가 자연스럽게 FinOps 지식을 검색(RAG)하도록 유도합니다.
-- **[Dynamic Cross-Cloud Routing]**: `multi-cloud/SKILL.md`를 통해 멀티 클라우드 질문 발생 시에만 `aws/SKILL.md`와 `azure/SKILL.md`를 동적으로 융합(Fusion)하고, 평소 단일 클라우드 작업 시에는 완벽히 격리(Isolation)하여 환각을 0%로 통제합니다.
-
----
-
-## 7. 결론 및 향후 활용 방안 (Conclusion)
-이 문서는 단순한 이론서가 아니라, **우리의 통합 워크스페이스(AWS, Azure, K8s, Dotfiles)가 어떻게 AI 에이전트의 뇌 구조를 완벽하게 통제하고 자가 진화시키는지**를 증명하는 설계도입니다.
-
-- **새로운 환경 구축 시:** GCP, OCI 등 새로운 도메인 룰북을 작성할 때 이 문서의 목차를 점검표(Checklist)로 활용하여, 방어적 기법들이 빠짐없이 들어갔는지 확인하십시오.
-- **AI 성능 고도화 시:** LLM의 지시 이행률이 떨어진다고 느껴질 때, 이 백과사전의 'XML 속성 맵핑'이나 'Few-shot 래핑' 구조가 무너지지 않았는지 점검하십시오. 
-- **지속적 통합:** 프롬프트는 코딩과 같습니다. 이 문서를 팀의 표준 기술 레퍼런스로 삼고, 새로운 SOTA 패턴이 발견될 때마다 본 가이드에 매핑하여 일관된 표준을 유지하십시오.
+런타임 스킬 폴더에는 `tests/`와 `evals/`가 동기화되지 않으므로 원본 저장소 경로를 사용합니다.
+`contexts/prompt-architect/evals/routing/measure.sh`는 실제 에이전트 세션 비용이 발생하므로 명시적인 실행 요청이 있을 때만 사용합니다.

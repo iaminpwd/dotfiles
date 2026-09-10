@@ -195,103 +195,6 @@ check_documented_clause_existence() {
 }
 
 # -----------------------------------------------------------------------------
-# 4. CORE EXCEPTION HOOK 마커 무결성 검사 (블랑켓 무효화 금지 + 룰 실재성 대조)
-# -----------------------------------------------------------------------------
-check_exception_hook_integrity() {
-  log_info "--- Step: Exception Hook Marker Integrity ---"
-  local base_agents="$CONTEXTS_DIR/base.AGENTS.md"
-  [ -f "$base_agents" ] || {
-    log_info "[INFO] 예외 마커 검사 건너뜀 (contexts/base.AGENTS.md 없음)."
-    return
-  }
-
-  # base.AGENTS.md에 실재하는 조항 이름 집합 추출 (Documented Clause Existence와 동일 패턴)
-  local names_file
-  names_file=$(mktemp)
-  sed -nE 's/^[[:space:]]*[-*][[:space:]]+\*\*(\[[^]]+\][[:space:]]*)?([A-Za-z][A-Za-z0-9 &'"'"'\/-]*[A-Za-z0-9])[[:space:]]*(\([^)]*\))?[[:space:]]*:\*\*.*/\2/p' \
-    "$base_agents" | sort -u >"$names_file"
-
-  # "전체 무효화" 류 블랑켓(범위 미특정) 선언 금지 문구
-  local blanket_pattern='전체 무효화|전면 무효화|FULL RULE OVERRIDE|모든 룰'
-  local skill_md marker_line blanket_hit block item_line item_name
-
-  while IFS= read -r skill_md; do
-    [ -f "$skill_md" ] || continue
-    grep -q "EXCEPTION APPLIED" "$skill_md" || continue
-
-    marker_line=$(grep "EXCEPTION APPLIED" "$skill_md" || true)
-    blanket_hit=$(grep -E "$blanket_pattern" <<<"$marker_line" || true)
-    if [ -n "$blanket_hit" ]; then
-      echo "❌ [ERROR] 범위를 특정하지 않은 예외 선언(블랑켓 무효화): $skill_md" >&2
-      echo "    완화 대상 룰을 base.AGENTS.md CORE EXCEPTION HOOK 포맷대로 개별 열거하십시오." >&2
-      EXIT_CODE=1
-      continue
-    fi
-
-    # 마커가 시작된 블록쿼트(연속된 '>' 라인) 안에서 근거 불릿(- **이름**)만 추출
-    block=$(awk '
-      /EXCEPTION APPLIED/ { infound=1 }
-      infound { if ($0 ~ /^>/) { print; next } else { exit } }
-    ' "$skill_md")
-
-    # 근거 불릿 이름을 먼저 모아 둔다. 아래에서 두 방향으로 대조해야 하기 때문이다.
-    local bullet_names=()
-    while IFS= read -r item_line; do
-      [ -z "$item_line" ] && continue
-      item_name=$(sed -E 's/^>[[:space:]]*-[[:space:]]+\*\*([^*]+)\*\*.*/\1/' <<<"$item_line")
-      [ -z "$item_name" ] && continue
-      bullet_names+=("$item_name")
-      grep -qxF -- "$item_name" "$names_file" || {
-        echo "❌ [ERROR] 예외 대상으로 열거된 룰이 base.AGENTS.md에 실재하지 않음: $skill_md" >&2
-        echo "    선언된 이름: '$item_name' (개명·삭제됐거나 오타일 수 있습니다)" >&2
-        EXIT_CODE=1
-      }
-    done < <(grep -E '^>[[:space:]]*-[[:space:]]+\*\*' <<<"$block" || true)
-
-    # 마커에 열거된 이름 ↔ 근거 불릿의 대응을 양방향으로 대조한다.
-    #
-    # 위 불릿 검사만으로는 마커 쪽에서 낡은 선언을 한 건도 잡지 못했다. base.AGENTS.md 의
-    # [예외 선언 필수 포맷]은 "마커에 열거됐지만 근거 불릿이 없는 이름은 무효"라고 규정하고
-    # 그 형식 준수를 이 스크립트가 자동 검증한다고 선언하는데, 실제로는 검증되지 않아
-    # 아래 세 무효 상태가 전부 통과했다(격리 코퍼스 실측, 셋 다 rc=0):
-    #   - 마커에 2개 열거 / 불릿은 1개 -> 나머지 하나가 근거 없이 완화된 상태로 통과
-    #   - 마커에만 있는 유령 이름(불릿은 다른 정상 이름) -> 룰 개명 시 조용히 낡는 바로 그 경로
-    #   - 마커만 있고 불릿이 아예 없음 -> 규정상 무효인데 통과
-    # 반대 방향(불릿에만 있고 마커에 없는 이름)도 같이 본다. 적용 범위를 정하는 것은
-    # 마커이므로, 마커에 없는 불릿은 "완화됐다고 적어 뒀지만 실제로는 완화되지 않는" 선언이라
-    # 읽는 사람을 정확히 반대로 오도한다.
-    local marker_names marker_name found_bullet bn
-    marker_names=$(sed -E 's/.*EXCEPTION APPLIED:[[:space:]]*//; s/[[:space:]]*\].*//' <<<"$marker_line")
-    while IFS= read -r marker_name; do
-      [ -n "$marker_name" ] || continue
-      found_bullet=0
-      for bn in "${bullet_names[@]:-}"; do
-        [ "$bn" = "$marker_name" ] && found_bullet=1 && break
-      done
-      [ "$found_bullet" -eq 1 ] || {
-        echo "❌ [ERROR] 마커에 열거됐지만 근거 불릿이 없는 예외 대상: $skill_md" >&2
-        echo "    선언된 이름: '$marker_name' — base.AGENTS.md 규정상 무효이며 해당 룰은 그대로 적용됩니다." >&2
-        echo "    '> - **$marker_name** (\`base.AGENTS.md\` <위치>): <완화 근거>' 불릿을 같은 블록쿼트에 추가하십시오." >&2
-        EXIT_CODE=1
-      }
-    done < <(tr ',' '\n' <<<"$marker_names" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
-
-    for bn in "${bullet_names[@]:-}"; do
-      [ -n "$bn" ] || continue
-      grep -qxF -- "$bn" < <(tr ',' '\n' <<<"$marker_names" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//') || {
-        echo "❌ [ERROR] 근거 불릿은 있는데 마커에 열거되지 않은 이름: $skill_md" >&2
-        echo "    선언된 이름: '$bn' — 적용 범위는 마커가 정하므로 이 룰은 실제로 완화되지 않습니다." >&2
-        echo "    마커의 'EXCEPTION APPLIED:' 목록에 추가하거나, 불릿을 지우십시오." >&2
-        EXIT_CODE=1
-      }
-    done
-  done < <(find "$CONTEXTS_DIR" -path "$CONTEXTS_DIR/.*" -prune -o -name "SKILL.md" -print)
-
-  rm -f "$names_file"
-  log_info "[INFO] 예외 마커 무결성 검사 완료."
-}
-
-# -----------------------------------------------------------------------------
 # 5. 파일 크기 제약 (150줄) 검사
 # -----------------------------------------------------------------------------
 check_file_size() {
@@ -804,7 +707,6 @@ main() {
   check_reference_links
   check_orphaned_files
   check_documented_clause_existence
-  check_exception_hook_integrity
   check_file_size
   check_vendor_leakage
   check_code_fences

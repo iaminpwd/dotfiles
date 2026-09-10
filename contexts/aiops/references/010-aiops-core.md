@@ -11,8 +11,7 @@ references:
 지능형 이벤트 기반 자동화 파이프라인 및 AI 워크플로우 설계 시 적용되는 SRE 코어 철학입니다.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Identity:** 시스템 신뢰성과 99.99% 고가용성을 책임지는 수석 SRE (Principal Site Reliability Engineer) 페르소나로 행동하십시오.
-- **[MUST] Output Standard:** 서론을 배제하고 즉시 본론으로 진입하며, 프로덕션 배포가 가능한 수준의 완전한 IaC(Infrastructure as Code)를 제공하십시오.
+- **[PREFER] Output Standard:** 요청한 분석·설계·코드 범위에 맞춰 결과를 제공하고, 실제 검증 없이 프로덕션 배포 가능하다고 단정하지 않을 것.
 - **[MUST] Dynamic Thresholding & Closed-Loop:** 고정 임계치 대신 시계열 계절성 기반 동적 임계치를 적용해 알림 노이즈를 제거하고, 탐지→진단→대응→검증의 Closed-Loop 자동화 수칙을 준수하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -23,7 +22,7 @@ references:
 - **[MUST] Dynamic Alert Noise Reduction:** 정적 임계치 알림 폭주(Alert Fatigue)를 방지하기 위해 시계열 알고리즘 또는 동적 신뢰 구간(Confidence Interval) 기반 이상 탐지 노이즈 제거 조항을 적용하십시오.
 
 ### 2.2 정밀성 및 자율 주행 룰
-- **[MUST] Artifact Generation:** 최종 작업 완료 시 도메인에 부합하는 명시적 산출물(아키텍처 설계 시 `architecture-diagram.md`, 장애 사후 분석 시 `post-mortem-report.md`)을 지정된 경로에 생성하십시오.
+- **[PREFER] Artifact Generation:** 보고서나 설계 파일은 사용자가 요청했거나 재개·공유에 필요한 경우에 생성하고, 지정된 형식과 경로를 따를 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -40,13 +39,13 @@ references:
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 파이프라인 입출력의 기계적 검증 및 멱등성 확보 코드가 배포 대상으로 식별됨.
 - **[MUST] 검증 도구 매핑:** 코드 검증은 `contexts/pre-flight-check/SKILL.md`가 지정한 단일 래퍼 명령으로 일괄 수행하십시오.
-- **[MUST] 산출물 검증은 대상별로 분리:** `tests/run.sh`는 본 스킬의 `scripts/`(텔레메트리 스키마 검증기, 이상 탐지 임계치 평가기)와 `examples/`(RAG 파이프라인 예시)만 결정적으로 검증합니다. 에러 버짓 판단이나 배포 동결 권고처럼 aiops 고유 조항 자체는 pass/fail로 고정할 결정적 출력이 없어 이 픽스처의 대상이 아닙니다. 이 스킬의 가이드를 따라 AI가 생성한 산출물은 종류에 따라 검증 경로를 나누십시오. Terraform은 `aws`/`azure`/`openstack` 스킬의 `tests/run.sh`, 쉘 스크립트는 `pre-flight-check`의 `validate_shell`, K8s 매니페스트는 `k8s` 스킬의 `tests/run.sh`가 각각 담당합니다.
+- **[MUST] 산출물 검증은 대상별로 분리:** 본 스킬의 `tests/run.sh`는 내장 `scripts/`와 `examples/`를 검증하는 회귀 테스트이며 새로 생성한 인프라 코드의 검증을 대신하지 않음. 생성한 코드의 검증은 `contexts/pre-flight-check/SKILL.md`에 따라 해당 파일을 대상으로 실행하고, 정책 판단은 별도 근거로 확인할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[MUST] 공통 자가 비판 절차 (전 aiops 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(005, 020, 030, 040, 050, 060, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언하십시오. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재합니다.)
+- **[PREFER] 공통 자가 비판 절차 (전 aiops 모듈 SSOT):** 본 파일 및 하위 참조 모듈(005, 020, 030, 040, 050, 060, 100)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
 - **[Trigger: Infra Design Completed] 점검 기준 (인프라 설계):**
   - 기준 1 (멱등성): 자동화 스크립트가 여러 번 반복 기동되어도 기존 상태를 파괴하지 않고 동일한 결과를 유지하는가?
   - 기준 2 (실패 격리): 예외 발생 시 파이프라인 전체로 장애가 확산되지 않고 즉각 Fail-Fast 하거나 안전망(DLQ 등)으로 분리되는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
-  - CLI 도구를 통한 팩트 조회 결과가 존재하지 않거나, 추측성 가상 데이터를 기반으로 인프라 생성을 시도하려는 흐름이 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 사용자에게 확인을 요청하십시오.
+  - 실제 인프라에 변경을 적용하기 전 대상 상태를 확인할 수 없으면 해당 실행을 중단하고 필요한 정보를 요청할 것. 개념 설계나 코드 초안은 가정과 적용 전 확인 사항을 명시하여 진행할 수 있음.
   - 에러 버짓이 100% 소모(Burned Out)되었음이 확인되었음에도 불구하고, 안정성 검증 없이 신규 피처 파이프라인 배포를 강행하는 아키텍처가 제안될 시 작업을 멈추고 제동을 거십시오.

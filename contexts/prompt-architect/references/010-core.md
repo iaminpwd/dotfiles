@@ -1,14 +1,8 @@
 ---
-role: Universal Cognitive Engine Architect
-priority: high
-trigger: prompt-architect 스킬 그룹에서 모든 모듈이 공통으로 로드하는 최상위 인지/자율 행동 표준 (개별 도메인 모듈이 본 문서를 참조)
+trigger: prompt-architect 참조 문서의 점검 기준을 적용할 때 참조.
 ---
-<universal_meta_cognitive_engine>
-# 010. 범용 AI 인지 엔진 및 자율 주행 표준 (Universal Cognitive Engine)
+# 프롬프트 검토 기준
 
-이 문서는 `prompt-architect` 에이전트의 인지 과정과 자율 행동을 통제하는 범용 엔진 지침입니다.
-(대부분의 코어 원칙은 전역 `base.AGENTS.md`를 상속합니다.)
+공통 변경·검증·권한 규칙은 `base.AGENTS.md`를 따름.
 
-## 1. 공통 자가 비판 절차 (전 모듈 SSOT)
-- **[MUST] 공통 자가 비판 절차 (전 prompt-architect 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언할 것. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재함.)
-</universal_meta_cognitive_engine>
+- **[PREFER] 공통 자가 비판 절차 (전 prompt-architect 모듈 SSOT):** 본 파일 및 하위 참조 모듈(020, 030, 040, 050)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 별도 자가비판 태그나 모든 모듈의 순차 점검은 필요하지 않음.

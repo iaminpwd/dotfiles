@@ -1,17 +1,6 @@
 #!/usr/bin/env bash
-# test-test-coverage-check.sh
-#
-# test-coverage-check.sh 자신은 지금까지 다른 파일들의 주석/echo 라벨에서만
-# 우발적으로 이름이 언급됐을 뿐, 자기 자신의 판정 로직(하드 게이트 + 플러그인
-# 전용 경고 레이어)을 직접 검증하는 격리 픽스처 테스트가 없었다. 정작 "테스트가
-# 없으면 잡아낸다"는 이 도구 자체가 그 규칙의 사각지대에 있었던 셈이다.
-#
-# 경고 레이어(bin/hooks/plugins/*.sh가 이름만 언급되고 실제 bash 호출 증거가 없으면
-# 경고)의 두 갈래 탐지 패턴(변수 대입 후 호출 / 직접 인라인 호출)이 깨지면,
-# k8s-check.sh처럼 이름만 주석에 있는 플러그인이 다시 "정상"으로 오분류될 수 있다.
-# 격리된 가짜 저장소로 하드 게이트와 경고 레이어를 각각 고정한다.
-#
-# 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-test-coverage-check.sh
+# test-coverage-check.sh의 등록 누락과 SKIP 안내 검사를 격리 픽스처로 검증한다.
+# 파일명 참조 여부만으로 커버리지를 판정하거나 커밋을 차단하지 않는지도 확인한다.
 
 set -euo pipefail
 
@@ -50,9 +39,7 @@ exit 0' >"$root/bin/hooks/plugins/example-check.sh"
   # run-suite.sh를 다루는 방식과 동일한 이유).
   cp "$REPO_ROOT/bin/linters/test-coverage-check.sh" "$root/bin/linters/test-coverage-check.sh"
   cp "$REPO_ROOT/bin/lib/script-init.sh" "$root/bin/lib/script-init.sh"
-  # 복사해 넣은 script-init.sh도 하드 게이트 대상이므로, 각 테스트 케이스의 run.sh와
-  # 별개로 이 커버리지를 항상 충족시켜 example-check.sh 판정만 순수하게 검증한다.
-  echo "# script-init.sh" >"$root/contexts/fake/tests/lib-coverage.txt"
+
 }
 
 run_checker() {
@@ -63,90 +50,18 @@ run_checker() {
 
 echo "=== test-coverage-check.sh 자기 자신의 판정 로직 회귀 테스트 ==="
 
-# 1. 하드 게이트: bin/ 스크립트 이름이 tests/ 어디에도 없으면 exit 1 + 목록 보고.
+# 이름 참조가 없는 새 유틸리티도 그 이유만으로 차단하지 않는다.
 R1="$TMP/repo1"
 new_fixture_repo "$R1"
 echo '#!/usr/bin/env bash' >"$R1/contexts/fake/tests/run.sh"
 status=$(run_checker "$R1")
-if [ "$status" -eq 1 ] && grep -qF "example-check.sh" "$TMP/out"; then
-  report "hard-gate-untested (참조 없는 스크립트는 exit 1 + 목록 보고)" 0
+if [ "$status" -eq 0 ] && ! grep -qF "[WARNING]" "$TMP/out"; then
+  report "unreferenced-script-allowed (이름 검색으로 커버리지를 추정하지 않음)" 0
 else
-  report "hard-gate-untested (참조 없는 스크립트는 exit 1 + 목록 보고)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 2. 하드 게이트 통과: 이름이 어딘가(주석이라도) 언급되면 통과.
-R2="$TMP/repo2"
-new_fixture_repo "$R2"
-echo '# example-check.sh 를 손보면 확인할 것' >"$R2/contexts/fake/tests/run.sh"
-status=$(run_checker "$R2")
-if [ "$status" -eq 0 ]; then
-  report "hard-gate-mentioned (주석 언급만으로도 하드 게이트는 통과)" 0
-else
-  report "hard-gate-mentioned (주석 언급만으로도 하드 게이트는 통과)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 3. 경고 레이어: 이름만 주석에 있고 실제 bash 호출 증거가 없으면 WARNING (exit 0 유지).
-R3="$TMP/repo3"
-new_fixture_repo "$R3"
-echo '# example-check.sh 와 동일한 방식으로 처리한다' >"$R3/contexts/fake/tests/run.sh"
-status=$(run_checker "$R3")
-if [ "$status" -eq 0 ] && grep -qF "[WARNING]" "$TMP/out" && grep -qF "bin/hooks/plugins/example-check.sh" "$TMP/out"; then
-  report "weak-coverage-warns (주석뿐이면 경고 발생 + exit 0 유지)" 0
-else
-  report "weak-coverage-warns (주석뿐이면 경고 발생 + exit 0 유지)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 4. 경고 레이어 통과 (패턴 A, 직접 인라인 호출): bash "...example-check.sh" 형태.
-R4="$TMP/repo4"
-new_fixture_repo "$R4"
-cat >"$R4/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-bash "$REPO_ROOT/bin/hooks/plugins/example-check.sh"
-EOF
-status=$(run_checker "$R4")
-if [ "$status" -eq 0 ] && ! grep -qF "example-check.sh" "$TMP/out"; then
-  report "direct-invocation-passes (직접 인라인 bash 호출은 경고 없음)" 0
-else
-  report "direct-invocation-passes (직접 인라인 bash 호출은 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 5. 경고 레이어 통과 (패턴 B, 변수 대입 후 호출): 이 저장소 테스트들의 표준 관례.
-R5="$TMP/repo5"
-new_fixture_repo "$R5"
-cat >"$R5/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-EXAMPLE_PLUGIN="$REPO_ROOT/bin/hooks/plugins/example-check.sh"
-bash "$EXAMPLE_PLUGIN"
-EOF
-status=$(run_checker "$R5")
-if [ "$status" -eq 0 ] && ! grep -qF "example-check.sh" "$TMP/out"; then
-  report "var-then-invoke-passes (변수 대입 후 bash \"\$VAR\" 호출도 경고 없음)" 0
-else
-  report "var-then-invoke-passes (변수 대입 후 bash \"\$VAR\" 호출도 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 6. 경고 레이어 통과 (패턴 B, 들여쓰기된 변수 대입): if/for 블록 안에서 대입되는 경우도
-# 잡아야 한다. 대입문이 require_tool yq 같은 블록 안에 들여쓰기돼 있으면 ^[A-Za-z_]
-# 앵커가 못 잡는 실사용 버그가 생길 수 있다.
-R6="$TMP/repo6"
-new_fixture_repo "$R6"
-cat >"$R6/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-if true; then
-  EXAMPLE_PLUGIN="$REPO_ROOT/bin/hooks/plugins/example-check.sh"
-  bash "$EXAMPLE_PLUGIN"
-fi
-EOF
-status=$(run_checker "$R6")
-if [ "$status" -eq 0 ] && ! grep -qF "example-check.sh" "$TMP/out"; then
-  report "indented-var-then-invoke-passes (들여쓰기된 변수 대입도 경고 없음)" 0
-else
-  report "indented-var-then-invoke-passes (들여쓰기된 변수 대입도 경고 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
+  report "unreferenced-script-allowed" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
 # 7. 등록 누락 하드 게이트: tests/ 에 테스트 파일이 있는데 run.sh 목록에 없으면 exit 1.
-#    (실제로 test-pre-flight-live-hook.sh / test-pre-flight-gate-hook.sh 가 이 상태로
-#     한 번도 실행되지 않았는데 위 1번 게이트는 통과했다 — 그 사각지대를 고정한다.)
 R7="$TMP/repo7"
 new_fixture_repo "$R7"
 echo '# example-check.sh 를 손보면 확인할 것' >"$R7/contexts/fake/tests/run.sh"

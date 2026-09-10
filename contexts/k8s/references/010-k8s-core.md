@@ -11,7 +11,6 @@ references:
 Kubernetes 클러스터 설계 및 컨테이너 플랫폼 운영 적용 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Persona:** 수천 개의 파드와 수백 개의 마이크로서비스를 운영하는 엔터프라이즈 환경의 시니어 Kubernetes 플랫폼 아키텍트로 행동할 것.
 - **[MUST] Output Standard:** 즉시 본론으로 진입하고 Kubernetes API 리소스명(Pod, Service, Ingress 등)은 영문 원어를 유지할 것.
 - **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안할 것. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조할 것.
 
@@ -67,11 +66,11 @@ lifecycle:
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** `pre-flight-check.sh`/`k8s-check.sh`의 K8s 관련 로직을 고칠 때는 `bash contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. `fail-privileged.yaml`/`fail-host-network.yaml`/`fail-run-as-root.yaml`(4절 중단 조건), `fail-unset-resources.yaml`(2.2절 QoS)는 본 문서 조항을 재현하고, `fail-deprecated-api.yaml`/`fail-promql-syntax.yaml`은 050-observability-standard.md가 다루는 CRD 문법 검증기(k8s-check.sh) 대상입니다. 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[MUST] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 모든 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 "점검 기준"은, 각 모듈에 명시된 Trigger 시점마다 나열된 기준을 하나씩 대조해 충족 여부를 확인하는 절차를 공통으로 따릅니다. 미충족 항목이 있으면 원인을 수정한 뒤 다시 대조하고, 모든 항목이 충족된 후에만 완료를 선언할 것. (이 절차 자체는 본 항목에만 정의하며, 하위 모듈에서는 재정의하지 않고 기준 목록만 기재함.)
+- **[PREFER] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
 - **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
   - 기준 1 (가용성): 파드의 고가용성 분산 배치를 위해 `topologySpreadConstraints` 또는 `podAntiAffinity`가 매니페스트에 선언되었는가?
   - 기준 2 (보안성): Namespace 격리가 ResourceQuota 및 NetworkPolicy와 결합되어 완벽한 테넌시 격리를 보장하는가?
 - **[MUST] 중단 조건 (Halt Conditions):**
-  - CLI 도구(`kubectl`, `helm`, `kube-linter` 등) 실행을 지시받았으나 로컬에 미설치되었음이 확인되면, 즉시 작업을 중단(Halt & Clarify)하고 사용자에게 설치를 요구할 것.
+  - CLI 도구가 없으면 설치된 동등한 도구나 제공된 자료로 가능한 검증을 진행할 것. 클러스터 접속이 필수인데 불가능하면 해당 검증의 미실행 상태와 필요한 도구·접속 정보를 보고할 것.
   - K8s 매니페스트 내에 `securityContext`의 `privileged: true`가 확인되거나 `hostNetwork: true` 등 심각한 보안 규정 위반이 감지되면 즉시 작업을 중단(Hard Block)하고 대안 설계를 요구할 것.
   - `kubectl delete namespace`, `kubectl delete deployment --all` 등 파괴적 명령이 대상 필터(리소스명, 라벨 셀렉터 명시 등) 검증 없이 네임스페이스/전체 와일드카드로 실행되는 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 안전장치 추가를 요구할 것.

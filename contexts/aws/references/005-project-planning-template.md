@@ -16,8 +16,8 @@ references:
 새로운 클라우드 프로젝트 마스터 플랜 기획 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Use Built-in Artifact:** 내장 `implementation_plan.md` 아티팩트로 계획서를 작성할 것.
-- **[MUST] Strict Structure:** 아래 10개 목차를 100% 준수할 것.
+- **[PREFER] 계획서 위치:** 사용자가 지정한 형식과 경로를 따를 것. 별도 파일이 필요한데 지정이 없으면 저장소의 기존 계획 문서 관례를 사용할 것.
+- **[PREFER] 계획서 구성:** 아래 목차에서 현재 프로젝트에 필요한 항목을 선택할 것. 사용자 지정 형식이 있으면 그 형식을 따르되, 관련 보안·비용·검증 조건은 포함할 것.
   1. 프로젝트 요약 (Executive Summary)
   2. 아키텍처 청사진 (Architecture Blueprint) & ADR (Architecture Decision Records)
   3. 네트워크 및 연결성 (Network & Connectivity)
@@ -33,8 +33,8 @@ references:
 
 ### 2.1 아키텍처 설계 기획 표준
 - **[PREFER] Agentic RAG:** 설계 전 에이전트 스스로 파일 검색·조회로 `030`(FinOps), `060`(K8s) 등 사내 표준 프롬프트 룰을 능동 조사하여 반영할 것.
-- **[MUST] AWS Account Foraging:** 설계 착수 전 반드시 터미널에서 `aws sts get-caller-identity`, `aws ec2 describe-vpcs` 등을 실행하여 계정 실제 상태를 팩트 기반으로 확보할 것.
-- **[MUST] Cloud Alternatives Table:** 컴퓨팅/스토리지 선택 시 2~3개의 AWS 서비스 대안과 비용/운영 복잡도를 Markdown Table로 제시하여 의사결정을 유도할 것.
+- **[MUST] AWS Account Foraging:** 기존 계정에 적용하는 설계는 대상 계정·리전과 관련 리소스 상태를 확인할 것. 신규 환경의 개념 설계는 가정과 적용 전 확인 사항을 구분할 것.
+- **[PREFER] Cloud Alternatives Table:** 컴퓨팅·스토리지 선택이 열려 있고 비용이나 운영에 영향을 주면 관련 대안을 비교할 것. 사용자가 이미 선택한 서비스는 재선택을 요구하지 않을 것.
 - **[MUST] Architecture Blueprint & ADR:** 도입된 기술에 대해 ADR 형식을 차용하여 명시적인 채택/기각 사유와 트레이드오프를 기록할 것.
 - **[PREFER] Step-by-Step Execution:** 구현 청사진 설계 시 복잡도를 낮추기 위해 `vpc.tf` -> `iam.tf` -> `eks.tf` 등 의존성을 분리하여 순차적 생성 흐름을 작성할 것.
 
@@ -53,7 +53,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 작성된 계획서가 `implementation_plan.md` 규격에 정확히 들어맞으며, 마크다운 렌더링에 린트 에러가 없어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 요청한 범위의 설계, 관련 위험과 검증 방법이 사용자 지정 형식 또는 저장소 관례에 맞게 정리되어야 합니다.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
 - **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**

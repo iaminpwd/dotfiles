@@ -19,10 +19,10 @@ references:
 
 ### 2.1 트러블슈팅 및 장애 진단
 - **[PREFER] Deep Dive Analysis:** 파드 로그 외에 노드 자원 상태(`kubectl top node`), 커널 이벤트(`dmesg`), kube-apiserver 감사 로그를 추가 조회하여 장애 근본 원인을 교차 검증할 것.
-- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인(Root Cause)과 대책(Resolution)이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사할 것. 검증이 통과된 후에만 최종 보고서를 생성할 것.
+- **[MUST] Grounding 팩트 검증:** 장애 보고서에서 관측 사실, 원인 가설, 제안 대책을 구분할 것. 사실과 확정 원인에는 수집된 로그·이벤트 등 근거를 연결하고, 근거가 부족하면 미확정으로 표시하고 필요한 추가 조사를 명시할 것.
 
 ### 2.2 장애 보고서 및 포스트모템 규격
-- **[Trigger: User requests bug fix or error analysis] 트러블슈팅 보고서**: 에러 분석 완료 시 아래 양식으로 `troubleshooting-report.md`를 작성할 것.
+- **[Trigger: Troubleshooting Report Requested] 트러블슈팅 보고서**: 별도 보고서를 요청받으면 아래 구성을 참고하고, 지정된 경로·형식에 작성할 것. 지정이 없으면 `troubleshooting-report.md`를 사용할 수 있음.
   ```markdown
   # Troubleshooting Report
   - **Issue Summary (문제 요약)**: [발생한 문제의 증상]
@@ -30,7 +30,7 @@ references:
   - **Resolution (해결책)**: [적용된 매니페스트 수정 내역]
   - **Prevention (재발 통제)**: [Liveness 수정, Limit 튜닝 등 개선 계획]
   ```
-- **[Trigger: Post-Incident Recovery] 포스트모템 보고서**: 운영 장애 복구 후 아래 양식으로 `post-mortem-report.md`를 작성할 것.
+- **[Trigger: Post-Mortem Requested] 포스트모템 보고서**: 장애 사후 분석 문서를 요청받으면 아래 구성을 참고하고, 지정된 경로·형식에 작성할 것. 지정이 없으면 `post-mortem-report.md`를 사용할 수 있음.
   ```markdown
   # Post-Mortem Report
   - **Incident Timeline (타임라인)**: [장애 발생부터 복구까지 시간대별 기록]
@@ -59,7 +59,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 수집된 K8s 이벤트가 Grounding 팩트 검증을 통과하여 `troubleshooting-report.md`에 결함 없이 기술되고, 재발을 통제할 리소스 격리 및 가드레일 매니페스트 코드가 파일 링크 형태로 명시되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 요청 범위의 조사·수정 결과, 확인된 근거와 미확정 사항, 필요한 후속 조치를 보고할 것. 코드 수정이 포함되면 해당 검증 결과를 함께 제시하고, 별도 보고서 파일은 요청된 경우에 작성할 것.
 - **[MUST] 검증 도구 매핑:** `kubectl get events --sort-by='.metadata.creationTimestamp'`를 사용하여 장애 시점 전후의 모든 클러스터 시스템 이벤트를 타임라인 순으로 자동 추출할 것.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)

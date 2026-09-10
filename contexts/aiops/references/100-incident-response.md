@@ -12,14 +12,14 @@ references:
 
 ## 1. 핵심 설계 원칙
 - **[MUST] Automated Timeline Extraction:** 장애 종료 시 로그 및 히스토리를 종합해 타임라인을 자동 추출하십시오.
-- **[MUST] Blameless RCA Generation:** 개인 비난을 배제하고 구조적 원인/Action Items 기반 `post-mortem-report.md`를 생성하십시오.
-- **[MUST] Structured Analysis:** 분석 시 `troubleshooting-report.md`에 RCA, 증거, 해결, 방지책 순으로 작성하십시오.
+- **[MUST] Blameless RCA Generation:** 개인 비난을 배제하고 근거가 있는 구조적 원인과 재발 방지 항목을 정리할 것.
+- **[PREFER] Structured Analysis:** 원인, 증거, 해결, 방지책을 구분해 보고할 것. 별도 파일은 요청되었거나 공유·재개에 필요한 경우에만 생성할 것.
 - **[MUST] Service Topology Propagation RCA:** 장애 분석 시 인프라·서비스 의존성 토폴로지 그래프를 바탕으로 장애 전파 경로를 추적 및 시각화하여 최하단 근원 원인(Root Cause)을 정확히 도출하십시오.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Grounding 팩트 검증
-- **[MUST] Grounding 팩트 검증:** 사후 분석 보고서 작성 지시를 받으면, 실제 보고서를 출력하기 전에 분석하려는 원인과 대책이 수집한 터미널 출력 및 로그(팩트)와 100% 문장 단위로 일치하는지 우선 검사하십시오. 검증이 통과된 후에만 최종 보고서를 생성하십시오.
+- **[MUST] Grounding 팩트 검증:** 장애 보고서에서 관측 사실, 원인 가설, 제안 대책을 구분할 것. 사실과 확정 원인에는 수집된 로그·이벤트 등 근거를 연결하고, 근거가 부족하면 미확정으로 표시하고 필요한 추가 조사를 명시할 것.
 
 ### 예시 코드 및 패턴 (Few-Shot Examples)
 <examples>
@@ -38,7 +38,7 @@ references:
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 수집된 인시던트 팩트 로그와 타임라인이 Grounding 팩트 검증을 통과하여 `post-mortem-report.md`에 결함 없이 정리되고, 구체적 재발 방지 룰 코드가 보증되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 요청 범위의 조사·수정 결과, 확인된 근거와 미확정 사항, 필요한 후속 조치를 보고할 것. 코드 수정이 포함되면 해당 검증 결과를 함께 제시하고, 별도 보고서 파일은 요청된 경우에 작성할 것.
 - **[MUST] 검증 도구 매핑:** `git log` 및 클라우드 로그 조회 CLI(`aws logs filter-log-events`, `az monitor log-analytics query` 등)를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
 
 ## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
