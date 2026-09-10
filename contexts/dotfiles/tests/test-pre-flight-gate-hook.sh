@@ -66,13 +66,16 @@ payload() {
 
 echo "=== pre-flight-gate-hook.sh 판정 로직 회귀 테스트 ==="
 
-# --- 픽스처 1: basename이 "dotfiles"인 저장소 (prompt-lint/test-coverage-check까지 대상) ---
-DOTFILES_REPO="$TMP/dotfiles"
+# --- 픽스처 1: 훅 원본이 있는 저장소 (prompt-lint/test-coverage-check까지 대상) ---
+DOTFILES_REPO="$TMP/personal-environment"
 git_init_clean "$DOTFILES_REPO"
 mkdir -p "$DOTFILES_REPO/bin/hooks" "$DOTFILES_REPO/bin/lib"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$DOTFILES_REPO/bin/hooks/run-suite.sh"
 chmod +x "$DOTFILES_REPO/bin/hooks/run-suite.sh"
 cp "$REPO_ROOT/bin/lib/script-init.sh" "$DOTFILES_REPO/bin/lib/script-init.sh"
+cp "$HOOK" "$DOTFILES_REPO/bin/hooks/pre-flight-gate-hook.sh"
+cp "$REPO_ROOT/bin/lib/jq-resolve.sh" "$DOTFILES_REPO/bin/lib/jq-resolve.sh"
+HOOK="$DOTFILES_REPO/bin/hooks/pre-flight-gate-hook.sh"
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "PFC_OK"
 stub "$DOTFILES_REPO/bin/linters/prompt-lint.sh" 0 "LINT_OK"
 stub "$DOTFILES_REPO/bin/linters/test-coverage-check.sh" 0 "COVERAGE_OK"
@@ -184,6 +187,8 @@ mkdir -p "$SPACED_REPO/bin/hooks" "$SPACED_REPO/bin/lib"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$SPACED_REPO/bin/hooks/run-suite.sh"
 chmod +x "$SPACED_REPO/bin/hooks/run-suite.sh"
 cp "$REPO_ROOT/bin/lib/script-init.sh" "$SPACED_REPO/bin/lib/script-init.sh"
+cp "$HOOK" "$SPACED_REPO/bin/hooks/pre-flight-gate-hook.sh"
+cp "$REPO_ROOT/bin/lib/jq-resolve.sh" "$SPACED_REPO/bin/lib/jq-resolve.sh"
 stub "$SPACED_REPO/bin/hooks/pre-flight-check.sh" 0 "SPACED_PFC_OK"
 stub "$SPACED_REPO/bin/linters/prompt-lint.sh" 0 "SPACED_LINT_OK"
 stub "$SPACED_REPO/bin/linters/test-coverage-check.sh" 0 "SPACED_COVERAGE_OK"
@@ -192,7 +197,7 @@ git -C "$SPACED_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 스텁 �
 # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "dirty" >>"$SPACED_REPO/README.md"
 
-out_spaced=$(payload "$SPACED_REPO" | bash "$HOOK")
+out_spaced=$(payload "$SPACED_REPO" | bash "$SPACED_REPO/bin/hooks/pre-flight-gate-hook.sh")
 if echo "$out_spaced" | jq -e '.hookSpecificOutput.additionalContext | contains("pre-flight-check.sh")' >/dev/null 2>&1; then
   report "공백 포함 경로 (cwd 가 잘리지 않고 게이트가 실제로 수행됨)" 0
 else

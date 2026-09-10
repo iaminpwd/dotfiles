@@ -76,7 +76,7 @@ if [ "${#SCRIPTS[@]}" -eq 0 ]; then
   add_default_gate pre-flight-check.sh
 
   # 2. dotfiles 저장소인 경우 예외적으로 prompt-lint.sh, test-coverage-check.sh 추가
-  if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
+  if [ "$REPO_ROOT" -ef "$RS_SCRIPT_DIR/../.." ]; then
     add_default_gate prompt-lint.sh
     add_default_gate test-coverage-check.sh
   fi

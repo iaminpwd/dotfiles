@@ -50,3 +50,10 @@ git add .
 git -c core.hooksPath=/dev/null commit -qm 'feat: 기준 브랜치 설치'
 check false EVENT_NAME=pull_request BASE_SHA="$(git rev-parse HEAD)" HEAD_SHA="$docs"
 echo '10/10 통과'
+
+before=$(git rev-parse HEAD)
+printf 'marker\n' >.gitignore
+git add .gitignore
+git -c core.hooksPath=/dev/null commit -qm 'chore: 설치 식별 설정'
+after=$(git rev-parse HEAD)
+check true EVENT_NAME=push BEFORE_SHA="$before" AFTER_SHA="$after"

@@ -1,0 +1,8 @@
+# 이 저장소가 생성하는 개인용 링크와 런타임 산출물
+/AGENTS.md
+/CLAUDE.md
+/.agent-state/
+/.agents/
+/.codex/
+__pycache__/
+*.pyc

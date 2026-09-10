@@ -108,6 +108,8 @@ else
 fi
 
 # 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
+PC_HOOK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+PC_DOTFILES_ROOT=$(cd "$PC_HOOK_DIR/../../.." 2>/dev/null && pwd || echo "")
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
 # AI 토큰 최적화를 위해 run-suite.sh가 존재하면 래퍼로 사용한다.
@@ -132,7 +134,7 @@ fi
 # bin/linters/*.sh 같은 경로는 dotfiles 자신의 구조라, 저장소 판별 없이 매칭하면
 # 외부 저장소에 우연히 같은 상대경로(예: bin/hooks/foo.sh)가 있을 때 존재하지도 않는
 # dotfiles 테스트 경로를 안내하는 오탐이 난다. dotfiles 저장소 안에서 커밋할 때만 켠다.
-if [ "$(basename "$REPO_ROOT")" = "dotfiles" ]; then
+if [ "$REPO_ROOT" -ef "$PC_DOTFILES_ROOT" ]; then
   BIN_REMINDERS=()
   for FILE in "${STAGED_FILES[@]:-}"; do
     # 각 항목은 "contexts/" 기준 상대경로(스킬/tests/파일명)로 저장한다. test-run-suite.sh와
@@ -207,8 +209,6 @@ fi
 # 실패는 아니지만, 원인이 "클론 위치"라는 것을 사용자가 알 방법이 없고 고칠 방법도 마땅치
 # 않았다(경로가 코드에 박혀 있으므로). 3순위를 남기는 이유는 commit-msg 의 같은 지점 주석 참조
 # — 훅을 심볼릭 링크가 아니라 복사본으로 배치한 환경에서 기존 동작을 그대로 보존한다.
-PC_HOOK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-PC_DOTFILES_ROOT=$(cd "$PC_HOOK_DIR/../../.." 2>/dev/null && pwd || echo "")
 
 DOTFILES_PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
 if [ ! -f "$DOTFILES_PFC" ] && [ -n "$PC_DOTFILES_ROOT" ]; then
@@ -218,7 +218,7 @@ if [ ! -f "$DOTFILES_PFC" ]; then
   DOTFILES_PFC="$HOME/dotfiles/bin/hooks/pre-flight-check.sh"
 fi
 PFC_TARGET=""
-if [[ "$REPO_ROOT/" == "$HOME/workspace/"* || "$(basename "$REPO_ROOT")" == "dotfiles" ]]; then
+if [[ "$REPO_ROOT/" == "$HOME/workspace/"* ]] || [ "$REPO_ROOT" -ef "$PC_DOTFILES_ROOT" ]; then
   # -x 가 아니라 -f 로 본다. PFC_TARGET 은 직접 실행되지 않고 아래에서 "$RUN_SUITE" 에
   # 인자로 넘어가며, run-suite.sh 의 run_script 는 `[ -f "$script" ]` 이면 `bash "$script"`
   # 로 돌리므로 실행 비트가 애초에 필요 없다. -x 로 판정하면 비트가 없는 순간 이 하드

@@ -122,16 +122,22 @@ fi
 #    `just verify` 가 저장소 전체 스캔·프롬프트 린트·커버리지 게이트를 한 번도 돌리지
 #    않고 성공처럼 보이는 경로다(실측: 15개여야 할 대상이 12개로 줄었는데 표시 없음).
 #    건너뛴 사실이 반드시 출력에 드러나야 한다.
-GATE_REPO="$TMP/dotfiles"
+GATE_REPO="$TMP/personal-environment"
 mkdir -p "$GATE_REPO/contexts/probe/tests"
 cat >"$GATE_REPO/contexts/probe/tests/run.sh" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
 chmod +x "$GATE_REPO/contexts/probe/tests/run.sh"
+mkdir -p "$GATE_REPO/bin/hooks" "$GATE_REPO/bin/lib"
+cp "$RUNNER" "$GATE_REPO/bin/hooks/run-suite.sh"
+cp "$REPO_ROOT/bin/lib/script-init.sh" "$GATE_REPO/bin/lib/script-init.sh"
+# 설치된 심볼릭 링크로 호출해도 원본 저장소로 판정해야 한다.
+GATE_RUNNER="$TMP/linked-runner"
+ln -s "$GATE_REPO/bin/hooks/run-suite.sh" "$GATE_RUNNER"
 git -C "$GATE_REPO" init -q
 CODE=0
-OUT=$( (cd "$GATE_REPO" && CI=false HOME="$TMP" PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+OUT=$( (cd "$GATE_REPO" && CI=false HOME="$TMP" PATH="/usr/bin:/bin" bash "$GATE_RUNNER") 2>&1) || CODE=$?
 if [ "$CODE" -eq 0 ] &&
   grep -qF "[✓] contexts/probe/tests/run.sh" <<<"$OUT" &&
   grep -qF "pre-flight-check.sh" <<<"$OUT" &&
@@ -174,7 +180,7 @@ fi
 
 # CI는 다른 테스트가 통과해도 기본 게이트 누락으로 실패한다.
 CODE=0
-OUT=$( (cd "$GATE_REPO" && CI=true PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+OUT=$( (cd "$GATE_REPO" && CI=true PATH="/usr/bin:/bin" bash "$GATE_RUNNER") 2>&1) || CODE=$?
 if [ "$CODE" -eq 1 ] && grep -qF 'CI 필수 검증 누락' <<<"$OUT"; then
   report "CI 필수 게이트 누락 실패" 0
 else
@@ -189,7 +195,7 @@ for name in pre-flight-check.sh prompt-lint.sh test-coverage-check.sh; do
   chmod +x "$TMP/shadow/$name"
 done
 CODE=0
-OUT=$( (cd "$GATE_REPO" && CI=true PATH="$TMP/shadow:/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+OUT=$( (cd "$GATE_REPO" && CI=true PATH="$TMP/shadow:/usr/bin:/bin" bash "$GATE_RUNNER") 2>&1) || CODE=$?
 if [ "$CODE" -eq 0 ] && ! grep -qF '[WARNING]' <<<"$OUT"; then
   report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 0
 else

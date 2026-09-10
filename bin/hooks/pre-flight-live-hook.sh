@@ -81,7 +81,7 @@ rs="$git_root/bin/hooks/run-suite.sh"
 # 깨져 있었다 — 실행 비트 없는 정본을 두면 커밋 게이트가 경고만 남기고 건너뛰는데
 # fail-open 인 이 훅만 차단해, 하드 게이트와 2차 방어선의 역할이 뒤집혔다(실측 재현).
 # 지금은 양쪽 분기 모두 -f 다. "동일하게"는 이렇게 두 분기를 각각 대조해야 유지된다.
-if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
+if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$git_root" -ef "$DOTFILES_ROOT" ]; then
   [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 elif [ -f "$git_root/pre-flight-check.sh" ]; then

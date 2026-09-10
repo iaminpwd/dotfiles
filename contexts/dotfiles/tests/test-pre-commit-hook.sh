@@ -38,12 +38,15 @@ report() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# BIN_REMINDERS 블록은 "$(basename "$REPO_ROOT")" = "dotfiles" 일 때만 활성화되고,
+# BIN_REMINDERS 블록은 훅 원본이 현재 저장소에 있을 때만 활성화되고,
 # 하단의 실제 검증 실행부는 그 조건에서 REPO_ROOT/bin/hooks/pre-flight-check.sh 를
 # 우선 사용한다. 그 자리에 exit 0 스텁을 심어두면 무거운 실제 파이프라인을 타지 않고도
 # 두 로직을 함께 검증할 수 있다.
-FIXTURE_REPO="$TMP/dotfiles"
+FIXTURE_REPO="$TMP/personal-environment"
 mkdir -p "$FIXTURE_REPO/bin/hooks"
+mkdir -p "$FIXTURE_REPO/stow/git/.githooks"
+cp "$HOOK" "$FIXTURE_REPO/stow/git/.githooks/pre-commit"
+HOOK="$FIXTURE_REPO/stow/git/.githooks/pre-commit"
 git -C "$FIXTURE_REPO" init -q
 git -C "$FIXTURE_REPO" config user.email "test@example.com"
 git -C "$FIXTURE_REPO" config user.name "Test"

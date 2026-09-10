@@ -37,11 +37,14 @@ report() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# 픽스처 저장소 구성: basename이 "dotfiles"여야 훅이 활성화되고(line 22 가드),
+# 픽스처 저장소 구성: 훅 원본이 현재 저장소에 있어야 훅이 활성화되고,
 # 실제 run-suite.sh를 그대로 가져와 아래 aws 스텁만 호출시킨다.
-FIXTURE_REPO="$TMP/dotfiles"
+FIXTURE_REPO="$TMP/personal-environment"
 mkdir -p "$FIXTURE_REPO/bin/hooks" "$FIXTURE_REPO/bin/lib" \
   "$FIXTURE_REPO/contexts/aws/tests" "$FIXTURE_REPO/contexts/azure/tests" "$FIXTURE_REPO/contexts/dotfiles/tests"
+mkdir -p "$FIXTURE_REPO/stow/git/.githooks"
+cp "$HOOK" "$FIXTURE_REPO/stow/git/.githooks/pre-push"
+HOOK="$FIXTURE_REPO/stow/git/.githooks/pre-push"
 cp "$REPO_ROOT/bin/hooks/run-suite.sh" "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 chmod +x "$FIXTURE_REPO/bin/hooks/run-suite.sh"
 # run-suite.sh가 source하는 SSOT 라이브러리. 실제 배포 구조와 동일하게 상대 위치에 둔다.
@@ -269,7 +272,7 @@ else
   report "branch-delete-push (브랜치 삭제 push는 무동작 + exit 0)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
-# 5. 저장소 basename이 "dotfiles"가 아니면(전역 훅이 dotfiles 밖 임의 저장소에서
+# 5. 훅 원본이 다른 저장소에 있으면(전역 훅이 dotfiles 밖 임의 저장소에서
 #    실행되는 경우) 즉시 조용히 통과해야 한다(dotfiles 전용 스킬 구조 오탐 방지).
 OTHER_REPO="$TMP/some-other-repo"
 mkdir -p "$OTHER_REPO"

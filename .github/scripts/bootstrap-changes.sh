@@ -37,7 +37,7 @@ if ! git diff --name-only --no-renames -z "$base" "$head" >"$changes"; then
 fi
 while IFS= read -r -d '' file; do
   case "$file" in
-  bootstrap.sh | Justfile | ansible/* | stow/* | bin/* | .github/* | contexts/*/scripts/* | contexts/*/tests/* | contexts/*/SKILL.md | contexts/base.AGENTS.md)
+  bootstrap.sh | .gitignore | Justfile | ansible/* | stow/* | bin/* | .github/* | contexts/*/scripts/* | contexts/*/tests/* | contexts/*/SKILL.md | contexts/base.AGENTS.md)
     echo 'run=true'
     exit 0
     ;;

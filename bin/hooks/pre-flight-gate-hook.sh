@@ -45,7 +45,7 @@ rs="$git_root/bin/hooks/run-suite.sh"
 # pfc 는 -f, rs 는 -x 로 판정하는 이유는 pre-flight-live-hook.sh 의 같은 지점 주석 참조
 # (pfc 는 run-suite.sh 에 인자로 넘겨 bash 로 실행되므로 실행 권한이 필요 없고, 예전의
 #  -x 판정은 실행 권한 없는 옵트인 저장소에서 이 훅만 조용히 빠지게 만들었다).
-if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$(basename "$git_root")" = "dotfiles" ]; then
+if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$git_root" -ef "$DOTFILES_ROOT" ]; then
   [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
 elif [ -f "$git_root/pre-flight-check.sh" ]; then
@@ -105,7 +105,7 @@ SCRIPTS=("$pfc")
 # prompt-lint.sh / test-coverage-check.sh는 저장소별이 아니라 dotfiles 코퍼스 전역
 # 검사라(test-coverage-check.sh는 자기 물리적 위치 기준으로 항상 dotfiles 자신만 본다),
 # 대상 저장소가 dotfiles 자신일 때만 의미가 있다.
-if [ "$(basename "$git_root")" = "dotfiles" ]; then
+if [ "$git_root" -ef "$DOTFILES_ROOT" ]; then
   prompt_lint="$git_root/bin/linters/prompt-lint.sh"
   [ -x "$prompt_lint" ] || prompt_lint="$DOTFILES_ROOT/bin/linters/prompt-lint.sh"
   [ -x "$prompt_lint" ] && SCRIPTS+=("$prompt_lint")
