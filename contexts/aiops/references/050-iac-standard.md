@@ -36,7 +36,7 @@ terraform {
     bucket         = "myproject-tfstate-bucket"
     key            = "prod/aiops/terraform.tfstate"
     region         = "ap-northeast-2"
-    dynamodb_table = "myproject-tfstate-lock"
+    use_lockfile   = true
   }
 }
 ```

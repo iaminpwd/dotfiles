@@ -634,6 +634,17 @@ export DB_PASSWORD'
   check_clean "ok-good-bash-no-shebang (셰방 없어도 SC2148 로 걸리지 않음)" "$D"
 fi
 
+# 평가 정답지에 삭제된 스킬이 남으면 프롬프트 린트에서도 차단한다.
+D=$(new_case fail-routing-unknown-skill)
+mkdir -p "$D/contexts/prompt-architect/evals/routing"
+cp "$REPO_ROOT_SRC/contexts/prompt-architect/evals/routing/run.sh" "$D/contexts/prompt-architect/evals/routing/run.sh"
+printf 'S01\tremoved-skill\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
+check "삭제된 라우팅 정답 차단" 1 "라우팅 정답에 없는 스킬" "$D"
+printf 'S01\tdemo\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
+check "유효한 라우팅 정답 허용" 0 "라우팅 케이스 정합성 확인" "$D"
+printf 'S01\tdemo\t입력\nS01\tnone\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
+check "라우팅 ID 중복 차단" 1 "라우팅 케이스 ID 중복" "$D"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

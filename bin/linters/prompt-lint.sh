@@ -717,6 +717,9 @@ main() {
   check_archive_scope_consistency
   check_dangling_file_references
   check_good_examples
+  if [ -f "$CONTEXTS_DIR/prompt-architect/evals/routing/run.sh" ]; then
+    bash "$CONTEXTS_DIR/prompt-architect/evals/routing/run.sh" --check-cases-only || EXIT_CODE=1
+  fi
 
   log_info "======================================================"
   if [ "$EXIT_CODE" -eq 0 ]; then

@@ -32,7 +32,7 @@ bash contexts/prompt-architect/tests/run.sh
 라우팅 표를 수정하면 색인을 재생성합니다.
 
 ```bash
-bash bin/utils/generate-context-index.sh > contexts/INDEX.md
+just docs-index
 ```
 
 런타임 스킬 폴더에는 `tests/`와 `evals/`가 동기화되지 않으므로 원본 저장소 경로를 사용합니다.

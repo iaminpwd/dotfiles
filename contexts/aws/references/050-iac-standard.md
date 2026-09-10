@@ -18,9 +18,9 @@ Terraform 및 Ansible IaC 코드 작성 표준임.
 
 ### 2.1 Terraform 엔지니어링 표준
 - **[PREFER] Active Investigation:** 코드 작성 전 반드시 `010-aws-core.md` 절차를 참조하여 실제 AWS 리소스들의 최신 상태를 물리적으로 선제 조사하고, 그 팩트만을 근거로 코드를 작성할 것.
-- **[MUST] Policy Self-Check:** 코드 제안 전/후 `implementation_plan.md` 및 `walkthrough.md`에 정량 검증 결과와 본 가이드에 기술된 보안/IaC 규정 준수 여부를 구체적인 충족 코드의 절대 경로 파일 링크(라인 범위 포함) 또는 팩트 기반 근거와 함께 명시할 것. 정확한 테이블 헤더/포맷은 `contexts/pre-flight-check/SKILL.md`의 "정성적 정책 자가 검증 (Policy Self-Check)" 절 템플릿을 따를 것(이 저장소 전체에서 유일하게 정의된 템플릿이므로 여기서 다시 정의하지 않음).
+- **[MUST] 검증 결과 보고:** 현재 변경에 해당하는 검사 결과와 정책 판단 근거를 보고할 것. 보고 형식과 별도 문서 작성 여부는 `contexts/pre-flight-check/SKILL.md`의 "검증 결과 보고" 절을 따른다.
 - **[PREFER] TGW:** 글로벌 확장성 확보를 위해 AWS Transit Gateway(TGW) 기반의 중앙 집중형 라우팅을 적극 제안할 것.
-- **[MUST] State Management:** State 저장은 반드시 AWS S3 Backend와 DynamoDB State Locking을 사용하여 원격으로 구성할 것.
+- **[MUST] State Management:** 공유 환경의 State는 S3 원격 Backend와 `use_lockfile = true`로 잠금을 구성할 것. 기존 DynamoDB 잠금은 구버전 클라이언트의 호환성을 확인한 뒤 이전하며, 신규 구성에는 추가하지 않을 것.
 - **[PREFER] Multi-Env:** 다중 환경 관리 시 Terragrunt를 활용하여 환경별(Dev/Prod) 상태(State) 격리 및 변수 주입 아키텍처를 적용하는 것을 우선 제안할 것. Terragrunt를 사용하지 않는 팀에는 `terraform.workspace` 방식이나 디렉토리 분리 방식을 환경 감사 대안으로 허용할 것.
 - **[MUST] Dynamic Mapping:** 가용 영역(AZ)은 `data "aws_availability_zones"` 블록을 활용하여 동적으로 매핑할 것.
 - **[MUST] Stateful Protection:** DB나 스토리지의 `prevent_destroy = true` 설정은 오직 프로덕션(Prod) 및 스테이징(Stage) 환경에만 적용하고, 개발(Dev) 및 임시 테스트 환경에서는 신속한 자원 회수가 가능하도록 환경 변수를 통해 삭제 처리를 허용하여 설계할 것.
@@ -31,7 +31,7 @@ Terraform 및 Ansible IaC 코드 작성 표준임.
 
 ### 2.2 Ansible 엔지니어링 표준
 - **[MUST] Idempotency:** 패키지 설치 시 `state: present`를 명시하고, `yum`, `systemd`, `file` 등 전용 모듈을 최우선으로 사용하여 멱등성을 달성할 것.
-- **[MUST] Dynamic Inventory:** 인벤토리 구성 시 반드시 AWS EC2 Dynamic Inventory Plugin(`aws_ec2.yml`)을 활용할 것.
+- **[PREFER] Dynamic Inventory:** AWS EC2 인스턴스 집합을 관리할 때는 Dynamic Inventory Plugin(`aws_ec2.yml`)을 우선 사용할 것. localhost 및 고정 호스트 구성에는 정적 인벤토리를 허용할 것.
 - **[MUST] Vault:** 민감한 변수(DB 패스워드 등)는 Ansible Vault로 암호화할 것.
 
 ### 2.3 엔터프라이즈 명명 규칙 및 태깅
@@ -47,7 +47,7 @@ terraform {
     bucket         = "my-terraform-state-bucket"
     key            = "prod/vpc/terraform.tfstate"
     region         = "ap-northeast-2"
-    dynamodb_table = "terraform-locks"
+    use_lockfile   = true
   }
 }
 ```
@@ -56,7 +56,7 @@ terraform {
 [Bad]
 ```hcl
 # backend 블록 누락 (로컬 state 사용)
-# dynamodb_table 누락 (동시성 제어 불가)
+# use_lockfile 누락 (S3 잠금 비활성화)
 ```
 </example>
 </examples>

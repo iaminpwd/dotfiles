@@ -23,6 +23,7 @@ set -euo pipefail
 
 EVAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CASES="$EVAL_DIR/cases.tsv"
+bash "$EVAL_DIR/run.sh" --check-cases-only
 OBSERVED="$EVAL_DIR/observed.tsv"
 RUNS_FILE="$EVAL_DIR/observed-runs.tsv"
 TIMEOUT_SEC="${ROUTING_TIMEOUT:-120}"

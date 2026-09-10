@@ -34,6 +34,33 @@ OBSERVED="$EVAL_DIR/observed.tsv"
   exit 1
 }
 
+# 모델 호출 없이 정답지의 삭제된 스킬·중복 ID·형식을 확인한다.
+python3 - "$CONTEXTS_DIR" "$CASES" <<'PYCASES'
+from pathlib import Path
+import sys
+
+contexts, cases = map(Path, sys.argv[1:])
+skills = {p.parent.name for p in contexts.glob('*/SKILL.md')} - {'dotfiles'}
+seen = set()
+for number, line in enumerate(cases.read_text().splitlines(), 1):
+    if not line.strip() or line.lstrip().startswith('#'):
+        continue
+    parts = line.split('\t')
+    if len(parts) != 3 or not all(p.strip() for p in parts):
+        sys.exit(f'[ERROR] 라우팅 케이스 형식 오류: {number}')
+    cid, expected, _ = parts
+    if cid in seen:
+        sys.exit(f'[ERROR] 라우팅 케이스 ID 중복: {cid}')
+    seen.add(cid)
+    names = set(expected.split(','))
+    if expected != 'none' and (names - skills):
+        sys.exit(f'[ERROR] 라우팅 정답에 없는 스킬: {cid}: {sorted(names - skills)}')
+if not seen:
+    sys.exit('[ERROR] 라우팅 케이스가 없습니다.')
+print(f'[INFO] 라우팅 케이스 정합성 확인: {len(seen)}건')
+PYCASES
+[ "${1:-}" != --check-cases-only ] || exit 0
+
 echo "======================================================"
 echo "=== 스킬 라우팅 eval ==="
 echo "======================================================"

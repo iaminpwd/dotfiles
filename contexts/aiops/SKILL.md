@@ -30,4 +30,4 @@ aiops 관련 작업 시 발동됩니다. SRE 원칙 및 에이전트 기반 자�
 ## 2. 작업 프로세스 제약 (Operational Gate)
 
 - **[PREFER] 필요한 참조 선택:** 라우팅 표에서 현재 작업에 해당하는 문서를 읽고, 연결된 문서는 판단에 필요한 경우에만 추가로 읽을 것. 이미 읽은 내용은 재사용할 것.
-- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 코드 작성 직후 `pre-flight-check.sh` 정량 검증을 통과시키십시오.
+- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 변경 완료 시 관련 파일의 `pre-flight-check.sh` 정량 검증 결과를 확인할 것. 실행 시점과 결과 보고는 `contexts/pre-flight-check/SKILL.md`를 따른다.
