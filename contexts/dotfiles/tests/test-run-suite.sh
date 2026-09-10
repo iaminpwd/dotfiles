@@ -131,7 +131,7 @@ EOF
 chmod +x "$GATE_REPO/contexts/probe/tests/run.sh"
 git -C "$GATE_REPO" init -q
 CODE=0
-OUT=$( (cd "$GATE_REPO" && HOME="$TMP" PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+OUT=$( (cd "$GATE_REPO" && CI=false HOME="$TMP" PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
 if [ "$CODE" -eq 0 ] &&
   grep -qF "[✓] contexts/probe/tests/run.sh" <<<"$OUT" &&
   grep -qF "pre-flight-check.sh" <<<"$OUT" &&
@@ -170,6 +170,30 @@ if [ "$CODE" -eq 0 ] && ! grep -qF "SUB_SUITE_MARKER" <<<"$OUT"; then
   report "루트에서 준 상대 경로는 루트 기준 유지" 0
 else
   report "루트에서 준 상대 경로는 루트 기준 유지" 1 "기대 exit=0 / 실제 exit=$CODE out=${OUT//$'\n'/ }"
+fi
+
+# CI는 다른 테스트가 통과해도 기본 게이트 누락으로 실패한다.
+CODE=0
+OUT=$( (cd "$GATE_REPO" && CI=true PATH="/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+if [ "$CODE" -eq 1 ] && grep -qF 'CI 필수 검증 누락' <<<"$OUT"; then
+  report "CI 필수 게이트 누락 실패" 0
+else
+  report "CI 필수 게이트 누락 실패" 1 "$OUT"
+fi
+mkdir -p "$GATE_REPO/bin/hooks" "$GATE_REPO/bin/linters" "$TMP/shadow"
+for name in pre-flight-check.sh prompt-lint.sh test-coverage-check.sh; do
+  dest="$GATE_REPO/bin/linters/$name"
+  [ "$name" != pre-flight-check.sh ] || dest="$GATE_REPO/bin/hooks/$name"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"$dest"
+  printf '#!/usr/bin/env bash\nexit 9\n' >"$TMP/shadow/$name"
+  chmod +x "$TMP/shadow/$name"
+done
+CODE=0
+OUT=$( (cd "$GATE_REPO" && CI=true PATH="$TMP/shadow:/usr/bin:/bin" bash "$RUNNER") 2>&1) || CODE=$?
+if [ "$CODE" -eq 0 ] && ! grep -qF '[WARNING]' <<<"$OUT"; then
+  report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 0
+else
+  report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 1 "$OUT"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

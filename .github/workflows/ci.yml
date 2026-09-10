@@ -21,6 +21,26 @@ permissions:
   contents: read
 
 jobs:
+  bootstrap-changes:
+    name: Detect bootstrap changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.changes.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: bash .github/scripts/bootstrap-changes.sh >> "$GITHUB_OUTPUT"
+
   # 로컬 git hook은 --no-verify로 우회 가능하므로, 이 job이 실제 우회 불가능한 검증 게이트 역할을 한다.
   verify:
     name: Lint & Test Gate
@@ -68,16 +88,18 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.local/share/mise
-          key: mise-${{ runner.os }}-${{ hashFiles('stow/mise/.config/mise/config.toml') }}
+          key: mise-verify-${{ runner.os }}-${{ hashFiles('stow/mise/.config/mise/config.toml', '.github/scripts/ci-tool-config.py') }}
 
-      # stow가 하는 mise 설정 배치를 그대로 재현 (전체 ansible 프로비저닝은 이 job에서 불필요)
-      - name: Apply repo mise tool config
+      # 버전 정본에서 검증에 필요한 도구만 추출한다. bootstrap-smoke는 전체 설치를 유지한다.
+      - name: Generate verification tool config
         run: |
           mkdir -p ~/.config/mise
-          cp stow/mise/.config/mise/config.toml ~/.config/mise/config.toml
+          /usr/bin/python3 .github/scripts/ci-tool-config.py > ~/.config/mise/config.toml
 
       - name: Install pinned tools (shellcheck, tflint, checkov, trufflehog, ansible-lint ...)
-        run: mise install
+        run: |
+          mise install uv
+          mise install
 
       # 테스트 스위트가 zsh -n 검사와 ai_agent 롤의 ~/.local/bin 심볼릭 링크(prompt-lint.sh 등)를
       # 전제하므로 이 job에서도 최소한으로 재현한다.
@@ -102,6 +124,8 @@ jobs:
   # RHEL(dnf)은 네이티브 러너가 없고, 컨테이너로 대체하면 ansible docker 롤의 systemd 요구를
   # 못 채워 무관한 이유로 실패하므로 이번 범위에서 제외한다.
   bootstrap-smoke:
+    needs: bootstrap-changes
+    if: needs.bootstrap-changes.outputs.run == 'true'
     name: Bootstrap Smoke (${{ matrix.name }})
     strategy:
       fail-fast: false

@@ -44,22 +44,28 @@ for arg in "$@"; do
   fi
 done
 
-# PATH에서 찾지 못해 목록에서 빠진 게이트. 조용히 빠지면 "돌지도 않은 검증"이 통과로
+# 저장소와 PATH에서 찾지 못해 목록에서 빠진 게이트. 조용히 빠지면 "돌지도 않은 검증"이 통과로
 # 보이므로(아래 add_default_gate 주석) 마지막 요약에서 한 번 더 드러낸다.
 MISSING_GATES=()
 
 # add_default_gate <스크립트명>
-# PATH에 있으면 실행 목록에 넣고, 없으면 경고를 남긴다.
+# 저장소 내부 파일을 우선하고 PATH로 폴백한다. CI에서는 누락을 실패 처리한다.
 # 예전엔 `command -v ... && SCRIPTS+=(...)` 뿐이라 미설치 시 아무 말 없이 빠졌다. 아래
 # "대상 0건" 가드는 run.sh 들이 잡히면 발동하지 않으므로, ai_agent 롤이 아직 안 돌아간
 # 새 클론에서 `just verify` 가 저장소 전체 스캔·프롬프트 린트·커버리지 게이트를 한 번도
 # 안 돌린 채 초록불만 띄웠다(실측: 15개여야 할 대상이 12개로 줄었는데 아무 표시 없음).
 add_default_gate() {
-  local name=$1
-  if command -v "$name" >/dev/null 2>&1; then
+  local name=$1 relative
+  case "$name" in
+  pre-flight-check.sh) relative="bin/hooks/$name" ;;
+  *) relative="bin/linters/$name" ;;
+  esac
+  if [ -f "$REPO_ROOT/$relative" ]; then
+    SCRIPTS+=("$REPO_ROOT/$relative")
+  elif command -v "$name" >/dev/null 2>&1; then
     SCRIPTS+=("$name")
   else
-    echo "[WARNING] $name 을(를) PATH에서 찾지 못해 이 검증을 건너뜁니다." >&2
+    echo "[WARNING] $name 을(를) 저장소와 PATH에서 찾지 못해 이 검증을 건너뜁니다." >&2
     MISSING_GATES+=("$name")
   fi
 }
@@ -190,5 +196,10 @@ fi
 
 if [ "${#FAILED[@]}" -gt 0 ]; then
   printf '❌ 검증 실패 %s/%s: %s\n' "${#FAILED[@]}" "${#SCRIPTS[@]}" "${FAILED[*]}" >&2
+  exit 1
+fi
+
+if [ "${CI:-}" = true ] && [ "${#MISSING_GATES[@]}" -gt 0 ]; then
+  echo "[ERROR] CI 필수 검증 누락: ${MISSING_GATES[*]}" >&2
   exit 1
 fi
