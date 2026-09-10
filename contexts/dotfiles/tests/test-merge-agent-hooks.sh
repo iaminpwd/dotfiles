@@ -107,6 +107,32 @@ else
   report "claude (재실행해도 훅 중복 누적 없음, 멱등성)" 1 "기대 PostToolUse 2개/Stop 1개 / 실제 ${COUNT}개/${STOP_COUNT}개: $(cat "$CLAUDE_JSON")"
 fi
 
+# 관리 훅과 사용자 훅이 같은 그룹이어도 사용자 명령은 남아야 한다.
+TMP_JSON="$TMP/mixed.json"
+jq '.hooks.PostToolUse[-1].hooks += [{type:"command",command:"mixed-edit"}]
+  | .hooks.Stop[-1].hooks += [{type:"command",command:"mixed-stop"}]' "$CLAUDE_JSON" >"$TMP_JSON"
+mv "$TMP_JSON" "$CLAUDE_JSON"
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+if jq -e '([.hooks.PostToolUse[].hooks[].command] | index("mixed-edit") != null)
+  and ([.hooks.Stop[].hooks[].command] | index("mixed-stop") != null)' "$CLAUDE_JSON" >/dev/null; then
+  report "혼합 그룹의 사용자 편집·종료 훅 보존" 0
+else
+  report "혼합 그룹의 사용자 편집·종료 훅 보존" 1
+fi
+
+# Gemini의 관리 그룹 안에서도 사용자 명령과 추가 설정을 보존한다.
+jq '."agent-edits-log".PostToolUse[-1].hooks += [{type:"command",command:"gemini-user-hook"}]
+  | ."agent-edits-log".custom = "keep"' "$GEMINI_JSON" >"$TMP_JSON"
+mv "$TMP_JSON" "$GEMINI_JSON"
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+if jq -e '."agent-edits-log" | .custom == "keep" and
+  ([.PostToolUse[].hooks[].command] | length == 2 and index("gemini-user-hook") != null)' "$GEMINI_JSON" >/dev/null; then
+  report "Gemini 혼합 그룹 보존과 멱등성" 0
+else
+  report "Gemini 혼합 그룹 보존과 멱등성" 1
+fi
+
 # -----------------------------------------------------------------------------
 # 실패를 드러내는가 (조용한 미등록 방지)
 # -----------------------------------------------------------------------------

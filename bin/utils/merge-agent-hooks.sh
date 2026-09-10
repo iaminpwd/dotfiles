@@ -55,22 +55,15 @@ unset _settings
 TMP=$(mktemp)
 # shellcheck disable=SC2016
 "$JQ" --arg cmd "$HOOK_SCRIPT" \
-  '. * {
-    "agent-edits-log": {
-      "PostToolUse": [
-        {
-          "matcher": "replace_file_content|write_to_file|create_file|write_file|edit_file",
-          "hooks": [
-            {
-              "type": "command",
-              "command": $cmd,
-              "timeout": 10
-            }
-          ]
-        }
-      ]
-    }
-  }' \
+  '."agent-edits-log".PostToolUse = (
+    ((."agent-edits-log".PostToolUse // []) | map(
+      .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+      | select(.hooks | length > 0)
+    )) + [{
+      matcher: "replace_file_content|write_to_file|create_file|write_file|edit_file",
+      hooks: [{type: "command", command: $cmd, timeout: 10}]
+    }]
+  )' \
   "$GEMINI_HOOKS" >"$TMP"
 mv "$TMP" "$GEMINI_HOOKS"
 
@@ -80,7 +73,10 @@ TMP=$(mktemp)
 "$JQ" --arg cmd "$HOOK_SCRIPT" '
   .attribution.commit = "" | .attribution.pr = ""
   | .hooks.PostToolUse = (
-      ((.hooks.PostToolUse // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+      ((.hooks.PostToolUse // []) | map(
+        .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+        | select(.hooks | length > 0)
+      ))
       + [{matcher: "Edit|Write|MultiEdit|NotebookEdit", hooks: [{type: "command", command: $cmd}]}]
     )
 ' "$CLAUDE_SETTINGS" >"$TMP"
@@ -107,7 +103,10 @@ TMP=$(mktemp)
 # shellcheck disable=SC2016
 "$JQ" --arg cmd "$GATE_HOOK_SCRIPT" '
   .hooks.Stop = (
-      ((.hooks.Stop // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
+      ((.hooks.Stop // []) | map(
+        .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+        | select(.hooks | length > 0)
+      ))
       + [{hooks: [{type: "command", command: $cmd, timeout: 60}]}]
     )
 ' "$CLAUDE_SETTINGS" >"$TMP"
