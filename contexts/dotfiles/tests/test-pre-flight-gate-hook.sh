@@ -252,6 +252,23 @@ else
   report "건너뛴 검사 경고는 성공 캐시로 저장하지 않음" 1
 fi
 
+stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "[WARNING] [ADVISORY] Idempotency check: fixture append"
+advisory1=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+advisory2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [[ "$advisory1" == *ADVISORY* ]] && [ -z "$advisory2" ]; then
+  report "권고 경고는 표시하고 성공 캐시 재사용" 0
+else
+  report "권고 경고는 표시하고 성공 캐시 재사용" 1
+fi
+stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "[WARNING] unknown warning"
+unknown1=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+unknown2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$unknown1" ] && [ -n "$unknown2" ]; then
+  report "분류되지 않은 경고는 캐시하지 않음" 0
+else
+  report "분류되지 않은 경고는 캐시하지 않음" 1
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

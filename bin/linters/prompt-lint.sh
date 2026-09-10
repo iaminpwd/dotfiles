@@ -146,7 +146,7 @@ check_orphaned_files() {
     for f in "${skill_dir}references"/*.md; do
       [ -f "$f" ] || continue
       fname=$(basename "$f")
-      grep -Fq "$fname" "$skill_md" || echo "[WARNING] 고아 후보(라우팅 테이블에 없음): $f"
+      grep -Fq "$fname" "$skill_md" || echo "[WARNING] [ADVISORY] 고아 후보(라우팅 테이블에 없음): $f"
     done
   done
   log_info "[INFO] 고아 파일 검사 완료."
@@ -205,7 +205,7 @@ check_file_size() {
       f = $2;
       limit = (f ~ /-library\.md$/) ? 250 : 150;
       if (lines > limit) {
-        print "[WARNING] " limit "줄 제약 초과: " f " (" lines "줄)"
+        print "[WARNING] [ADVISORY] " limit "줄 제약 초과: " f " (" lines "줄)"
       }
     }'
   log_info "[INFO] 파일 크기 검사 완료."
@@ -294,7 +294,7 @@ check_severity_tag_heuristic() {
       file = $1;
       sub(/[^:]+:/, "", $0);
       if (file != last_file) {
-        print "[WARNING] 고위험 키워드가 있는데 Halt & Clarify로 태깅됨 (Hard Block 검토 필요): " file;
+        print "[WARNING] [ADVISORY] 고위험 키워드가 있는데 Halt & Clarify로 태깅됨 (Hard Block 검토 필요): " file;
         last_file = file;
       }
       print "    " $0;
@@ -317,7 +317,7 @@ check_prefer_language_tagged_must() {
       file = $1;
       sub(/[^:]+:/, "", $0);
       if (file != last_file) {
-        print "[WARNING] MUST 인데 본문이 선호를 서술함 (PREFER 재등급 검토): " file;
+        print "[WARNING] [ADVISORY] MUST 인데 본문이 선호를 서술함 (PREFER 재등급 검토): " file;
         last_file = file;
       }
       print "    " $0;

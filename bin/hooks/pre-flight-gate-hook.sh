@@ -128,7 +128,9 @@ RC=$?
 
 if [ "$RC" -eq 0 ]; then
   after=$(fingerprint) || after=""
-  if [ -n "$before" ] && [ "$before" = "$after" ] && ! grep -qE '\[WARNING\]|⚠' <<<"$OUT"; then
+  # 명시된 권고만 캐시를 허용하고, 미실행·알 수 없는 경고는 재검사한다.
+  cache_warnings=$(grep -E '\[WARNING\]|⚠' <<<"$OUT" | grep -vF '[WARNING] [ADVISORY]' || true)
+  if [ -n "$before" ] && [ "$before" = "$after" ] && [ -z "$cache_warnings" ]; then
     cache_tmp=$(mktemp "$cache_file.XXXXXX") || cache_tmp=""
     if [ -n "$cache_tmp" ]; then
       if ! { printf '%s\n' "$before" >"$cache_tmp" && mv "$cache_tmp" "$cache_file"; }; then

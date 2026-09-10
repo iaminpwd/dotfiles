@@ -66,7 +66,7 @@ for FILE in "${FILES[@]}"; do
           if (guard_lines[j]) { guarded = 1; break }
         }
         if (!guarded) {
-          print "⚠️ [WARNING] Idempotency check: \047" FILENAME "\047 at line " i " uses append (>> or tee -a) but lacks a nearby state checking logic (e.g., grep -q or if [ ... ]). Consider adding idempotency guards." > "/dev/stderr"
+          print "⚠️ [WARNING] [ADVISORY] Idempotency check: \047" FILENAME "\047 at line " i " uses append (>> or tee -a) but lacks a nearby state checking logic (e.g., grep -q or if [ ... ]). Consider adding idempotency guards." > "/dev/stderr"
         }
       }
     }
