@@ -40,9 +40,9 @@
 
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
-- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`) 양쪽에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
-- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md` 및 `~/.claude/skills/<도메인>/SKILL.md` 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
-- **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이와 클로드 에이전트가 100% 무인식 룰 로딩을 지원합니다.
+- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`), Codex 글로벌 룰(`~/.codex/AGENTS.md`)에 심볼릭 링크로 주입되고, 전역 무시 룰(`.base.aiexclude`)도 함께 배치됩니다.
+- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
+- **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이·클로드·Codex 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
 - **실시간 사전 검증 훅:** `bin/hooks/pre-flight-live-hook.sh`가 Claude Code `PostToolUse`(`Edit|Write|MultiEdit`)에 등록되어, AI가 파일을 편집한 직후 그 파일 1개만 대상으로 `pre-flight-check.sh`를 `run-suite.sh` 경유로 즉시 실행합니다(`--pfc-args="<파일>"`로 explicit 모드 패스스루, `contexts/*/tests/run.sh`가 전량 딸려오는 기본 전체 수집 분기는 안 탐). 최종 하드 게이트인 `stow/git/.githooks/pre-commit`은 여전히 커밋 시점에만 발동하므로, 이 훅은 그 이전 — "AI가 코드를 짜고 완료를 선언하는 시점" — 의 시차를 좁히는 2차 방어선입니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 한 줄만 `additionalContext`로 조용히 실어(대화 메시지로는 안 보임) "통과했다"와 "훅이 애초에 안 돌았다"를 구분 가능하게 하고, 실패 시엔 `decision:block` JSON으로 AI에게 즉시 피드백을 줍니다. 훅 자신은 fail-open이라 실패해도 에이전트 루프를 막지 않습니다(최종 판정은 계속 커밋 게이트 몫). `terraform init` 등 네트워크·빌드 의존 검증이 걸리는 `.tf`/`.tfvars`/`.bicep`은 편집마다 돌면 지연이 커서 이 훅에서 제외하고, 커밋 시점 게이트에서만 검증합니다.
 - **완료 선언 직전 게이트 훅:** `bin/hooks/pre-flight-gate-hook.sh`가 Claude Code `Stop`(턴 종료 시점)에 등록되어, `base.AGENTS.md`가 명시하던 완료 선언 직전 통합 검증을 프롬프트 문구가 아니라 기계적으로 강제합니다(해당 조항은 훅으로 완전히 대체되어 삭제됨). 범위는 의도적으로 `pre-flight-check.sh --changed` + (dotfiles 저장소일 때만) `prompt-lint.sh` + `test-coverage-check.sh` 3종으로 한정합니다(`contexts/*/tests/run.sh` 스킬 회귀 스위트 전체는 여기 없음 — "검증기 자체가 여전히 맞는가"를 확인하는 것이라 매턴 재확인은 낭비이고, `stow/git/.githooks/pre-push`가 건드린 스킬만 골라 push 시점에 이미 담당합니다. 코어 로직 `bin/lib/*`·`pre-flight-check.sh` 변경 시 전체 스킬을 트리거하는 케이스도 pre-push에 있어 사각지대가 없습니다). 이 3개는 `run-suite.sh`에 명시적 스크립트 경로로 넘겨서 돌립니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 로그(스크립트당 한 줄)만 `additionalContext`로 조용히 실어 훅이 실제로 검증을 시도했다는 증거를 남기고("통과"와 "애초에 안 돎"을 구분), 실패 시엔 `decision:block` + 압축 없는 원본 로그를 넘깁니다. 커밋되지 않은 변경이 전혀 없는 순수 대화 턴에는 아무것도 실행하지 않고, 무한 재실패 루프 방지를 위해 `stop_hook_active`가 true면 실패해도 조용히 통과시킵니다.
@@ -98,7 +98,7 @@ just setup-dryrun
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
 | **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
-| **`ai_agent`** | 글로벌 룰(`base.AGENTS.md`) 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`, Claude Code·Antigravity 양쪽)과 실시간 사전 검증 훅(`bin/hooks/pre-flight-live-hook.sh`, `PostToolUse`)·완료 선언 직전 게이트 훅(`bin/hooks/pre-flight-gate-hook.sh`, `Stop`)을 Claude Code에 병합 등록 |
+| **`ai_agent`** | Gemini·Claude·Codex 글로벌 룰(`base.AGENTS.md`) 및 스킬 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`, Claude Code·Antigravity 양쪽)과 실시간 사전 검증 훅(`bin/hooks/pre-flight-live-hook.sh`, `PostToolUse`)·완료 선언 직전 게이트 훅(`bin/hooks/pre-flight-gate-hook.sh`, `Stop`)을 Claude Code에 병합 등록 |
 | **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
 
 ### Step 3. 터미널 재시작
@@ -118,6 +118,8 @@ ls -la ~/.zshrc ~/.gitconfig ~/.vimrc ~/.tflint.hcl ~/.config/mise/config.toml
 # AI 글로벌 룰 및 스킬 레지스트리 등록 확인
 cat ~/.gemini/config/AGENTS.md | head -5
 ls ~/.gemini/config/skills/
+readlink -f ~/.codex/AGENTS.md
+ls ~/.agents/skills/
 
 # 통합 사전 검증 및 테스트 통과 확인 (Justfile 활용)
 just check     # pre-flight-check.sh --all: 저장소 전체 파일에 shellcheck/tflint/checkov 등 정적 분석
@@ -200,7 +202,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
 
 **글로벌 스킬 적용**
-모든 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/` 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
+모든 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
@@ -288,7 +290,7 @@ src
 이미 셋업된 도메인 스킬의 세부 규칙을 수정하거나 확장할 경우, `bootstrap.sh` 재실행 없이 `contexts/` 하위의 마크다운 파일을 수정하는 즉시 실시간으로 에이전트에 반영됩니다.
 
 > [!NOTE]
-> `bootstrap.sh`(Ansible `ai_agent` 역할)는 `contexts/` 하위의 모든 도메인 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`)에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
+> `bootstrap.sh`(Ansible `ai_agent` 역할)는 `contexts/` 하위의 모든 도메인 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex))에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
 
 ---
 

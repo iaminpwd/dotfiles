@@ -37,6 +37,24 @@
     state: link
     force: true
 
+- name: Codex 글로벌 룰셋 환경 생성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex"
+    state: directory
+    recurse: true
+
+- name: Codex 글로벌 AGENTS.md 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+  changed_when: false
+
+- name: Codex 글로벌 AGENTS.md 링크 설정
+  ansible.builtin.file:
+    src: "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+    dest: "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+    state: link
+    force: true
+
 - name: Local 에이전트 스크립트(~/.local/bin) 경로 구성
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.local/bin"
@@ -116,18 +134,20 @@
     recurse: false
   register: ai_agent_context_domains
 
-- name: Gemini / Claude 글로벌 스킬 등록 디렉토리 생성
+- name: Gemini / Claude / Codex 글로벌 스킬 등록 디렉토리 생성
   ansible.builtin.file:
     path: "{{ item[0] }}/skills/{{ item[1].path | basename }}"
     state: directory
     mode: '0755'
-  loop: "{{ [ansible_env.HOME + '/.gemini/config', ansible_env.HOME + '/.claude'] | product(ai_agent_context_domains.files) | list }}"
+  loop: >-
+    {{ [ansible_env.HOME + '/.gemini/config', ansible_env.HOME + '/.claude', ansible_env.HOME + '/.agents']
+       | product(ai_agent_context_domains.files) | list }}
   loop_control:
     label: "{{ item[0] | basename }}/skills/{{ item[1].path | basename }}"
   when: >
     item[1].path | basename not in ['dotfiles']
 
-- name: Gemini / Claude 스킬 파일 및 폴더 링크 생성 대상 정의
+- name: Gemini / Claude / Codex 스킬 파일 및 폴더 링크 생성 대상 정의
   ansible.builtin.set_fact:
     ai_agent_skill_link_targets:
       - SKILL.md
@@ -195,6 +215,32 @@
     item.stat.exists and
     item.item[0].path | basename not in ['dotfiles']
 
+- name: Codex 스킬 에셋 목적지 충돌 백업
+  ansible.builtin.command:
+    cmd: >-
+      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      "{{ ansible_env.HOME }}/.agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  loop: "{{ ai_agent_skill_assets_stat.results }}"
+  loop_control:
+    label: ".agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  when: >
+    item.stat.exists and
+    item.item[0].path | basename not in ['dotfiles']
+  changed_when: false
+
+- name: Codex 글로벌 스킬 에셋 링크 설정
+  ansible.builtin.file:
+    src: "{{ item.item[0].path }}/{{ item.item[1] }}"
+    dest: "{{ ansible_env.HOME }}/.agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+    state: link
+    force: true
+  loop: "{{ ai_agent_skill_assets_stat.results }}"
+  loop_control:
+    label: ".agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
+  when: >
+    item.stat.exists and
+    item.item[0].path | basename not in ['dotfiles']
+
 - name: Gemini 및 Claude 편집 이력 훅(agent-edits-hook) 병합
   ansible.builtin.command:
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/merge-agent-hooks.sh" "{{ role_path }}/../../../ansible"
@@ -212,6 +258,7 @@
   loop:
     - "{{ ansible_env.HOME }}/.gemini/config/skills"
     - "{{ ansible_env.HOME }}/.claude/skills"
+    - "{{ ansible_env.HOME }}/.agents/skills"
   # register 이름을 changed_when 에서 참조하는 것이 loop 태스크의 정상 관용구다. Ansible 은
   # 각 아이템 실행 직후 그 아이템의 결과를 이 이름으로 바인딩하므로 아이템별로 정확히
   # 갈린다(실측, ansible-core 2.19.11: [PRUNED] 아이템 changed=true / [SKIP] 아이템 false).
