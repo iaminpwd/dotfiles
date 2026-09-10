@@ -1,17 +1,11 @@
 #!/usr/bin/env bash
-# pre-push 훅: 스킬별 회귀 스위트(contexts/*/tests/run.sh)를 여기서 실행한다.
-#
-# 이 스위트는 checkov/tflint/sam 등 무거운 외부 도구를 픽스처에 반복 호출하는데,
-# 픽스처 기반이라 "지금 이 커밋의 실제 변경분이 안전한가"가 아니라 "검증 로직
-# 자체가 여전히 제대로 도는가"를 확인하는 것이다. 그래서 커밋 1번마다 매번 돌 필요는
-# 없고, 코드가 실제로 이 머신을 떠나는 시점(push)에 한 번만 돌아도 보호 수준은
-# 그대로다. pre-commit 쪽엔 trufflehog(시크릿 스캔)와 pre-flight-check.sh 본체
-# (지금 스테이징된 실제 diff에 대한 캐시 가능한 검증)만 남겨 반복 커밋 루프를 빠르게
-# 유지한다.
-#
-# 사용: git push 시 자동 호출. core.hooksPath(~/.githooks → git/.githooks)로 배포됨.
+# 기본 push는 회귀 테스트를 반복하지 않는다. 전체 검증은 CI에서 수행한다.
+# 로컬 선검증이 필요하면 DOTFILES_PRE_PUSH=1 git push 로 선택 실행한다.
 
 set -euo pipefail
+
+[ "${DOTFILES_PRE_PUSH:-0}" = "1" ] || exit 0
+export PFC_PROFILE=full
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT" || exit 1
@@ -23,11 +17,7 @@ cd "$REPO_ROOT" || exit 1
 # 비대화형 환경에서도 mise 도구(checkov/tflint/sam 등)를 찾을 수 있도록 PATH 주입.
 export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 
-# FinOps 회귀 테스트(contexts/pre-flight-check/tests/test-finops.sh)가 infracost
-# 무료 티어를 쓰므로, 개발 루프(just test)에서는 건너뛰고 push 시점에만 실제로
-# 호출한다 — pre-commit의 RUN_COST_CHECK와 동일한 이유, 별도 프로세스라 여기서도
-# 다시 켜야 한다.
-export RUN_COST_CHECK=true
+# 비용 API 검사는 RUN_COST_CHECK=true를 명시한 경우에만 실행한다.
 
 EMPTY_TREE=$(git hash-object -t tree /dev/null)
 ZERO_SHA="0000000000000000000000000000000000000000"
@@ -50,17 +40,10 @@ add_skill() {
 # idempotency-check.sh -> pre-flight-check 한 곳뿐, db-sg-checker.sh -> containers +
 # pre-flight-check, k8s-check.sh -> k8s + pre-flight-check, prompt-lint.sh ->
 # prompt-architect). 그래서 그 파일들을 고쳐도 정작 그것을 검증하는 스위트는 한 번도 돌지
-# 않고 dotfiles 스위트만 초록불로 지나갔다 — test-coverage-check.sh 가 "회귀 테스트가
-# 존재하는가"를 하드 게이트로 강제해 놓고, 정작 실행은 다른 곳을 돌리고 있던 셈이다.
-#
-# 소유 스킬을 파일명 규칙으로 유추(k8s-check.sh -> k8s)하지 않는다. 그 매핑은 스크립트가
-# 늘거나 이름 규칙이 바뀌면 조용히 낡는다(같은 이유로 위 코어 케이스도 소비자 목록을
-# 나열하지 않는다). 대신 test-coverage-check.sh 가 커버리지를 판정할 때 쓰는 것과 똑같은
-# 기준 — "그 이름이 contexts/<skill>/tests 안에서 언급되는가" — 을 그대로 역방향으로 쓴다.
-# 두 게이트가 같은 기준을 공유하므로 한쪽만 낡는 드리프트가 생기지 않는다.
-#
-# 어느 스위트도 참조하지 않으면 종전대로 dotfiles 로 보낸다(신규 스크립트 등). 그 상태
-# 자체는 test-coverage-check.sh 가 별도로 차단한다.
+# 않고 dotfiles 스위트만 실행되던 누락이 있었다.
+# 테스트 안의 파일명 참조를 보수적인 스위트 선택 힌트로 사용한다. 실제 커버리지
+# 증명은 아니며, 어느 스위트도 참조하지 않으면 dotfiles 스위트로 보낸다.
+# test-coverage-check.sh는 테스트 등록과 SKIP 안내만 별도로 검사한다.
 add_skills_testing() {
   local name=$1 tdir found=0
   for tdir in "$REPO_ROOT"/contexts/*/tests; do

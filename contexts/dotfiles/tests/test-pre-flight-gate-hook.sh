@@ -100,6 +100,24 @@ else
   report "3종 전부 통과 (decision 없이 압축 로그 3줄)" 1 "out=$out2"
 fi
 
+# 같은 내용은 재검사하지 않지만 수정·신규 파일·삭제는 다시 검사한다.
+repeated=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -z "$repeated" ]; then report "동일 변경 재검사 생략" 0; else report "동일 변경 재검사 생략" 1; fi
+printf 'other\n' >"$DOTFILES_REPO/README.md"
+changed=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$changed" ]; then report "파일 내용 수정 재검사" 0; else report "파일 내용 수정 재검사" 1; fi
+printf 'new\n' >"$DOTFILES_REPO/new file.txt"
+added=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+printf 'mod\n' >"$DOTFILES_REPO/new file.txt"
+untracked_changed=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+rm "$DOTFILES_REPO/new file.txt"
+deleted=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$added" ] && [ -n "$untracked_changed" ] && [ -n "$deleted" ]; then
+  report "untracked 생성·내용 변경·삭제 재검사" 0
+else
+  report "untracked 생성·내용 변경·삭제 재검사" 1
+fi
+
 # 3. pre-flight-check.sh가 실패하면 decision:block + 스텁 마커가 additionalContext에 담겨야 한다.
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 1 "PFC_FAIL_MARKER"
 out3=$(payload "$DOTFILES_REPO" | bash "$HOOK")
@@ -108,6 +126,12 @@ if echo "$out3" | jq -e '.decision == "block"' >/dev/null 2>&1 &&
   report "pre-flight-check 실패 (decision:block)" 0
 else
   report "pre-flight-check 실패 (decision:block)" 1 "out=$out3"
+fi
+failed_again=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if jq -e '.decision == "block"' <<<"$failed_again" >/dev/null; then
+  report "실패 결과는 캐시하지 않음" 0
+else
+  report "실패 결과는 캐시하지 않음" 1
 fi
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "PFC_OK"
 
@@ -204,6 +228,28 @@ if grep -qF '$HOME/dotfiles' <<<"$hook_code"; then
   report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 1 "$(grep -nF '$HOME/dotfiles' "$HOOK")"
 else
   report "정본 경로를 \$HOME 기준으로 하드코딩하지 않음" 0
+fi
+
+# 검사 중 파일이 바뀌면 그 결과는 다음 턴의 성공 캐시로 사용할 수 없다.
+cat >"$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+# idempotency:bypass — 검사 도중 변경을 재현하는 임시 픽스처
+printf 'race\n' >>README.md
+EOF
+race1=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+race2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$race1" ] && [ -n "$race2" ]; then
+  report "검사 도중 변경은 캐시하지 않음" 0
+else
+  report "검사 도중 변경은 캐시하지 않음" 1
+fi
+stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "[WARNING] SKIP missing-tool"
+warning1=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+warning2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$warning1" ] && [ -n "$warning2" ]; then
+  report "건너뛴 검사 경고는 성공 캐시로 저장하지 않음" 0
+else
+  report "건너뛴 검사 경고는 성공 캐시로 저장하지 않음" 1
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

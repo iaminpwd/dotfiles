@@ -31,7 +31,7 @@ mkdir -p "$(dirname "$GEMINI_HOOKS")" "$(dirname "$CLAUDE_SETTINGS")"
 JQ=$(resolve_jq)
 if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
   echo "❌ [Hard Block] jq 를 찾을 수 없어 에이전트 훅을 등록하지 못했습니다." >&2
-  echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-live-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
+  echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
   echo "   'mise install -y' 로 jq 를 설치한 뒤 다시 실행하십시오." >&2
   exit 1
 fi
@@ -39,10 +39,15 @@ fi
 for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS"; do
   if ! "$JQ" empty "$_settings" 2>/dev/null; then
     echo "❌ [Hard Block] $_settings 가 유효한 JSON 이 아니어서 에이전트 훅을 등록하지 못했습니다." >&2
-    echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-live-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
+    echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
     echo "   해당 파일의 JSON 문법을 고친 뒤 다시 실행하십시오(손상이 심하면 백업 후 '{}' 로 초기화)." >&2
     exit 1
   fi
+done
+# 유효성 확인 후 원본 설정을 백업한다. 변경 실패 시 수동 복구에 사용할 수 있다.
+for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS"; do
+  backup=$(mktemp "${_settings}.bak.XXXXXX")
+  cp -p "$_settings" "$backup"
 done
 unset _settings
 
@@ -81,19 +86,15 @@ TMP=$(mktemp)
 ' "$CLAUDE_SETTINGS" >"$TMP"
 mv "$TMP" "$CLAUDE_SETTINGS"
 
-# 3. Claude: 실시간 사전 검증 훅(pre-flight-live-hook.sh) 병합
-# 편집 직후 그 파일 1개만 pre-flight-check.sh로 즉시 검증해, 커밋 시점 게이트
-# (git/.githooks/pre-commit) 이전의 시차를 좁힌다. NotebookEdit은 pre-flight-check가
-# 검증하는 대상이 아니라 매처에서 제외한다.
+# 3. 이전 설치의 편집 직후 검사를 제거한다. 같은 항목에 있는 사용자 훅은 보존한다.
 LIVE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")"
-
 TMP=$(mktemp)
 # shellcheck disable=SC2016
 "$JQ" --arg cmd "$LIVE_HOOK_SCRIPT" '
-  .hooks.PostToolUse = (
-      ((.hooks.PostToolUse // []) | map(select(((.hooks // []) | map(.command) | index($cmd)) == null)))
-      + [{matcher: "Edit|Write|MultiEdit", hooks: [{type: "command", command: $cmd, timeout: 30}]}]
-    )
+  .hooks.PostToolUse = ((.hooks.PostToolUse // []) | map(
+    .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+    | select(.hooks | length > 0)
+  ))
 ' "$CLAUDE_SETTINGS" >"$TMP"
 mv "$TMP" "$CLAUDE_SETTINGS"
 

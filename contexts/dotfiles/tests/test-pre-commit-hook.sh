@@ -259,6 +259,19 @@ fi
 git -C "$FIXTURE_REPO" reset -q
 rm -f "$FIXTURE_REPO/trigger.txt"
 
+# 사전 검증기에 quick 프로필을 넘기는지 확인한다(시크릿 검사는 기존 케이스에서 확인).
+cat >"$FIXTURE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+[ "${PFC_PROFILE:-}" = "quick" ] || exit 1
+echo QUICK_PROFILE
+EOF
+status=$(run_hook_allow_fail)
+if [ "$status" -eq 0 ] && grep -qF QUICK_PROFILE "$TMP/out"; then
+  report "commit-quick-profile" 0
+else
+  report "commit-quick-profile" 1
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

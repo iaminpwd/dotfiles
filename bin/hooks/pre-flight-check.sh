@@ -140,6 +140,7 @@ GLOBAL_CACHE_ENABLED=0
 print_usage() {
   cat >&2 <<'USAGE'
 사용법: pre-flight-check.sh [모드 | 파일...]
+환경: PFC_PROFILE=quick 은 커밋용 문법·포맷 검사, 기본 full 은 전체 검증.
 
   (인자 없음)   스테이징된 변경분만 검증한다 (커밋 훅과 동일한 기본 동작).
   --changed     스테이징 + 미스테이징 + untracked 변경분을 모두 검증한다.
@@ -255,6 +256,13 @@ parse_target_args() {
 }
 
 main() {
+  case "${PFC_PROFILE:-full}" in
+  full | quick) ;;
+  *)
+    echo "[ERROR] PFC_PROFILE은 full 또는 quick이어야 합니다." >&2
+    exit 2
+    ;;
+  esac
   parse_target_args "$@"
 
   if git rev-parse --is-inside-work-tree &>/dev/null; then
@@ -309,6 +317,19 @@ main() {
 
   mapfile -d '' -t GLOBAL_TARGET_TF_FILES < <(filter_target_files '*.tf')
   mapfile -d '' -t GLOBAL_TARGET_YAML_FILES < <(filter_target_files '*.yaml' '*.yml')
+
+  # 커밋용 빠른 검사: 네트워크 초기화, 보안 DB 스캔, 비용 API, 회귀 테스트 제외.
+  # 시크릿 검사는 pre-commit이 스테이징된 내용에 대해 별도로 수행한다.
+  if [ "${PFC_PROFILE:-full}" = "quick" ]; then
+    validate_shell
+    validate_yaml
+    validate_docker
+    if [ "${#GLOBAL_TARGET_TF_FILES[@]}" -gt 0 ] && has_tool terraform; then
+      terraform fmt -check "${GLOBAL_TARGET_TF_FILES[@]}"
+    fi
+    print_unavailable_tools
+    return
+  fi
 
   # calculate_tf_hash는 위에서 채운 GLOBAL_IS_GIT_REPO/GLOBAL_TARGET_TF_FILES를 재사용한다.
   GLOBAL_TF_HASH=$(calculate_tf_hash)

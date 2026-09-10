@@ -45,6 +45,15 @@ mkdir -p "$PLAYBOOK_DIR"
 mkdir -p "$FAKE_HOME/.gemini/config"
 echo '{"unrelated-key": "keep-me"}' >"$FAKE_HOME/.gemini/config/hooks.json"
 
+# 이전 버전의 live 훅과 같은 항목의 사용자 훅을 함께 심어 마이그레이션을 확인한다.
+mkdir -p "$FAKE_HOME/.claude" "$FAKE_HOME/bin/hooks"
+LEGACY_LIVE=$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")
+jq -n --arg live "$LEGACY_LIVE" '{hooks:{PostToolUse:[
+  {matcher:"Edit|Write|MultiEdit",hooks:[
+    {type:"command",command:$live},{type:"command",command:"user-hook"}
+  ]}
+]}}' >"$FAKE_HOME/.claude/settings.json"
+
 echo "=== merge-agent-hooks.sh 훅 병합 로직 회귀 테스트 ==="
 
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
@@ -72,11 +81,12 @@ else
   report "claude (PostToolUse 매처 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
 fi
 
-# 4. Claude: 실시간 사전 검증 훅(pre-flight-live-hook.sh)도 PostToolUse에 추가되어야 한다.
-if jq -e '.hooks.PostToolUse[] | select(.matcher == "Edit|Write|MultiEdit") | .hooks[0].command | endswith("pre-flight-live-hook.sh")' "$CLAUDE_JSON" >/dev/null 2>&1; then
-  report "claude (pre-flight-live-hook 훅 추가)" 0
+# 4. 이전 live 훅만 제거하고 같은 항목의 사용자 훅은 보존한다.
+if jq -e '[.hooks.PostToolUse[].hooks[].command] |
+  (all(.[]; endswith("pre-flight-live-hook.sh") | not)) and (index("user-hook") != null)' "$CLAUDE_JSON" >/dev/null; then
+  report "claude (실시간 검사 제거, 사용자 훅 보존)" 0
 else
-  report "claude (pre-flight-live-hook 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
+  report "claude (실시간 검사 제거, 사용자 훅 보존)" 1
 fi
 
 # 5. Claude: 완료 선언 직전 게이트 훅(pre-flight-gate-hook.sh)이 Stop에 추가되어야 한다.
@@ -87,7 +97,7 @@ else
 fi
 
 # 6. 멱등성: 두 번째 실행 후에도 Claude PostToolUse/Stop 훅이 중복 누적되면 안 된다
-#    (PostToolUse: agent-edits-hook.sh + pre-flight-live-hook.sh 2개, Stop: 1개만 유지).
+#    (PostToolUse: agent-edits-hook.sh + user-hook 2개, Stop: 1개만 유지).
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
 COUNT=$(jq '.hooks.PostToolUse | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
 STOP_COUNT=$(jq '.hooks.Stop | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)

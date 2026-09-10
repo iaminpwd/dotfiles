@@ -96,7 +96,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run full regression verification (check + test + prompt-lint)
-        run: just verify
+        run: PFC_PROFILE=full just verify
 
   # bootstrap.sh가 지원 OS에서 끝까지 동작하고 재실행해도 안전한지(멱등성) 검증.
   # RHEL(dnf)은 네이티브 러너가 없고, 컨테이너로 대체하면 ansible docker 롤의 systemd 요구를

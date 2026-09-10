@@ -110,14 +110,6 @@ fi
 # 커밋 시점에만 인프라 및 코드 사전 검증(pre-flight-check)을 수행 (CWD 무관하게 상위 저장소 루트 기반 탐색)
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
-# 이 훅 자체가 실제 git 커밋 시점에만 실행되므로, "지금이 진짜 커밋인가"의 신호로
-# 그대로 쓴다. `just test` 같은 일반 개발 루프에서는 이 변수가 꺼져 있어 infracost
-# 무료 티어 API 호출을 아낀다. 아래 PFC_TARGET(pre-flight-check.sh 본체, 지금
-# 스테이징된 실제 diff 검증)이 이 신호로 FinOps 비용 검증까지 수행한다. 스킬 회귀
-# 스위트(픽스처 기반 FinOps 테스트 포함)는 pre-push로 옮겼고, 거기서도 이 변수를
-# 동일한 이유로 별도로 켠다.
-export RUN_COST_CHECK=true
-
 # AI 토큰 최적화를 위해 run-suite.sh가 존재하면 래퍼로 사용한다.
 RUN_SUITE="$REPO_ROOT/bin/hooks/run-suite.sh"
 if [ ! -x "$RUN_SUITE" ]; then
@@ -252,9 +244,8 @@ elif [ -f "$REPO_ROOT/pre-flight-check.sh" ]; then
 fi
 
 if [ -n "$PFC_TARGET" ]; then
-  # RUN_COST_CHECK는 위(77행 부근)에서 이미 켰다. 여기서 또 export하면 값 자체는
-  # 같아도 "진실의 원천이 두 곳"이 되어 한쪽만 고치는 드리프트가 생긴다.
-  "$RUN_SUITE" "$PFC_TARGET" || {
+  # 커밋에는 빠른 검사만 실행하고 전체 검증은 CI/수동 실행에 맡긴다.
+  PFC_PROFILE=quick "$RUN_SUITE" "$PFC_TARGET" || {
     echo "❌ 사전 검증 실패로 커밋이 차단되었습니다."
     exit 1
   }

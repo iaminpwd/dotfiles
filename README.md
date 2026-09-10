@@ -34,9 +34,9 @@
 - **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `bin/hooks/pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
 - **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하여 커밋 지연을 단축했습니다(직접 재현 실측: DB 캐시 미스 10.56초 → 캐시 적중 1.17초, 약 89% 단축). 파일 대상 수집은 `find` 전체 탐색이 아니라 `git diff --cached`/`git ls-files` 기반이라 `.git/`, `.terraform/` 등은 애초에 스캔 대상에 들어오지 않습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
 
-### 3. SOTA 에이전트 워크플로우 및 프롬프트 아키텍처
-로컬 프롬프트 아키텍처에는 Andrew Ng의 Agentic Workflow 디자인 패턴, ReAct/ToT 등의 추론 아키텍처, 그리고 벤더별 공식 가이드를 반영한 고급 프롬프트 설계가 반영되어 있습니다.
-이에 대한 상세한 설계 철학 및 기술적 배경은 [Agentic Workflow & Prompt Architecture](contexts/README.md) 문서를 참고하십시오.
+### 3. 작업별 프롬프트와 검증
+공통 행동 지침은 간결하게 유지하고, 도메인별 참조 문서와 실행 가능한 검증 자산을 작업에 맞게 사용합니다.
+프롬프트의 적용 방식과 유지보수 기준은 [프롬프트와 검증 자산](contexts/README.md) 문서를 참고하십시오.
 
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
@@ -44,12 +44,12 @@
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** 워크스페이스 최상단 루트에 `AGENTS.md`와 `CLAUDE.md` 심볼릭 링크를 단독 생성 및 전역 이그노어하여, 로컬 저장소 오염 없이 제미나이·클로드·Codex 에이전트가 100% 무인식 룰 로딩을 지원합니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
-- **실시간 사전 검증 훅:** `bin/hooks/pre-flight-live-hook.sh`가 Claude Code `PostToolUse`(`Edit|Write|MultiEdit`)에 등록되어, AI가 파일을 편집한 직후 그 파일 1개만 대상으로 `pre-flight-check.sh`를 `run-suite.sh` 경유로 즉시 실행합니다(`--pfc-args="<파일>"`로 explicit 모드 패스스루, `contexts/*/tests/run.sh`가 전량 딸려오는 기본 전체 수집 분기는 안 탐). 최종 하드 게이트인 `stow/git/.githooks/pre-commit`은 여전히 커밋 시점에만 발동하므로, 이 훅은 그 이전 — "AI가 코드를 짜고 완료를 선언하는 시점" — 의 시차를 좁히는 2차 방어선입니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 한 줄만 `additionalContext`로 조용히 실어(대화 메시지로는 안 보임) "통과했다"와 "훅이 애초에 안 돌았다"를 구분 가능하게 하고, 실패 시엔 `decision:block` JSON으로 AI에게 즉시 피드백을 줍니다. 훅 자신은 fail-open이라 실패해도 에이전트 루프를 막지 않습니다(최종 판정은 계속 커밋 게이트 몫). `terraform init` 등 네트워크·빌드 의존 검증이 걸리는 `.tf`/`.tfvars`/`.bicep`은 편집마다 돌면 지연이 커서 이 훅에서 제외하고, 커밋 시점 게이트에서만 검증합니다.
-- **완료 선언 직전 게이트 훅:** `bin/hooks/pre-flight-gate-hook.sh`가 Claude Code `Stop`(턴 종료 시점)에 등록되어, `base.AGENTS.md`가 명시하던 완료 선언 직전 통합 검증을 프롬프트 문구가 아니라 기계적으로 강제합니다(해당 조항은 훅으로 완전히 대체되어 삭제됨). 범위는 의도적으로 `pre-flight-check.sh --changed` + (dotfiles 저장소일 때만) `prompt-lint.sh` + `test-coverage-check.sh` 3종으로 한정합니다(`contexts/*/tests/run.sh` 스킬 회귀 스위트 전체는 여기 없음 — "검증기 자체가 여전히 맞는가"를 확인하는 것이라 매턴 재확인은 낭비이고, `stow/git/.githooks/pre-push`가 건드린 스킬만 골라 push 시점에 이미 담당합니다. 코어 로직 `bin/lib/*`·`pre-flight-check.sh` 변경 시 전체 스킬을 트리거하는 케이스도 pre-push에 있어 사각지대가 없습니다). 이 3개는 `run-suite.sh`에 명시적 스크립트 경로로 넘겨서 돌립니다. 통과 시엔 `decision` 없이 `run-suite.sh`의 압축된 `-> [✓]` 로그(스크립트당 한 줄)만 `additionalContext`로 조용히 실어 훅이 실제로 검증을 시도했다는 증거를 남기고("통과"와 "애초에 안 돎"을 구분), 실패 시엔 `decision:block` + 압축 없는 원본 로그를 넘깁니다. 커밋되지 않은 변경이 전혀 없는 순수 대화 턴에는 아무것도 실행하지 않고, 무한 재실패 루프 방지를 위해 `stop_hook_active`가 true면 실패해도 조용히 통과시킵니다.
+- **편집 직후 검사:** 기본 등록하지 않습니다. `merge-agent-hooks.sh` 재실행 시 이전 `pre-flight-live-hook.sh` 등록만 제거하고 사용자 훅과 편집 이력 기록은 유지합니다.
+- **변경 감지 기반 종료 검사:** Claude Code `Stop` 훅은 마지막 성공 검사 이후 변경 내용·검증기가 달라진 경우에만 실행합니다. tracked diff와 untracked 내용을 비교하고, 실패·검사 중 변경·검사 경고는 캐시하지 않습니다. 성공 상태는 Git 메타데이터의 `pre-flight-stop-success`에 저장하며, 전체 회귀 스위트는 이 훅에서 실행하지 않습니다.
 - **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/dotfiles/tests/test-run-suite.sh`의 회귀 테스트 8건이 고정합니다(`run-suite.sh`는 `pre-flight-check.sh` 전용이 아니라 저장소 전역 러너라 dotfiles 스킬 소속입니다).
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
-워크스페이스별 특화 룰북과 메타 프롬프트에 적용된 구체적인 프롬프트 엔지니어링 기법(XML 격리, 계급제 우선순위 등)은 [Agentic Workflow & Prompt Architecture](contexts/README.md)에 상세히 명세되어 있습니다.
+공통 지침은 짧게 유지하고, 워크스페이스별 상세 룰북은 현재 작업에 필요한 문서만 선택해 읽습니다. 유지보수와 검증 방법은 [프롬프트와 검증 자산](contexts/README.md)를 참고하십시오.
 
 **워크스페이스별 특화 모듈 (🟢 Production만 표시):**
 
@@ -58,7 +58,7 @@
 | **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
 | **Dotfiles** (`dotfiles/`) | 6개 (`010`~`060`) | 인지 엔진, 계획서·핸드오프 설계도 작성 표준, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 규칙 근거·승격 표준, 트러블슈팅 |
 
-> K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 상세 커버리지는 [contexts/README.md](contexts/README.md)를 참고하십시오.
+> K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 작업별 참조 경로는 [contexts/INDEX.md](contexts/INDEX.md)를 참고하십시오.
 >
 > Azure · Multi-Cloud · OpenStack 워크스페이스는 현재 사용하지 않아 워킹 트리에서 지웠습니다. 룰북은 git 히스토리에 그대로 남아 있으므로 다시 쓰게 되면 `git checkout 1104de6 -- contexts/.archive` 로 꺼내 `contexts/` 아래로 옮기기만 하면 됩니다(스킬 스캔·글로벌 등록·테스트 탐색이 모두 폴더 위치만 보고 자동으로 다시 잡습니다).
 
@@ -98,7 +98,7 @@ just setup-dryrun
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
 | **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
-| **`ai_agent`** | Gemini·Claude·Codex 글로벌 룰(`base.AGENTS.md`) 및 스킬 주입, `AGENTS.md`/`CLAUDE.md` 링킹, AI 편집 이력 훅(`bin/hooks/agent-edits-hook.sh`, Claude Code·Antigravity 양쪽)과 실시간 사전 검증 훅(`bin/hooks/pre-flight-live-hook.sh`, `PostToolUse`)·완료 선언 직전 게이트 훅(`bin/hooks/pre-flight-gate-hook.sh`, `Stop`)을 Claude Code에 병합 등록 |
+| **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록, 이전 실시간 검사 등록 제거 |
 | **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
 
 ### Step 3. 터미널 재시작
@@ -124,7 +124,7 @@ ls ~/.agents/skills/
 # 통합 사전 검증 및 테스트 통과 확인 (Justfile 활용)
 just check     # pre-flight-check.sh --all: 저장소 전체 파일에 shellcheck/tflint/checkov 등 정적 분석
 just test      # contexts/*/tests/run.sh 전체: 각 검사 스크립트가 ok/fail 픽스처를 올바르게 판정하는지 회귀 테스트
-just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-suite.sh로 한 번에 실행 (가장 종합적인 검증, 코드 수정 후 최종 확인용)
+just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-suite.sh로 한 번에 실행 (가장 종합적인 검증, 코드 수정 후 최종 확인용)
 ```
 
 마지막 줄에 `❌`가 하나도 없고 `-> [✓] <경로>`만 쌓여 있으면 통과입니다. 실패한 항목만 원형 로그가 그대로 남으므로 그 부분만 읽으면 됩니다.
@@ -152,7 +152,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 커버리지 게이트를 run-su
 │   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
-│   ├── README.md              # 프롬프트 아키텍처 백과사전
+│   ├── README.md              # 프롬프트 적용·유지보수와 검증 안내
 │   ├── aws/, dotfiles/                    # 🟢 Production 워크스페이스 룰북
 │   ├── aiops/, containers/, drawio-gen/, k8s/,
 │   │   observability/, pre-flight-check/,
@@ -306,3 +306,12 @@ src
 | `stern` | K8s 파드 로그 다중 tail | `k9s`로는 부족할 만큼 로그 스트리밍/디버깅을 자주 할 때 |
 
 > LocalStack은 후보에서 제외했습니다. IaC 검증은 이미 `terraform plan` + `checkov`/`conftest`로 커밋 전에 걸러지고, 실제 apply는 로컬 에뮬레이션보다 격리된 샌드박스 AWS 계정에서 하는 쪽이 현업에서 더 신뢰받는 방식이기 때문입니다.
+
+### 검사 시점과 선택 실행
+
+- 커밋: 스테이징된 내용의 시크릿 검사와 `PFC_PROFILE=quick` 문법·포맷 검사. 프롬프트 변경 시 관련 린트도 실행합니다.
+- 종료: 마지막 성공 결과와 달라진 경우 `pre-flight-check.sh --changed`와 저장소 검사를 실행합니다.
+- 푸시: 로컬 회귀 테스트는 기본 비활성화. 필요할 때 `DOTFILES_PRE_PUSH=1 git push`로 변경 스킬을 검증합니다.
+- CI: `PFC_PROFILE=full just verify`로 전체 파일 검증과 회귀 테스트를 실행합니다. 비용 API 검사는 별도 `RUN_COST_CHECK=true` 요청이 있을 때만 켭니다.
+
+훅 등록 변경은 `bash bin/utils/merge-agent-hooks.sh`로 적용합니다. 기존 에이전트 설정은 `.bak.*` 파일로 백업합니다.

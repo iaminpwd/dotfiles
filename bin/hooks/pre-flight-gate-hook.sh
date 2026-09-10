@@ -1,29 +1,6 @@
 #!/usr/bin/env bash
-# pre-flight-gate-hook.sh - 에이전트가 응답(턴)을 끝내려는 시점(Stop)에, base.AGENTS.md의
-# "Pre-Flight Gate" MUST 룰(완료 선언 직전 통합 검증)을 기계적으로 강제하는 훅.
-#
-# 범위는 의도적으로 가볍게 셋으로 한정한다: pre-flight-check.sh(--changed) + prompt-lint.sh
-# + test-coverage-check.sh. contexts/*/tests/run.sh 스킬별 회귀 스위트(checkov/tflint/sam 등
-# 무거운 외부 도구 반복 호출)는 여기서 뺐다 — git/.githooks/pre-push가 이미 "건드린 스킬만"
-# 스마트하게 골라 push 시점에 돌리고 있고(코어 로직(bin/lib/*, pre-flight-check.sh) 변경은
-# pre-push 케이스에 전체 스킬 트리거로 이미 보강해뒀다), 턴마다 스킬 스위트 전체를 또 돌리면
-# "지금 이 변경이 안전한가"가 아니라 "검증기 자체가 여전히 맞는가"까지 매턴 재확인하는
-# 셈이라 순수 낭비다.
-#
-# 위 3개는 run-suite.sh에 명시적 스크립트 경로로 넘겨서 돌린다(무인자가 아니므로
-# contexts/*/tests/run.sh 가 전량 딸려오는 기본 전체 수집 분기는 안 탐). 성공 시에도
-# 완전 무음이면 "통과했다"와 "훅이 애초에 안 돌았다"가 구분이 안 되므로, run-suite.sh의
-# 압축된 "-> [✓] <경로>" 출력을 decision:block 없이(=차단·재응답 유발 없이)
-# additionalContext로만 조용히 실어 보낸다 — 대화 메시지로는 안 보이고 에이전트
-# 컨텍스트에만 쌓이는 채널이라 몇 줄 수준이면 비용이 감내할 만하다. 실패 시엔 지금도
-# run-suite.sh가 압축 없이 원본을 그대로 보여준다.
-#
-# 변경사항이 전혀 없는 턴(순수 Q&A 등)에는 아무것도 실행하지 않고 조용히 빠진다.
-#
-# fail-open + stop_hook_active 체크는 공식 가이드의 무한루프 방지 패턴을 그대로 따른다:
-# 이 훅이 한 번 decision:block을 걸어 에이전트가 재응답했는데 그 재응답에서도 다시
-# 실패하면, 다시 block을 걸면 무한루프가 된다. stop_hook_active가 true(=이미 Stop 훅
-# 컨텍스트 안)면 더 이상 막지 않고 조용히 통과시킨다.
+# Stop 시 마지막 성공 검증 이후 내용이 달라졌을 때만 검사한다.
+# 실패 및 검사 중 변경은 캐시하지 않으며 stop_hook_active로 재응답 루프를 방지한다.
 set -uo pipefail
 
 PFG_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
@@ -86,6 +63,43 @@ fi
 # 커밋되지 않은 변경분이 하나도 없으면(순수 대화 턴 등) 검증할 게 없으므로 조용히 빠진다.
 [ -n "$(git -C "$git_root" status --porcelain 2>/dev/null)" ] || exit 0
 
+# Git 메타데이터 안에 저장해 검사 대상과 사용자 작업 트리를 오염시키지 않는다.
+cache_file=$(git -C "$git_root" rev-parse --git-path pre-flight-stop-success)
+case "$cache_file" in
+/*) ;;
+*) cache_file="$git_root/$cache_file" ;;
+esac
+
+fingerprint() {
+  local file
+  {
+    git -C "$git_root" rev-parse HEAD 2>/dev/null || printf 'unborn\n'
+    git -C "$git_root" status --porcelain=v1 -z || return 1
+    git -C "$git_root" diff --no-ext-diff --no-textconv --binary || return 1
+    git -C "$git_root" diff --cached --no-ext-diff --no-textconv --binary || return 1
+    # untracked는 diff에 없으므로 경로와 내용을 함께 포함한다.
+    while IFS= read -r -d '' file; do
+      printf '%s\0' "$file"
+      if [ -L "$git_root/$file" ]; then
+        readlink "$git_root/$file" || return 1
+      else
+        git hash-object --no-filters -- "$git_root/$file" || return 1
+      fi
+    done < <(git -C "$git_root" ls-files --others --exclude-standard -z)
+    # 검증기 변경도 성공 캐시를 무효화한다(외부 저장소의 정본 폴백 포함).
+    for file in "$pfc" "$rs" "${BASH_SOURCE[0]}"; do
+      git hash-object --no-filters -- "$file" || return 1
+    done
+    while IFS= read -r -d '' file; do
+      printf '%s\0' "$file"
+      git hash-object --no-filters -- "$file" || return 1
+    done < <(find "$DOTFILES_ROOT/bin" -type f -name '*.sh' -print0)
+  } | git hash-object --stdin
+}
+
+before=$(fingerprint) || before=""
+[ -n "$before" ] && [ -f "$cache_file" ] && [ "$(cat "$cache_file")" = "$before" ] && exit 0
+
 SCRIPTS=("$pfc")
 
 # prompt-lint.sh / test-coverage-check.sh는 저장소별이 아니라 dotfiles 코퍼스 전역
@@ -109,10 +123,19 @@ fi
 # 거기서 env 가 "illegal option -- C" 로 죽으면 그 0 아닌 종료 코드가 그대로 "검증 실패"로
 # 해석돼 매 턴 decision:block 이 걸린다. 서브셸 cd 는 이식성 문제가 없고 부모 셸의 CWD 도
 # 오염시키지 않는다.
-OUT=$(cd "$git_root" && "$rs" "${SCRIPTS[@]}" --pfc-args="--changed" 2>&1)
+OUT=$(cd "$git_root" && PFC_PROFILE=full "$rs" "${SCRIPTS[@]}" --pfc-args="--changed" 2>&1)
 RC=$?
 
 if [ "$RC" -eq 0 ]; then
+  after=$(fingerprint) || after=""
+  if [ -n "$before" ] && [ "$before" = "$after" ] && ! grep -qE '\[WARNING\]|⚠' <<<"$OUT"; then
+    cache_tmp=$(mktemp "$cache_file.XXXXXX") || cache_tmp=""
+    if [ -n "$cache_tmp" ]; then
+      if ! { printf '%s\n' "$before" >"$cache_tmp" && mv "$cache_tmp" "$cache_file"; }; then
+        rm -f "$cache_tmp"
+      fi
+    fi
+  fi
   # 통과: decision 없이 additionalContext만 조용히 실어 보낸다(차단·재응답 없음).
   # shellcheck disable=SC2016
   "$JQ" -n --arg ctx "$OUT" '

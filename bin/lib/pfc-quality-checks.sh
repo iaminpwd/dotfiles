@@ -126,6 +126,8 @@ validate_docker() {
       log_info "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
 
+    [ "${PFC_PROFILE:-full}" = "quick" ] && return 0
+
     # DS-0002(컨테이너가 root로 실행됨) 하드 블록. hadolint에는 이 룰이 없다.
     # validate_security()의 trivy misconfig 스캔이 같은 DS-0002를 이미 경고로는 잡고
     # 있었지만, db-sg-checker.sh 급의 오탐 거의 없는 기초 항목이라 다른 하드 게이트들과

@@ -74,7 +74,7 @@ echo "=== pre-push 훅 스킬 회귀 스위트 트리거 로직 회귀 테스트
 
 run_hook_with_refline() {
   local refline=$1 status=0
-  (cd "$FIXTURE_REPO" && printf '%s\n' "$refline" | bash "$HOOK") >"$TMP/out" 2>&1 || status=$?
+  (cd "$FIXTURE_REPO" && printf '%s\n' "$refline" | DOTFILES_PRE_PUSH=1 bash "$HOOK") >"$TMP/out" 2>&1 || status=$?
   echo "$status"
 }
 
@@ -285,6 +285,14 @@ if [ "$status" -eq 0 ] && [ ! -s "$TMP/out2" ]; then
   report "non-dotfiles-repo (dotfiles 밖 저장소는 즉시 무동작 통과)" 0
 else
   report "non-dotfiles-repo (dotfiles 밖 저장소는 즉시 무동작 통과)" 1 "exit=$status out=$(cat "$TMP/out2")"
+fi
+
+# 기본 push는 입력이나 변경 범위와 무관하게 회귀 스위트를 실행하지 않는다.
+out_default=$(cd "$FIXTURE_REPO" && DOTFILES_PRE_PUSH=0 bash "$HOOK" </dev/null)
+if [ -z "$out_default" ]; then
+  report "default-push (회귀 테스트 기본 비활성화)" 0
+else
+  report "default-push" 1 "$out_default"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

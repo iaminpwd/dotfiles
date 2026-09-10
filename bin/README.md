@@ -33,12 +33,12 @@ bin/
 
 | 스크립트 | 역할 및 핵심 기능 | 실행 예시 |
 |---|---|---|
-| **`prompt-lint.sh`** | 마크다운 룰북(`AGENTS.md`, `SKILL.md`) 및 프롬프트의 구조, YAML 린트, 필수 태그, `EXCEPTION APPLIED` 마커의 형식 준수 및 완화 대상 룰 실재성을 정적 분석 | `bin/linters/prompt-lint.sh` |
+| **`prompt-lint.sh`** | 프롬프트 참조 링크·코드펜스·색인 정합성과 실행 예제를 검사하고 크기·중복 후보를 경고 | `bin/linters/prompt-lint.sh` |
 | **`semantic-commit-lint.sh`** | `feat:`, `fix:`, `docs:` 등 시맨틱 커밋 메시지 컨벤션을 검증하는 `commit-msg` 훅 | `bin/linters/semantic-commit-lint.sh .git/COMMIT_EDITMSG` |
 | **`idempotency-check.sh`** | 셸 스크립트를 정적 분석해 가드 없는 append(`>>`/`tee -a`)를 경고 (재실행 시 설정이 중복 증식하는 비멱등 패턴 탐지). 파일 인자를 받으며, 인자가 없으면 아무것도 하지 않음 | `bin/linters/idempotency-check.sh <파일...>` 또는 `just check-idempotency <파일>` |
 | **`container-hardening-gate.sh`** | 컨테이너 이미지 및 Dockerfile non-root/distroless 하드닝 검증 게이트 | `bin/linters/container-hardening-gate.sh` |
 | **`db-sg-checker.sh`** | IaC 코드 내 DB 보안그룹 인바운드가 인터넷 전체(0.0.0.0/0·::/0)에 열렸는지 검증 (포트 범위·`protocol = "-1"` 로 DB 포트를 포함해 여는 형태 포함) | `bin/linters/db-sg-checker.sh` |
-| **`test-coverage-check.sh`** | `bin/` 하위 검사 스크립트가 `contexts/*/tests`에서 최소 1개 이상 회귀 테스트로 참조되는지 게이트 (정적분석이 못 잡는 판정 로직 결함 대비) | `bin/linters/test-coverage-check.sh` |
+| **`test-coverage-check.sh`** | 회귀 테스트의 `tests/run.sh` 등록 누락과 숨겨지는 SKIP 안내를 검사. 기존 이름은 호환용이며 실제 커버리지 측정은 아님 | `bin/linters/test-coverage-check.sh` |
 
 ---
 
@@ -67,3 +67,18 @@ bin/
 1. **SSOT 검증 호출**: 개별 저장소에 훅 스크립트 복사본을 두지 않고 `~/dotfiles/bin/`의 정본 스크립트를 직접 실행합니다.
 2. **AI 토큰 최적화**: 모든 실행 결과는 성공 시 출력을 최소화하고 실패 시 원형 블랙박스를 남기도록 구성됩니다.
 3. **독립 실행 및 멱등성**: 각 스크립트는 `set -euo pipefail`로 보호되며 독립적인 CLI 툴체인 탐색을 지원합니다.
+
+## 유지·축소 판단
+
+설치·백업 유틸리티는 bootstrap/Ansible에서, 라이브러리는 훅과 검증기에서 사용합니다.
+`hooks/plugins/`는 파일명을 직접 인용하지 않아도 자동 탐색으로 실행되므로 참조 검색만으로 삭제하지 않습니다.
+`broken-symlink-detector.sh`는 수동 진단 도구이므로 자동 호출이 없다는 이유로 제거하지 않습니다.
+
+폐기한 프롬프트 예외 마커 검사는 제거했습니다. 테스트 파일의 주석이나 호출 문자열만으로
+커버리지를 추정하는 검사도 제거하고, 테스트 등록·SKIP 안내 검사와 실제 회귀 테스트를 유지합니다.
+
+## 자동 실행 시점
+
+편집 직후 검증은 기본 등록하지 않습니다. `pre-flight-gate-hook.sh`는 변경 내용 기반의 성공 캐시로 중복 Stop 검사를 생략합니다.
+커밋은 `PFC_PROFILE=quick`, CI는 `PFC_PROFILE=full`을 사용합니다. quick은 문법·포맷 중심이며 전체 보안·인프라 검증은 full에서 수행합니다.
+pre-push 회귀 테스트는 `DOTFILES_PRE_PUSH=1 git push`로 선택할 수 있습니다. 훅 설정 갱신은 `merge-agent-hooks.sh`가 기존 설정을 백업한 뒤 적용합니다.
