@@ -61,8 +61,8 @@ check_alert_rule_policy() {
     log_info "[WARNING] validate-alert-rules.sh 를 찾을 수 없어 정책 검증을 건너뜁니다."
     return 0
   fi
-  if ! has_tool yq; then
-    log_info "[WARNING] PrometheusRule manifest found but 'yq' is not installed. Skipping policy validation."
+  if ! has_tool yq || ! has_tool jq; then
+    log_info "[WARNING] PrometheusRule manifest found but yq/jq is unavailable. Skipping policy validation."
     return 0
   fi
 

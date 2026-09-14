@@ -12,6 +12,7 @@
 # 사용: bash ~/dotfiles/contexts/k8s/tests/run.sh
 
 set -euo pipefail
+export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -386,7 +387,7 @@ if require_tool helm; then
     # 의 차트 디렉토리 판정은 git ls-files 가 주는 상대경로와 접두사를 맞춰 보는 구조라
     # 매치가 전부 빗나가 helm lint 가 한 번도 돌지 않은 채 exit 0 이 났다(실측: 같은 차트가
     # staged 에서는 차단, explicit 에서는 "Step: Helm Chart Validation" 줄조차 없이 통과).
-    # explicit 는 pre-flight-live-hook.sh 가 AI 편집 1회마다 쓰는 경로라, 편집 직후 피드백이
+    # explicit 는 예전 편집 훅이 AI 편집 1회마다 쓰는 경로라, 편집 직후 피드백이
     # 통째로 비어 있으면서 초록불만 떴다. 두 모드의 판정이 같아야 함을 축으로 고정한다.
     #
     # 차트를 반드시 하위 디렉토리에 둔다. 루트 배치(바로 위 케이스)는 dirname 이 "." 라
@@ -502,6 +503,33 @@ for path in "$FIXTURES"/*.yaml; do
   for c in "${CHECKED[@]}"; do [ "$c" = "$name" ] && found=1 && break; done
   [ "$found" -eq 0 ] && echo "  WARN  $name — 기대 결과가 등록되지 않은 픽스처입니다"
 done
+
+# 문서 수가 늘어도 YAML 변환은 파일당 한 번이어야 한다.
+if require_tool yq; then
+  BATCH_TMP=$(mktemp -d)
+  mkdir "$BATCH_TMP/tools"
+  export YAML_REAL_YQ YAML_CALL_TRACE
+  YAML_REAL_YQ=$(command -v yq)
+  YAML_CALL_TRACE="$BATCH_TMP/calls"
+  cat >"$BATCH_TMP/tools/yq" <<'EOF'
+#!/usr/bin/env bash
+printf 'call\n' >>"$YAML_CALL_TRACE"
+exec "$YAML_REAL_YQ" "$@"
+EOF
+  chmod +x "$BATCH_TMP/tools/yq"
+  for ((i = 0; i < 10; i++)); do
+    printf '%s\n' '---'
+    cat "$FIXTURES/ok-prometheus-rule.yaml"
+  done >"$BATCH_TMP/rules.yaml"
+  status=0
+  PATH="$BATCH_TMP/tools:$PATH" bash "$REPO_ROOT/bin/hooks/plugins/k8s-check.sh" "$BATCH_TMP/rules.yaml" >"$BATCH_TMP/out" 2>&1 || status=$?
+  if [ "$status" -eq 0 ] && [ "$(wc -l <"$YAML_CALL_TRACE")" -eq 1 ]; then
+    report "10개 문서도 yq 1회로 검증" 0
+  else
+    report "10개 문서도 yq 1회로 검증" 1 "$(cat "$BATCH_TMP/out")"
+  fi
+  rm -rf "$BATCH_TMP"
+fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo

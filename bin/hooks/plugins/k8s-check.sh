@@ -108,41 +108,28 @@ check_prometheus_rules() {
     return 0
   fi
 
-  # 문서 단위로 검사한다. 예전엔 파일 전체에 `yq eval '.spec'` 을 걸었는데, 멀티 도큐먼트
-  # 매니페스트(K8s 에서 아주 흔하다)에서 게이트가 통째로 무력화됐다 — PrometheusRule 이
-  # 아닌 문서는 `.spec` 이 null 로 나오고, 그 null 이 출력의 첫 문서가 되면 promtool 이
-  # "Multiple document yaml rules files are not supported, only the first document is
-  # processed" 를 경고하며 그 null 만 보고 "0 rules found / SUCCESS" 로 끝난다.
-  # 실측: 깨진 PromQL 이 단독 파일이면 exit 1 로 막히는데, 앞에 ConfigMap 문서 하나만
-  # 붙이면 exit 0 으로 통과했다.
-  # PrometheusRule 문서가 여러 개인 파일도 같은 이유로 첫 개만 검사됐으므로, 문서마다
-  # 따로 뽑아 promtool 에 넘긴다.
-  local f last_idx idx kind tmp
+  # YAML 전체를 한 번에 변환하되 promtool은 문서별로 호출해 뒤 문서도 검증한다.
+  local docs spec tmp
   for f in "${rule_files[@]}"; do
     log_info "Checking PrometheusRule: $f"
-    last_idx=$(yq eval 'documentIndex' "$f" 2>/dev/null | tail -1)
-    if ! [[ "$last_idx" =~ ^[0-9]+$ ]]; then
-      echo "❌ [ERROR] PrometheusRule 문서 구조를 읽지 못했습니다: $f" >&2
+    tmp=$(mktemp -d)
+    docs="$tmp/docs.json"
+    if ! yq eval -o=json -I=0 'select(.kind == "PrometheusRule") | .spec' "$f" >"$docs"; then
+      rm -rf "$tmp"
+      echo "❌ [ERROR] PrometheusRule의 .spec 블록 추출에 실패했습니다: $f" >&2
       return 1
     fi
-    for ((idx = 0; idx <= last_idx; idx++)); do
-      kind=$(yq eval "select(documentIndex == $idx) | .kind" "$f" 2>/dev/null)
-      [ "$kind" = "PrometheusRule" ] || continue
-      tmp=$(mktemp)
-      # promtool은 순수 groups: 포맷만 이해하므로, CRD 래퍼(apiVersion/kind/metadata)를
-      # 벗기고 해당 문서의 spec 블록만 추출해 넘긴다.
-      if ! yq eval "select(documentIndex == $idx) | .spec" "$f" >"$tmp"; then
-        rm -f "$tmp" 2>/dev/null || true
-        echo "❌ [ERROR] PrometheusRule의 .spec 블록 추출에 실패했습니다: $f (문서 $idx)" >&2
+    # yq의 compact JSON은 문서당 한 줄이다. JSON은 YAML의 부분집합이므로
+    # 다시 YAML로 변환하지 않고 promtool에 전달한다.
+    while IFS= read -r spec; do
+      printf '%s\n' "$spec" >"$tmp/rule.yaml"
+      if ! promtool check rules "$tmp/rule.yaml"; then
+        rm -rf "$tmp"
+        echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 중단되었습니다: $f" >&2
         return 1
       fi
-      if ! promtool check rules "$tmp"; then
-        rm -f "$tmp" 2>/dev/null || true
-        echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 중단되었습니다: $f (문서 $idx)" >&2
-        return 1
-      fi
-      rm -f "$tmp" 2>/dev/null || true
-    done
+    done <"$docs"
+    rm -rf "$tmp"
   done
   log_info "[SUCCESS] Prometheus rule validation passed."
 }

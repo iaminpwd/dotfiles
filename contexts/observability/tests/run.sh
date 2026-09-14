@@ -13,6 +13,7 @@
 # 사용: bash ~/dotfiles/contexts/observability/tests/run.sh
 
 set -euo pipefail
+export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -181,6 +182,33 @@ EOF
   else
     report "observability-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/observability-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
   fi
+fi
+
+# 문서 수가 늘어도 YAML 변환은 파일당 한 번이어야 한다.
+if require_tool yq; then
+  BATCH_TMP=$(mktemp -d)
+  mkdir "$BATCH_TMP/tools"
+  export YAML_REAL_YQ YAML_CALL_TRACE
+  YAML_REAL_YQ=$(command -v yq)
+  YAML_CALL_TRACE="$BATCH_TMP/calls"
+  cat >"$BATCH_TMP/tools/yq" <<'EOF'
+#!/usr/bin/env bash
+printf 'call\n' >>"$YAML_CALL_TRACE"
+exec "$YAML_REAL_YQ" "$@"
+EOF
+  chmod +x "$BATCH_TMP/tools/yq"
+  for ((i = 0; i < 10; i++)); do
+    printf '%s\n' '---'
+    cat "$FIXTURES/ok-baseline.yaml"
+  done >"$BATCH_TMP/rules.yaml"
+  status=0
+  PATH="$BATCH_TMP/tools:$PATH" bash "$VALIDATOR" "$BATCH_TMP/rules.yaml" >"$BATCH_TMP/out" 2>&1 || status=$?
+  if [ "$status" -eq 0 ] && [ "$(wc -l <"$YAML_CALL_TRACE")" -eq 1 ]; then
+    report "10개 문서도 yq 1회로 검증" 0
+  else
+    report "10개 문서도 yq 1회로 검증" 1 "$(cat "$BATCH_TMP/out")"
+  fi
+  rm -rf "$BATCH_TMP"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
