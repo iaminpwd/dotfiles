@@ -98,7 +98,19 @@ fi
 
 # 6. 멱등성: 두 번째 실행 후에도 Claude PostToolUse/Stop 훅이 중복 누적되면 안 된다
 #    (PostToolUse: agent-edits-hook.sh + user-hook 2개, Stop: 1개만 유지).
+# JSON의 공백·키 순서만 바꿔도 백업과 파일 교체가 발생하면 안 된다.
+jq -cS . "$CLAUDE_JSON" >"$TMP/compact.json"
+mv "$TMP/compact.json" "$CLAUDE_JSON"
+ln "$CLAUDE_JSON" "$TMP/claude-before"
+ln "$GEMINI_JSON" "$TMP/gemini-before"
+BACKUPS_BEFORE=$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+if [ "$BACKUPS_BEFORE" -eq "$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)" ] &&
+  [ "$CLAUDE_JSON" -ef "$TMP/claude-before" ] && [ "$GEMINI_JSON" -ef "$TMP/gemini-before" ]; then
+  report "동일 JSON 재실행은 백업·원본 교체 없음" 0
+else
+  report "동일 JSON 재실행은 백업·원본 교체 없음" 1
+fi
 COUNT=$(jq '.hooks.PostToolUse | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
 STOP_COUNT=$(jq '.hooks.Stop | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
 if [ "$COUNT" -eq 2 ] && [ "$STOP_COUNT" -eq 1 ]; then
@@ -112,7 +124,19 @@ TMP_JSON="$TMP/mixed.json"
 jq '.hooks.PostToolUse[-1].hooks += [{type:"command",command:"mixed-edit"}]
   | .hooks.Stop[-1].hooks += [{type:"command",command:"mixed-stop"}]' "$CLAUDE_JSON" >"$TMP_JSON"
 mv "$TMP_JSON" "$CLAUDE_JSON"
+cp "$CLAUDE_JSON" "$TMP/claude-changed"
+BACKUPS_BEFORE=$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+if [ "$((BACKUPS_BEFORE + 1))" -eq "$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)" ] &&
+  [ "$GEMINI_JSON" -ef "$TMP/gemini-before" ]; then
+  saved=0
+  for backup in "$CLAUDE_JSON".bak.*; do
+    if cmp -s "$TMP/claude-changed" "$backup"; then saved=1; fi
+  done
+  report "달라진 Claude만 백업하고 원본 내용 보존" "$((1 - saved))"
+else
+  report "달라진 Claude만 백업하고 원본 내용 보존" 1
+fi
 if jq -e '([.hooks.PostToolUse[].hooks[].command] | index("mixed-edit") != null)
   and ([.hooks.Stop[].hooks[].command] | index("mixed-stop") != null)' "$CLAUDE_JSON" >/dev/null; then
   report "혼합 그룹의 사용자 편집·종료 훅 보존" 0

@@ -103,14 +103,16 @@
 # (bin/utils/check-agent-collision.sh 도 같은 이유로 맞춤.)
 - name: 에이전트 스크립트 목적지 충돌 백업 (~/.local/bin)
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
-  loop: "{{ ai_agent_scripts_find.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  when: >
-    ('/scripts/' in item.path or '/bin/' in item.path) and
-    '/contexts/.' not in item.path and
-    item.mode is search('^.[1357]')
+    expand_argument_vars: false
+    argv: >-
+      {%- set targets = [] -%}
+      {%- for script in ai_agent_scripts_find.files -%}
+      {%- if ('/scripts/' in script.path or '/bin/' in script.path) and
+            '/contexts/.' not in script.path and script.mode is search('^.[1357]') -%}
+      {%- set _ = targets.append(ansible_env.HOME + '/.local/bin/' + (script.path | basename)) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ ['/bin/bash', role_path + '/../../../bin/utils/safe-link-backup.sh'] + targets }}
   changed_when: false
 
 - name: 에이전트 스크립트를 ~/.local/bin 경로에 심볼릭 링크
@@ -163,17 +165,21 @@
   loop_control:
     label: "{{ item[0].path | basename }}/{{ item[1] }}"
 
-- name: Gemini 스킬 에셋 목적지 충돌 백업
+# 링크가 이미 정상이어도 에셋별 Ansible 모듈을 실행하지 않도록 백업 확인을 합친다.
+- name: Gemini / Claude / Codex 스킬 에셋 목적지 일괄 충돌 백업
   ansible.builtin.command:
-    cmd: >-
-      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
-      "{{ ansible_env.HOME }}/.gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  loop: "{{ ai_agent_skill_assets_stat.results }}"
-  loop_control:
-    label: ".gemini/config/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  when: >
-    item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles']
+    expand_argument_vars: false
+    argv: >-
+      {%- set targets = [] -%}
+      {%- for asset in ai_agent_skill_assets_stat.results -%}
+      {%- if asset.stat.exists and asset.item[0].path | basename != 'dotfiles' -%}
+      {%- for client in ['.gemini/config', '.claude', '.agents'] -%}
+      {%- set _ = targets.append(ansible_env.HOME + '/' + client + '/skills/' +
+                                (asset.item[0].path | basename) + '/' + asset.item[1]) -%}
+      {%- endfor -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ ['/bin/bash', role_path + '/../../../bin/utils/safe-link-backup.sh'] + targets }}
   changed_when: false
 
 - name: Gemini 글로벌 스킬 에셋 링크 설정
@@ -189,19 +195,6 @@
     item.stat.exists and
     item.item[0].path | basename not in ['dotfiles']
 
-- name: Claude 스킬 에셋 목적지 충돌 백업
-  ansible.builtin.command:
-    cmd: >-
-      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
-      "{{ ansible_env.HOME }}/.claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  loop: "{{ ai_agent_skill_assets_stat.results }}"
-  loop_control:
-    label: ".claude/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  when: >
-    item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles']
-  changed_when: false
-
 - name: Claude 글로벌 스킬 에셋 링크 설정
   ansible.builtin.file:
     src: "{{ item.item[0].path }}/{{ item.item[1] }}"
@@ -214,19 +207,6 @@
   when: >
     item.stat.exists and
     item.item[0].path | basename not in ['dotfiles']
-
-- name: Codex 스킬 에셋 목적지 충돌 백업
-  ansible.builtin.command:
-    cmd: >-
-      /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
-      "{{ ansible_env.HOME }}/.agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  loop: "{{ ai_agent_skill_assets_stat.results }}"
-  loop_control:
-    label: ".agents/skills/{{ item.item[0].path | basename }}/{{ item.item[1] }}"
-  when: >
-    item.stat.exists and
-    item.item[0].path | basename not in ['dotfiles']
-  changed_when: false
 
 - name: Codex 글로벌 스킬 에셋 링크 설정
   ansible.builtin.file:

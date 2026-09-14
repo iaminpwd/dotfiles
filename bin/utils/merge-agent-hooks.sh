@@ -44,18 +44,23 @@ for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS"; do
     exit 1
   fi
 done
-# 유효성 확인 후 원본 설정을 백업한다. 변경 실패 시 수동 복구에 사용할 수 있다.
-for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS"; do
-  backup=$(mktemp "${_settings}.bak.XXXXXX")
-  cp -p "$_settings" "$backup"
-done
-unset _settings
+# 두 파일의 최종 결과를 먼저 만든다. 변환 실패 시 원본은 건드리지 않는다.
+GEMINI_TMP=$(mktemp "${GEMINI_HOOKS}.tmp.XXXXXX")
+CLAUDE_TMP=""
+trap 'rm -f "$GEMINI_TMP" "${CLAUDE_TMP:-}"' EXIT
+CLAUDE_TMP=$(mktemp "${CLAUDE_SETTINGS}.tmp.XXXXXX")
+# 원본 권한을 유지한 임시 파일을 원자적으로 교체한다.
+cp -p "$GEMINI_HOOKS" "$GEMINI_TMP"
+cp -p "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
 
-# 1. Gemini
-TMP=$(mktemp)
+# 파일은 폐기했지만 이전 설치의 등록을 제거하기 위한 경로는 유지한다.
+LEGACY_LIVE_NAME="pre-flight-live-hook.sh"
+LIVE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME")"
+GATE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
+
 # shellcheck disable=SC2016
-"$JQ" --arg cmd "$HOOK_SCRIPT" \
-  '."agent-edits-log".PostToolUse = (
+"$JQ" --arg cmd "$HOOK_SCRIPT" '
+  ."agent-edits-log".PostToolUse = (
     ((."agent-edits-log".PostToolUse // []) | map(
       .hooks = ((.hooks // []) | map(select(.command != $cmd)))
       | select(.hooks | length > 0)
@@ -63,53 +68,39 @@ TMP=$(mktemp)
       matcher: "replace_file_content|write_to_file|create_file|write_file|edit_file",
       hooks: [{type: "command", command: $cmd, timeout: 10}]
     }]
-  )' \
-  "$GEMINI_HOOKS" >"$TMP"
-mv "$TMP" "$GEMINI_HOOKS"
+  )
+' "$GEMINI_HOOKS" >"$GEMINI_TMP"
 
-# 2. Claude
-TMP=$(mktemp)
+# Claude의 편집 이력·폐기 훅 제거·Stop 등록을 한 번에 병합한다.
 # shellcheck disable=SC2016
-"$JQ" --arg cmd "$HOOK_SCRIPT" '
+"$JQ" --arg cmd "$HOOK_SCRIPT" --arg live "$LIVE_HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" '
   .attribution.commit = "" | .attribution.pr = ""
   | .hooks.PostToolUse = (
       ((.hooks.PostToolUse // []) | map(
-        .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+        .hooks = ((.hooks // []) | map(select(.command != $cmd and .command != $live)))
         | select(.hooks | length > 0)
       ))
       + [{matcher: "Edit|Write|MultiEdit|NotebookEdit", hooks: [{type: "command", command: $cmd}]}]
     )
-' "$CLAUDE_SETTINGS" >"$TMP"
-mv "$TMP" "$CLAUDE_SETTINGS"
-
-# 3. 이전 설치의 편집 직후 검사를 제거한다. 같은 항목에 있는 사용자 훅은 보존한다.
-LIVE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")"
-TMP=$(mktemp)
-# shellcheck disable=SC2016
-"$JQ" --arg cmd "$LIVE_HOOK_SCRIPT" '
-  .hooks.PostToolUse = ((.hooks.PostToolUse // []) | map(
-    .hooks = ((.hooks // []) | map(select(.command != $cmd)))
-    | select(.hooks | length > 0)
-  ))
-' "$CLAUDE_SETTINGS" >"$TMP"
-mv "$TMP" "$CLAUDE_SETTINGS"
-
-# 4. Claude: 완료 선언 직전 게이트 훅(pre-flight-gate-hook.sh) 병합
-# base.AGENTS.md의 Pre-Flight Gate MUST 룰(완료 선언 직전 통합 검증)을 Stop 이벤트에서
-# 기계적으로 강제한다. Edit/Write 매처가 아니라 Stop 이벤트라 matcher 없이 등록한다.
-GATE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
-
-TMP=$(mktemp)
-# shellcheck disable=SC2016
-"$JQ" --arg cmd "$GATE_HOOK_SCRIPT" '
-  .hooks.Stop = (
+  | .hooks.Stop = (
       ((.hooks.Stop // []) | map(
-        .hooks = ((.hooks // []) | map(select(.command != $cmd)))
+        .hooks = ((.hooks // []) | map(select(.command != $gate)))
         | select(.hooks | length > 0)
       ))
-      + [{hooks: [{type: "command", command: $cmd, timeout: 60}]}]
+      + [{hooks: [{type: "command", command: $gate, timeout: 60}]}]
     )
-' "$CLAUDE_SETTINGS" >"$TMP"
-mv "$TMP" "$CLAUDE_SETTINGS"
+' "$CLAUDE_SETTINGS" >"$CLAUDE_TMP"
 
-exit 0
+replace_if_changed() {
+  local original=$1 candidate=$2 backup
+  # 들여쓰기·키 순서만 다른 경우에도 원본과 수정 시각을 유지한다.
+  if "$JQ" -e -s '.[0] == .[1]' "$original" "$candidate" >/dev/null; then
+    return 0
+  fi
+  backup=$(mktemp "${original}.bak.XXXXXX")
+  cp -p "$original" "$backup"
+  mv "$candidate" "$original"
+}
+
+replace_if_changed "$GEMINI_HOOKS" "$GEMINI_TMP"
+replace_if_changed "$CLAUDE_SETTINGS" "$CLAUDE_TMP"

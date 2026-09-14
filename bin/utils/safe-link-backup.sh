@@ -9,15 +9,15 @@
 # 대상을 가리키든 아니든)는 어차피 force가 안전하게 교체하므로 건드리지 않는다 — 오직
 # "실제 파일/디렉토리가 그 자리를 차지하고 있는" 경우만 백업 대상이다.
 #
-# 사용: safe-link-backup.sh <target>
+# 사용: safe-link-backup.sh [target ...]
 
 set -euo pipefail
 
-TARGET="$1"
-BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
-
-if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-  mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
-  echo "  [BACKUP] $TARGET -> $TARGET.backup.$BACKUP_TIMESTAMP (실제 파일이 이미 있어 백업 후 링크 예정)"
-fi
+for TARGET in "$@"; do
+  if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+    BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
+    mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
+    echo "  [BACKUP] $TARGET -> $TARGET.backup.$BACKUP_TIMESTAMP (실제 파일이 이미 있어 백업 후 링크 예정)"
+  fi
+done
 exit 0

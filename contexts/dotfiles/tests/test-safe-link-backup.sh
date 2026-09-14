@@ -80,6 +80,34 @@ else
   report "ok-already-symlink (이미 심볼릭 링크면 그대로 유지)" 1 "$(ls -la "$TMP" 2>&1)"
 fi
 
+# 여러 경로의 공백·개행을 보존하고 정상 링크와 없는 경로는 건너뛴다.
+TARGET5="$TMP/batch file"
+TARGET6="$TMP/"$'batch\ndir'
+printf 'batch data\n' >"$TARGET5"
+mkdir "$TARGET6"
+printf 'inner\n' >"$TARGET6/inner.txt"
+bash "$SCRIPT" "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6"
+BACKUPS5=("$TARGET5".backup.*)
+BACKUPS6=("$TARGET6".backup.*)
+if [ ! -e "$TARGET5" ] && [ ! -e "$TARGET6" ] &&
+  grep -qx 'batch data' "${BACKUPS5[0]}" &&
+  grep -qx inner "${BACKUPS6[0]}/inner.txt" && [ -L "$TARGET4" ]; then
+  report "batch (복수 경로 백업 및 링크 보존)" 0
+else
+  report "batch (복수 경로 백업 및 링크 보존)" 1
+fi
+
+# 백업할 것이 없으면 date도 실행하지 않는다. 빈 대상 목록 역시 정상 무동작이다.
+mkdir "$TMP/tools"
+printf '#!/usr/bin/env bash\nexit 99\n' >"$TMP/tools/date"
+chmod +x "$TMP/tools/date"
+if PATH="$TMP/tools:$PATH" bash "$SCRIPT" "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6" &&
+  PATH="$TMP/tools:$PATH" bash "$SCRIPT"; then
+  report "no-op (재실행·빈 목록에서 date 호출 없음)" 0
+else
+  report "no-op (재실행·빈 목록에서 date 호출 없음)" 1
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
