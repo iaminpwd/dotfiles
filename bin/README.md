@@ -80,6 +80,17 @@ bin/
 
 ## 자동 실행 시점
 
-편집 직후 검증은 기본 등록하지 않습니다. `pre-flight-gate-hook.sh`는 변경 내용 기반의 성공 캐시로 중복 Stop 검사를 생략합니다.
-커밋은 `PFC_PROFILE=quick`, CI는 `PFC_PROFILE=full`을 사용합니다. quick은 문법·포맷 중심이며 전체 보안·인프라 검증은 full에서 수행합니다.
-pre-push 회귀 테스트는 `DOTFILES_PRE_PUSH=1 git push`로 선택할 수 있습니다. 훅 설정 갱신은 `merge-agent-hooks.sh`가 기존 설정을 백업한 뒤 적용합니다.
+편집 직후 검증 훅은 제거했으며 이전 등록을 지우는 마이그레이션만 유지합니다.
+`pre-flight-gate-hook.sh`는 변경 내용 기반의 성공 캐시로 중복 Stop 검사를 생략하고, 문서·테스트 등록 검사는 각 입력의 성공 캐시를 별도로 재사용합니다.
+커밋은 `PFC_PROFILE=quick`, Stop은 `PFC_PROFILE=stop`, CI는 `PFC_PROFILE=full`을 사용합니다.
+Stop은 변경 파일과 Ansible 검사, `stop-regression-check.sh`가 선택한 핵심 회귀 테스트를 실행하고 실패 로그·재현 명령을 AI에 반환합니다.
+전체 보안 스캔은 full에서, 인프라·도메인 정책 검사는 `PFC_DOMAIN_CHECKS=1`을 명시할 때 실행합니다.
+
+- `just check-changed`: 변경 영역의 핵심 회귀 테스트
+- `just check-domain`: 인프라·도메인 정책을 포함한 검사
+- `just verify`: 기본 검사와 전체 회귀 테스트
+- `just docs-review`: 표현·분량·벤더 용어 등 선택적 문서 리뷰
+
+문서 린트의 기본 게이트는 참조·색인·구문 정합성입니다. Stop에서는 마크다운 변경이 있을 때만 코드 예제를 검사합니다.
+도메인 도구의 전용 회귀 테스트는 해당 스위트를 명시적으로 실행하거나 CI의 전체 회귀에서 검증합니다.
+pre-push 회귀 테스트는 `DOTFILES_PRE_PUSH=1 git push`로 선택할 수 있습니다. 훅 설정 갱신은 `merge-agent-hooks.sh`가 최종 JSON이 달라진 파일만 백업한 뒤 적용합니다.

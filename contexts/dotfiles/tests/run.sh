@@ -17,7 +17,7 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # [주의] 이 디렉토리의 test-*.sh 는 아래 목록에 빠짐없이 등록돼야 한다. 등록 누락은
 # test-coverage-check.sh 의 "회귀 스위트 등록 누락 하드 게이트"가 차단한다 — 파일은 있는데
 # run.sh 목록에 없으면 exit 1 로 이름을 지목한다(실측 확인). 그 게이트는
-# test-pre-flight-live-hook / test-pre-flight-gate-hook 이 등록 누락 상태로 just test /
+# test-pre-flight-gate-hook 이 등록 누락 상태로 just test /
 # pre-push / CI 어디서도 실행되지 않았던 사고 이후에 추가됐고, 전용 회귀 테스트도 있다
 # (test-test-coverage-check.sh 의 registered-suite-passes / comment-only-mention-blocks 등).
 # 손으로 대조할 필요는 없다.
@@ -31,7 +31,7 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 지금 이 머신의 홈 상태를 보고 싶으면 직접 실행할 것:
 #   bash contexts/dotfiles/tests/check-symlinks.sh
 FAILED=()
-for suite in test-zsh-updates test-setup-behavior test-ci-tool-config test-bootstrap-changes test-tflint-init test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-safe-link-backup test-agent-batch-backup test-prune-orphan-skills test-git-relpath test-jq-resolve test-tool-probe-ssot test-script-init test-plugin-targets test-run-suite test-pre-flight-live-hook test-pre-flight-gate-hook test-commit-msg-hook test-pre-commit-hook test-pre-push-hook test-test-coverage-check test-zshrc-activation test-lint-commit-messages test-verify-bootstrap-env test-install-mise test-generate-context-index; do
+for suite in test-zsh-updates test-setup-behavior test-ci-tool-config test-bootstrap-changes test-tflint-init test-detector-logic test-ansible test-agent-edits-hook test-semantic-commit-lint test-check-agent-collision test-merge-agent-hooks test-stow-backup test-safe-link-backup test-agent-batch-backup test-prune-orphan-skills test-git-relpath test-jq-resolve test-tool-probe-ssot test-script-init test-plugin-targets test-run-suite test-pre-flight-gate-hook test-stop-regression-check test-commit-msg-hook test-pre-commit-hook test-pre-push-hook test-test-coverage-check test-zshrc-activation test-lint-commit-messages test-verify-bootstrap-env test-install-mise test-generate-context-index; do
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   echo
 done

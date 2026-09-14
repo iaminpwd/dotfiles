@@ -19,6 +19,7 @@
 # 실제 실행: RUN_COST_CHECK=true bash ~/dotfiles/contexts/pre-flight-check/tests/test-finops.sh
 
 set -euo pipefail
+export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

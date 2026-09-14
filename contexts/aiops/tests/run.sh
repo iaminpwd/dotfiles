@@ -20,6 +20,7 @@
 # 사용: bash ~/dotfiles/contexts/aiops/tests/run.sh
 
 set -euo pipefail
+export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

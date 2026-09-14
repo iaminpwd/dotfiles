@@ -126,7 +126,7 @@ validate_docker() {
       log_info "[WARNING] Dockerfiles found but hadolint is not installed."
     fi
 
-    [ "${PFC_PROFILE:-full}" = "quick" ] && return 0
+    [ "${PFC_PROFILE:-full}" != "full" ] && return 0
 
     # DS-0002(컨테이너가 root로 실행됨) 하드 블록. hadolint에는 이 룰이 없다.
     # validate_security()의 trivy misconfig 스캔이 같은 DS-0002를 이미 경고로는 잡고
@@ -166,7 +166,7 @@ validate_yaml() {
   local yaml_files=()
   for f in "${staged_yaml[@]}"; do
     [ -z "$f" ] && continue
-    [[ "$f" == */templates/* ]] && continue
+    [[ "$f" == templates/* || "$f" == */templates/* ]] && continue
     yaml_files+=("$f")
   done
 

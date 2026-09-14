@@ -180,6 +180,10 @@ validate_ansible() {
         lint_cmd=(ansible-lint -c ansible/ansible-lint.yml)
       fi
       local lint_rc=0
+      # Stop에서는 변경된 플레이북·롤 파일만 린트한다. 전체 탐색은 full에 남긴다.
+      if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+        lint_cmd+=("${ansible_files[@]}" "${staged_roles[@]}")
+      fi
       "${lint_cmd[@]}" || lint_rc=$?
 
       if [ "$ansible_cache_owned" -eq 1 ]; then
@@ -220,7 +224,7 @@ validate_helm() {
   # 접두사를 맞춰 보는 구조라 절대경로가 섞이면 어떤 차트도 매치되지 않는다. 그러면
   # chart_dirs 가 0건이 되어 helm lint 를 한 번도 돌리지 않은 채 조용히 통과한다
   # (실측: 같은 깨진 차트가 staged/--changed 에서는 exit 1 인데 explicit 에서는 "Step: Helm
-  # Chart Validation" 줄조차 없이 exit 0 — explicit 는 pre-flight-live-hook.sh 가 AI 편집
+  # Chart Validation" 줄조차 없이 exit 0 — explicit 는 예전 편집 훅이 AI 편집
   # 1회마다 쓰는 경로다). 이 저장소가 반복해서 제거해 온 무검증 초록불과 같은 클래스다.
   local hf_idx
   for hf_idx in "${!helm_changed[@]}"; do
@@ -277,7 +281,7 @@ validate_k8s_manifests() {
   local k8s_manifests=()
   for f in "${staged_yaml[@]}"; do
     [ -z "$f" ] && continue
-    [[ "$f" == */templates/* ]] && continue
+    [[ "$f" == templates/* || "$f" == */templates/* ]] && continue
     [ -f "$f" ] || continue
     grep -qE "^kind:" "$f" 2>/dev/null && k8s_manifests+=("$f")
   done

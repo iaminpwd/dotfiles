@@ -43,6 +43,7 @@ stub() {
   cat >"$path" <<EOF
 #!/usr/bin/env bash
 echo "$marker"
+[ "\${PFC_PROFILE:-}" = stop ] || exit 91
 exit $rc
 EOF
   chmod +x "$path"
@@ -79,6 +80,10 @@ HOOK="$DOTFILES_REPO/bin/hooks/pre-flight-gate-hook.sh"
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "PFC_OK"
 stub "$DOTFILES_REPO/bin/linters/prompt-lint.sh" 0 "LINT_OK"
 stub "$DOTFILES_REPO/bin/linters/test-coverage-check.sh" 0 "COVERAGE_OK"
+mkdir -p "$DOTFILES_REPO/stow/git" "$DOTFILES_REPO/contexts/demo/tests"
+printf '[core]\neditor = vim\n' >"$DOTFILES_REPO/stow/git/.gitconfig"
+printf '# 문서\n' >"$DOTFILES_REPO/contexts/demo/SKILL.md"
+printf '#!/bin/bash\n' >"$DOTFILES_REPO/contexts/demo/tests/run.sh"
 # 스텁 자체가 untracked 상태로 남으면 "변경사항 없음" 테스트가 거짓으로 실패하므로,
 # 스텁을 저장소의 커밋된 베이스라인으로 편입한다.
 git -C "$DOTFILES_REPO" add -A
@@ -104,8 +109,49 @@ else
 fi
 
 # 같은 내용은 재검사하지 않지만 수정·신규 파일·삭제는 다시 검사한다.
-repeated=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+# 캐시 적중 시 검증기 해시는 파일 개수와 관계없이 Git 한 번으로 계산한다.
+mkdir -p "$TMP/tools"
+export GATE_REAL_GIT GATE_HASH_TRACE
+GATE_REAL_GIT=$(command -v git)
+GATE_HASH_TRACE="$TMP/hash-trace"
+cat >"$TMP/tools/git" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = hash-object ] && [ "${2:-}" = --no-filters ]; then
+  printf 'hash\n' >>"$GATE_HASH_TRACE"
+fi
+exec "$GATE_REAL_GIT" "$@"
+EOF
+chmod +x "$TMP/tools/git"
+repeated=$(payload "$DOTFILES_REPO" | PATH="$TMP/tools:$PATH" bash "$HOOK")
 if [ -z "$repeated" ]; then report "동일 변경 재검사 생략" 0; else report "동일 변경 재검사 생략" 1; fi
+if [ "$(wc -l <"$GATE_HASH_TRACE")" -eq 1 ]; then
+  report "캐시 적중 시 검증기 해시 일괄 호출" 0
+else
+  report "캐시 적중 시 검증기 해시 일괄 호출" 1
+fi
+# Git 설정만 고치면 문서·등록 검사의 성공 캐시는 유지된다.
+printf '[core]\neditor = nano\n' >"$DOTFILES_REPO/stow/git/.gitconfig"
+scoped=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [[ "$scoped" == *pre-flight-check.sh* ]] &&
+  [[ "$scoped" != *prompt-lint.sh* && "$scoped" != *test-coverage-check.sh* ]]; then
+  report "Git 설정 변경은 문서·등록 검사 캐시 재사용" 0
+else
+  report "Git 설정 변경은 문서·등록 검사 캐시 재사용" 1 "$scoped"
+fi
+printf '# 문서 수정\n' >"$DOTFILES_REPO/contexts/demo/SKILL.md"
+scoped=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [[ "$scoped" == *prompt-lint.sh* && "$scoped" != *test-coverage-check.sh* ]]; then
+  report "문서 변경은 문서 검사만 재실행" 0
+else
+  report "문서 변경은 문서 검사만 재실행" 1 "$scoped"
+fi
+printf '#!/bin/bash\n# 등록 변경\n' >"$DOTFILES_REPO/contexts/demo/tests/run.sh"
+scoped=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [[ "$scoped" == *test-coverage-check.sh* ]]; then
+  report "테스트 등록 변경은 등록 검사 재실행" 0
+else
+  report "테스트 등록 변경은 등록 검사 재실행" 1 "$scoped"
+fi
 printf 'other\n' >"$DOTFILES_REPO/README.md"
 changed=$(payload "$DOTFILES_REPO" | bash "$HOOK")
 if [ -n "$changed" ]; then report "파일 내용 수정 재검사" 0; else report "파일 내용 수정 재검사" 1; fi
@@ -121,6 +167,21 @@ else
   report "untracked 생성·내용 변경·삭제 재검사" 1
 fi
 
+# 개행 포함 경로와 심볼릭 링크 변경도 일괄 해싱 후 캐시에 반영되어야 한다.
+printf 'new\n' >"$DOTFILES_REPO/"$'new\nfile.txt'
+ln -s README.md "$DOTFILES_REPO/new-link"
+added=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+repeated=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+rm "$DOTFILES_REPO/new-link"
+ln -s missing "$DOTFILES_REPO/new-link"
+changed=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if [ -n "$added" ] && [ -z "$repeated" ] && [ -n "$changed" ]; then
+  report "개행 경로·심볼릭 링크 내용의 캐시 무효화" 0
+else
+  report "개행 경로·심볼릭 링크 내용의 캐시 무효화" 1
+fi
+rm "$DOTFILES_REPO/"$'new\nfile.txt' "$DOTFILES_REPO/new-link"
+
 # 3. pre-flight-check.sh가 실패하면 decision:block + 스텁 마커가 additionalContext에 담겨야 한다.
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 1 "PFC_FAIL_MARKER"
 out3=$(payload "$DOTFILES_REPO" | bash "$HOOK")
@@ -131,10 +192,11 @@ else
   report "pre-flight-check 실패 (decision:block)" 1 "out=$out3"
 fi
 failed_again=$(payload "$DOTFILES_REPO" | bash "$HOOK")
-if jq -e '.decision == "block"' <<<"$failed_again" >/dev/null; then
-  report "실패 결과는 캐시하지 않음" 0
+if jq -e '.decision == "block"' <<<"$failed_again" >/dev/null &&
+  [[ "$failed_again" != *prompt-lint.sh* && "$failed_again" != *test-coverage-check.sh* ]]; then
+  report "실패한 검사만 재실행하고 통과한 문서·등록 검사는 캐시" 0
 else
-  report "실패 결과는 캐시하지 않음" 1
+  report "실패한 검사만 재실행하고 통과한 문서·등록 검사는 캐시" 1
 fi
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "PFC_OK"
 
@@ -224,8 +286,7 @@ else
   report "스코프 밖 저장소 (건너뜀)" 1 "out=$out7"
 fi
 
-# 정본 저장소 경로를 $HOME 기준으로 하드코딩하지 않아야 한다(사유와 이 형태를 택한 근거는
-# test-pre-flight-live-hook.sh 의 같은 검사 주석 참조 — 실측으로 CI 에서만 실패했던 축이다).
+# CI처럼 저장소 위치가 다른 환경에서도 정본을 찾을 수 있어야 한다.
 hook_code=$(grep -vE '^[[:space:]]*#' "$HOOK" || true)
 # 홑따옴표가 맞다: 셸이 전개한 값이 아니라 소스에 적힌 리터럴 문자열을 찾는 검사다.
 # shellcheck disable=SC2016
@@ -251,7 +312,8 @@ fi
 stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "[WARNING] SKIP missing-tool"
 warning1=$(payload "$DOTFILES_REPO" | bash "$HOOK")
 warning2=$(payload "$DOTFILES_REPO" | bash "$HOOK")
-if [ -n "$warning1" ] && [ -n "$warning2" ]; then
+if [ -n "$warning1" ] && [ -n "$warning2" ] &&
+  [[ "$warning2" != *prompt-lint.sh* && "$warning2" != *test-coverage-check.sh* ]]; then
   report "건너뛴 검사 경고는 성공 캐시로 저장하지 않음" 0
 else
   report "건너뛴 검사 경고는 성공 캐시로 저장하지 않음" 1
@@ -272,6 +334,16 @@ if [ -n "$unknown1" ] && [ -n "$unknown2" ]; then
   report "분류되지 않은 경고는 캐시하지 않음" 0
 else
   report "분류되지 않은 경고는 캐시하지 않음" 1
+fi
+
+# 실제 회귀 러너 실패도 Stop의 block 피드백에 포함되어야 한다.
+stub "$DOTFILES_REPO/bin/hooks/pre-flight-check.sh" 0 "PFC_OK"
+stub "$DOTFILES_REPO/bin/hooks/stop-regression-check.sh" 1 "REGRESSION_FAILED"
+regression_out=$(payload "$DOTFILES_REPO" | bash "$HOOK")
+if jq -e '.decision == "block" and (.hookSpecificOutput.additionalContext | contains("REGRESSION_FAILED"))' <<<"$regression_out" >/dev/null; then
+  report "관련 회귀 테스트 실패를 AI에 block으로 반환" 0
+else
+  report "관련 회귀 테스트 실패를 AI에 block으로 반환" 1 "$regression_out"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

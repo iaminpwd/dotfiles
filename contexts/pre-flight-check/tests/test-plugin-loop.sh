@@ -11,6 +11,7 @@
 # 사용: bash ~/dotfiles/contexts/pre-flight-check/tests/test-plugin-loop.sh
 
 set -euo pipefail
+export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -84,7 +85,7 @@ fi
 # 행동으로 재현하려면 검증기별 위반 픽스처를 만들어 pre-flight-check 를 실제로 돌려야 하는데,
 # 실측상 위반 .tf 하나로 전체 파이프라인이 14.6초가 걸리고 fail-fast 라 첫 실패 게이트
 # 하나만 확인된다(12개 중 1개). 그 비용으로 얻는 것이 "배선이 살아 있다"뿐이라면 정적
-# 대조가 같은 것을 1ms 에 준다 — test-pre-flight-live-hook.sh 가 $HOME 하드코딩을
+# 대조가 같은 것을 1ms 에 준다 — Stop 훅 테스트가 $HOME 하드코딩을
 # 같은 근거로 정적 검사한 선례를 따른다.
 #
 # 이 검사가 못 잡는 것: 함수는 배선돼 있는데 내부 판정이 망가진 경우. 그쪽은 스킬 스위트의

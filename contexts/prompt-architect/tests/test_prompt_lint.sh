@@ -17,6 +17,8 @@
 
 set -euo pipefail
 export QUIET=0
+# 이 스위트는 선택적 문서 리뷰와 예제 검증까지 명시적으로 검증한다.
+export PROMPT_LINT_REVIEW=1 PROMPT_LINT_EXAMPLES=1
 
 REPO_ROOT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 LINT="bin/linters/prompt-lint.sh"
@@ -417,12 +419,14 @@ D=$(new_case warn-file-size)
   # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 } >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-file-size" 0 "150줄 제약 초과" "$D"
+PROMPT_LINT_REVIEW=0 check_clean "default-ignores-editorial-size (분량은 기본 게이트에서 제외)" "$D"
 
 # 8. MUST 로 태깅됐지만 본문은 선호를 서술.
 D=$(new_case warn-must-with-prefer-wording)
 # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
 echo "- **[MUST] Prefer Small Modules:** 가급적 모듈을 작게 유지하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
 check "warn-must-with-prefer-wording" 0 "MUST 인데 본문이 선호를 서술함" "$D"
+PROMPT_LINT_REVIEW=0 check_clean "default-ignores-editorial-wording (표현은 기본 게이트에서 제외)" "$D"
 
 # 9. 고위험 키워드인데 Halt & Clarify 로 태깅(Hard Block 후보).
 D=$(new_case warn-halt-on-high-risk)
@@ -613,6 +617,7 @@ else
   # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
   append_bash_example "$D" "[Good]" 'export DB_PASSWORD=$(get-secret prod/db)'
   check "fail-good-bash-sc2155 ([Good] 예제가 종료 코드를 삼킴)" 1 "shellcheck 게이트에 걸립니다" "$D"
+  PROMPT_LINT_EXAMPLES=0 check_clean "examples-disabled (예제 검사 제외 시 구조 검사만 실행)" "$D"
 
   D=$(new_case ok-good-bash-split-assign)
   # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다

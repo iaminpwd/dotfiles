@@ -42,9 +42,7 @@ git_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
 
 pfc="$git_root/bin/hooks/pre-flight-check.sh"
 rs="$git_root/bin/hooks/run-suite.sh"
-# pfc 는 -f, rs 는 -x 로 판정하는 이유는 pre-flight-live-hook.sh 의 같은 지점 주석 참조
-# (pfc 는 run-suite.sh 에 인자로 넘겨 bash 로 실행되므로 실행 권한이 필요 없고, 예전의
-#  -x 판정은 실행 권한 없는 옵트인 저장소에서 이 훅만 조용히 빠지게 만들었다).
+# pfc는 bash로 실행하므로 파일 존재만, 직접 실행하는 rs는 실행 권한까지 확인한다.
 if [[ "$git_root/" == "$HOME/workspace/"* ]] || [ "$git_root" -ef "$DOTFILES_ROOT" ]; then
   [ -f "$pfc" ] || pfc="$DOTFILES_ROOT/bin/hooks/pre-flight-check.sh"
   [ -x "$rs" ] || rs="$DOTFILES_ROOT/bin/hooks/run-suite.sh"
@@ -72,6 +70,7 @@ esac
 
 fingerprint() {
   local file
+  local untracked_files=() validator_files=()
   {
     git -C "$git_root" rev-parse HEAD 2>/dev/null || printf 'unborn\n'
     git -C "$git_root" status --porcelain=v1 -z || return 1
@@ -83,36 +82,118 @@ fingerprint() {
       if [ -L "$git_root/$file" ]; then
         readlink "$git_root/$file" || return 1
       else
-        git hash-object --no-filters -- "$git_root/$file" || return 1
+        untracked_files+=("$git_root/$file")
       fi
     done < <(git -C "$git_root" ls-files --others --exclude-standard -z)
+    if [ "${#untracked_files[@]}" -gt 0 ]; then
+      git hash-object --no-filters -- "${untracked_files[@]}" || return 1
+    fi
     # 검증기 변경도 성공 캐시를 무효화한다(외부 저장소의 정본 폴백 포함).
-    for file in "$pfc" "$rs" "${BASH_SOURCE[0]}"; do
-      git hash-object --no-filters -- "$file" || return 1
-    done
+    validator_files=("$pfc" "$rs" "${BASH_SOURCE[0]}")
     while IFS= read -r -d '' file; do
       printf '%s\0' "$file"
-      git hash-object --no-filters -- "$file" || return 1
+      validator_files+=("$file")
     done < <(find "$DOTFILES_ROOT/bin" -type f -name '*.sh' -print0)
+    # 경로와 내용은 모두 지문에 포함하되 파일마다 Git 프로세스를 띄우지 않는다.
+    git hash-object --no-filters -- "${validator_files[@]}" || return 1
   } | git hash-object --stdin
 }
+
+DOCUMENTS_CHANGED=0
+while IFS= read -r -d '' changed; do
+  case "$changed" in *.md) DOCUMENTS_CHANGED=1 ;; esac
+done < <(
+  git -C "$git_root" diff --cached --name-only --no-renames -z
+  git -C "$git_root" diff --name-only --no-renames -z
+  git -C "$git_root" ls-files --others --exclude-standard -z
+)
 
 before=$(fingerprint) || before=""
 [ -n "$before" ] && [ -f "$cache_file" ] && [ "$(cat "$cache_file")" = "$before" ] && exit 0
 
+# 검사별 입력 지문. 문서 검사는 참조 경로의 존재와 Git 추적 목록도 보지만,
+# 테스트 등록 검사는 활성 스킬의 tests/*.sh 내용만 본다. 공통 bin 검증기 변경은
+# 양쪽 캐시를 무효화한다. .gitconfig 내용 변경은 어느 쪽도 무효화하지 않는다.
+scope_fingerprint() {
+  local scope=$1 dir
+  if [ "$scope" = regression ]; then
+    fingerprint
+    return
+  fi
+  local dirs=()
+  for dir in bin contexts; do
+    [ ! -d "$git_root/$dir" ] || dirs+=("$git_root/$dir")
+  done
+  if [ "$scope" = prompt ]; then
+    for dir in stow ansible .github; do
+      [ ! -d "$git_root/$dir" ] || dirs+=("$git_root/$dir")
+    done
+  fi
+  {
+    printf '%s\0' "$git_root/README.md"
+    if [ "${#dirs[@]}" -gt 0 ]; then
+      find "${dirs[@]}" -path "$git_root/contexts/.*" -prune -o -print0 || return 1
+    fi
+  } | {
+    local file rel
+    local files=("$rs" "${BASH_SOURCE[0]}")
+    while IFS= read -r -d '' file; do
+      rel=${file#"$git_root/"}
+      if [ "$scope" = prompt ]; then
+        # 경로 생성·삭제는 참조 유효성을 바꿀 수 있으므로 확장자와 무관하게 포함한다.
+        printf '%s\0' "$rel"
+        case "$rel" in
+        README.md | *.md | *.sh | *.yml | *.yaml | contexts/*.tsv | */.githooks/* | stow/mise/*) ;;
+        *) continue ;;
+        esac
+      else
+        case "$rel" in
+        contexts/*/tests/*.sh | bin/*.sh) printf '%s\0' "$rel" ;;
+        *) continue ;;
+        esac
+      fi
+      if [ -f "$file" ]; then
+        files+=("$file")
+      elif [ -L "$file" ]; then
+        readlink "$file" || return 1
+      fi
+    done
+    if [ "$scope" = prompt ]; then
+      printf 'examples=%s\n' "$DOCUMENTS_CHANGED"
+      git -C "$git_root" ls-files -z || return 1
+    fi
+    git hash-object --no-filters -- "${files[@]}" || return 1
+  } | git hash-object --stdin
+}
+
+write_success_cache() {
+  local destination=$1 value=$2 tmp
+  tmp=$(mktemp "$destination.XXXXXX") || return 0
+  if ! { printf '%s\n' "$value" >"$tmp" && mv "$tmp" "$destination"; }; then
+    rm -f "$tmp"
+  fi
+}
+
 SCRIPTS=("$pfc")
-
-# prompt-lint.sh / test-coverage-check.sh는 저장소별이 아니라 dotfiles 코퍼스 전역
-# 검사라(test-coverage-check.sh는 자기 물리적 위치 기준으로 항상 dotfiles 자신만 본다),
-# 대상 저장소가 dotfiles 자신일 때만 의미가 있다.
+SCOPES=()
+SCOPE_HASHES=()
 if [ "$git_root" -ef "$DOTFILES_ROOT" ]; then
-  prompt_lint="$git_root/bin/linters/prompt-lint.sh"
-  [ -x "$prompt_lint" ] || prompt_lint="$DOTFILES_ROOT/bin/linters/prompt-lint.sh"
-  [ -x "$prompt_lint" ] && SCRIPTS+=("$prompt_lint")
-
-  test_coverage="$git_root/bin/linters/test-coverage-check.sh"
-  [ -x "$test_coverage" ] || test_coverage="$DOTFILES_ROOT/bin/linters/test-coverage-check.sh"
-  [ -x "$test_coverage" ] && SCRIPTS+=("$test_coverage")
+  for scope in prompt tests regression; do
+    case "$scope" in
+    prompt) script="$git_root/bin/linters/prompt-lint.sh" ;;
+    tests) script="$git_root/bin/linters/test-coverage-check.sh" ;;
+    regression) script="$git_root/bin/hooks/stop-regression-check.sh" ;;
+    esac
+    [ -x "$script" ] || continue
+    scope_hash=$(scope_fingerprint "$scope") || scope_hash=""
+    scope_cache="$cache_file.$scope"
+    if [ -n "$scope_hash" ] && [ -f "$scope_cache" ] && [ "$(cat "$scope_cache")" = "$scope_hash" ]; then
+      continue
+    fi
+    SCRIPTS+=("$script")
+    SCOPES+=("$scope")
+    SCOPE_HASHES+=("$scope_hash")
+  done
 fi
 
 # --pfc-args="--changed"는 SCRIPTS 중 경로에 pre-flight-check.sh가 포함된 항목에만
@@ -123,21 +204,41 @@ fi
 # 거기서 env 가 "illegal option -- C" 로 죽으면 그 0 아닌 종료 코드가 그대로 "검증 실패"로
 # 해석돼 매 턴 decision:block 이 걸린다. 서브셸 cd 는 이식성 문제가 없고 부모 셸의 CWD 도
 # 오염시키지 않는다.
-OUT=$(cd "$git_root" && PFC_PROFILE=full "$rs" "${SCRIPTS[@]}" --pfc-args="--changed" 2>&1)
-RC=$?
-
-if [ "$RC" -eq 0 ]; then
-  after=$(fingerprint) || after=""
-  # 명시된 권고만 캐시를 허용하고, 미실행·알 수 없는 경고는 재검사한다.
-  cache_warnings=$(grep -E '\[WARNING\]|⚠' <<<"$OUT" | grep -vF '[WARNING] [ADVISORY]' || true)
-  if [ -n "$before" ] && [ "$before" = "$after" ] && [ -z "$cache_warnings" ]; then
-    cache_tmp=$(mktemp "$cache_file.XXXXXX") || cache_tmp=""
-    if [ -n "$cache_tmp" ]; then
-      if ! { printf '%s\n' "$before" >"$cache_tmp" && mv "$cache_tmp" "$cache_file"; }; then
-        rm -f "$cache_tmp"
-      fi
+OUT=""
+RC=0
+SCOPE_CACHEABLE=()
+for i in "${!SCRIPTS[@]}"; do
+  current_rc=0
+  current_out=$(cd "$git_root" && PFC_PROFILE=stop PROMPT_LINT_REVIEW=0 PROMPT_LINT_EXAMPLES="$DOCUMENTS_CHANGED" "$rs" "${SCRIPTS[i]}" --pfc-args="--changed" 2>&1) || current_rc=$?
+  OUT+="${current_out}"$'\n'
+  [ "$current_rc" -eq 0 ] || RC=1
+  if [ "$i" -gt 0 ]; then
+    warnings=$(grep -E '\[WARNING\]|⚠' <<<"$current_out" | grep -vF '[WARNING] [ADVISORY]' || true)
+    if [ "$current_rc" -eq 0 ] && [ -z "$warnings" ]; then
+      SCOPE_CACHEABLE+=(1)
+    else
+      SCOPE_CACHEABLE+=(0)
     fi
   fi
+done
+
+after=$(fingerprint) || after=""
+if [ -n "$before" ] && [ "$before" = "$after" ]; then
+  # 다른 검사가 실패하거나 도구 부재로 건너뛰어져도, 실제 통과한 검사의 캐시는 저장한다.
+  for i in "${!SCOPES[@]}"; do
+    [ "${SCOPE_CACHEABLE[i]}" -eq 1 ] || continue
+    scope_after=$(scope_fingerprint "${SCOPES[i]}") || scope_after=""
+    if [ -n "${SCOPE_HASHES[i]}" ] && [ "${SCOPE_HASHES[i]}" = "$scope_after" ]; then
+      write_success_cache "$cache_file.${SCOPES[i]}" "$scope_after"
+    fi
+  done
+  cache_warnings=$(grep -E '\[WARNING\]|⚠' <<<"$OUT" | grep -vF '[WARNING] [ADVISORY]' || true)
+  if [ "$RC" -eq 0 ] && [ -z "$cache_warnings" ]; then
+    write_success_cache "$cache_file" "$before"
+  fi
+fi
+
+if [ "$RC" -eq 0 ]; then
   # 통과: decision 없이 additionalContext만 조용히 실어 보낸다(차단·재응답 없음).
   # shellcheck disable=SC2016
   "$JQ" -n --arg ctx "$OUT" '
@@ -147,7 +248,7 @@ if [ "$RC" -eq 0 ]; then
 fi
 
 # shellcheck disable=SC2016
-"$JQ" -n --arg reason "Pre-Flight Gate 실패: 완료 선언 전 확인이 필요합니다." --arg ctx "$OUT" '
+"$JQ" -n --arg reason "변경 영역 검사 실패: 아래 로그와 재현 명령으로 수정한 뒤 다시 검증하십시오." --arg ctx "$OUT" '
   {
     decision: "block",
     reason: $reason,

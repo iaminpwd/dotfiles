@@ -12,7 +12,7 @@
 # 그 결과 문법이 깨진 PrometheusRule 하나로 실측했을 때:
 #   staged 모드   -> exit 1 (잡음)
 #   --all 모드    -> exit 0 (놓침)   <- just verify / CI 가 쓰는 모드
-#   explicit 모드 -> exit 0 (놓침)   <- pre-flight-live-hook.sh 가 AI 편집마다 쓰는 모드
+#   explicit 모드 -> exit 0 (놓침)   <- 예전 편집 훅이 AI 편집마다 쓰는 모드
 # 즉 --all/--changed/explicit 경로에서는 Kyverno·PromQL·deprecated API·텔레메트리 시크릿
 # 검증이 통째로 비어 있으면서 초록불만 떴다.
 #

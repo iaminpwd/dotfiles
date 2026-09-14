@@ -110,6 +110,19 @@ if [ -x "$PFC" ] && require_tool yamllint; then
     report "non-templates-path-blocked (같은 내용, templates/ 밖 -> 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
   fi
 
+  # Stop에서는 루트 차트의 templates/도 일반 YAML로 파싱하지 않는다.
+  YR3="$PLUGIN_TMP/repo3"
+  new_repo "$YR3"
+  mkdir -p "$YR3/templates"
+  cp "$FIXTURES/fail-yamllint.yaml" "$YR3/templates/broken.yaml"
+  git -C "$YR3" add templates/broken.yaml
+  status=$(PFC_PROFILE=stop run_pfc "$YR3")
+  if [ "$status" -eq 0 ]; then
+    report "root-templates-excluded-in-stop (루트 Helm 템플릿 제외)" 0
+  else
+    report "root-templates-excluded-in-stop (루트 Helm 템플릿 제외)" 1 "$(cat "$PLUGIN_TMP/out")"
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "pre-flight-check.sh 배선 확인" 1 "bin/hooks/pre-flight-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"

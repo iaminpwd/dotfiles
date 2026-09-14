@@ -26,6 +26,18 @@ check:
     @echo "=> Running Pre-flight Checks..."
     bash bin/hooks/pre-flight-check.sh --all
 
+# 인프라·도메인 정책까지 명시적으로 실행
+check-domain:
+    PFC_PROFILE=full PFC_DOMAIN_CHECKS=1 bash bin/hooks/pre-flight-check.sh --all
+
+# 변경 영역의 핵심 회귀 테스트만 실행
+check-changed:
+    bash bin/hooks/stop-regression-check.sh
+
+# 선택적인 문서 표현·분량 리뷰
+docs-review:
+    PROMPT_LINT_REVIEW=1 bash bin/linters/prompt-lint.sh
+
 # 스크립트 멱등성 검사 (개별 테스트)
 check-idempotency file:
     @echo "=> Checking Idempotency for {{file}}..."

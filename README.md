@@ -44,8 +44,8 @@
 - **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
 - **프로젝트 루트 단독 매핑:** dotfiles 루트의 `AGENTS.md`와 `CLAUDE.md`를 생성하고 저장소 `.gitignore`에서 제외합니다. 다른 프로젝트의 공유 룰 파일은 전역에서 숨기지 않습니다.
 - **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
-- **편집 직후 검사:** 기본 등록하지 않습니다. `merge-agent-hooks.sh` 재실행 시 이전 `pre-flight-live-hook.sh` 등록만 제거하고 사용자 훅과 편집 이력 기록은 유지합니다.
-- **변경 감지 기반 종료 검사:** Claude Code `Stop` 훅은 마지막 성공 검사 이후 변경 내용·검증기가 달라진 경우에만 실행합니다. tracked diff와 untracked 내용을 비교하고, 실패·검사 중 변경·검사 경고는 캐시하지 않습니다. 성공 상태는 Git 메타데이터의 `pre-flight-stop-success`에 저장하며, 전체 회귀 스위트는 이 훅에서 실행하지 않습니다.
+- **편집 직후 검사:** 사용하지 않는 훅 본체와 전용 테스트는 제거했습니다. `merge-agent-hooks.sh` 재실행 시 이전 `pre-flight-live-hook.sh` 등록만 제거하고 사용자 훅과 편집 이력 기록은 유지합니다.
+- **변경 감지 기반 종료 검사:** Claude Code `Stop` 훅은 마지막 성공 검사 이후 변경 내용·검증기가 달라진 경우에만 실행합니다. tracked diff와 untracked 내용을 비교하고, 실패·검사 중 변경·검사 경고는 캐시하지 않습니다. 성공 상태는 Git 메타데이터의 `pre-flight-stop-success`에 저장합니다. `PFC_PROFILE=stop`으로 변경 파일과 Ansible을 검사하고, 백업·링크·설정 병합 등 변경 영역의 핵심 회귀 테스트를 실행합니다. 실패 로그와 재현 명령은 AI에 반환합니다. 전체 보안·도메인 검사와 전체 회귀는 CI 또는 명시적 실행에 남깁니다.
 - **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/dotfiles/tests/test-run-suite.sh`의 회귀 테스트 8건이 고정합니다(`run-suite.sh`는 `pre-flight-check.sh` 전용이 아니라 저장소 전역 러너라 dotfiles 스킬 소속입니다).
 
 ### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)

@@ -3,7 +3,7 @@
 #
 # bin/lib/plugin-targets.sh 는 위임 플러그인 3개(k8s/observability/aiops)가 공유하는
 # "검사 대상 수집" SSOT다. 이 계약이 깨지면 예전처럼 플러그인이 실행 모드를 무시하고
-# 항상 스테이징만 보게 되어, --all(just verify/CI)과 explicit(pre-flight-live-hook.sh)
+# 항상 스테이징만 보게 되어, --all(just verify/CI)과 explicit(폐기된 편집 훅)
 # 경로에서 위임 검증이 통째로 비면서 초록불만 뜬다(실측 재현된 버그, 라이브러리 헤더 참조).
 # 그 무검증 통과가 재발하지 않도록 아래 4개 계약을 고정한다.
 #

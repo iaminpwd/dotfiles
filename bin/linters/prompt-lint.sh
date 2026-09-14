@@ -705,18 +705,23 @@ check_good_examples() {
 main() {
   check_ssot_module_lists
   check_reference_links
-  check_orphaned_files
   check_documented_clause_existence
-  check_file_size
-  check_vendor_leakage
   check_code_fences
-  check_severity_tag_heuristic
-  check_prefer_language_tagged_must
+  # 표현·분량·벤더 용어는 코드 정확성 게이트가 아니라 선택적인 문서 리뷰다.
+  if [ "${PROMPT_LINT_REVIEW:-0}" = "1" ]; then
+    check_orphaned_files
+    check_file_size
+    check_vendor_leakage
+    check_severity_tag_heuristic
+    check_prefer_language_tagged_must
+  fi
   check_index_freshness
   check_readme_skill_counts
   check_archive_scope_consistency
   check_dangling_file_references
-  check_good_examples
+  if [ "${PROMPT_LINT_EXAMPLES:-1}" = "1" ]; then
+    check_good_examples
+  fi
   if [ -f "$CONTEXTS_DIR/prompt-architect/evals/routing/run.sh" ]; then
     bash "$CONTEXTS_DIR/prompt-architect/evals/routing/run.sh" --check-cases-only || EXIT_CODE=1
   fi

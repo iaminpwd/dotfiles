@@ -95,7 +95,7 @@ run_delegated_skill_checks() {
   # 플러그인에 이번 실행의 검사 대상을 인자로 넘긴다. 예전엔 인자 없이 호출했고 플러그인이
   # 저마다 git diff --cached 를 하드코딩해, --all/--changed/explicit 모드에서는 실행 모드와
   # 무관하게 항상 "스테이징된 것"만 봤다 — 즉 just verify(--all)나
-  # pre-flight-live-hook.sh(explicit)에서는 위임 검증이 통째로 비어 있으면서 초록불만 떴다
+  # 폐기된 편집 훅(explicit)에서는 위임 검증이 통째로 비어 있으면서 초록불만 떴다
   # (실측 재현: bin/lib/plugin-targets.sh 헤더 주석 참조).
   #
   # 넘기는 목록은 filter_target_files 를 거친 것이라 */tests/fixtures* 가 이미 빠져 있다.
@@ -140,7 +140,8 @@ GLOBAL_CACHE_ENABLED=0
 print_usage() {
   cat >&2 <<'USAGE'
 사용법: pre-flight-check.sh [모드 | 파일...]
-환경: PFC_PROFILE=quick 은 커밋용 문법·포맷 검사, 기본 full 은 전체 검증.
+환경: PFC_PROFILE=quick 은 커밋용, stop 은 변경 파일·Ansible 검사, 기본 full 은 보안 검사 포함.
+      PFC_DOMAIN_CHECKS=1 을 명시하면 full에서 인프라·도메인 정책 검사도 실행한다.
 
   (인자 없음)   스테이징된 변경분만 검증한다 (커밋 훅과 동일한 기본 동작).
   --changed     스테이징 + 미스테이징 + untracked 변경분을 모두 검증한다.
@@ -168,7 +169,7 @@ filter_target_files() {
     #
     # 그 차이의 대가는 무검증 초록불이었다. tests/ 하위 파일은 explicit 모드와 --all
     # 모드 양쪽에서 대상 0건이 되어, 검증기가 아무것도 보지 않고 exit 0 을 냈다.
-    # 실측: shellcheck 가 SC2086 을 잡아내는 파일을 pre-flight-live-hook.sh 에 물렸더니
+    # 실측: shellcheck 가 SC2086 을 잡아내는 파일을 예전 편집 훅에 물렸더니
     # decision 없이 "-> [✓]" 한 줄이 에이전트 컨텍스트로 들어갔다(같은 위반을 tests/
     # 밖에 두면 rc=1 로 차단). 추적 중인 .sh 98개 중 59개가 그 상태였다.
     #
@@ -257,9 +258,9 @@ parse_target_args() {
 
 main() {
   case "${PFC_PROFILE:-full}" in
-  full | quick) ;;
+  full | quick | stop) ;;
   *)
-    echo "[ERROR] PFC_PROFILE은 full 또는 quick이어야 합니다." >&2
+    echo "[ERROR] PFC_PROFILE은 full, quick 또는 stop이어야 합니다." >&2
     exit 2
     ;;
   esac
@@ -320,10 +321,13 @@ main() {
 
   # 커밋용 빠른 검사: 네트워크 초기화, 보안 DB 스캔, 비용 API, 회귀 테스트 제외.
   # 시크릿 검사는 pre-commit이 스테이징된 내용에 대해 별도로 수행한다.
-  if [ "${PFC_PROFILE:-full}" = "quick" ]; then
+  if [ "${PFC_PROFILE:-full}" != "full" ]; then
     validate_shell
     validate_yaml
     validate_docker
+    if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+      validate_ansible
+    fi
     if [ "${#GLOBAL_TARGET_TF_FILES[@]}" -gt 0 ] && has_tool terraform; then
       terraform fmt -check "${GLOBAL_TARGET_TF_FILES[@]}"
     fi
@@ -335,20 +339,22 @@ main() {
   GLOBAL_TF_HASH=$(calculate_tf_hash)
 
   validate_shell
-  validate_terraform
-  validate_sam
   validate_ansible
-  validate_helm
-  validate_k8s_manifests
   validate_docker
   validate_yaml
-  validate_conftest
   validate_security
-  validate_finops_costs
-  run_delegated_skill_checks
+  if [ "${PFC_DOMAIN_CHECKS:-0}" = "1" ]; then
+    validate_terraform
+    validate_sam
+    validate_helm
+    validate_k8s_manifests
+    validate_conftest
+    validate_finops_costs
+    run_delegated_skill_checks
+  fi
 
   # 검증 성공 시 스테이징 캐시 갱신 (쓰기 실패 시 무시, 동시 실행 시 원자적 덮어쓰기로 캐시 파일 손상 방지)
-  if [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
+  if [ "${PFC_DOMAIN_CHECKS:-0}" = "1" ] && [ "$GLOBAL_CACHE_ENABLED" -eq 1 ] && [ "$GLOBAL_TF_HASH" != "empty" ] && [ "$GLOBAL_TF_HASH" != "non-git" ]; then
     cache_tmp=$(mktemp "$REPO_ROOT/.pre-flight-check.cache.XXXXXX" 2>/dev/null) || cache_tmp=""
     if [ -n "$cache_tmp" ]; then
       echo "$GLOBAL_TF_HASH" >"$cache_tmp" 2>/dev/null && mv "$cache_tmp" "$CACHE_FILE" 2>/dev/null || rm -f "$cache_tmp" 2>/dev/null || true
