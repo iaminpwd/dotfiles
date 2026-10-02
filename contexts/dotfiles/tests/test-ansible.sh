@@ -173,6 +173,21 @@ else
   report "RHEL packages role은 메이저 버전별 EPEL release RPM을 직접 bootstrap" 1 "stock RHEL 기본 저장소에는 epel-release가 없을 수 있으므로 bare package명에 의존하면 안 됩니다"
 fi
 
+echo "--- Docker Debian architecture contract ---"
+DOCKER_TASKS="$REPO_ROOT/ansible/roles/docker/tasks/main.yml"
+if grep -Fq 'dpkg --print-architecture' "$DOCKER_TASKS" &&
+  grep -Fq 'arch={{ docker_deb_architecture.stdout }}' "$DOCKER_TASKS"; then
+  report "Docker apt 저장소는 dpkg가 보고하는 Debian 아키텍처를 그대로 사용" 0
+else
+  report "Docker apt 저장소는 dpkg가 보고하는 Debian 아키텍처를 그대로 사용" 1 "armv7l/ppc64le를 arm64로 오판정하지 않아야 합니다"
+fi
+
+if grep -Fq "else 'arm64'" "$DOCKER_TASKS"; then
+  report "Docker apt 아키텍처 catch-all arm64 금지" 1 "x86_64 이외 모든 CPU를 arm64로 취급하면 armhf/ppc64el 설치가 깨집니다"
+else
+  report "Docker apt 아키텍처 catch-all arm64 금지" 0
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
