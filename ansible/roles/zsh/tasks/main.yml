@@ -17,7 +17,7 @@
     repo: 'https://github.com/zsh-users/zsh-autosuggestions.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
     depth: 1
-    version: v0.7.1
+    version: e52ee8ca55bcc56a17c828767a3f98f22a68d4eb # v0.7.1
     update: true
   register: zsh_clone_result
   until: zsh_clone_result is succeeded
@@ -29,7 +29,7 @@
     repo: 'https://github.com/zsh-users/zsh-syntax-highlighting.git'
     dest: "{{ ansible_env.HOME }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
     depth: 1
-    version: 0.8.0
+    version: db085e4661f6aafd24e5acb5b2e17e4dd5dddf3e # 0.8.0
     update: true
   register: zsh_clone_result
   until: zsh_clone_result is succeeded

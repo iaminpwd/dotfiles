@@ -60,20 +60,20 @@
     },
     {
       "customType": "regex",
-      "description": "zsh-autosuggestions 플러그인은 릴리스 태그가 존재하므로 master 커밋 대신 최신 안정 태그를 추적",
+      "description": "zsh-autosuggestions 플러그인은 실행값을 commit SHA로 고정하고 주석의 안정 태그와 digest를 함께 추적",
       "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
       "matchStrings": [
-        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-autosuggestions)\\.git'[\\s\\S]*?version: (?<currentValue>\\S+)"
+        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-autosuggestions)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>\\S+)"
       ],
       "depNameTemplate": "zsh-autosuggestions",
       "datasourceTemplate": "github-tags"
     },
     {
       "customType": "regex",
-      "description": "zsh-syntax-highlighting 플러그인은 릴리스 태그가 존재하므로 master 커밋 대신 최신 안정 태그를 추적",
+      "description": "zsh-syntax-highlighting 플러그인은 실행값을 commit SHA로 고정하고 주석의 안정 태그와 digest를 함께 추적",
       "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
       "matchStrings": [
-        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-syntax-highlighting)\\.git'[\\s\\S]*?version: (?<currentValue>\\S+)"
+        "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-syntax-highlighting)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>\\S+)"
       ],
       "depNameTemplate": "zsh-syntax-highlighting",
       "datasourceTemplate": "github-tags"
