@@ -27,7 +27,10 @@ source "$ROOT_FN"
 ROOT_MARKER="$TMP/root-path"
 SUDO_MARKER="$TMP/sudo-path"
 id() { printf '0\n'; }
-sudo() { printf 'unexpected\n' >"$SUDO_MARKER"; return 99; }
+sudo() {
+  printf 'unexpected\n' >"$SUDO_MARKER"
+  return 99
+}
 privcmd() { printf '%s\n' "$*" >"$ROOT_MARKER"; }
 run_as_root privcmd direct-root
 [ "$(cat "$ROOT_MARKER")" = "direct-root" ]
@@ -35,7 +38,10 @@ run_as_root privcmd direct-root
 echo 'PASS: root 사용자는 sudo 없이 직접 실행'
 
 id() { printf '1000\n'; }
-sudo() { printf 'used\n' >"$SUDO_MARKER"; "$@"; }
+sudo() {
+  printf 'used\n' >"$SUDO_MARKER"
+  "$@"
+}
 run_as_root privcmd via-sudo
 [ "$(cat "$ROOT_MARKER")" = "via-sudo" ]
 [ "$(cat "$SUDO_MARKER")" = "used" ]
