@@ -21,7 +21,9 @@
 
 - name: EPEL 저장소 활성화 (RHEL/Rocky/CentOS)
   ansible.builtin.dnf:
-    name: epel-release
+    # stock RHEL 기본 저장소에는 epel-release가 없을 수 있으므로 Fedora가 배포하는
+    # 메이저 버전별 release RPM을 직접 설치한다. RHEL 호환 배포판도 같은 EPEL X를 사용한다.
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
     state: present
   become: true
   when:
