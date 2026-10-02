@@ -167,10 +167,10 @@ fi
 echo "--- RHEL EPEL bootstrap contract ---"
 PACKAGES_TASKS="$REPO_ROOT/ansible/roles/packages/tasks/main.yml"
 if grep -Fq 'epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm' "$PACKAGES_TASKS" &&
-  ! grep -Eq '^[[:space:]]+name:[[:space:]]+epel-release "$PACKAGES_TASKS"; then
+  ! grep -Eq '^[[:space:]]+name:[[:space:]]+epel-release([[:space:]]|$)' "$PACKAGES_TASKS"; then
   report "RHEL packages role은 메이저 버전별 EPEL release RPM을 직접 bootstrap" 0
 else
-  report "RHEL packages role은 메이저 버전별 EPEL release RPM을 직접 bootstrap" 1     "stock RHEL 기본 저장소에는 epel-release가 없을 수 있으므로 bare package명에 의존하면 안 됩니다"
+  report "RHEL packages role은 메이저 버전별 EPEL release RPM을 직접 bootstrap" 1 "stock RHEL 기본 저장소에는 epel-release가 없을 수 있으므로 bare package명에 의존하면 안 됩니다"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
