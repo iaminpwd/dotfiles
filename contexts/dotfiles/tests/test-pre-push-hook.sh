@@ -96,6 +96,21 @@ else
   report "detect-and-run-aws (aws만 감지 + 스텁 실제 호출, azure는 미실행)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 1a. 스킬 경로의 파일을 스킬 밖으로 rename해도 "그 스킬에서 파일이 제거된 변경"이다.
+#     git diff의 rename detection이 R100으로 접으면 --name-only에는 새 경로만 남아,
+#     contexts/aws/...라는 원래 경로가 사라진다. 그러면 aws 스위트가 한 번도 돌지 않는다.
+#     --no-renames로 delete+add처럼 보아 원래 경로도 변경 목록에 남겨야 한다.
+git -C "$FIXTURE_REPO" mv contexts/aws/scripts/deploy-check.sh README_MOVED_SCRIPT.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "refactor(aws): 배포 점검 스크립트 위치 이동"
+RENAMED_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $RENAMED_SHA refs/heads/main $NEW_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out"; then
+  report "rename-out-of-skill (스킬 밖으로 이동해도 원래 스킬 회귀 실행)" 0
+else
+  report "rename-out-of-skill (스킬 밖으로 이동해도 원래 스킬 회귀 실행)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 1b. bin/lib/*(모든 스킬이 공유하는 코어 검증 로직) 변경은 경로 패턴이 특정 스킬 하나에
 #     매핑되지 않으므로, 존재하는 스킬 회귀 스위트 전부(aws + azure)를 대상으로 삼아야 한다.
 mkdir -p "$FIXTURE_REPO/bin/lib"
@@ -104,7 +119,7 @@ git -C "$FIXTURE_REPO" add bin/lib/pfc-iac-checks.sh
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(bin): 코어 IaC 검증 로직 수정"
 CORE_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-status=$(run_hook_with_refline "refs/heads/main $CORE_SHA refs/heads/main $NEW_SHA")
+status=$(run_hook_with_refline "refs/heads/main $CORE_SHA refs/heads/main $RENAMED_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" && grep -qF "[✓] contexts/azure/tests/run.sh" "$TMP/out"; then
   report "core-lib-change (bin/lib 변경 시 존재하는 스킬 전체 감지)" 0
 else
