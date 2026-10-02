@@ -215,7 +215,7 @@ STUB
   # sh 스텁: "설치가 실제로 실행됐다"의 유일한 증거. 차단 케이스에서는 생기면 안 된다.
   # 홑따옴표가 맞다 — $STUB_MARKER 는 지금이 아니라 스텁이 실행되는 시점에 전개돼야 한다.
   # shellcheck disable=SC2016
-  printf '#!/usr/bin/env bash\nprintf "ran:%s\\n" "${MISE_VERSION:-}" >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
+  printf '#!/usr/bin/env bash\nprintf "ran:%%s\\n" "${MISE_VERSION:-}" >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
   chmod +x "$E2E_BIN/curl" "$E2E_BIN/gpg" "$E2E_BIN/sh"
 
   # run_e2e <지문목록> <GOODSIG여부> -> "<exit코드>|<설치실행여부>|<출력>"
