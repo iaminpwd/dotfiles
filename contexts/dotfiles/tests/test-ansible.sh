@@ -175,7 +175,9 @@ fi
 
 echo "--- Docker Debian architecture contract ---"
 DOCKER_TASKS="$REPO_ROOT/ansible/roles/docker/tasks/main.yml"
-if grep -Fq 'dpkg --print-architecture' "$DOCKER_TASKS" &&
+if grep -Fq 'ansible.builtin.command: dpkg --print-architecture' "$DOCKER_TASKS" &&
+  grep -Fq 'register: docker_deb_architecture' "$DOCKER_TASKS" &&
+  grep -Fq 'check_mode: false' "$DOCKER_TASKS" &&
   grep -Fq 'arch={{ docker_deb_architecture.stdout }}' "$DOCKER_TASKS"; then
   report "Docker apt 저장소는 dpkg가 보고하는 Debian 아키텍처를 그대로 사용" 0
 else
