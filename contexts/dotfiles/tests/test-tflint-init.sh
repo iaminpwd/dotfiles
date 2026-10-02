@@ -8,13 +8,18 @@ if ! command -v ansible-playbook >/dev/null || ! ansible-playbook --version >/de
   echo '[WARNING] SKIP: ansible-playbook 필요 (TFLint 재시도 테스트)'
   exit 0
 fi
-mkdir -p "$TMP/roles/tflint/tasks" "$TMP/tools"
+mkdir -p "$TMP/roles/tflint/tasks" "$TMP/tools" "$TMP/home"
+export TFLINT_TEST_HOME="$TMP/home"
 # 실제 태스크를 실행하되 테스트에서는 재시도 대기만 없앤다.
 sed 's/delay: 5/delay: 0/' "$ROOT/ansible/roles/tflint/tasks/main.yml" >"$TMP/roles/tflint/tasks/main.yml"
 cat >"$TMP/play.yml" <<'YAML'
 - hosts: localhost
   gather_facts: false
   connection: local
+  vars:
+    ansible_env:
+      HOME: "{{ lookup('env', 'TFLINT_TEST_HOME') }}"
+      PATH: "{{ lookup('env', 'PATH') }}"
   roles:
     - tflint
 YAML
