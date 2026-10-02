@@ -1,4 +1,5 @@
-# mise shims PATH 등록 (비인터랙티브 셸 포함)
+# mise shims와 사용자 실행 파일 PATH 등록 (비인터랙티브 셸 포함)
+# mise 본체와 ai_agent 실행 스크립트는 ~/.local/bin에 설치되므로 여기서 함께 노출한다.
 # 무거운 activate 기능은 .zshrc에 남겨 부작용 최소화
 # PATH 중복 누적 방지 (멱등성 보장): typeset -U 로 PATH 전역 중복 제거 적용
 if [ -n "${ZSH_VERSION:-}" ]; then
@@ -19,4 +20,4 @@ if [[ "$OSTYPE" == darwin* ]]; then
   unset _brew_prefix _gnu_pkg
 fi
 
-export PATH="$HOME/.local/share/mise/shims:$PATH"
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
