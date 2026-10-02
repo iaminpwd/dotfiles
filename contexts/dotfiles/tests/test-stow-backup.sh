@@ -120,6 +120,29 @@ else
   report "fail-stale-relative-dirlink (패키지 이동으로 끊어진 디렉토리 링크는 백업)" 1 "$(ls -la "$CASE2D/home" 2>&1)"
 fi
 
+# 2e. fail-live-foreign-parent-dirlink: ~/.config 같은 공유 부모 디렉토리가 사용자의
+#     살아있는 외부 symlink라면 stow-backup이 통째로 백업/교체하면 안 된다. 이 링크 아래에는
+#     dotfiles와 무관한 앱 설정이 함께 있을 수 있으므로, 자동 takeover 대신 링크를 그대로
+#     보존하고 명확하게 실패해야 사용자가 직접 충돌 정책을 결정할 수 있다.
+CASE2E="$TMP/case2e"
+mkdir -p "$CASE2E/dotfiles/pkg/.config/mise" "$CASE2E/home" "$CASE2E/config-store"
+echo "dotfiles 버전" >"$CASE2E/dotfiles/pkg/.config/mise/config.toml"
+echo "사용자 외부 설정" >"$CASE2E/config-store/unrelated.conf"
+ln -s "../config-store" "$CASE2E/home/.config"
+
+status=0
+out=$(bash "$BACKUP" "pkg" "$CASE2E/dotfiles" "$CASE2E/home" 2>&1) || status=$?
+
+if [ "$status" -ne 0 ] &&
+  [ -L "$CASE2E/home/.config" ] &&
+  [ "$(readlink "$CASE2E/home/.config")" = "../config-store" ] &&
+  [ -f "$CASE2E/config-store/unrelated.conf" ] &&
+  grep -qF "외부 디렉토리 심볼릭 링크" <<<"$out"; then
+  report "fail-live-foreign-parent-dirlink (공유 부모의 사용자 symlink 보존 + fail-closed)" 0
+else
+  report "fail-live-foreign-parent-dirlink (공유 부모의 사용자 symlink 보존 + fail-closed)" 1 "exit=$status out=$out $(ls -la "$CASE2E/home" 2>&1)"
+fi
+
 # 3. ok-no-conflict: HOME에 해당 경로가 아예 없으면 아무 것도 하지 않고 exit 0이어야 한다.
 CASE3="$TMP/case3"
 mkdir -p "$CASE3/dotfiles/pkg" "$CASE3/home"
