@@ -26,34 +26,52 @@ source "$ROOT_FN"
 
 ROOT_MARKER="$TMP/root-path"
 SUDO_MARKER="$TMP/sudo-path"
-id() { printf '0\n'; }
-sudo() {
-  printf 'unexpected\n' >"$SUDO_MARKER"
-  return 99
-}
-privcmd() { printf '%s\n' "$*" >"$ROOT_MARKER"; }
-run_as_root privcmd direct-root
+ROOT_BIN="$TMP/root-bin"
+mkdir -p "$ROOT_BIN"
+cat >"$ROOT_BIN/id" <<'STUB'
+#!/bin/sh
+printf '0\n'
+STUB
+cat >"$ROOT_BIN/sudo" <<'STUB'
+#!/bin/sh
+printf 'unexpected\n' >"$SUDO_MARKER"
+exit 99
+STUB
+cat >"$ROOT_BIN/privcmd" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >"$ROOT_MARKER"
+STUB
+chmod +x "$ROOT_BIN/id" "$ROOT_BIN/sudo" "$ROOT_BIN/privcmd"
+PATH="$ROOT_BIN" ROOT_MARKER="$ROOT_MARKER" SUDO_MARKER="$SUDO_MARKER" run_as_root privcmd direct-root
 [ "$(cat "$ROOT_MARKER")" = "direct-root" ]
 [ ! -e "$SUDO_MARKER" ]
 echo 'PASS: root 사용자는 sudo 없이 직접 실행'
 
-id() { printf '1000\n'; }
-sudo() {
-  printf 'used\n' >"$SUDO_MARKER"
-  "$@"
-}
-run_as_root privcmd via-sudo
+SUDO_BIN="$TMP/sudo-bin"
+mkdir -p "$SUDO_BIN"
+cat >"$SUDO_BIN/id" <<'STUB'
+#!/bin/sh
+printf '1000\n'
+STUB
+cat >"$SUDO_BIN/sudo" <<'STUB'
+#!/bin/sh
+printf 'used\n' >"$SUDO_MARKER"
+exec "$@"
+STUB
+cp "$ROOT_BIN/privcmd" "$SUDO_BIN/privcmd"
+chmod +x "$SUDO_BIN/id" "$SUDO_BIN/sudo" "$SUDO_BIN/privcmd"
+PATH="$SUDO_BIN" ROOT_MARKER="$ROOT_MARKER" SUDO_MARKER="$SUDO_MARKER" run_as_root privcmd via-sudo
 [ "$(cat "$ROOT_MARKER")" = "via-sudo" ]
 [ "$(cat "$SUDO_MARKER")" = "used" ]
 echo 'PASS: 일반 사용자는 sudo 경로 사용'
 
-unset -f sudo
-mkdir -p "$TMP/no-sudo"
+NO_SUDO_BIN="$TMP/no-sudo-bin"
+mkdir -p "$NO_SUDO_BIN"
+cp "$SUDO_BIN/id" "$SUDO_BIN/privcmd" "$NO_SUDO_BIN/"
 status=0
-out=$(PATH="$TMP/no-sudo" run_as_root privcmd denied 2>&1) || status=$?
+out=$(PATH="$NO_SUDO_BIN" ROOT_MARKER="$ROOT_MARKER" run_as_root privcmd denied 2>&1) || status=$?
 [ "$status" -ne 0 ]
 grep -q 'sudo를 찾을 수 없습니다' <<<"$out"
-unset -f id privcmd
 echo 'PASS: 일반 사용자 + sudo 없음은 명확히 실패'
 
 grep -q '^  run_as_root apt-get update -qq$' "$ROOT/bootstrap.sh"
