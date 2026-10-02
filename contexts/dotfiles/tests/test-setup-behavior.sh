@@ -83,6 +83,16 @@ if grep -Eq '^[[:space:]]*sudo (apt-get|dnf)' "$ROOT/bootstrap.sh"; then
 fi
 echo 'PASS: apt/dnf bootstrap 호출부가 권한 wrapper를 사용'
 
+if ! grep -Fq 'epel-release-latest-${os_major}.noarch.rpm' "$ROOT/bootstrap.sh"; then
+  echo 'FAIL: bootstrap의 dnf 경로가 RHEL 메이저 버전별 EPEL release RPM을 직접 설치하지 않습니다.'
+  exit 1
+fi
+if grep -Eq 'run_as_root dnf install -y epel-release([[:space:]]|$)' "$ROOT/bootstrap.sh"; then
+  echo 'FAIL: bootstrap이 stock RHEL에서 제공되지 않을 수 있는 bare epel-release 패키지에 의존합니다.'
+  exit 1
+fi
+echo 'PASS: RHEL bootstrap이 메이저 버전별 EPEL release RPM을 직접 사용'
+
 # 실제 bootstrap의 로컬 파일 생성 구간만 실행해 시스템 설치는 호출하지 않는다.
 awk '/^# 2. 로컬 환경변수 파일 생성/{capture=1} /^# 3. Infracost 설정/{capture=0} capture' "$ROOT/bootstrap.sh" >"$TMP/create-local.sh"
 (
