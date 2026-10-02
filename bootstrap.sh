@@ -28,9 +28,9 @@ install_epel_release() {
   local os_major=""
   os_major="$(rpm -E '%{rhel}' 2>/dev/null || true)"
   case "$os_major" in
-    '' | '%{rhel}' | *[!0-9]*)
-      return 0
-      ;;
+  '' | '%{rhel}' | *[!0-9]*)
+    return 0
+    ;;
   esac
   run_as_root dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major}.noarch.rpm"
 }
