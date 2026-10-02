@@ -76,7 +76,10 @@ echo 'PASS: non-root + sudo 없음은 명확한 오류로 차단'
 grep -q '_run_as_root apt-get update -qq' "$ROOT/bootstrap.sh"
 grep -q '_run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install' "$ROOT/bootstrap.sh"
 grep -q '_run_as_root dnf install' "$ROOT/bootstrap.sh"
-! grep -Eq '^[[:space:]]+sudo (apt-get|dnf)' "$ROOT/bootstrap.sh"
+if grep -Eq '^[[:space:]]+sudo (apt-get|dnf)' "$ROOT/bootstrap.sh"; then
+  echo 'FAIL: Linux bootstrap 패키지 설치가 권한 래퍼를 우회합니다.' >&2
+  exit 1
+fi
 echo 'PASS: Linux bootstrap 패키지 설치가 권한 래퍼를 사용'
 
 # 실제 bootstrap의 로컬 파일 생성 구간만 실행해 시스템 설치는 호출하지 않는다.
