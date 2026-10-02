@@ -5,9 +5,10 @@
   become: false
   gather_facts: true
 
-  # 환경 변수를 통해 mise 등의 경로를 보장
-  environment:
-    PATH: "{{ ansible_env.HOME }}/.local/share/mise/shims:{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  # 사용자 HOME 아래 toolchain PATH를 play 전역에 주입하지 않는다.
+  # play-level environment는 become:true 태스크에도 상속되므로, user-writable 경로를
+  # 전역 PATH 앞에 두면 privileged shell/command가 동명 바이너리에 가로채질 수 있다.
+  # mise PATH가 필요한 비권한 태스크는 각 role/task에서 국소적으로 선언한다.
 
   roles:
     - role: packages
