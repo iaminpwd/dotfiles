@@ -8,6 +8,19 @@ export ANSIBLE_HOME="$HOME/.cache/ansible"
 # 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Linux 최소 설치에서도 root 사용자는 sudo 없이 bootstrap할 수 있어야 한다.
+# 일반 사용자는 sudo를 사용하고, 둘 다 불가능하면 command-not-found 대신 명확히 차단한다.
+run_as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    echo "❌ 관리자 권한이 필요하지만 sudo를 찾을 수 없습니다. root로 실행하거나 sudo를 설치하십시오." >&2
+    return 1
+  fi
+}
+
 # sudo 정책과 시스템 대체 실행 파일은 변경하지 않는다.
 # Ansible의 sudo 호환성은 run-setup.sh가 해당 실행에만 적용한다.
 
@@ -17,14 +30,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # gnupg(gpg)는 아래 2단계에서 mise 설치 스크립트의 GPG 서명을 검증하는 데 필요해
 # ansible packages 롤(Docker GPG 검증용)보다 먼저 여기서 확보해둔다.
 if command -v apt-get &>/dev/null; then
-  sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg gawk
+  run_as_root apt-get update -qq
+  run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg gawk
 elif command -v dnf &>/dev/null; then
   # Fedora 외의 RHEL/Rocky/CentOS 계열은 stow 패키지를 위해 EPEL 저장소가 필요함
   if ! command -v stow &>/dev/null; then
-    sudo dnf install -y epel-release 2>/dev/null || true
+    run_as_root dnf install -y epel-release 2>/dev/null || true
   fi
-  sudo dnf install -y curl git unzip stow gnupg2 gawk
+  run_as_root dnf install -y curl git unzip stow gnupg2 gawk
 elif command -v brew &>/dev/null; then
   # macOS는 기본 내장 도구 활용, stow/gnupg만 별도 설치
   if ! command -v stow &>/dev/null; then
