@@ -43,12 +43,23 @@ _reconcile_symlink() {
 
 # GNU Stow는 ~/.githooks처럼 대상 디렉토리가 없으면 파일 단위가 아니라 디렉토리 자체를
 # 통째로 심볼릭 링크한다(tree-folding). 아래 파일 루프만으로는 그 링크를 못 만나므로
-# 디렉토리 단위로 먼저 정리하되, 반드시 "이미 심볼릭 링크인 경우"만 다룬다 — 실제
-# 디렉토리(예: ~/.config)는 다른 앱과 공유 중일 수 있어 절대 손대지 않는다.
+# 디렉토리 단위로 먼저 정리한다. 다만 ~/.config -> ~/config-store처럼 사용자가 공유 부모
+# 디렉토리를 외부의 "살아있는 디렉토리"로 연결해 둔 경우까지 자동 takeover하면, 그 아래의
+# 무관한 앱 설정 전체가 기존 경로에서 이탈한다. 이런 링크는 그대로 보존하고 fail-closed한다.
+# 반면 끊어진 과거 Stow 디렉토리 링크는 기존처럼 백업해 새 배치를 복구할 수 있게 한다.
+_reconcile_dir_symlink() {
+  local target=$1 src=$2
+  if [ -d "$target" ] && [ "$(_canonicalize "$target")" != "$(_canonicalize "$src")" ]; then
+    echo "❌ [Hard Block] 외부 디렉토리 심볼릭 링크를 자동 교체하지 않습니다: $target -> $(readlink "$target")" >&2
+    return 1
+  fi
+  _reconcile_symlink "$target" "$src"
+}
+
 while IFS= read -r -d '' SRC_DIR; do
   REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
   TARGET="$HOME_DIR/$REL_PATH"
-  [ -L "$TARGET" ] && _reconcile_symlink "$TARGET" "$SRC_DIR"
+  [ -L "$TARGET" ] && _reconcile_dir_symlink "$TARGET" "$SRC_DIR"
 done < <(find "$DOTFILES_DIR/$PKG" -mindepth 1 -type d -print0)
 
 # 파일은 심볼릭 링크 정리 + "실제 파일이 그 경로를 차지하고 있는" 진짜 충돌까지 다룬다.
