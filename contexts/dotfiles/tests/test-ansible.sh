@@ -150,9 +150,18 @@ if awk '
   in_env && /ansible_env\.HOME/ && /(mise\/shims|\.local\/bin)/ { bad = 1 }
   END { exit(bad ? 0 : 1) }
 ' "$SITE_YML"; then
-  report "play-level PATH에 HOME 하위 user-writable 경로 금지" 1     "site.yml의 전역 environment PATH가 become:true 태스크에도 상속됩니다"
+  report "play-level PATH에 HOME 하위 user-writable 경로 금지" 1 "site.yml의 전역 environment PATH가 become:true 태스크에도 상속됩니다"
 else
   report "play-level PATH에 HOME 하위 user-writable 경로 금지" 0
+fi
+
+# 전역 PATH를 제거해도 mise로 설치한 tflint 탐지는 유지되어야 한다. HOME toolchain PATH는
+# become을 쓰지 않는 tflint task에만 국소화한다.
+TFLINT_TASKS="$REPO_ROOT/ansible/roles/tflint/tasks/main.yml"
+if grep -Fq 'PATH: "{{ ansible_env.HOME }}/.local/share/mise/shims:{{ ansible_env.PATH }}"' "$TFLINT_TASKS"; then
+  report "mise PATH는 non-privileged tflint 태스크에 국소화" 0
+else
+  report "mise PATH는 non-privileged tflint 태스크에 국소화" 1 "tflint 탐지/초기화용 PATH가 사라졌습니다"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
