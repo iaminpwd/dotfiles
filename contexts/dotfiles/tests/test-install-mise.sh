@@ -7,9 +7,11 @@
 # 경로가 된다 — 검증이 죽어도 설치는 성공하니 아무도 모른다.
 #
 # 실제 설치는 네트워크에 의존하므로 여기서 반복하지 않는다. 대신 네트워크 없이 확인
-# 가능한 세 축을 고정한다: (1) 이미 설치돼 있으면 아무것도 하지 않는다(멱등),
+# 가능한 축을 고정한다: (1) 고정 mise 버전이 이미 설치돼 있으면 무동작(멱등),
+# (1a) 다른 mise 버전은 이미 설치돼 있어도 고정 버전 설치 경로로 들어간다,
 # (1b) 설치가 필요한데 검증을 못 하면 조용히 통과하지 않는다,
-# (2) 지문 판정이 "주 키가 정확히 1개이고 기대값"인가.
+# (2) 지문 판정이 "주 키가 정확히 1개이고 기대값"인가,
+# (3) 정상 설치 시 공식 installer에 저장소의 MISE_VERSION pin을 실제로 전달하는가.
 #
 # (2)는 판정식을 이 파일에 복제하지 않는다. 복제하면 본체만 고쳤을 때 테스트가 그대로
 # 통과해 회귀를 못 잡는다(test-finops.sh 가 실제로 그 상태였다). 스크립트에서 awk 식을
@@ -43,18 +45,40 @@ trap 'rm -rf "$TMP"' EXIT
 
 echo "=== install-mise.sh 공급망 판정 회귀 테스트 ==="
 
-# 1. 멱등: 이미 mise 가 있으면 네트워크를 타지 않고 즉시 0.
+PINNED_VERSION=$(grep -oE '^MISE_VERSION="[0-9.]+"' "$INSTALLER" | head -1 | sed -E 's/.*"([^"]+)"/\1/')
+if [ -z "$PINNED_VERSION" ]; then
+  echo "FAIL: install-mise.sh 에서 고정 MISE_VERSION을 찾지 못했습니다." >&2
+  exit 1
+fi
+
+# 1. 멱등: 정확히 고정된 mise 버전이 있으면 네트워크를 타지 않고 즉시 0.
 IDEM_HOME="$TMP/idem"
 mkdir -p "$IDEM_HOME/.local/bin"
-printf '#!/bin/sh\nexit 0\n' >"$IDEM_HOME/.local/bin/mise"
+printf '#!/bin/sh\nprintf "%s linux-x64\\n"\n' "$PINNED_VERSION" >"$IDEM_HOME/.local/bin/mise"
 chmod +x "$IDEM_HOME/.local/bin/mise"
 
 status=0
 out=$(HOME="$IDEM_HOME" bash "$INSTALLER" 2>&1) || status=$?
 if [ "$status" -eq 0 ] && [ -z "$out" ]; then
-  report "already-installed (재실행 시 무동작)" 0
+  report "already-pinned (같은 버전 재실행 시 무동작)" 0
 else
-  report "already-installed (재실행 시 무동작)" 1 "기대 exit=0 + 무출력 / 실제 exit=$status: $out"
+  report "already-pinned (같은 버전 재실행 시 무동작)" 1 "기대 exit=0 + 무출력 / 실제 exit=$status: $out"
+fi
+
+# 1a. 실행 파일이 존재한다는 이유만으로 통과하면 머신마다 mise 버전이 달라진다.
+#     다른 버전을 둔 뒤 curl을 막아, 조기 종료하지 않고 재설치 경로로 진입하는지 고정한다.
+MISMATCH_HOME="$TMP/mismatch"
+mkdir -p "$MISMATCH_HOME/.local/bin" "$TMP/mismatch-bin"
+printf '#!/bin/sh\nprintf "2000.1.1 linux-x64\\n"\n' >"$MISMATCH_HOME/.local/bin/mise"
+printf '#!/bin/sh\nexit 1\n' >"$TMP/mismatch-bin/curl"
+chmod +x "$MISMATCH_HOME/.local/bin/mise" "$TMP/mismatch-bin/curl"
+
+status=0
+out=$(HOME="$MISMATCH_HOME" PATH="$TMP/mismatch-bin:$PATH" bash "$INSTALLER" 2>&1) || status=$?
+if [ "$status" -ne 0 ] && [[ "$out" == *"고정 버전 $PINNED_VERSION"* ]]; then
+  report "version-mismatch (다른 mise는 고정 버전 설치 경로 진입)" 0
+else
+  report "version-mismatch (다른 mise는 고정 버전 설치 경로 진입)" 1     "기대 재설치 시도 후 실패 / 실제 exit=$status: $out"
 fi
 
 # 1b. 설치가 필요한 상태에서 네트워크가 막히면 반드시 시끄럽게 실패해야 한다.
@@ -191,7 +215,7 @@ STUB
   # sh 스텁: "설치가 실제로 실행됐다"의 유일한 증거. 차단 케이스에서는 생기면 안 된다.
   # 홑따옴표가 맞다 — $STUB_MARKER 는 지금이 아니라 스텁이 실행되는 시점에 전개돼야 한다.
   # shellcheck disable=SC2016
-  printf '#!/usr/bin/env bash\necho ran >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
+  printf '#!/usr/bin/env bash\nprintf "ran:%s\\n" "${MISE_VERSION:-}" >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
   chmod +x "$E2E_BIN/curl" "$E2E_BIN/gpg" "$E2E_BIN/sh"
 
   # run_e2e <지문목록> <GOODSIG여부> -> "<exit코드>|<설치실행여부>|<출력>"
@@ -203,7 +227,7 @@ STUB
     st=0
     out=$(HOME="$home" PATH="$E2E_BIN:$PATH" STUB_FPS="$fps" STUB_GOODSIG="$goodsig" \
       STUB_MARKER="$marker" bash "$INSTALLER" 2>&1) || st=$?
-    if [ -e "$marker" ]; then echo "$st|ran|$out"; else echo "$st|blocked|$out"; fi
+    if [ -e "$marker" ]; then echo "$st|$(cat "$marker")|$out"; else echo "$st|blocked|$out"; fi
   }
 
   # 3a. 지문 불일치 -> 차단, 설치 미실행.
@@ -233,10 +257,10 @@ STUB
   # 3d. 정상 경로 -> 설치 진행. 이 케이스가 없으면 "항상 차단"으로 바뀌어도 3a~3c 가 전부
   #     통과해 게이트가 고장난 채 초록불이 된다(차단 전용 테스트만 두면 생기는 사각지대).
   r=$(run_e2e "$REAL_FP" 1)
-  if [ "${r%%|*}" -eq 0 ] && [[ "$r" == *"|ran|"* ]]; then
-    report "e2e happy-path (검증 통과 시 설치 진행)" 0
+  if [ "${r%%|*}" -eq 0 ] && [[ "$r" == *"|ran:$PINNED_VERSION|"* ]]; then
+    report "e2e happy-path (고정 mise 버전으로 설치 진행)" 0
   else
-    report "e2e happy-path (검증 통과 시 설치 진행)" 1 "$r"
+    report "e2e happy-path (고정 mise 버전으로 설치 진행)" 1 "$r"
   fi
 fi
 
