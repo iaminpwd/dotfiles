@@ -78,7 +78,7 @@ out=$(HOME="$MISMATCH_HOME" PATH="$TMP/mismatch-bin:$PATH" bash "$INSTALLER" 2>&
 if [ "$status" -ne 0 ] && [[ "$out" == *"고정 버전 $PINNED_VERSION"* ]]; then
   report "version-mismatch (다른 mise는 고정 버전 설치 경로 진입)" 0
 else
-  report "version-mismatch (다른 mise는 고정 버전 설치 경로 진입)" 1     "기대 재설치 시도 후 실패 / 실제 exit=$status: $out"
+  report "version-mismatch (다른 mise는 고정 버전 설치 경로 진입)" 1 "기대 재설치 시도 후 실패 / 실제 exit=$status: $out"
 fi
 
 # 1b. 설치가 필요한 상태에서 네트워크가 막히면 반드시 시끄럽게 실패해야 한다.
