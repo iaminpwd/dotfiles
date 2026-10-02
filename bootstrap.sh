@@ -21,6 +21,20 @@ run_as_root() {
   fi
 }
 
+# RHEL 호환 배포판은 EPEL release 패키지가 기본 dnf 저장소에 없을 수 있다.
+# rpm의 %{rhel} 매크로가 숫자로 해석되는 Enterprise Linux 계열에서만, 해당 메이저
+# 버전의 Fedora EPEL release RPM을 직접 설치한다. Fedora 등 다른 dnf 계열은 건너뛴다.
+install_epel_release() {
+  local os_major=""
+  os_major="$(rpm -E '%{rhel}' 2>/dev/null || true)"
+  case "$os_major" in
+  '' | '%{rhel}' | *[!0-9]*)
+    return 0
+    ;;
+  esac
+  run_as_root dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major}.noarch.rpm"
+}
+
 # sudo 정책과 시스템 대체 실행 파일은 변경하지 않는다.
 # Ansible의 sudo 호환성은 run-setup.sh가 해당 실행에만 적용한다.
 
@@ -33,9 +47,10 @@ if command -v apt-get &>/dev/null; then
   run_as_root apt-get update -qq
   run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y curl git unzip stow gnupg gawk
 elif command -v dnf &>/dev/null; then
-  # Fedora 외의 RHEL/Rocky/CentOS 계열은 stow 패키지를 위해 EPEL 저장소가 필요함
+  # RHEL/Rocky/Alma/CentOS 등 Enterprise Linux 계열은 stow를 위해 EPEL이 필요할 수 있다.
+  # stock RHEL은 bare "epel-release" 패키지가 기본 저장소에 없으므로 direct RPM으로 bootstrap.
   if ! command -v stow &>/dev/null; then
-    run_as_root dnf install -y epel-release 2>/dev/null || true
+    install_epel_release
   fi
   run_as_root dnf install -y curl git unzip stow gnupg2 gawk
 elif command -v brew &>/dev/null; then
