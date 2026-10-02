@@ -93,6 +93,36 @@ if grep -Eq 'run_as_root dnf install -y epel-release([[:space:]]|$)' "$ROOT/boot
 fi
 echo 'PASS: RHEL bootstrap이 메이저 버전별 EPEL release RPM을 직접 사용'
 
+EPEL_FN="$TMP/install-epel-release.sh"
+awk '/^install_epel_release\(\) \{/{capture=1} capture{print} capture && /^}/{exit}' "$ROOT/bootstrap.sh" >"$EPEL_FN"
+grep -q '^install_epel_release()' "$EPEL_FN"
+# shellcheck disable=SC1090
+source "$EPEL_FN"
+
+EPEL_BIN="$TMP/epel-bin"
+EPEL_MARKER="$TMP/epel-dnf-args"
+mkdir -p "$EPEL_BIN"
+cat >"$EPEL_BIN/id" <<'STUB'
+#!/bin/sh
+printf '0\n'
+STUB
+cat >"$EPEL_BIN/rpm" <<'STUB'
+#!/bin/sh
+if [ "$1" = "-E" ] && [ "$2" = "%{rhel}" ]; then
+  printf '9\n'
+  exit 0
+fi
+exit 1
+STUB
+cat >"$EPEL_BIN/dnf" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >"$EPEL_MARKER"
+STUB
+chmod +x "$EPEL_BIN/id" "$EPEL_BIN/rpm" "$EPEL_BIN/dnf"
+PATH="$EPEL_BIN" EPEL_MARKER="$EPEL_MARKER" install_epel_release
+grep -Fq 'https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm' "$EPEL_MARKER"
+echo 'PASS: RHEL 9 판별 시 EPEL 9 release RPM URL을 dnf에 전달'
+
 # 실제 bootstrap의 로컬 파일 생성 구간만 실행해 시스템 설치는 호출하지 않는다.
 awk '/^# 2. 로컬 환경변수 파일 생성/{capture=1} /^# 3. Infracost 설정/{capture=0} capture' "$ROOT/bootstrap.sh" >"$TMP/create-local.sh"
 (
