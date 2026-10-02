@@ -103,6 +103,16 @@ jobs:
 
       # 테스트 스위트가 zsh -n 검사와 ai_agent 롤의 ~/.local/bin 심볼릭 링크(prompt-lint.sh 등)를
       # 전제하므로 이 job에서도 최소한으로 재현한다.
+      - name: Scan PR/push commit range for secrets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: bash .github/scripts/secret-history-scan.sh
+
       - name: Install zsh (required by test-shell zsh -n subtest)
         run: sudo apt-get update -qq && sudo apt-get install -y zsh
 

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# CI가 최종 워킹트리뿐 아니라 PR/push의 Git 커밋 범위 자체를 시크릿 스캔하는지 검증한다.
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+SCAN="$ROOT/.github/scripts/secret-history-scan.sh"
+WORKFLOW="$ROOT/.github/workflows/ci.yml"
+
+if [ ! -f "$SCAN" ]; then
+  echo "FAIL: Git 히스토리 시크릿 스캔 스크립트가 없습니다: $SCAN"
+  exit 1
+fi
+if ! grep -Fq 'bash .github/scripts/secret-history-scan.sh' "$WORKFLOW"; then
+  echo "FAIL: CI가 Git 히스토리 시크릿 스캔을 호출하지 않습니다"
+  exit 1
+fi
+
+if ! command -v trufflehog >/dev/null 2>&1 || ! trufflehog --version >/dev/null 2>&1 ||
+  ! command -v openssl >/dev/null 2>&1; then
+  echo "[WARNING] SKIP functional secret-history scan — trufflehog 또는 openssl 미설치"
+  exit 0
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+REPO="$TMP/repo"
+mkdir "$REPO"
+git -C "$REPO" init -q
+git -C "$REPO" config user.email test@example.com
+git -C "$REPO" config user.name Test
+
+printf 'base\n' >"$REPO/README.md"
+git -C "$REPO" add README.md
+git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "chore: base"
+BASE=$(git -C "$REPO" rev-parse HEAD)
+
+# 저장소 자체에는 키 픽스처를 두지 않는다. 실행 시 임시 저장소에만 생성하고,
+# 다음 커밋에서 삭제해 "최종 트리는 깨끗하지만 히스토리에는 남은" 상태를 재현한다.
+openssl genrsa -out "$REPO/leaked-key.pem" 2048 2>/dev/null
+git -C "$REPO" add -f leaked-key.pem
+git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: temporary secret"
+git -C "$REPO" rm -q leaked-key.pem
+git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: remove secret"
+HEAD=$(git -C "$REPO" rev-parse HEAD)
+
+run_scan() {
+  local event=$1 status=0
+  shift
+  (
+    cd "$REPO"
+    env EVENT_NAME="$event" "$@" bash "$SCAN"
+  ) >"$TMP/out" 2>&1 || status=$?
+  echo "$status"
+}
+
+status=$(run_scan pull_request BASE_SHA="$BASE" HEAD_SHA="$HEAD")
+if [ "$status" -eq 0 ]; then
+  echo "FAIL: PR 범위의 중간 커밋 시크릿이 차단되지 않았습니다"
+  cat "$TMP/out"
+  exit 1
+fi
+echo "PASS: PR 커밋 범위의 삭제된 시크릿도 차단"
+
+status=$(run_scan push BEFORE_SHA="$BASE" AFTER_SHA="$HEAD")
+if [ "$status" -eq 0 ]; then
+  echo "FAIL: push 범위의 중간 커밋 시크릿이 차단되지 않았습니다"
+  cat "$TMP/out"
+  exit 1
+fi
+echo "PASS: push 커밋 범위의 삭제된 시크릿도 차단"
+
+# 삭제 커밋 이후의 깨끗한 새 커밋만 범위로 주면 과거 시크릿 때문에 영구 차단되면 안 된다.
+CLEAN_BASE="$HEAD"
+printf 'clean\n' >>"$REPO/README.md"
+git -C "$REPO" add README.md
+git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: clean change"
+CLEAN_HEAD=$(git -C "$REPO" rev-parse HEAD)
+
+status=$(run_scan pull_request BASE_SHA="$CLEAN_BASE" HEAD_SHA="$CLEAN_HEAD")
+if [ "$status" -ne 0 ]; then
+  echo "FAIL: 깨끗한 신규 범위가 과거 히스토리 때문에 차단되었습니다"
+  cat "$TMP/out"
+  exit 1
+fi
+echo "PASS: 검사 범위 밖의 과거 시크릿은 재차단하지 않음"
