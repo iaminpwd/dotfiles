@@ -84,6 +84,24 @@ else
   report "PATH 의 jq 가 먹통 -> mise 설치 디렉토리 폴백으로 발견" 1 "resolved='$out' (먹통 shim 을 그대로 반환했거나 폴백이 비었습니다)"
 fi
 
+# 3c. jq도 없고 mise 폴백 디렉토리도 없는 fresh/minimal 환경에서는 "jq 없음"을 빈 값으로
+#     반환해야 한다. 이 라이브러리의 소비자 merge-agent-hooks.sh는 set -euo pipefail 상태에서
+#     resolve_jq를 호출한 뒤 빈 값을 명시적인 Hard Block으로 바꾼다. 그런데 find 대상
+#     디렉토리가 없으면 find|sort|tail 파이프라인이 pipefail로 실패해, 그 안내에 도달하기
+#     전에 소비자 프로세스 자체가 조용히 종료될 수 있다.
+EMPTY_HOME="$TMP/empty-home"
+mkdir -p "$EMPTY_HOME"
+code=0
+out=$(HOME="$EMPTY_HOME" PATH="$FAKE_BIN:$PATH" bash -c 'set -euo pipefail
+  source "$1"
+  resolved=$(resolve_jq)
+  printf "%s" "$resolved"' _ "$LIB") || code=$?
+if [ "$code" -eq 0 ] && [ -z "$out" ]; then
+  report "jq/mise 폴백 모두 없음 + pipefail -> 빈 값으로 정상 반환" 0
+else
+  report "jq/mise 폴백 모두 없음 + pipefail -> 빈 값으로 정상 반환" 1 "exit=$code resolved='$out'"
+fi
+
 # 4. 소비자(agent-edits-hook.sh, merge-agent-hooks.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
 CONSUMERS=(
   "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
