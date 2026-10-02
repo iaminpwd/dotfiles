@@ -38,6 +38,7 @@
 
 - name: 현재 설치된 zsh 경로 확인
   ansible.builtin.command: which zsh
+  check_mode: false
   register: zsh_path
   changed_when: false
   failed_when: false
