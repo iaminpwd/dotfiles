@@ -48,9 +48,9 @@ PY
 ln -s "../private/mise.toml" "$TMP/home-user/.mise.toml"
 STOW_TEST_HOME="$TMP/home-user" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
   ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/user.out" 2>&1 || {
-    cat "$TMP/user.out"
-    exit 1
-  }
+  cat "$TMP/user.out"
+  exit 1
+}
 
 if [ ! -L "$TMP/home-user/.mise.toml" ] ||
   [ "$(readlink "$TMP/home-user/.mise.toml")" != "../private/mise.toml" ]; then
@@ -63,9 +63,9 @@ fi
 ln -s "../repo/mise/.mise.toml" "$TMP/home-legacy/.mise.toml"
 STOW_TEST_HOME="$TMP/home-legacy" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
   ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/legacy.out" 2>&1 || {
-    cat "$TMP/legacy.out"
-    exit 1
-  }
+  cat "$TMP/legacy.out"
+  exit 1
+}
 
 if [ -e "$TMP/home-legacy/.mise.toml" ] || [ -L "$TMP/home-legacy/.mise.toml" ]; then
   cat "$TMP/legacy.out"
