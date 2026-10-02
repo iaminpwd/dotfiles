@@ -114,7 +114,10 @@ collect_changed_skills_from_range() {
       add_skill dotfiles
       ;;
     esac
-  done < <(git diff --name-only "$base" "$tip" 2>/dev/null)
+  # rename detection을 끈다. 스킬 안의 파일을 스킬 밖으로 이동하면 기본
+  # --name-only는 R100의 새 경로만 보고해 원래 스킬에서 파일이 제거된 사실을 놓친다.
+  # delete+add로 펼치면 원본과 목적지 경로를 모두 판정할 수 있다.
+  done < <(git diff --name-only --no-renames "$base" "$tip" 2>/dev/null)
 }
 
 # git이 stdin으로 "<로컬 ref> <로컬 sha> <원격 ref> <원격 sha>" 줄을 ref당 하나씩 준다.
