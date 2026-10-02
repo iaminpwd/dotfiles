@@ -53,7 +53,7 @@ fi
 output=$(mktemp)
 trap 'rm -f "$output"' EXIT
 
-args=(git file://. --branch "$head" --results=verified,unknown --no-update --fail)
+args=(git file://. --branch "$head" --no-update --fail)
 if [ -n "$base" ]; then
   args+=(--since-commit "$base")
 fi
