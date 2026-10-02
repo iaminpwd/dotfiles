@@ -44,17 +44,27 @@ mkdir -p "$SKILLS"
 mkdir -p "$SKILLS/aws"
 echo "실제 데이터" >"$SKILLS/aws/not-a-symlink.txt"
 
-# 2. pruned-all-symlinks: 도메인 목록에 없고 내부가 전부 심볼릭 링크면 안전하게 삭제된다.
+# 2. pruned-repo-owned-symlinks: 도메인 목록에 없고, 링크 대상이 이 저장소 contexts/
+#    아래의 제거된 도메인이면 ai_agent 롤이 만들었던 잔재이므로 안전하게 삭제한다.
 mkdir -p "$SKILLS/removed-domain"
-ln -s "$TMP/somewhere/SKILL.md" "$SKILLS/removed-domain/SKILL.md"
-ln -s "$TMP/somewhere/references" "$SKILLS/removed-domain/references"
+ln -s "$REPO_ROOT/contexts/removed-domain/SKILL.md" "$SKILLS/removed-domain/SKILL.md"
+ln -s "$REPO_ROOT/contexts/removed-domain/references" "$SKILLS/removed-domain/references"
 
-# 3. fail-foreign-real-file: 도메인 목록에 없어도 실제 파일이 하나라도 섞여 있으면 보존한다.
+# 3. fail-foreign-all-symlinks: 공유 글로벌 레지스트리에는 사용자가 직접 만든 스킬도
+#    존재할 수 있다. 파일이 전부 symlink여도 링크 대상이 이 저장소 contexts/ 밖이면
+#    dotfiles 소유로 오판해 삭제하면 안 된다.
+mkdir -p "$TMP/foreign-source" "$SKILLS/my-linked-skill"
+echo "foreign skill" >"$TMP/foreign-source/SKILL.md"
+mkdir -p "$TMP/foreign-source/references"
+ln -s "$TMP/foreign-source/SKILL.md" "$SKILLS/my-linked-skill/SKILL.md"
+ln -s "$TMP/foreign-source/references" "$SKILLS/my-linked-skill/references"
+
+# 4. fail-foreign-real-file: 도메인 목록에 없어도 실제 파일이 하나라도 섞여 있으면 보존한다.
 mkdir -p "$SKILLS/my-own-skill"
 ln -s "$TMP/somewhere/SKILL.md" "$SKILLS/my-own-skill/SKILL.md"
 echo "사용자가 직접 만든 실제 파일" >"$SKILLS/my-own-skill/notes.txt"
 
-# 4. pruned-empty: 도메인 목록에 없고 비어 있으면 안전하게(잃을 게 없으므로) 삭제된다.
+# 5. pruned-empty: 도메인 목록에 없고 비어 있으면 안전하게(잃을 게 없으므로) 삭제된다.
 mkdir -p "$SKILLS/empty-orphan"
 
 OUT=$(bash "$SCRIPT" "$SKILLS" aws k8s 2>&1)
@@ -66,9 +76,17 @@ else
 fi
 
 if [ ! -e "$SKILLS/removed-domain" ] && grep -qF "[PRUNED]" <<<"$OUT"; then
-  report "pruned-all-symlinks (전부 심볼릭 링크면 삭제)" 0
+  report "pruned-repo-owned-symlinks (저장소 contexts/를 가리키는 고아 링크는 삭제)" 0
 else
-  report "pruned-all-symlinks (전부 심볼릭 링크면 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
+  report "pruned-repo-owned-symlinks (저장소 contexts/를 가리키는 고아 링크는 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
+fi
+
+if [ -d "$SKILLS/my-linked-skill" ] &&
+  [ -L "$SKILLS/my-linked-skill/SKILL.md" ] &&
+  [ -L "$SKILLS/my-linked-skill/references" ]; then
+  report "fail-foreign-all-symlinks (외부 대상을 가리키는 symlink-only 스킬은 보존)" 0
+else
+  report "fail-foreign-all-symlinks (외부 대상을 가리키는 symlink-only 스킬은 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
 if [ -d "$SKILLS/my-own-skill" ] && [ -f "$SKILLS/my-own-skill/notes.txt" ] && grep -qF "[SKIP]" <<<"$OUT"; then
@@ -83,7 +101,7 @@ else
   report "pruned-empty (빈 고아 폴더는 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
-# 5. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
+# 6. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
 status=0
 bash "$SCRIPT" "$TMP/does-not-exist" aws || status=$?
 if [ "$status" -eq 0 ]; then
