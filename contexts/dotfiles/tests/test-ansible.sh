@@ -138,6 +138,23 @@ if [ -f "$PFC" ] && require_tool ansible-lint; then
   rm -rf "$ANS_TMP"
 fi
 
+echo "--- play-level privilege PATH isolation ---"
+# play-level environment는 role의 become:true 태스크에도 상속된다. HOME 아래의 user-writable
+# mise shims/~/.local/bin을 전역 PATH 앞에 두면 root 태스크가 gpg/awk 같은 bare command를
+# 실행할 때 사용자가 심은 동명 바이너리를 집어올 수 있다. 권한 상승 태스크와 사용자
+# toolchain PATH의 경계를 play 공통 계층에서 강제한다.
+SITE_YML="$REPO_ROOT/ansible/site.yml"
+if awk '
+  /^  environment:$/ { in_env = 1; next }
+  in_env && /^  [^[:space:]][^:]*:/ { in_env = 0 }
+  in_env && /ansible_env\.HOME/ && /(mise\/shims|\.local\/bin)/ { bad = 1 }
+  END { exit(bad ? 0 : 1) }
+' "$SITE_YML"; then
+  report "play-level PATH에 HOME 하위 user-writable 경로 금지" 1     "site.yml의 전역 environment PATH가 become:true 태스크에도 상속됩니다"
+else
+  report "play-level PATH에 HOME 하위 user-writable 경로 금지" 0
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
