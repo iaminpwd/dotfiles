@@ -17,6 +17,68 @@ done
 if grep -q -- --ask-become-pass "$TMP/args"; then exit 1; fi
 echo 'PASS: 비대화형 설치와 dry-run 인자 전달'
 
+# bootstrap의 Linux 권한 상승 경로를 실제 함수에서 추출해 검증한다.
+# GitHub-hosted runner에는 sudo가 항상 있어 "root + sudo 없음" fresh/minimal 환경이
+# bootstrap smoke만으로는 재현되지 않는다. 함수 본문을 복제하지 않고 원본을 source해
+# root 직접 실행 / 일반 사용자 sudo / 권한 상승 수단 없음의 세 상태를 고정한다.
+awk '/^_run_as_root\(\) \{/{capture=1} capture{print} capture && /^}/{exit}' "$ROOT/bootstrap.sh" >"$TMP/run-as-root.sh"
+grep -q '^_run_as_root() {' "$TMP/run-as-root.sh"
+
+make_id() {
+  local dir=$1 uid=$2
+  mkdir -p "$dir"
+  cat >"$dir/id" <<STUB
+#!/bin/sh
+echo "$uid"
+STUB
+  chmod +x "$dir/id"
+}
+make_pkgcmd() {
+  local dir=$1
+  cat >"$dir/pkgcmd" <<'STUB'
+#!/bin/sh
+printf 'pkg:%s\n' "$*" >>"$PRIV_LOG"
+STUB
+  chmod +x "$dir/pkgcmd"
+}
+
+ROOT_BIN="$TMP/priv-root"
+make_id "$ROOT_BIN" 0
+make_pkgcmd "$ROOT_BIN"
+PRIV_LOG="$TMP/priv-root.log" PATH="$ROOT_BIN" /bin/bash -c 'source "$1"; _run_as_root pkgcmd root-direct' _ "$TMP/run-as-root.sh"
+grep -qx 'pkg:root-direct' "$TMP/priv-root.log"
+echo 'PASS: root + sudo 없음은 시스템 명령을 직접 실행'
+
+SUDO_BIN="$TMP/priv-sudo"
+make_id "$SUDO_BIN" 1000
+make_pkgcmd "$SUDO_BIN"
+cat >"$SUDO_BIN/sudo" <<'STUB'
+#!/bin/sh
+printf 'sudo:%s\n' "$*" >>"$PRIV_LOG"
+"$@"
+STUB
+chmod +x "$SUDO_BIN/sudo"
+PRIV_LOG="$TMP/priv-sudo.log" PATH="$SUDO_BIN" /bin/bash -c 'source "$1"; _run_as_root pkgcmd via-sudo' _ "$TMP/run-as-root.sh"
+grep -qx 'sudo:pkgcmd via-sudo' "$TMP/priv-sudo.log"
+grep -qx 'pkg:via-sudo' "$TMP/priv-sudo.log"
+echo 'PASS: non-root + sudo는 sudo를 통해 실행'
+
+NOSUDO_BIN="$TMP/priv-nosudo"
+make_id "$NOSUDO_BIN" 1000
+make_pkgcmd "$NOSUDO_BIN"
+status=0
+out=$(PRIV_LOG="$TMP/priv-nosudo.log" PATH="$NOSUDO_BIN" /bin/bash -c 'source "$1"; _run_as_root pkgcmd blocked' _ "$TMP/run-as-root.sh" 2>&1) || status=$?
+[ "$status" -ne 0 ]
+[[ "$out" == *"root 권한 또는 sudo가 필요합니다"* ]]
+[ ! -e "$TMP/priv-nosudo.log" ]
+echo 'PASS: non-root + sudo 없음은 명확한 오류로 차단'
+
+grep -q '_run_as_root apt-get update -qq' "$ROOT/bootstrap.sh"
+grep -q '_run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install' "$ROOT/bootstrap.sh"
+grep -q '_run_as_root dnf install' "$ROOT/bootstrap.sh"
+! grep -Eq '^[[:space:]]+sudo (apt-get|dnf)' "$ROOT/bootstrap.sh"
+echo 'PASS: Linux bootstrap 패키지 설치가 권한 래퍼를 사용'
+
 # 실제 bootstrap의 로컬 파일 생성 구간만 실행해 시스템 설치는 호출하지 않는다.
 awk '/^# 2. 로컬 환경변수 파일 생성/{capture=1} /^# 3. Infracost 설정/{capture=0} capture' "$ROOT/bootstrap.sh" >"$TMP/create-local.sh"
 (
