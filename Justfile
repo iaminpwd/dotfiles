@@ -41,7 +41,7 @@ docs-review:
 # 스크립트 멱등성 검사 (개별 테스트)
 check-idempotency file:
     @echo "=> Checking Idempotency for {{file}}..."
-    bash bin/linters/idempotency-check.sh {{file}}
+    bash bin/linters/idempotency-check.sh {{quote(file)}}
 
 # [test 배경] 첫 실패 스킬에서 멈추면 뒤 스킬은 시도조차 안 되어, 무관한 스킬이 동시에
 # 깨져 있어도 하나씩만 재커밋마다 드러난다. run-suite.sh가 이미 갖춘 병렬 실행 + "실패해도
