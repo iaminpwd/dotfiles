@@ -13,11 +13,24 @@
 
 set -euo pipefail
 
-if [ -x "$HOME/.local/bin/mise" ]; then
-  exit 0
+# 도구 버전뿐 아니라 그 버전을 해석·설치하는 mise 자체도 저장소에서 고정한다.
+# 공식 installer는 MISE_VERSION이 없으면 실행 시점의 최신 적격 stable release를 선택하므로,
+# 같은 dotfiles commit도 날짜에 따라 다른 mise로 bootstrap될 수 있다.
+MISE_VERSION="2026.9.18"
+MISE_BIN="$HOME/.local/bin/mise"
+
+if [ -x "$MISE_BIN" ]; then
+  installed_version=""
+  if installed_version="$("$MISE_BIN" --version 2>/dev/null)"; then
+    installed_version=${installed_version%% *}
+    if [ "$installed_version" = "$MISE_VERSION" ]; then
+      exit 0
+    fi
+    echo "=> mise $installed_version 감지; 고정 버전 $MISE_VERSION으로 맞춥니다."
+  fi
 fi
 
-echo "=> Installing mise (GPG 서명 검증 후 설치, https://mise.jdx.dev)..."
+echo "=> Installing mise $MISE_VERSION (GPG 서명 검증 후 설치, https://mise.jdx.dev)..."
 MISE_GPG_HOME="$(mktemp -d)"
 MISE_INSTALL_SCRIPT="$MISE_GPG_HOME/install.sh"
 # https://mise.jdx.dev/installing-mise.html 에 명시된 mise 릴리스 서명 키 지문
@@ -67,5 +80,5 @@ if [ "$gpg_rc" -ne 0 ] || ! grep -q '^\[GNUPG:\] GOODSIG ' "$MISE_GPG_HOME/statu
   exit 1
 fi
 
-sh "$MISE_INSTALL_SCRIPT"
+MISE_VERSION="$MISE_VERSION" sh "$MISE_INSTALL_SCRIPT"
 rm -rf "$MISE_GPG_HOME"
