@@ -83,7 +83,7 @@ if grep -Eq '^[[:space:]]*sudo (apt-get|dnf)' "$ROOT/bootstrap.sh"; then
 fi
 echo 'PASS: apt/dnf bootstrap 호출부가 권한 wrapper를 사용'
 
-if ! grep -Fq 'epel-release-latest-${os_major}.noarch.rpm' "$ROOT/bootstrap.sh"; then
+if ! grep -Fq "epel-release-latest-\${os_major}.noarch.rpm" "$ROOT/bootstrap.sh"; then
   echo 'FAIL: bootstrap의 dnf 경로가 RHEL 메이저 버전별 EPEL release RPM을 직접 설치하지 않습니다.'
   exit 1
 fi
