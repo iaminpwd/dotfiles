@@ -19,7 +19,7 @@ export ANSIBLE_HOME="$TMP/ansible-home"
 export ANSIBLE_LOCAL_TEMP="$TMP/local"
 export ANSIBLE_REMOTE_TEMP="$TMP/remote"
 
-mkdir -p   "$TMP/ansible/roles/tflint/tasks"   "$TMP/stow/tflint"   "$TMP/home"   "$TMP/work/.tflint.d/plugins"
+mkdir -p "$TMP/ansible/roles/tflint/tasks" "$TMP/stow/tflint" "$TMP/home" "$TMP/work/.tflint.d/plugins"
 
 cp "$ROOT/ansible/roles/tflint/tasks/main.yml" "$TMP/ansible/roles/tflint/tasks/main.yml"
 
@@ -45,7 +45,7 @@ YAML
 
 (
   cd "$TMP/work"
-  HOME="$TMP/home" ANSIBLE_ROLES_PATH="$TMP/ansible/roles"     ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/out" 2>&1
+  HOME="$TMP/home" ANSIBLE_ROLES_PATH="$TMP/ansible/roles" ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/out" 2>&1
 ) || {
   cat "$TMP/out"
   exit 1
