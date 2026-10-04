@@ -13,14 +13,14 @@ checkov = "3.3.21"
 "pipx:yamllint" = "1.38.0"
 # ansible/ansible-lint/yamllint 등 pipx 계열 도구는 aqua 바이너리가 없어 pip 기반 설치가 불가피함.
 # 대신 uv를 설치해두면 mise pipx 백엔드가 자동으로 uvx를 사용해 설치 로그/속도가 개선됨.
-uv = "0.12.21"
+uv = "0.12.23"
 # ansible은 mise 레지스트리에서 uvx=false로 고정돼 있어 uv가 있어도 uvx로 대체되지 않고
 # 반드시 실제 pipx 바이너리를 요구함. 위 uv만으로는 부족해 별도로 설치해둔다.
-pipx = "1.17.8"
+pipx = "1.17.11"
 
 # Container Image Supply Chain (SBOM/Vuln/Layer Analysis)
 syft = "1.54.0"
-grype = "0.119.0"
+grype = "0.120.0"
 dive = "0.13.1"
 
 # Observability
@@ -28,7 +28,7 @@ loki-logcli = "3.7.8"
 
 
 # IaC & Configuration Management
-terraform = "1.16.4"
+terraform = "1.16.5"
 ansible = "14.4.0"
 "pipx:ansible-lint" = "26.9.0"
 terragrunt = "1.1.6"
@@ -37,7 +37,7 @@ infracost = "0.10.46"
 terraform-docs = "0.24.0"
 
 # Cloud Services
-awscli = "2.37.8"
+awscli = "2.37.9"
 "pipx:aws-sam-cli" = "1.166.2"
 
 # Kubernetes & Containers
