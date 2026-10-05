@@ -236,7 +236,8 @@
 - name: Gemini 및 Claude 편집 이력 훅(agent-edits-hook) 병합
   ansible.builtin.command:
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/merge-agent-hooks.sh" "{{ role_path }}/../../../ansible"
-  changed_when: false # 멱등성은 분리된 스크립트 내부에서 방어함
+  register: ai_agent_hooks_merge_result
+  changed_when: "'[CHANGED]' in ai_agent_hooks_merge_result.stdout"
 
 # 폴더 전체가 심볼릭 링크로만 구성된(=이 롤이 만든) 경우에만 삭제한다. 사용자가 직접
 # 만들었거나 다른 도구로 설치해 실제 파일이 섞여 있는 폴더는 이름이 우연히 contexts/

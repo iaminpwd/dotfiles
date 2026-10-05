@@ -109,6 +109,7 @@ GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-h
     )
 ' "$CLAUDE_SETTINGS" >"$CLAUDE_TMP"
 
+MAH_CHANGED=0
 replace_if_changed() {
   local original=$1 candidate=$2 backup
   # 들여쓰기·키 순서만 다른 경우에도 원본과 수정 시각을 유지한다.
@@ -118,7 +119,12 @@ replace_if_changed() {
   backup=$(mktemp "${original}.bak.XXXXXX")
   cp -p "$original" "$backup"
   mv "$candidate" "$original"
+  MAH_CHANGED=1
 }
 
 replace_if_changed "$GEMINI_HOOKS" "$GEMINI_TMP"
 replace_if_changed "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
+
+if [ "$MAH_CHANGED" -eq 1 ]; then
+  echo '[CHANGED] agent hook settings updated'
+fi
