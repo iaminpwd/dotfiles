@@ -1,6 +1,4 @@
 ---
-role: Senior SRE / Observability Engineer
-priority: high
 trigger: Apply these rules ONLY when designing metrics, Alerting Rules, or PromQL/CloudWatch/Azure Monitor queries.
 references:
   - contexts/observability/references/010-observability-core.md
@@ -44,23 +42,12 @@ groups:
       runbook_url: "https://runbooks.internal/payment-api-5xx"
 ```
 </example>
-<example>
-[Bad]
-```yaml
-  - alert: HighCPU
-    expr: node_cpu_seconds_total > 80
-    # 사용자 체감과 무관한 인프라 지표, 런북 없음, severity 없음
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** Alerting Rule이 PromQL/쿼리 문법 오류 없이 검증되고, 모든 Critical 알람에 런북 링크가 포함되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Alerting Rule Authored] 점검 기준 (절차는 010-observability-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (알람 최적화): 정상 스파이크(배치/배포)로 인한 오탐이 억제되었는가?
-  - 기준 2 (조치 가능성): 알람에 런북 링크와 명확한 severity 라우팅이 포함되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - Alerting Rule에 `user_id`/`client_ip` 등 통제되지 않은 고유값이 레이블로 바인딩된 패턴이 감지되면 즉시 작업을 중단(Halt & Clarify)하고 레이블 설계를 수정할 것.
   - Critical 등급 알람에 런북 URL이 누락된 상태로 배포가 시도되면 작업을 멈추고 런북 링크 추가를 요구할 것.

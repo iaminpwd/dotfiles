@@ -1,6 +1,4 @@
 ---
-role: Senior AIOps Engineer
-priority: high
 trigger: Apply these rules ONLY when generating Post-mortem reports, SLA summaries, or automated incident response artifacts.
 references:
   - contexts/aiops/references/010-aiops-core.md
@@ -21,30 +19,11 @@ references:
 ### 2.1 Grounding 팩트 검증
 - **[MUST] Grounding 팩트 검증:** 장애 보고서에서 관측 사실, 원인 가설, 제안 대책을 구분할 것. 사실과 확정 원인에는 수집된 로그·이벤트 등 근거를 연결하고, 근거가 부족하면 미확정으로 표시하고 필요한 추가 조사를 명시할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- 시스템적 원인 분석 (5 Whys):
-  Why 1: 배포 중 왜 장애가 났는가? (잘못된 DB URL 설정이 프로덕션에 반영됨)
-  Why 2: 왜 잘못된 설정이 병합되었는가? (IaC PR 리뷰 단계에서 검증 파이프라인(Conftest) 부재)
-  결론: 엔지니어 개인의 실수가 아닌, CI/CD 파이프라인의 OPA 정책 안전망 부재가 시스템의 근본 결함.
-  → "이번 인시던트의 근본 원인은 작업자의 실수가 아닌, CI/CD 파이프라인 단에서 잘못된 설정을 필터링하는 정책(Policy-as-Code) 자동화의 부재입니다. `post-mortem-report.md` 산출물에 향후 OPA 기반의 파이프라인 개선안(Action Items)을 명확히 제시하겠습니다."
-</example>
-<example>
-[Bad]
-- 개인/팀 비난: "담당 엔지니어가 DB 설정을 실수로 잘못 배포해서 장애가 났습니다. 담당자 경고를 주어야 합니다." (시스템적 가드레일 부재 방치 안티패턴)
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 요청 범위의 조사·수정 결과, 확인된 근거와 미확정 사항, 필요한 후속 조치를 보고할 것. 코드 수정이 포함되면 해당 검증 결과를 함께 제시하고, 별도 보고서 파일은 요청된 경우에 작성할 것.
 - **[MUST] 검증 도구 매핑:** `git log` 및 클라우드 로그 조회 CLI(`aws logs filter-log-events`, `az monitor log-analytics query` 등)를 활용하여 실제 배포/장애 시점의 이벤트를 기계적으로 추출하십시오.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (시스템적 원인 규명): 장애의 진짜 원인이 사람의 실수(Human Error)가 아닌 시스템적 안전망(Validation 등) 부재로 세밀하게 규명되었는가?
-  - 기준 2 (액션 아이템 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 가능한 형태(정책 린터 추가, 코드 가드 주입 등)로 상세히 기술되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 장애 원인 분석이 실제 수집된 로그 팩트 데이터(CloudWatch, Azure Monitor, ELK 등)가 아닌 임의의 가상 추측 시나리오를 바탕으로 작성하려는 패턴이 감지될 시 작업을 즉시 중단(Halt & Clarify)하고 로그를 먼저 수집하십시오.
   - 생성될 RCA 보고서(Post-Mortem) 상에 향후 시스템 강건성을 위한 구체적인 재발 방지 액션 아이템이 누락된 채 문장이 마무리될 경우 작업을 즉시 멈추고 개선책을 기입하십시오.

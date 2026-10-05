@@ -19,7 +19,7 @@ description: |
 | 레지스트리 태깅 규칙 및 라이프사이클 정책 | references/040-registry-lifecycle-standard.md |
 | 컨테이너 런타임 장애 대응 (OOMKilled, CrashLoop 등) | references/100-incident-response.md |
 
-* **기본 컨테이너 코어 원칙**: references/010-containers-core.md
+* 해당 주제의 설계·검토가 필요한 경우: references/010-containers-core.md
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 

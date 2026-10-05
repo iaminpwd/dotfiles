@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: drawio XML 생성 직후, 완료 선언 전 검증 단계에서 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

@@ -3,9 +3,8 @@ name: k8s
 description: |
   Kubernetes(k8s) 클러스터 및 컨테이너 오케스트레이션 스킬. Pod, Deployment, Service, Ingress, CNI,
   PVC, StatefulSet, ArgoCD, Flux, Prometheus, Grafana, HPA, VPA, RBAC, OPA, 멀티테넌시.
-  모든 쿠버네티스(k8s) 관련 리소스 작업 및 트러블슈팅에 필수적으로 로드할 것.
-  관리형 클러스터(EKS, AKS, GKE, Magnum) 위에서 워크로드·권한·정책·네트워킹을 다루는
-  작업까지 포함하며, 이때는 클러스터를 제공하는 클라우드 쪽 스킬도 같이 필요함.
+  매니페스트 작성·검토, 클러스터 정책과 트러블슈팅에 사용.
+  관리형 클러스터에서도 워크로드는 이 스킬로 다루고, 클라우드 IAM·노드·네트워크 변경이 있을 때만 클라우드 스킬을 추가 참조함.
   Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션 정책도 다룸.
 ---
 # k8s Skill
@@ -27,7 +26,7 @@ description: |
 | 플랫폼 엔지니어링, 멀티테넌시 | references/080-platform-engineering-standard.md |
 | K8s 장애 대응, 트러블슈팅, RCA | references/100-incident-response.md |
 
-* **기본 K8s 코어 아키텍처**: references/010-k8s-core.md
+* 해당 주제의 설계·검토가 필요한 경우: references/010-k8s-core.md
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 

@@ -40,15 +40,15 @@
 
 ### 4. AI Customization Architecture (AI 스킬 동적 주입)
 개발자의 로컬 환경 편의성과 팀 Git 협업 순수성을 완전히 분리하면서 최신 AI 에이전트의 Customization Elements(Skills & Rules)를 완벽히 지원하는 독자적 아키텍처입니다.
-- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 코어 룰(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`), Codex 글로벌 룰(`~/.codex/AGENTS.md`)에 심볼릭 링크로 연결됩니다.
-- **도메인 스킬 글로벌 등록:** 환경별 특화 룰(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. AI는 폴더 이동 없이도 작업 맥락을 파악하여 최적의 도메인 스킬(예: aws, k8s)을 스스로 호출합니다.
+- **글로벌 룰 자동 주입:** `bootstrap.sh` 실행 시 사용자 기본 지침(`base.AGENTS.md`)이 제미나이 Customizations Root(`~/.gemini/config/AGENTS.md`)와 클로드 글로벌 룰(`~/.claude/CLAUDE.md`), Codex 글로벌 룰(`~/.codex/AGENTS.md`)에 심볼릭 링크로 연결됩니다.
+- **도메인 스킬 글로벌 등록:** dotfiles를 제외한 도메인 스킬(`contexts/`)은 `~/.gemini/config/skills/<도메인>/SKILL.md`, `~/.claude/skills/<도메인>/SKILL.md`, `~/.agents/skills/<도메인>/SKILL.md`(Codex) 심볼릭 링크로 글로벌 스킬 등록됩니다. 현재 작업에 맞는 스킬(예: aws, k8s)과 필요한 참조만 선택합니다. `dotfiles`는 글로벌 등록에서 제외하고 이 저장소의 `AGENTS.md`·`CLAUDE.md`로 연결합니다.
 - **프로젝트 루트 단독 매핑:** dotfiles 루트의 `AGENTS.md`와 `CLAUDE.md`를 생성하고 저장소 `.gitignore`에서 제외합니다. 다른 프로젝트의 공유 룰 파일은 전역에서 숨기지 않습니다.
-- **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 이 기록은 프롬프트 자가 진화(`base.AGENTS.md` 9장)의 입력으로 사용됩니다.
+- **AI 편집 이력 자동 기록:** `bin/hooks/agent-edits-hook.sh`가 두 에이전트의 `PostToolUse` 훅으로 등록되어, AI가 파일을 변경할 때마다 `<ISO8601> | <파일경로> | <출처> | <목적> | <결과>` 1줄을 그 프로젝트 루트의 `.agent-state/edits.log`에 누적합니다. 페이로드 스키마가 서로 다른 Claude Code(`tool_name`/`file_path`)와 Antigravity(`toolCall.name`/`TargetFile`)를 한 스크립트가 함께 처리하며, 로그 파일은 전역 이그노어 대상이라 어느 저장소도 오염시키지 않습니다. 룰 근거 조회와 반복 실패 검토 방법은 `contexts/dotfiles/references/010-core.md`에 안내합니다. 기록 훅과 도구는 유지하며 이 절차를 전역 작업에 강제하지 않습니다.
 - **편집 직후 검사:** 사용하지 않는 훅 본체와 전용 테스트는 제거했습니다. `merge-agent-hooks.sh` 재실행 시 이전 `pre-flight-live-hook.sh` 등록만 제거하고 사용자 훅과 편집 이력 기록은 유지합니다.
 - **변경 감지 기반 종료 검사:** Claude Code `Stop` 훅은 마지막 성공 검사 이후 변경 내용·검증기가 달라진 경우에만 실행합니다. tracked diff와 untracked 내용을 비교하고, 실패·검사 중 변경·검사 경고는 캐시하지 않습니다. 성공 상태는 Git 메타데이터의 `pre-flight-stop-success`에 저장합니다. `PFC_PROFILE=stop`으로 변경 파일과 Ansible을 검사하고, 백업·링크·설정 병합 등 변경 영역의 핵심 회귀 테스트를 실행합니다. 실패 로그와 재현 명령은 AI에 반환합니다. 전체 보안·도메인 검사와 전체 회귀는 CI 또는 명시적 실행에 남깁니다.
-- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 전역 룰북의 검증 게이트로 탑재했습니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/dotfiles/tests/test-run-suite.sh`의 회귀 테스트 8건이 고정합니다(`run-suite.sh`는 `pre-flight-check.sh` 전용이 아니라 저장소 전역 러너라 dotfiles 스킬 소속입니다).
+- **AI 토큰 최적화 (범용 압축 래퍼):** AI가 테스트를 구동할 때 장황한 정상 통과(PASS) 로그로 인해 발생하는 토큰 폭주를 막기 위해, 통과한 스크립트를 `-> [✓] <경로>` 한 줄로 접는 `bin/hooks/run-suite.sh`를 공용 검증 러너로 사용합니다. 합격 판정은 출력 패턴이 아니라 **각 스크립트의 종료 코드**로만 내리며, 실패 시에는 압축 없이 원형 로그를 보존하여 디버깅 블랙박스를 방지합니다. 실패해도 남은 검증을 끝까지 실행한 뒤 `검증 실패 N/M` 요약으로 차단하고, 통과 항목이라도 `[WARNING]`(도구 미설치로 인한 검증 스킵 등)은 접지 않아 가짜 초록불을 차단합니다. 이 판정 계약은 `contexts/dotfiles/tests/test-run-suite.sh`의 회귀 테스트 8건이 고정합니다(`run-suite.sh`는 `pre-flight-check.sh` 전용이 아니라 저장소 전역 러너라 dotfiles 스킬 소속입니다).
 
-### 5. 엔터프라이즈 AI 프롬프트 세트 내장 (`contexts/` 폴더)
+### 5. 작업별 지침과 검증 자산 (`contexts/` 폴더)
 공통 지침은 짧게 유지하고, 워크스페이스별 상세 룰북은 현재 작업에 필요한 문서만 선택해 읽습니다. 유지보수와 검증 방법은 [프롬프트와 검증 자산](contexts/README.md)를 참고하십시오.
 
 **워크스페이스별 특화 모듈 (🟢 Production만 표시):**
@@ -56,7 +56,7 @@
 | 워크스페이스 | 모듈 수 | 주요 커버리지 |
 |---|---|---|
 | **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
-| **Dotfiles** (`dotfiles/`) | 6개 (`010`~`060`) | 인지 엔진, 계획서·핸드오프 설계도 작성 표준, 셸 스크립팅 표준, 툴체인 관리, 보안, 메타/범용 프롬프팅, 규칙 근거·승격 표준, 트러블슈팅 |
+| **Dotfiles** (`dotfiles/`) | 6개 (`010`~`060`) | 저장소 구조·검증 명령, 계획서·배포 연결, 툴체인 관리, 시크릿 보호, 룰 근거 기록, 로컬 트러블슈팅 |
 
 > K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 작업별 참조 경로는 [contexts/INDEX.md](contexts/INDEX.md)를 참고하십시오.
 >
@@ -149,7 +149,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-s
 │   └── lib/                   # tool-probe.sh, git-relpath.sh 등 공용 탐색/헬퍼 라이브러리
 │
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
-│   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
+│   ├── base.AGENTS.md         # 전역 사용자 선호와 실행 경계
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── README.md              # 프롬프트 적용·유지보수와 검증 안내
 │   ├── aws/, dotfiles/                    # 🟢 Production 워크스페이스 룰북
@@ -201,7 +201,7 @@ just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-s
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
 
 **글로벌 스킬 적용**
-모든 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
+dotfiles를 제외한 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
 
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
@@ -289,7 +289,7 @@ src
 이미 셋업된 도메인 스킬의 세부 규칙을 수정하거나 확장할 경우, `bootstrap.sh` 재실행 없이 `contexts/` 하위의 마크다운 파일을 수정하는 즉시 실시간으로 에이전트에 반영됩니다.
 
 > [!NOTE]
-> `bootstrap.sh`(Ansible `ai_agent` 역할)는 `contexts/` 하위의 모든 도메인 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하기만 하면, AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex))에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
+> `bootstrap.sh`(Ansible `ai_agent` 역할)는 `contexts/` 하위의 모든 도메인 디렉토리를 자동 순회합니다. 새 도메인 디렉토리를 추가하고 스크립트를 재실행하면(dotfiles는 로컬 지침으로 제외), AI 에이전트의 글로벌 레지스트리(`~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex))에 스킬이 자동으로 등록되어 모든 로컬 환경에서 즉시 활용 가능해집니다.
 
 ---
 

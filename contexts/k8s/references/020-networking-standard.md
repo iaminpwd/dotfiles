@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing networking, service mesh, ingress, or network policies.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -44,19 +42,12 @@ spec:
   - Egress
 ```
 </example>
-<example>
-[Bad]
-- NetworkPolicy 기본 선언 누락 (네임스페이스 전체가 Ingress/Egress 무방비 오픈 상태로 방치됨)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** NetworkPolicy 매니페스트 린팅 스캔이 에러 없이 통과되고, Ingress 도메인 인증서 갱신 파이프라인의 정의가 검증되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Network Change] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (격리성): 네임스페이스 내 전체 파드가 `Default Deny All` 정책 하에 철저하게 격리되었는가?
-  - 기준 2 (복원력): L7 프록시 단에 네트워크 타임아웃 및 재시도 횟수 제한 등 안정성 정책이 기입되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 신규 네임스페이스 매니페스트 중 `Default Deny All` NetworkPolicy 선언이 누락되었음이 확인될 시 작업을 즉시 중단(Hard Block)하고 정책을 보완할 것.
   - Ingress 설정 시 `tls` 영역의 `secretName`에 수동으로 생성한 Let's Encrypt 인증서(1회성)가 바인딩된 코드가 감지되면 즉시 작업을 멈추고 `cert-manager` 연동으로 수정을 유도할 것.

@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when investigating a K8s error, CrashLoopBackOff, pod eviction, or cluster incident.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -39,33 +37,11 @@ references:
   - **Action Items (액션 아이템)**: [시스템 강건성을 위한 아키텍처 개선 후속 조치 목록]
   ```
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- 5 Whys 기반의 구조화된 심층 분석:
-  Why 1: 파드가 왜 CrashLoopBackOff 상태인가? (OOMKilled 이벤트 반복)
-  Why 2: 왜 OOM이 발생했는가? (JVM Heap Size를 컨테이너 Limit에 맞게 튜닝하지 않음)
-  결론: JVM의 `-XX:MaxRAMPercentage` 옵션 누락이 근본 원인.
-  → "파드의 반복적인 재시작(CrashLoopBackOff) 원인은 메모리 누수로 인한 OOMKilled입니다. JVM의 MaxRAMPercentage 옵션 누락을 해결하기 위해 매니페스트를 다음과 같이 수정하여 제안하겠습니다."
-- 비난 없는 사후 분석(Blameless RCA):
-  "작업자의 실수로 Pod이 삭제됨" -> "운영 환경의 배포 권한이 특정 관리자 계정으로 격리되지 않아 휴먼 에러가 시스템 장애로 이어질 수 있는 구조적 취약점이 있었음"
-</example>
-<example>
-[Bad]
-- 성급한 결론: "에러 메시지를 보니 일단 Liveness Probe 시간을 늘려보고 파드를 강제 재시작할 것."
-- 비난 조항 기재: "담당 엔지니어가 명령어를 오인하여 입력해 장애를 유발함. 담당 팀원 대상 교육을 시행하겠음." (개인을 탓함)
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 요청 범위의 조사·수정 결과, 확인된 근거와 미확정 사항, 필요한 후속 조치를 보고할 것. 코드 수정이 포함되면 해당 검증 결과를 함께 제시하고, 별도 보고서 파일은 요청된 경우에 작성할 것.
 - **[MUST] 검증 도구 매핑:** `kubectl get events --sort-by='.metadata.creationTimestamp'`를 사용하여 장애 시점 전후의 모든 클러스터 시스템 이벤트를 타임라인 순으로 자동 추출할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (시스템적 원인 규명): 장애의 근본적인 원인이 엔지니어 부주의가 아닌 시스템적 방어가드 공백으로 명확히 도출되었는가?
-  - 기준 2 (액션 아이템 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 및 코드로 검증 가능한 형태(ResourceQuota 튜닝, Probe 수정 등)로 설계되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 문제 진단 및 데이터 수집 시, 로컬에 API 호출 도구(`kubectl`)가 없거나 클러스터 접속 정보가 만료되어 데이터 팩트 수집이 3회 연속 실패할 경우 즉시 작업을 중단(Halt & Clarify)하고 정보 갱신을 요청할 것.
   - 임시 조치(Mitigation) 전, 원인 파악을 위해 수정을 미루고 복구 적용에 브레이크를 거는 동작이 감지될 경우 작업을 멈추고 복구 조치를 먼저 취할 것.

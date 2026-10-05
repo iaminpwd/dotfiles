@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when designing AWS infrastructure, provisioning resources, or optimizing cloud costs.
 references:
   - contexts/aws/references/010-aws-core.md
@@ -29,30 +27,11 @@ AWS 인프라 비용 최적화(FinOps) 표준임.
 - **[MUST] Explicit Fact-Check (버전 관리형 서비스 전수조사):** EKS, RDS, ElastiCache, MSK, OpenSearch를 비롯하여 **'엔진 버전(Version) 지정이 필요한 모든 AWS 관리형 서비스'**를 설계할 때, 해당 서비스에 Extended Support(연장 지원) 과금 정책이 존재하는지 웹 검색으로 먼저 조사할 것.
 - **[MUST] Use Verified Latest Version:** 연장 지원 과금 정책이 존재하는 서비스임이 확인되면, 학습 데이터의 기억에 의존하는 대신 **직전 단계에서 수행한 웹 검색 결과(또는 버전 확정을 위한 추가 웹 검색 결과)를 근거로** '현재 시간 기준' AWS 표준 지원(Standard Support)이 유효한 최신 안정화 버전을 코드에 반영함으로써 구버전으로 인한 숨은 비용을 안전하게 격리할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "최초 구축 시에는 T3/T4g 인스턴스를 활용하고, 트래픽 패턴에 맞추어 Auto Scaling Group(ASG)을 통해 자원을 유동적으로 확보할 것."
-- "EBS 볼륨 타입을 gp3로 선언하고 처리량(throughput) 및 IOPS를 필요 사양에 맞춰 수동 최적화할 것."
-- "EKS 버전을 지정하기 전 웹 검색으로 '현재 날짜 기준' AWS EKS 표준 지원 버전을 검색하여, 요금 미발생이 확인된 최신 안정 버전인 `1.XX`(검색 결과 반영) 버전으로 클러스터를 설정함." (예시의 버전을 그대로 복사하지 않고 검색된 최신 버전 대입)
-</example>
-<example>
-[Bad]
-- "트래픽 예측이 불가능하므로 초기부터 m5.4xlarge 인스턴스 10대를 상시 가동 상태로 띄우겠습니다."
-- "EBS 볼륨은 gp2 볼륨 타입을 기본으로 유지하겠습니다."
-- "가장 익숙하거나 예시에 적혀 있는 구버전(예: EKS 1.23 등)을 팩트 체크 없이 그대로 하드코딩하여 설정하겠습니다." (검색 절차 누락 및 구버전 지정으로 인한 Extended Support 요금 발생 위반)
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 리소스 생성 전/후의 예상 비용 변화가 수치로 확인되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `infracost`가 로컬에 설치되어 있으면 `infracost` CLI를 활용하여 수정된 코드의 월별 예상 비용 증감을 실제로 검증할 것. 미설치 환경에서는 [AWS Pricing Calculator](https://calculator.aws/)(혹은 유사 도구)를 사용하여 수동 코스트 추정을 `finops-cost-report.md`에 명시할 것.
+- **[MUST] 완료 조건 (Done when):** 리소스 생성 전/후의 예상 비용 변화가 수치로 확인되고, 완화 내역을 보고해야 합니다. 별도 `finops-cost-report.md`는 요청된 경우 작성합니다.
+- **[MUST] 검증 도구 매핑:** `infracost`가 로컬에 설치되어 있으면 `infracost` CLI를 활용하여 수정된 코드의 월별 예상 비용 증감을 실제로 검증할 것. 미설치 환경에서는 [AWS Pricing Calculator](https://calculator.aws/)(혹은 유사 도구)를 사용하여 수동 코스트 추정의 근거와 결과를 보고할 것. 별도 `finops-cost-report.md`는 요청된 경우 작성한다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Resource Sizing] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (최적 설계 보장): 현재 비즈니스 목표 대비 과도한 인프라 등급(instance type 등)이 지정되지 않았는가?
-  - 기준 2 (탄력성 설계): 트래픽 오프피크(off-peak) 타임 시 리소스를 자동으로 내릴 수 있는 Auto Scaling 아키텍처가 결합되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `infracost` 분석 결과, 단일 작업으로 인해 예상 월별 인프라 비용이 기존 대비 50% 이상 폭증(Drift)하는 현상이 감지될 경우 즉시 작업을 중단하고 비용 위반 보고서를 작성할 것.
   - 사용하지 않는 NAT Gateway가 2개 이상 방치되거나 VPC Endpoint가 누락되어 요금이 낭비되는 설계가 확인될 시 작업을 멈추고 대체 경로를 수립할 것.

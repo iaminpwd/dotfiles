@@ -1,6 +1,4 @@
 ---
-role: Senior DevOps Automation Engineer
-priority: high
 trigger: Apply these rules ONLY when writing shell scripts (Bash/Zsh), automating tasks, or installing system CLI tools.
 references:
   - contexts/aws/references/010-aws-core.md

@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when working with AWS Lambda, API Gateway, Step Functions, or event-driven architecture.
 references:
   - contexts/aws/references/050-iac-standard.md
@@ -48,22 +46,12 @@ resource "aws_lambda_function_event_invoke_config" "example" {
 }
 ```
 </example>
-<example>
-[Bad]
-```hcl
-# maximum_retry_attempts 설정 누락 (이벤트 유실 및 무한 루프 위험)
-# failure destination 누락 (에러 시 유실된 메시지 추적 불가)
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** AWS SAM CLI를 통해 템플릿의 형식이 에러 없이 검증되고, 로컬 시뮬레이션(`sam local invoke` 등)을 거쳐 이진(Pass/Fail) 결과를 획득해야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Serverless Deployed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (오류 격리): 비동기 이벤트 처리 실패 시 Dead Letter Queue (DLQ)로 자동 격리(On-Failure)되는 경로가 설정되었는가?
-  - 기준 2 (보안 통제): API Gateway의 퍼블릭 엔드포인트에 인증(IAM/Cognito 등) 장치가 누락 없이 결합되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - Lambda 함수의 메모리 및 타임아웃 할당량이 비합리적으로 과도하게 높게 설정(예: 타임아웃 15분 및 메모리 10GB 상시 적용)되어 리소스 낭비 위험성이 확인될 시 작업을 즉시 중단(Halt & Clarify)하고 최적화를 요청할 것.
   - SQS/SNS 비동기 파이프라인에서 DLQ 유실이 확인되고 수동 재처리 복구 계획이 부재할 시 작업을 멈추고 대체 설계를 구현할 것.

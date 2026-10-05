@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing autoscaling, finops, or resource optimization.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -44,19 +42,12 @@ spec:
     updateMode: "Initial"
 ```
 </example>
-<example>
-[Bad]
-- updateMode: "Auto" 설정 및 HPA가 동일 CPU 메트릭으로 동시 구동 (스케일 업/다운 충돌 및 무한 대기 유발 안티패턴)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 완화 내역을 포함한 `finops-cost-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** `infracost` 월별 비용 분석이 에러 없이 출력되고, 완화 내역을 보고해야 합니다. 별도 `finops-cost-report.md`는 요청된 경우 작성합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Infrastructure Design / Scaling Check] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (자원 격리): 개발 네임스페이스 내에 무단 프로비저닝을 차단하기 위한 ResourceQuota 하드 상한선이 정의되었는가?
-  - 기준 2 (탄력성): 트래픽 스파이크 발생 시 Pod과 Node가 연쇄적으로 즉시 스케일 아웃(Scale-out) 가능한가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - HPA와 VPA가 동일 CPU/Memory 메트릭을 타겟팅한 상태에서 동시에 활성화(updateMode = "Auto")된 매니페스트가 발견될 시 즉시 작업을 중단(Halt & Clarify)하고 VPA 모드를 Initial로 전환할 것.
   - 네임스페이스 리소스 할당량(`ResourceQuota`) 설정 중 Limits의 최대 상한선(hard limits)이 정의되지 않은 상한선이 누락된 구성이 감지될 시 즉시 작업을 멈추고 자원 정책을 보완할 것.

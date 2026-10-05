@@ -24,8 +24,8 @@ AWS 클라우드 인프라, 네트워크, 컨테이너, 서버리스, 보안 제
 | CI/CD 파이프라인 및 Day-2 운영 | references/090-day2-operations.md |
 | 장애 대응 및 Post-Mortem 분석 | references/100-incident-response.md |
 
-* **기본 아키텍처 원칙**: references/010-aws-core.md
-* **보안 및 시크릿 규정**: references/020-security-compliance.md
+* 해당 주제의 설계·검토가 필요한 경우: references/010-aws-core.md
+* 해당 주제의 설계·검토가 필요한 경우: references/020-security-compliance.md
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 

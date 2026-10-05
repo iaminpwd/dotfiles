@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: drawio XML 생성 시 "읽는 사람"의 가독성(범례/제목/라벨/타이포그래피)을 확보할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

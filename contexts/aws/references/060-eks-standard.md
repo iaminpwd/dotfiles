@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when working with Kubernetes, EKS, Helm, or container orchestration.
 references:
   - contexts/aws/references/050-iac-standard.md
@@ -24,26 +22,12 @@ EKS 클러스터 설계 및 Helm 오케스트레이션 표준임.
 - **[PREFER] Managed Observability:** 클러스터 메트릭 및 로그 관측 시 자체 Prometheus/Grafana 운영 부담을 줄이기 위해 Amazon Managed Service for Prometheus(AMP) 및 Amazon Managed Grafana(AMG) 사용을 우선 제안할 것.
 
 ### 2.2 공통 K8s 코어 룰 참조
-- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, 반드시 시스템에 기 등록된 `k8s` 스킬(SKILL.md)을 먼저 읽고(View), 그 안에 명시된 라우팅 테이블(작업 유형별 라우팅)에 매핑된 `references/` 하위 코어 룰을 참조할 것.
-
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- Pod Identity 적용: `aws_eks_pod_identity_association` 리소스로 ServiceAccount와 IAM 역할을 연결하여 파드에 권한을 주입할 것. (교차 계정 시나리오에서만 ServiceAccount `metadata.annotations`의 `eks.amazonaws.com/role-arn`을 사용하는 IRSA 방식을 적용할 것.)
-</example>
-<example>
-[Bad]
-- 워커 노드 IAM에 과도한 권한 위임: "파드가 S3에 접근해야 하므로 EKS Worker Node의 EC2 Instance Profile에 Admin 권한을 직접 추가하겠습니다."
-</example>
-</examples>
+- **[MUST] Reference Generic K8s Rules:** 쿠버네티스 공통 기능(네트워크, 스토리지, 파드 생명주기, GitOps 등) 작업 시, `k8s` 스킬에서 해당 작업의 참조를 선택한다. AWS IAM·노드·엔드포인트 조건은 이 문서에서 확인한다.
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 생성될 K8s 매니페스트 파일이나 Helm 차트의 린트 검사가 경고 없이 패스되고, API 리소스 스키마가 대상 EKS 버전에 유효함이 검증되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: EKS Config Proposed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (워크로드 권한 격리): 노드 인스턴스 프로파일 대신 Pod Identity(또는 교차 계정 시 IRSA)가 개별 파드 계정 단위로 완벽히 매핑되었는가?
-  - 기준 2 (보안 통제): 클러스터 API Endpoint가 퍼블릭 통제(Private Access Only) 또는 화이트리스트 IP 기반으로 격리되었는가?
+## 4. 변경 전 확인과 실행 경계
+- **[MUST] API Endpoint:** EKS API 엔드포인트는 Private 접근을 사용하거나, Public 접근이 필요한 경우 허용된 IP 범위로 제한할 것.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - KMS Envelope Encryption 연동 없이 기본 평문 base64 Secret 저장 방식으로 프로덕션 코드가 설계되었을 시 즉시 작업을 멈추고 보안 수정을 적용할 것. (`privileged`/`hostNetwork` 등 파드 보안 컨텍스트 일반 위반은 `k8s` 스킬의 중단 조건을 참조할 것.)

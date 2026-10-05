@@ -25,7 +25,7 @@ aiops 관련 작업 시 발동됩니다. SRE 원칙 및 에이전트 기반 자�
 | 텔레메트리 파이프라인 및 동적 임계치 정량 검증 도구 | scripts/ |
 | scripts/examples 회귀 테스트 실행 | tests/run.sh |
 
-* **기본 AIOps 코어 원칙**: references/010-aiops-core.md
+* 해당 주제의 설계·검토가 필요한 경우: references/010-aiops-core.md
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 

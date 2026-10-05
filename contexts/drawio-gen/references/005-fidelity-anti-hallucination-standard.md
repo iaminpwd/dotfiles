@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: IaC 코드/문서 또는 자연어 아키텍처 설명에서 리소스 그래프를 추출할 때 적용 (drawio XML 생성 6단계 프로세스의 1단계 근거 수집 및 5단계 최종 검증에서 재사용)
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

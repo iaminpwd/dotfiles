@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing CI/CD pipelines, GitOps workflows, or ArgoCD/Flux deployments.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -44,25 +42,12 @@ spec:
     image: myregistry.example.com/payment-api:a1b2c3d4
 ```
 </example>
-<example>
-[Bad]
-- latest 가변 태그 배포 (롤아웃 멱등성 파괴 리스크):
-```yaml
-spec:
-  containers:
-  - name: payment-api
-    image: myregistry.example.com/payment-api:latest
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 로컬 배포 테스트 시 `kubectl diff` 또는 `helm diff`가 정상 출력되어 파급 효과가 팩트로 증명되고, 배포 결과가 `k8s-deployment-report.md`에 결함 없이 작성되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 로컬 배포 테스트 시 `kubectl diff` 또는 `helm diff`가 정상 출력되어 파급 효과가 팩트로 증명되고, 배포 결과를 보고해야 합니다. 별도 `k8s-deployment-report.md`는 요청된 경우 작성합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Manual Apply] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (안전성): 배포 실패 시 서비스 지연 없이 즉각 자동 롤백(Automated Rollback)되는 구조가 결합되었는가?
-  - 기준 2 (추적성): 모든 매니페스트 변경 사항이 커밋 로그에 감사 마커(`[K8s-Agent-Action]`)를 명확히 달고 배포되는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 컨테이너 이미지 태그에 `latest` 또는 `dev` 가변 태그가 주입된 코드가 감지되면 즉시 작업을 중단(Halt & Clarify)하고 고정 버저닝 적용을 요구할 것.
   - GitOps 배포 설정 시 Prune 옵션(`prune = true`)이 비활성화되어, Git에서 삭제된 리소스가 클러스터에 좀비 자원으로 방치될 가능성이 감지되면 작업을 멈추고 정책을 수정할 것.

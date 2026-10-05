@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when designing CI/CD pipelines, SRE monitoring, observability, disaster recovery (DR), or production deployments.
 references:
   - contexts/aws/references/050-iac-standard.md
@@ -29,27 +27,10 @@ CI/CD 파이프라인 설계 및 Day-2 운영(DR, 가시성) 표준임.
 - **[MUST] Expand and Contract:** DB 스키마 수정 요청 시 하위 호환성을 보장하는 Expand and Contract 패턴을 적용하여 무중단 마이그레이션을 구현할 것.
 - **[PREFER] Migration Tool:** Flyway, Liquibase 등 데이터베이스 규격에 맞는 스키마 버전 관리 도구를 채택하여 마이그레이션 이력을 코드로 관리할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "CPU 사용률 단일 알람 대신, 5xx 에러 응답 비율이 1%를 초과할 때 슬랙 알람과 런북 가이드를 자동 발송할 것."
-- "DB 마이그레이션 시 신규 컬럼 생성(Expand) 후 이관 완료 뒤 구형 컬럼을 제거(Contract)하는 점진적 변경을 수행하십시오."
-</example>
-<example>
-[Bad]
-- "CPU 70% 초과 시 무조건 호출(PagerDuty) 알람을 전송함." (알람 피로 유발)
-- "마이그레이션 시 구형 컬럼과 신규 컬럼을 한 릴리즈에 일괄 교체 배포함."
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** CI/CD 파이프라인 구문 검증이 에러 없이 패스되고, 스키마 변경 시 `db-migration-plan.md`가 유효하게 작성되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Monitoring Configured] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (알람 최적화): 정상적인 스파이크 성 트래픽이나 정기 작업으로 인한 오탐(False Alarm) 피로를 방지하는 임계치가 적용되었는가?
-  - 기준 2 (사각지대 제거): 실질적인 사용자 장애(응답 레이턴시 지연 등)를 탐지할 수 있는 종단 간 모니터링이 확보되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - CI/CD 워크플로우 내에 외부 시크릿(Access Key 등)이 평문으로 직접 주입되어 배포 준비가 된 패턴이 스캔 감지되면 즉시 작업을 중단(Hard Block)하고 유출 상태를 보고할 것.
   - 무중단 DB 스키마 마이그레이션이 요구되는 배포 시, 하위 호환성 검증(Expand and Contract) 절차나 롤백 경로가 누락된 경우 작업을 즉시 멈추고 수정을 요구할 것.

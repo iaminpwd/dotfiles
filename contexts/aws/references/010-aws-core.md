@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: critical
 trigger: Apply these rules when planning, designing, or reviewing AWS infrastructure architecture.
 references:
   - contexts/aws/references/020-security-compliance.md
@@ -10,17 +8,14 @@ references:
 
 AWS 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임.
 
-## 1. 핵심 설계 원칙
-- **[MUST] Well-Architected Alignment:** 아키텍처 제안 시 AWS 6개 기둥 근거 및 트레이드오프를 명시할 것.
-- **[MUST] Output Standard:** 본론 직진, 클라우드 용어 영문 유지, 도구 비교는 테이블로 제공할 것.
-- **[PREFER] Cloud-Native First:** IaaS(EC2 직접 구축 등)보다 AWS Fargate, Lambda, RDS 등 관리형 서비스(Managed Service)를 우선 제안할 것.
+## 1. 설계 범위와 상태 확인
 
-## 2. 세부 오퍼레이션 조항 (Actionable Rules)
+- 기존 인프라 변경은 대상 계정·리전과 관련 리소스 상태를 확인한다. 개념 설계는 가정과 적용 전 확인 사항을 구분하며 실제 리소스 ID를 지어내지 않는다.
+- 사용자가 선택한 기술과 요구사항을 우선한다. 관리형 서비스는 운영·비용·제약을 비교할 때 대안으로 검토한다.
+- Well-Architected 검토를 요청받거나 전체 아키텍처를 평가할 때 관련 기둥의 근거·트레이드오프를 설명한다.
+- 고가용성이 요구되는 워크로드는 필요한 AZ 분산과 장애 대응을 설계한다. 실습·개발 구성에도 동일한 가용성 사양을 일괄 적용하지 않는다.
 
-### 2.1 아키텍처 설계 및 데이터 조사 표준
-- **[PREFER] Information Foraging:** 리소스 ID(VPC, Subnet 등)는 반드시 터미널에서 `aws ec2` API 등으로 실제 인프라 상태를 선제적으로 조회하여 팩트 기반으로 확보할 것. 실제 AWS API 조회 결과(팩트)를 동적으로 참조하여 기재할 것.
-- **[MUST] Explicit Naming:** 아키텍처나 리소스 구조를 예시로 들 때는 `deployment-app`, `tgw-attachment-vpc-a` 처럼 직관적이고 구체적인 네이밍만 엄수할 것.
-- **[MUST] Respect Constraints:** 사용자가 특정 기술(예: EC2 직접 구성)을 명시적으로 요구한 경우 이를 최우선으로 반영하되, 관리형 대안은 참고 제안으로만 덧붙이십시오.
+## 2. 연동 검증
 
 ### 2.2 5차원 서비스 연동 검증 (5D Integration Matrix)
 네트워크 구조, IAM 역할, 보안 그룹, 암호화 등 고영향도(High-Impact) 리소스 변경 시에만 적용할 것. (TAG 수정, 변수명 변경 등 단순 변경은 생략 가능)
@@ -32,27 +27,10 @@ AWS 인프라 설계 및 DevOps 아키텍처 수립 시 적용되는 표준임.
   4. **Encryption & Security:** KMS 고객 관리형 키(CMK) 사용 시 Key Policy에 대상 IAM Role의 복호화/데이터 키 생성 권한(`kms:Decrypt`, `kms:GenerateDataKey*`)이 양방향 연동되었는지 검증할 것.
   5. **Lifecycle Ordering:** `depends_on`, 대기 스크립트를 통한 상/하위 리소스 프로비저닝 순서를 검증할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- 능동적 데이터 수집: "VPC ID를 확인하기 위해 터미널에서 `aws ec2 describe-vpcs`를 실행하겠습니다."
-- Fargate 우선 제안: "EKS Cluster 구축 시 Worker Node는 Fargate 사용을 우선 제안할 것."
-</example>
-<example>
-[Bad]
-- 무지성 가상 ID 사용: "해당 VPC의 ID는 `vpc-12345678`일 것임. 이 서브넷에 배포하겠습니다."
-- 단일 AZ 저가용성 설계: "개발 환경이므로 Subnet을 1개 AZ에만 만드세요."
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] FinOps Delegation:** 비용 추정, Right-Sizing 등 FinOps 관련 상세 규칙은 `030-finops-optimization` 모듈을 참조하여 검증을 위임할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[PREFER] 공통 자가 비판 절차 (전 aws 모듈 SSOT):** 본 파일 및 하위 참조 모듈(005, 020, 025, 030, 040, 050, 060, 070, 080, 090, 100)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
-- **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
-  - 기준 1 (가용성): 최소 2개 이상의 AZ(Availability Zone)에 Subnet을 분산 배치하여 고가용성 설계를 확보했는가?
-  - 기준 2 (확장성): 트래픽 폭증 시 병목 지점이 없도록 오토스케일링 및 라우팅 구조가 최적화되었는가?
+## 4. 변경 전 확인과 실행 경계
+- **[PREFER] 공통 자가 비판 절차 (전 aws 모듈 SSOT):** 참조 모듈(005, 020, 025, 030, 040, 050, 060, 070, 080, 090, 100) 중 현재 작업의 기준만 확인한다. 전체 조회나 별도 자가비판 출력은 필요하지 않다.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 필수 검증 도구가 없으면 설치된 동등한 도구를 확인하고, 가능한 조사와 검증을 계속할 것. 필수 검증을 대체할 수 없으면 미검증 범위와 필요한 도구를 보고하고, 해당 검증을 전제로 하는 배포는 진행하지 않을 것.
