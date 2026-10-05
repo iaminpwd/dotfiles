@@ -27,9 +27,12 @@ UNREGISTERED=()
 MISSING_RUNNERS=()
 for tdir in "${TEST_DIRS[@]}"; do
   runner="$tdir/run.sh"
-  runner_code=""
+  registered_suites=""
   if [ -f "$runner" ]; then
-    runner_code=$(grep -v '^[[:space:]]*#' "$runner" || true)
+    # 현재 tests/run.sh 관례의 실제 실행 목록만 추출한다.
+    # 코드 어딘가의 echo/변수/dead branch 에 이름이 남아 있다는 이유로 등록됐다고
+    # 오판하지 않도록, `for suite in ...; do` 의 토큰만 진실의 원천으로 삼는다.
+    registered_suites=$(sed -nE 's/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+([^;]+);[[:space:]]*do[[:space:]]*$/\1/p' "$runner" | tr '\n' ' ')
   fi
   while IFS= read -r -d '' tfile; do
     if [ ! -f "$runner" ]; then
@@ -37,11 +40,14 @@ for tdir in "${TEST_DIRS[@]}"; do
       break
     fi
     tname="$(basename "$tfile" .sh)"
-    # here-string 을 쓴다. `grep -v ... | grep -qF ...` 형태는 오른쪽 grep 이 첫 매치에서
-    # stdin 을 닫아 왼쪽이 SIGPIPE(141)로 끝나고, set -o pipefail 이 그것을 파이프라인
-    # 결과로 채택해 "등록됐는데 미등록"으로 판정이 뒤집힌다(이 저장소의 tf_run_tflint /
-    # check_documented_clause_existence 주석이 짚은 것과 동일한 함정).
-    grep -qF -- "$tname" <<<"$runner_code" || UNREGISTERED+=("${tfile#"$REPO_ROOT"/}")
+    registered=0
+    for suite_name in $registered_suites; do
+      if [ "$suite_name" = "$tname" ]; then
+        registered=1
+        break
+      fi
+    done
+    [ "$registered" -eq 1 ] || UNREGISTERED+=("${tfile#"$REPO_ROOT"/}")
   done < <(find "$tdir" -maxdepth 1 -type f -name "test[-_]*.sh" -print0 2>/dev/null | sort -z)
 done
 

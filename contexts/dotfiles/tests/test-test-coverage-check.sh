@@ -227,6 +227,28 @@ else
   report "skip-with-warning-prefix-passes ([WARNING] 접두사와 주석은 오탐 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 14. 주석만 제외하고 코드 전체에서 이름을 찾으면, 실제 suite 목록에서 빠져도
+#     변수/echo/dead branch 같은 실행 코드에 이름이 남아 있는 것만으로 "등록됨" 오판한다.
+#     등록의 정본은 현재 저장소 관례인 `for suite in ...; do` 목록이어야 한다.
+R14="$TMP/repo14"
+new_fixture_repo "$R14"
+cat >"$R14/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+orphan_note=test-orphan
+for suite in test-real; do
+  bash "$suite.sh"
+done
+EOF
+echo '#!/usr/bin/env bash' >"$R14/contexts/fake/tests/test-real.sh"
+echo '#!/usr/bin/env bash' >"$R14/contexts/fake/tests/test-orphan.sh"
+status=$(run_checker "$R14")
+if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" &&
+  ! grep -qF "test-real.sh" "$TMP/out"; then
+  report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 0
+else
+  report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
