@@ -14,7 +14,8 @@ SECOND_STEP=$(awk '
   capture && /^      - name:/ && !/Bootstrap \(2nd run - idempotency check\)/ { exit }
 ' "$CI")
 
-if ! grep -q 'tee .*bootstrap.*second' <<<"$SECOND_STEP" ||
+if ! grep -q 'bootstrap-second\.log' <<<"$SECOND_STEP" ||
+  ! grep -q 'tee "\$SECOND_BOOTSTRAP_LOG"' <<<"$SECOND_STEP" ||
   ! grep -q 'assert-idempotent-ansible-recap.sh' <<<"$SECOND_STEP"; then
   echo 'FAIL: 2차 bootstrap이 changed=0을 검사하지 않아 비멱등 변경도 CI에서 GREEN이 될 수 있습니다.'
   exit 1
