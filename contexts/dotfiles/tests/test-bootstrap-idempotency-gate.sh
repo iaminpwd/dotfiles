@@ -14,6 +14,7 @@ SECOND_STEP=$(awk '
   capture && /^      - name:/ && !/Bootstrap \(2nd run - idempotency check\)/ { exit }
 ' "$CI")
 
+# shellcheck disable=SC2016 # workflow 안의 literal $SECOND_BOOTSTRAP_LOG 참조를 검사한다.
 if ! grep -q 'bootstrap-second\.log' <<<"$SECOND_STEP" ||
   ! grep -q 'tee "\$SECOND_BOOTSTRAP_LOG"' <<<"$SECOND_STEP" ||
   ! grep -q 'assert-idempotent-ansible-recap.sh' <<<"$SECOND_STEP"; then
