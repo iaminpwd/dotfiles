@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 # sudo 정책을 바꾸지 않고 Ansible 설치 또는 dry-run을 실행한다.
 set -euo pipefail
-ROOT=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. 이 스크립트는 Ansible이
+# coreutils를 설치하기 전에 실행되므로 plain readlink만으로 symlink 체인을 해석한다.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  SOURCE_DIR=$(cd -P "$(dirname "$SOURCE")" && pwd)
+  LINK_TARGET=$(readlink "$SOURCE")
+  case "$LINK_TARGET" in
+  /*) SOURCE="$LINK_TARGET" ;;
+  *) SOURCE="$SOURCE_DIR/$LINK_TARGET" ;;
+  esac
+done
+ROOT=$(cd -P "$(dirname "$SOURCE")/../.." && pwd)
 cd "$ROOT"
 export ANSIBLE_CONFIG="$ROOT/ansible/ansible.cfg"
 export ANSIBLE_HOME="${ANSIBLE_HOME:-$HOME/.cache/ansible}"
