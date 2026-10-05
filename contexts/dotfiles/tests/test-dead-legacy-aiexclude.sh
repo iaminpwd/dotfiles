@@ -10,7 +10,7 @@ LEGACY="$ROOT/contexts/.base.aiexclude"
 # 보안 기대를 만들지 않도록 제거해야 한다. 다시 도입하려면 실제 실행 경로에서 소비되어야 한다.
 if [ -f "$LEGACY" ]; then
   consumers=$(
-    git -C "$ROOT" grep -lF '.base.aiexclude' HEAD --       bootstrap.sh Justfile ansible bin stow .github 2>/dev/null || true
+    git -C "$ROOT" grep -lF '.base.aiexclude' HEAD -- bootstrap.sh Justfile ansible bin stow .github 2>/dev/null || true
   )
   if [ -z "$consumers" ]; then
     echo 'FAIL: contexts/.base.aiexclude가 실제 배포·런타임 consumer 없이 남아 있는 dead security config입니다.'
