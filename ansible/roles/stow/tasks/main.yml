@@ -46,12 +46,45 @@
 - name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정
   ansible.builtin.shell: |
     set -euo pipefail
+
+    canonical_existing_file() {
+      local path=$1 dir base
+      dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
+      base=$(basename "$path")
+      [ -e "$dir/$base" ] || return 1
+      printf '%s/%s\n' "$dir" "$base"
+    }
+
     PKG_DIR="{{ role_path }}/../../../stow/{{ item.path | basename }}"
     DRIFT=0
     while IFS= read -r -d '' SRC; do
       REL="${SRC#"$PKG_DIR"/}"
       TARGET="{{ ansible_env.HOME }}/$REL"
-      if [ "$(readlink -f "$TARGET" 2>/dev/null)" != "$(readlink -f "$SRC")" ]; then
+
+      # --no-folding 정책상 관리 대상은 파일 단위 symlink여야 한다.
+      # macOS 기본 BSD readlink에는 -f가 없으므로 plain readlink로 raw target을 읽고,
+      # 양쪽 부모 디렉토리는 cd -P로 정규화해 실제 파일 경로를 비교한다.
+      if [ ! -L "$TARGET" ]; then
+        DRIFT=1
+        break
+      fi
+      LINK_TARGET=$(readlink "$TARGET" 2>/dev/null) || {
+        DRIFT=1
+        break
+      }
+      case "$LINK_TARGET" in
+      /*) LINK_PATH="$LINK_TARGET" ;;
+      *) LINK_PATH="$(dirname "$TARGET")/$LINK_TARGET" ;;
+      esac
+      SRC_CANON=$(canonical_existing_file "$SRC") || {
+        DRIFT=1
+        break
+      }
+      LINK_CANON=$(canonical_existing_file "$LINK_PATH") || {
+        DRIFT=1
+        break
+      }
+      if [ "$LINK_CANON" != "$SRC_CANON" ]; then
         DRIFT=1
         break
       fi
