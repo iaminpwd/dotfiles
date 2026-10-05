@@ -32,7 +32,7 @@ for tdir in "${TEST_DIRS[@]}"; do
     # 현재 tests/run.sh 관례의 실제 실행 목록만 추출한다.
     # 코드 어딘가의 echo/변수/dead branch 에 이름이 남아 있다는 이유로 등록됐다고
     # 오판하지 않도록, `for suite in ...; do` 의 토큰만 진실의 원천으로 삼는다.
-    registered_suites=$(sed -nE       's/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+([^;]+);[[:space:]]*do[[:space:]]*$/\1/p'       "$runner" | tr '\n' ' ')
+    registered_suites=$(sed -nE 's/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+([^;]+);[[:space:]]*do[[:space:]]*$/\1/p' "$runner" | tr '\n' ' ')
   fi
   while IFS= read -r -d '' tfile; do
     if [ ! -f "$runner" ]; then
