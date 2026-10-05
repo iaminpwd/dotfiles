@@ -8,14 +8,55 @@ mkdir -p "$TMP/bin" "$TMP/home"
 cat >"$TMP/bin/ansible-playbook" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >"$SETUP_ARGS"
+printf '%s\n' "$PWD" >"$SETUP_PWD"
+printf '%s\n' "$ANSIBLE_CONFIG" >"$SETUP_CONFIG"
 STUB
-chmod +x "$TMP/bin/ansible-playbook"
-PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" bash "$ROOT/bin/utils/run-setup.sh" --check --tags stow </dev/null
+
+# macOS 기본 BSD readlink처럼 -f 옵션을 지원하지 않는 환경을 재현한다.
+# 실제 bootstrap은 packages role이 coreutils를 설치하기 전에 run-setup.sh를 호출하므로,
+# 진입점 자체가 GNU readlink 사전설치에 의존하면 fresh macOS에서 Ansible까지 도달하지 못한다.
+cat >"$TMP/bin/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$TMP/bin/ansible-playbook" "$TMP/bin/readlink"
+status=0
+PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" SETUP_PWD="$TMP/pwd" SETUP_CONFIG="$TMP/config" \
+  bash "$ROOT/bin/utils/run-setup.sh" --check --tags stow </dev/null || status=$?
+if [ "$status" -ne 0 ]; then
+  echo 'FAIL: run-setup.sh가 GNU readlink -f 사전설치에 의존합니다.'
+  exit 1
+fi
+[ "$(cat "$TMP/pwd")" = "$ROOT" ] || {
+  echo "FAIL: run-setup.sh가 repo root가 아닌 디렉터리에서 Ansible을 실행했습니다: $(cat "$TMP/pwd")"
+  exit 1
+}
+[ "$(cat "$TMP/config")" = "$ROOT/ansible/ansible.cfg" ] || {
+  echo "FAIL: run-setup.sh의 ANSIBLE_CONFIG가 repo root를 가리키지 않습니다: $(cat "$TMP/config")"
+  exit 1
+}
 for arg in --check --tags stow; do
   grep -qx -- "$arg" "$TMP/args"
 done
 if grep -q -- --ask-become-pass "$TMP/args"; then exit 1; fi
 echo 'PASS: 비대화형 설치와 dry-run 인자 전달'
+
+# ai_agent role은 실행 가능한 bin 스크립트를 ~/.local/bin에 링크하므로 symlink 경유 실행도
+# 같은 저장소 root로 수렴해야 한다. BSD readlink stub은 plain readlink는 허용한다.
+ln -s "$ROOT/bin/utils/run-setup.sh" "$TMP/bin/run-setup-link"
+: >"$TMP/pwd"
+: >"$TMP/config"
+status=0
+PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" SETUP_PWD="$TMP/pwd" SETUP_CONFIG="$TMP/config" \
+  bash "$TMP/bin/run-setup-link" --check --tags stow </dev/null || status=$?
+[ "$status" -eq 0 ]
+[ "$(cat "$TMP/pwd")" = "$ROOT" ]
+[ "$(cat "$TMP/config")" = "$ROOT/ansible/ansible.cfg" ]
+echo 'PASS: BSD readlink 환경의 symlink 실행도 repo root 유지'
 
 # bootstrap 권한 선택: root / 일반 사용자+sudo / 일반 사용자+sudo 없음 세 경로를 고정한다.
 ROOT_FN="$TMP/run-as-root.sh"
