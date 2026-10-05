@@ -116,6 +116,24 @@ jobs:
       - name: Install zsh (required by test-shell zsh -n subtest)
         run: sudo apt-get update -qq && sudo apt-get install -y zsh
 
+      # test-zshrc-activation.sh 는 실제 .zshrc가 source하는 Oh My Zsh까지 로드한 상태에서
+      # 중첩 zsh의 mise/fzf 훅을 검증한다. 별도 버전 정본을 만들지 않고 zsh role의 고정 SHA를
+      # 읽어 같은 revision을 준비한다.
+      - name: Prepare pinned Oh My Zsh for zsh activation regression
+        run: |
+          OMZ_SHA=$(awk '
+            /repo: .https:\/\/github.com\/ohmyzsh\/ohmyzsh\.git./ { found = 1; next }
+            found && /version:/ { print $2; exit }
+          ' ansible/roles/zsh/tasks/main.yml)
+          if [[ ! "$OMZ_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid pinned Oh My Zsh SHA from ansible role: $OMZ_SHA" >&2
+            exit 1
+          fi
+          git init -q "$HOME/.oh-my-zsh"
+          git -C "$HOME/.oh-my-zsh" remote add origin https://github.com/ohmyzsh/ohmyzsh.git
+          git -C "$HOME/.oh-my-zsh" fetch --depth 1 origin "$OMZ_SHA"
+          git -C "$HOME/.oh-my-zsh" checkout -q --detach FETCH_HEAD
+
       # ! -path '*/contexts/.*' — 롤이 점으로 시작하는 컨텍스트 디렉토리(.shared)를 링크하지 않으므로
       # 여기서도 빼야 "mirrors" 가 사실이 된다. 안 빼면 CI 만 그 디렉토리의 스크립트가
       # PATH 에 더 올라간 환경에서 검증하게 된다.
