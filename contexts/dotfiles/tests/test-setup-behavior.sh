@@ -45,6 +45,19 @@ done
 if grep -q -- --ask-become-pass "$TMP/args"; then exit 1; fi
 echo 'PASS: 비대화형 설치와 dry-run 인자 전달'
 
+# ai_agent role은 실행 가능한 bin 스크립트를 ~/.local/bin에 링크하므로 symlink 경유 실행도
+# 같은 저장소 root로 수렴해야 한다. BSD readlink stub은 plain readlink는 허용한다.
+ln -s "$ROOT/bin/utils/run-setup.sh" "$TMP/bin/run-setup-link"
+: >"$TMP/pwd"
+: >"$TMP/config"
+status=0
+PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" SETUP_PWD="$TMP/pwd" SETUP_CONFIG="$TMP/config" \
+  bash "$TMP/bin/run-setup-link" --check --tags stow </dev/null || status=$?
+[ "$status" -eq 0 ]
+[ "$(cat "$TMP/pwd")" = "$ROOT" ]
+[ "$(cat "$TMP/config")" = "$ROOT/ansible/ansible.cfg" ]
+echo 'PASS: BSD readlink 환경의 symlink 실행도 repo root 유지'
+
 # bootstrap 권한 선택: root / 일반 사용자+sudo / 일반 사용자+sudo 없음 세 경로를 고정한다.
 ROOT_FN="$TMP/run-as-root.sh"
 awk '/^run_as_root\(\) \{/{capture=1} capture{print} capture && /^}/{exit}' "$ROOT/bootstrap.sh" >"$ROOT_FN"
