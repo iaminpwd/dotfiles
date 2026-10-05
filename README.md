@@ -151,7 +151,6 @@ just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-s
 ├── contexts/             # AI 컨텍스트 룰북 단일 진실 공급원 (SSOT)
 │   ├── base.AGENTS.md         # 전 워크스페이스 공통 마스터 엔진 (SSOT)
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
-│   ├── .base.aiexclude        # 글로벌 AI 오염 방지 전역 무시 룰 원본
 │   ├── README.md              # 프롬프트 적용·유지보수와 검증 안내
 │   ├── aws/, dotfiles/                    # 🟢 Production 워크스페이스 룰북
 │   ├── aiops/, containers/, drawio-gen/, k8s/,
