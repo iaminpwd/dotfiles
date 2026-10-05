@@ -56,7 +56,25 @@ jq -n --arg live "$LEGACY_LIVE" '{hooks:{PostToolUse:[
 
 echo "=== merge-agent-hooks.sh 훅 병합 로직 회귀 테스트 ==="
 
-MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+FIRST_OUT="$TMP/first.out"
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >"$FIRST_OUT" 2>&1
+
+# 실제 설정 파일을 바꾼 첫 실행은 Ansible이 changed 로 보고할 수 있도록 명시적 marker를 내야 한다.
+if grep -qF '[CHANGED]' "$FIRST_OUT"; then
+  report "첫 훅 병합은 실제 변경 marker 출력" 0
+else
+  report "첫 훅 병합은 실제 변경 marker 출력" 1 "$(cat "$FIRST_OUT")"
+fi
+
+# role 자체도 그 marker를 changed_when에 연결해야 한다. 스크립트가 파일을 바꾸는데
+# changed_when:false 로 고정하면 setup/update가 실제 mutation을 changed=0 으로 숨긴다.
+AI_ROLE="$REPO_ROOT/ansible/roles/ai_agent/tasks/main.yml"
+if grep -qF 'register: ai_agent_hooks_merge_result' "$AI_ROLE" &&
+  grep -qE "changed_when:.*\\[CHANGED\\].*ai_agent_hooks_merge_result\.stdout" "$AI_ROLE"; then
+  report "Ansible 훅 병합 task가 변경 marker를 changed 상태에 반영" 0
+else
+  report "Ansible 훅 병합 task가 변경 marker를 changed 상태에 반영" 1
+fi
 
 # 1. Gemini: agent-edits-log 훅이 생성되어야 한다.
 GEMINI_JSON="$FAKE_HOME/.gemini/config/hooks.json"
@@ -104,7 +122,13 @@ mv "$TMP/compact.json" "$CLAUDE_JSON"
 ln "$CLAUDE_JSON" "$TMP/claude-before"
 ln "$GEMINI_JSON" "$TMP/gemini-before"
 BACKUPS_BEFORE=$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)
-MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR"
+SECOND_OUT="$TMP/second.out"
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >"$SECOND_OUT" 2>&1
+if grep -qF '[CHANGED]' "$SECOND_OUT"; then
+  report "동일 훅 재실행은 변경 marker 없음" 1 "$(cat "$SECOND_OUT")"
+else
+  report "동일 훅 재실행은 변경 marker 없음" 0
+fi
 if [ "$BACKUPS_BEFORE" -eq "$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)" ] &&
   [ "$CLAUDE_JSON" -ef "$TMP/claude-before" ] && [ "$GEMINI_JSON" -ef "$TMP/gemini-before" ]; then
   report "동일 JSON 재실행은 백업·원본 교체 없음" 0
