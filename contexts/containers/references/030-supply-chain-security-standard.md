@@ -1,6 +1,4 @@
 ---
-role: Senior Container Security Engineer
-priority: high
 trigger: Apply these rules ONLY when generating SBOMs, signing images, or gating builds on vulnerability scan results.
 references:
   - contexts/containers/references/010-containers-core.md
@@ -36,22 +34,12 @@ trivy image --severity CRITICAL --exit-code 1 "$IMAGE_DIGEST"
 cosign sign --key cosign.key "$IMAGE_DIGEST"
 ```
 </example>
-<example>
-[Bad]
-```bash
-docker push myapp:latest
-# SBOM 생성 없음, 취약점 스캔 없음, 서명 없음 -> 공급망 출처 추적 불가
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** SBOM 파일이 생성되어 아티팩트로 보관되고, CRITICAL 취약점 없이 이미지 서명이 완료되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Image Pushed to Registry] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (추적성): SBOM이 생성되어 이미지의 구성 요소가 완전히 추적 가능한가?
-  - 기준 2 (무결성): 이미지가 다이제스트 기준으로 서명되고 배포 전 검증 경로가 존재하는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `trivy` 또는 `grype` 스캔 결과 CRITICAL 등급 취약점이 발견되었으나 승인된 예외 처리(Ignore File)가 없을 경우 즉시 배포를 중단(Hard Block)하십시오.
   - `cosign verify`가 실패하거나 서명 자체가 부재한 이미지가 프로덕션 배포 대상으로 지정될 경우 즉시 작업을 멈추고 서명 절차를 요구할 것.

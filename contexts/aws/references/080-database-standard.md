@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when working with RDS, Aurora, DynamoDB, ElastiCache, or database engineering.
 references:
   - contexts/aws/references/050-iac-standard.md
@@ -30,27 +28,11 @@ references:
 - **[MUST] Capacity Mode Selection:** DynamoDB 설계 시 트래픽 예측이 어려운 신규 서비스는 **On-Demand** 모드를 사용하고, 안정적인 워크로드는 **Provisioned 모드 + Auto Scaling**을 적용할 것.
 - **[MUST] Data Lifecycle (TTL):** 세션 정보 등 임시 데이터 수집 테이블에는 비용 통제를 위해 DynamoDB TTL(Time To Live) 속성을 필수로 기재할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "커넥션 병목을 줄이기 위해 RDS Proxy를 연동하여 자원을 최적화할 것."
-- "자주 조회되는 컬럼에 인덱스를 걸고 실행 계획(Explain) 상의 Full Table Scan 여부를 검증할 것."
-</example>
-<example>
-[Bad]
-- "애플리케이션에서 RDS로 Proxy 없이 수만 개의 커넥션을 직접 오픈하도록 둡니다."
-- "속도가 느리므로 인프라 인스턴스 스펙을 즉시 4배로 스케일업함."
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** DB IaC 파일 내에 암호화 옵션과 백업 정책이 누락 없이 선언되고, 보안 그룹 규칙 상 DB 포트가 전면 개방되지 않았음이 린팅 도구를 통해 검증되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Schema Modified] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (락 리스크 최소화): DDL 쿼리가 프로덕션 테이블 전체에 Table Lock을 유발하여 API 장애를 일으킬 가능성이 없는가?
-  - 기준 2 (보안 노출): DB 엔드포인트의 `publicly_accessible` 속성이 활성화되어 외부 공격에 노출될 우려가 없는가?
+## 4. 변경 전 확인과 실행 경계
+- **[MUST] DDL 실행 전 확인:** 운영 DB의 스키마를 변경하기 전에 Table Lock 발생 가능성과 서비스 영향을 확인할 것.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - DB 리소스의 Public Access (`publicly_accessible = true`) 설정이 감지되거나 보안 그룹 상 DB 포트(3306, 5432 등)가 `0.0.0.0/0`에 노출되는 위험이 발견될 시 즉시 작업을 중단(Hard Block)하고 보안 경고를 발송할 것.
   - KMS CMK 암호화 옵션(`storage_encrypted = false`)이 비활성화된 상태로 RDS 생성이 시도될 경우 작업을 즉시 멈추고 보안 수정을 강제할 것.

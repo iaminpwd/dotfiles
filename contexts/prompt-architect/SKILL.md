@@ -1,8 +1,8 @@
 ---
 name: prompt-architect
 description: |
-  전역 AI 프롬프트 엔지니어링, 룰북(AGENTS.md, SKILL.md) 작성, 범용 쉘 스크립트 작성 표준 지침.
-  어느 워크스페이스에서든 AI 프롬프트를 수정하거나 범용 쉘 스크립트를 작성할 때 항상 발동됨.
+  AI 프롬프트와 룰북(AGENTS.md, SKILL.md)을 작성·검토·간소화할 때 사용하는 스킬.
+  일반 셸 코드 수정만으로는 호출하지 않으며, 셸 작성 기준은 필요할 때 참조할 수 있음.
 ---
 # Prompt Architect Skill
 
@@ -19,8 +19,9 @@ description: |
 
 * **공통 시스템 원칙**: references/010-core.md
 
-## 2. 작업 프로세스 제약 (Operational Gate)
+## 2. 검증
 
-- **[MUST] 토큰 소모 검증의 사전 승인 (Paid Eval Gate)**: `contexts/prompt-architect/evals/routing/measure.sh`는 케이스 1회당 실제 에이전트 세션을 띄워 토큰을 소모함. 사용자가 이 스크립트 실행을 명시적으로 요청한 경우에만 실행하고, 그 외에는 무료 로컬 검사(`contexts/prompt-architect/evals/routing/run.sh`의 description 용어 중복 분석, `prompt-lint.sh`)로 대체할 것. description을 수정한 뒤 효과를 확인해야 한다면, 전체 재측정 대신 관련 케이스 ID만 인자로 지정한 부분 측정을 사용자에게 비용(예정 세션 수)과 함께 제안할 것.
-- **[MUST] 프롬프트 코퍼스 정합성 검증 (Prompt Lint)**: `contexts/*/SKILL.md` 또는 `contexts/*/references/*.md` 파일을 신규 작성하거나 수정한 직후, 터미널에서 `prompt-lint.sh` 명령어를 실행하여 자가비판 SSOT 모듈 목록 일치, 참조 링크 무결성, 크로스 벤더 용어 오염, 코드펜스 짝, 크로스 스킬 개념 중복 후보를 정량 검증할 것. ERROR 항목은 완료 선언 전에 반드시 해결하고, WARNING 항목은 실제 중복인지 검토한 뒤 실재 중복 확인 시 SSOT 위임 구조로 정리할 것.
-- **[MUST] 린터 자가 검증 (Linter Regression Test)**: `bin/linters/prompt-lint.sh` 로직 자체를 수정한 직후에는 반드시 `bash ~/dotfiles/contexts/prompt-architect/tests/run.sh`를 실행해 회귀 테스트를 통과해야 한다.
+- `contexts/` 프롬프트 변경 후 원본 저장소에서 `bash bin/linters/prompt-lint.sh`를 실행한다. 오류는 해결하고 경고는 실제 영향과 미검증 범위를 확인한다.
+- 라우팅 표 변경 후 `just docs-index`, description 변경 후 `bash contexts/prompt-architect/evals/routing/run.sh --check-cases-only`로 정합성을 확인한다. 정적 검사는 실제 모델의 호출 정확도를 증명하지 않는다.
+- 린터 로직 변경은 `bash contexts/prompt-architect/tests/run.sh`로 회귀 검증한다.
+- **[MUST] 유료 평가:** `contexts/prompt-architect/evals/routing/measure.sh`는 실제 에이전트 세션을 실행한다. 사용자가 명시적으로 실행을 요청한 경우에만 수행한다. 그 외에는 로컬 정답지·description 분석을 사용한다.

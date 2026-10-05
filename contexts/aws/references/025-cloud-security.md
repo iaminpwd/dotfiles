@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when designing cloud network architecture, container deployments, or enterprise multi-account environments.
 references:
   - contexts/aws/references/020-security-compliance.md
@@ -31,28 +29,11 @@ references:
 - **[PREFER] SCP/Boundary:** Organizations의 SCP 및 IAM Permission Boundary를 활용하여 멤버 계정의 최소 권한 범위(Least Privilege)를 강제 적용할 것.
 - **[PREFER] Vulnerability & Data Classification:** EC2/ECR/Lambda 워크로드의 알려진 CVE 취약점은 Amazon Inspector로 자동 스캔하고, S3에 저장된 민감 데이터(PII 등)는 Amazon Macie로 자동 분류 및 탐지할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "DB 보안 그룹의 3306 포트 인바운드를 애플리케이션 보안 그룹 ID(`sg-xxxx`)만을 명시적으로 허용할 것."
-- "SSH 접근을 위한 22번 포트 인바운드 소스를 사내 VPN 대역(`10.10.0.0/16`)으로만 한정할 것."
-</example>
-<example>
-[Bad]
-- "DB 보안 그룹 3306 포트를 `0.0.0.0/0`으로 엽니다."
-- "SSH 포트를 `0.0.0.0/0`으로 임시 개방함."
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 탐지된 취약점은 무결하게 해결해야 합니다.
   - **감사 보고서:** 포트 추가/삭제, SG 신규 생성 등 중대한 변경이 발생할 경우에만 `security-audit-report.md`를 작성할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Network Rule Modified] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (포트 격리): 대국민 서비스 웹 포트(80/443) 이외의 모든 타겟 포트 인바운드가 `0.0.0.0/0` 없이 VPN 대역 또는 특정 보안 그룹으로만 격리되었는가?
-  - 기준 2 (데이터 경로): AWS 내부 서비스 통신이 VPC Endpoint를 경유하는 프라이빗 경로로만 구성되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 퍼블릭 IP를 갖는 EC2 인스턴스의 22(SSH) 또는 3389(RDP) 포트가 `0.0.0.0/0`으로 개방되어 배포 준비가 된 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 경고할 것.
   - 컨테이너 이미지 파이프라인에서 취약한 기본 이미지(CVE 크리티컬 레벨) 노출이 스캔 결과 감지되었으나 대체 이미지가 제안되지 않을 경우 작업을 즉시 중단할 것.

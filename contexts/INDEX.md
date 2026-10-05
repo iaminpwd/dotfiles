@@ -114,13 +114,13 @@ Kubernetes(k8s) 클러스터 및 컨테이너 오케스트레이션 스킬. Pod,
 
 ## pre-flight-check
 
-인프라 및 자동화 코드에 대한 정량적 사전 검증(Pre-Flight Check) 및 린트/정적 분석 파이프라인 스킬임.
+Terraform, Ansible, Helm, Dockerfile 및 셸 자동화 변경의 검증 명령·프로필·결과를 확인할 때 사용.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## prompt-architect
 
-전역 AI 프롬프트 엔지니어링, 룰북(AGENTS.md, SKILL.md) 작성, 범용 쉘 스크립트 작성 표준 지침.
+AI 프롬프트와 룰북(AGENTS.md, SKILL.md)을 작성·검토·간소화할 때 사용하는 스킬.
 
 | 작업 유형 | 참조 문서 |
 |---|---|

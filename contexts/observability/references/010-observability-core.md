@@ -1,6 +1,4 @@
 ---
-role: Senior SRE / Observability Engineer
-priority: critical
 trigger: Apply these rules when designing monitoring, logging, or tracing architecture across any cloud or K8s environment.
 references:
   - contexts/observability/references/020-metrics-alerting-standard.md
@@ -23,25 +21,10 @@ references:
 - **[PREFER] Vendor-Neutral Instrumentation:** 계측(Instrumentation) 코드는 특정 APM 벤더 SDK 대신 OpenTelemetry SDK를 반드시 우선 채택하여, 백엔드(Datadog, Grafana, CloudWatch 등) 교체 시 애플리케이션 코드 수정 없이 Exporter 설정만 변경 가능하도록 설계할 것.
 - **[MUST] Cloud-Agnostic Correlation Keys:** AWS(X-Ray Trace ID), Azure(Operation ID), K8s(Pod/Namespace 레이블) 등 플랫폼별 상관관계 키를 로그/메트릭/트레이스 3곳 모두에 일관되게 주입할 것.
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "결제 API의 SLO는 30일 롤링 윈도우 기준 가용성 99.95%, P99 레이턴시 400ms 이하로 정의함. Error Budget 소진 시 신규 배포를 동결함."
-</example>
-<example>
-[Bad]
-- "결제 API는 최대한 빠르고 안정적으로 동작해야 합니다." (측정 불가능한 모호한 목표)
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] Delegation:** 프로젝트 플래닝, 메트릭/알람, 로깅, 추적, 대시보드의 세부 규칙은 각각 `005`, `020`, `030`, `040`, `050` 모듈을 참조하여 검증을 위임할 것.
+- **[MUST] Delegation:** 현재 작업의 계획·메트릭·로그·추적·대시보드 기준만 각각 `005`, `020`, `030`, `040`, `050`에서 선택한다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[PREFER] 공통 자가 비판 절차 (전 observability 모듈 SSOT):** 본 파일 및 하위 참조 모듈(005, 020, 030, 040, 050)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
-- **[Trigger: Observability Design Proposed] 점검 기준 (통합성):**
-  - 기준 1 (상관관계): 메트릭/로그/트레이스가 공통 식별자로 상호 조회 가능한가?
-  - 기준 2 (SLO 명확성): SLI/SLO가 측정 가능한 구체적 수치로 정의되었는가?
+## 4. 변경 전 확인과 실행 경계
+- **[PREFER] 공통 자가 비판 절차 (전 observability 모듈 SSOT):** 참조 모듈(005, 020, 030, 040, 050) 중 현재 작업의 기준만 확인한다. 전체 조회나 별도 자가비판 출력은 필요하지 않다.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - SLO 수치나 사용자 체감 지표 정의 없이 "안정적인 모니터링"처럼 모호한 목표로 설계를 진행하려는 시도가 감지되면 즉시 작업을 중단(Halt & Clarify)하고 구체적 수치를 요청할 것.

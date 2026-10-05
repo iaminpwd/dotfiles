@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: critical
 trigger: Apply these rules when planning, designing, or reviewing Kubernetes configurations and resources.
 references:
   - contexts/k8s/references/020-networking-standard.md
@@ -11,7 +9,6 @@ references:
 Kubernetes 클러스터 설계 및 컨테이너 플랫폼 운영 적용 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Output Standard:** 즉시 본론으로 진입하고 Kubernetes API 리소스명(Pod, Service, Ingress 등)은 영문 원어를 유지할 것.
 - **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안할 것. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
@@ -32,7 +29,7 @@ Kubernetes 클러스터 설계 및 컨테이너 플랫폼 운영 적용 표준�
 - **[PREFER] Active Reconnaissance:** 매니페스트를 작성하거나 에러를 디버깅할 때 터미널에서 `kubectl get`, `kubectl describe` 등을 통해 실시간 K8s 컨텍스트를 능동적으로 조회하여 팩트 기반으로 작업할 것. 실제 클러스터 상태(팩트)를 동적으로 참조하여 보고할 것.
 
 ### 2.4 5차원 K8s 종속성 검증 (5D Integration Matrix)
-모든 Kubernetes 매니페스트나 배포 스크립트를 작성하기 전, 반드시 다음 절차를 따르십시오.
+권한·네트워크·시크릿·상태 저장 워크로드 등 연동에 영향을 주는 변경에 적용한다. 기존 클러스터 적용은 관련 상태를 확인하고, 새 환경의 초안은 가정과 적용 전 확인 사항을 구분한다.
 - **Step 0. Active Investigation (기존 클러스터 실태 조사):** 코드 작성 전 터미널에서 연동 대상 리소스들의 현재 실제 상태(NetworkPolicy, RoleBinding, ConfigMap/Secret, ResourceQuota 등)를 `kubectl get`, `kubectl describe` 등으로 조회하여 팩트를 확보할 것.
 - 확보한 팩트를 기반으로 다음 5가지 종속성을 검증할 것.
   1. **Network & Connectivity Topology:** Namespace 내/외부 통신을 제어하는 `NetworkPolicy` 양방향 룰, Ingress/Egress 라우팅, `Service` 포트 및 Service Mesh 엔드포인트 매핑 상태.
@@ -54,22 +51,14 @@ lifecycle:
       command: ["/bin/sh", "-c", "sleep 5"]
 ```
 </example>
-<example>
-[Bad]
-- 추측성 배포: "원인 파악 전 파드 매니페스트를 즉시 적용(`kubectl apply`)하겠습니다."
-- Probe 기본 설정 남용: "livenessProbe와 readinessProbe의 설정을 동일하게 구성하여 간단하게 끝냅니다."
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] Observability Delegation:** SLI/SLO, 알람 설계, 로깅, 분산 추적의 검증 기준은 `050-observability-standard` 모듈이 아니라 상위 `observability` 스킬(`SKILL.md`)을 참조하여 위임할 것. `050-observability-standard`는 K8s 네이티브 Prometheus Operator CRD 문법만 다루며 이 항목들은 명시적으로 범위 밖으로 두고 있습니다.
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** `pre-flight-check.sh`/`k8s-check.sh`의 K8s 관련 로직을 고칠 때는 `bash contexts/k8s/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. `fail-privileged.yaml`/`fail-host-network.yaml`/`fail-run-as-root.yaml`(4절 중단 조건), `fail-unset-resources.yaml`(2.2절 QoS)는 본 문서 조항을 재현하고, `fail-deprecated-api.yaml`/`fail-promql-syntax.yaml`은 050-observability-standard.md가 다루는 CRD 문법 검증기(k8s-check.sh) 대상입니다. 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[PREFER] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 본 파일 및 하위 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
-- **[Trigger: Architecture Proposed] 점검 기준 (아키텍처):**
-  - 기준 1 (가용성): 파드의 고가용성 분산 배치를 위해 `topologySpreadConstraints` 또는 `podAntiAffinity`가 매니페스트에 선언되었는가?
-  - 기준 2 (보안성): Namespace 격리가 ResourceQuota 및 NetworkPolicy와 결합되어 완벽한 테넌시 격리를 보장하는가?
+## 4. 변경 전 확인과 실행 경계
+- **[PREFER] 공통 자가 비판 절차 (전 k8s 모듈 SSOT):** 참조 모듈(020, 030, 040, 050, 060, 070, 080, 100) 중 현재 작업의 기준만 확인한다. 전체 조회나 별도 자가비판 출력은 필요하지 않다.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - CLI 도구가 없으면 설치된 동등한 도구나 제공된 자료로 가능한 검증을 진행할 것. 클러스터 접속이 필수인데 불가능하면 해당 검증의 미실행 상태와 필요한 도구·접속 정보를 보고할 것.
   - K8s 매니페스트 내에 `securityContext`의 `privileged: true`가 확인되거나 `hostNetwork: true` 등 심각한 보안 규정 위반이 감지되면 즉시 작업을 중단(Hard Block)하고 대안 설계를 요구할 것.

@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when writing or reviewing Terraform, Terragrunt, or Ansible code.
 references:
   - contexts/aws/references/010-aws-core.md
@@ -17,7 +15,7 @@ Terraform 및 Ansible IaC 코드 작성 표준임.
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
 ### 2.1 Terraform 엔지니어링 표준
-- **[PREFER] Active Investigation:** 코드 작성 전 반드시 `010-aws-core.md` 절차를 참조하여 실제 AWS 리소스들의 최신 상태를 물리적으로 선제 조사하고, 그 팩트만을 근거로 코드를 작성할 것.
+- **[PREFER] Active Investigation:** 기존 인프라를 변경할 때는 대상 계정·리전·관련 상태를 확인한다. 신규 코드 초안은 가정과 적용 전 확인 사항을 구분한다.
 - **[MUST] 검증 결과 보고:** 현재 변경에 해당하는 검사 결과와 정책 판단 근거를 보고할 것. 보고 형식과 별도 문서 작성 여부는 `contexts/pre-flight-check/SKILL.md`의 "검증 결과 보고" 절을 따른다.
 - **[PREFER] TGW:** 글로벌 확장성 확보를 위해 AWS Transit Gateway(TGW) 기반의 중앙 집중형 라우팅을 적극 제안할 것.
 - **[MUST] State Management:** 공유 환경의 State는 S3 원격 Backend와 `use_lockfile = true`로 잠금을 구성할 것. 기존 DynamoDB 잠금은 구버전 클라이언트의 호환성을 확인한 뒤 이전하며, 신규 구성에는 추가하지 않을 것.
@@ -52,22 +50,13 @@ terraform {
 }
 ```
 </example>
-<example>
-[Bad]
-```hcl
-# backend 블록 누락 (로컬 state 사용)
-# use_lockfile 누락 (S3 잠금 비활성화)
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `terraform plan`이 에러 없이 출력되고, `run-suite.sh` 통합 검증(Stop 훅이 활성화된 환경에서는 마지막 성공 검사 이후 변경 시 실행)까지 통과해야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Terraform Apply] 사전 조치 및 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):** 상태 변경 명령어를 실행하기 전 반드시 `terraform plan -input=false`를 먼저 실행할 것.
-  - 기준 1 (안전성): plan 결과 검토를 통해 의도치 않은 리소스 파괴(Destroy)나 프로덕션 다운타임이 발생하지 않음이 보장되는가?
-  - 기준 2 (보안성): Security Group이나 IAM 권한이 과도하게 열려있지 않은가?
+## 4. 변경 전 확인과 실행 경계
+- **[MUST] 적용 전 Plan:** 상태를 변경하는 Terraform 명령을 실행하기 전에 `terraform plan -input=false`를 실행하고, 삭제·중단 가능성과 SG/IAM 변경을 검토할 것.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `terraform plan` 결과 중 의도치 않은 영속적 리소스 삭제(Destroy)가 감지되고 복구 계획이 부재할 경우 작업을 중단하고 Halt & Clarify 상태로 진입할 것.
   - SSH/RDP 등 민감 포트의 `0.0.0.0/0` 과다 개방에 대한 중단 조건은 025-cloud-security.md §4를 참조하여 위임할 것.

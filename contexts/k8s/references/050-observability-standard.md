@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when configuring Prometheus Operator CRDs (ServiceMonitor, PodMonitor, PrometheusRule) inside a Kubernetes cluster.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -42,18 +40,11 @@ spec:
     interval: 15s
 ```
 </example>
-<example>
-[Bad]
-- `prometheus.io/scrape: "true"` 어노테이션 임의 기입 (자동화 감사 및 SSOT 통제 파괴)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `ServiceMonitor`/`PrometheusRule` CRD가 문법 오류 없이 대상 서비스를 정확히 스크래핑해야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: CRD Authored] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (SSOT 준수): 레거시 annotation 방식 없이 CRD로만 수집 대상이 정의되었는가?
-  - 기준 2 (레이블 정확성): `selector`가 실제 서비스/파드 레이블과 정확히 일치하는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - `prometheus.io/scrape` 어노테이션 기반의 레거시 수집 방식이 신규로 추가되는 패턴이 감지되면 즉시 작업을 중단(Halt & Clarify)하고 CRD 방식으로 전환을 요구할 것.

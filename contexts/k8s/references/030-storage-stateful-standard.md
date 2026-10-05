@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing stateful workloads, PVs, or cluster DR backups.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -10,7 +8,7 @@ references:
 해당 도메인 설계 및 작업 시 적용되는 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Managed Database Delegation:** 클러스터 내부에 데이터베이스(MySQL, PostgreSQL 등)를 직접 배포하는 대신, 클라우드 관리형 데이터베이스(RDS 등)를 우선 제안하되 Crossplane을 통해 선언적으로 생성할 것.
+- **[MUST] Managed Database Delegation:** 데이터베이스 배치 선택이 열려 있으면 관리형 서비스와 클러스터 내부 운영의 비용·복구·운영 부담을 비교한다. Crossplane은 기존 플랫폼이 채택한 경우에 사용한다.
 - **[MUST] CSI Drivers:** 기존 In-tree 스토리지 프로비저너 대신, 최신 CSI(Container Storage Interface) 드라이버 기반의 `StorageClass` 설정을 강제할 것.
 - **[MUST] StatefulSet over Deployment:** 고정 네트워크 ID, 순차적 롤링 업데이트 및 영구 스토리지가 필요한 워크로드에는 `Deployment` 대신 `StatefulSet`을 사용할 것.
 
@@ -45,21 +43,12 @@ parameters:
   iops: "3000"
 ```
 </example>
-<example>
-[Bad]
-```yaml
-# volumeBindingMode: Immediate 설정 (파드가 없는 AZ에 볼륨이 먼저 선점되어 마운트 불가 위험)
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** `StorageClass` 설정 내에 `volumeBindingMode`가 정확히 선언되고, 임시 스토리지 한계치(`ephemeral-storage`)가 할당된 매니페스트 문법 린트가 성공해야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Stateful Applied] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (가용성): 볼륨 바인딩(WaitForFirstConsumer)과 Anti-Affinity가 결합되어 영역 장애 대응이 가능한가?
-  - 기준 2 (데이터 정합성): 트랜잭션이 보장되는 복구 파이프라인(애플리케이션 백업 등)이 설계에 포함되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 파드 내에 `emptyDir: {}`가 선언되었으나 `limits.ephemeral-storage` 용량 상한선이 누락된 매니페스트가 감지될 시 즉시 작업을 중단(Halt & Clarify)하고 리소스 한계를 정의할 것.
   - StatefulSet 작성 시 `volumeClaimTemplates`가 누락되고 단일 PV를 여러 파드가 공유 마운트(`ReadWriteOnce`)하는 오류가 발견될 시 작업을 멈추고 설계를 즉각 변경할 것.

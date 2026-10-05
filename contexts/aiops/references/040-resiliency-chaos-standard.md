@@ -1,6 +1,4 @@
 ---
-role: Senior AIOps Engineer
-priority: high
 trigger: Apply these rules ONLY when writing automation scripts, testing edge-cases, or configuring error handling logic.
 references:
   - contexts/aiops/references/010-aiops-core.md
@@ -38,20 +36,13 @@ def process_webhook(event_id, payload):
     return execute_business_logic(payload)
 ```
 </example>
-<example>
-[Bad]
-- 멱등성 락 부재 (동일 결제 알람이 여러 번 유입될 시 중복 결제 사고 유발 안티패턴)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 테스트 커버리지 달성 및 예외/멱등성 검증 모킹 성공.
 - **[MUST] 검증 도구 매핑:** `pytest`/`jest`로 예외 캐치 및 격리를 검증하십시오.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Executing Critical Actions] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (멱등성 작동): 동일한 자동화 명령이 2회 연속 수행되더라도 상태 오염이나 중복 인프라 생성이 확실히 방지되는가?
-  - 기준 2 (예외 처리): 연동 대상인 API 게이트웨이 및 외부 서비스 장애 시, 에러를 조기에 차단하고 시스템을 안정적으로 복구시키는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 배치/이벤트 처리 스크립트 작성 시, 중복 유입에 대응하기 위한 멱등성 검증 로직(Idempotency Key 등)이 누락되어 데이터 오염 위험이 확인될 시 작업을 즉시 중단(Halt & Clarify)하고 락 설정을 구현하십시오.
   - LLM 에이전트 인풋에 사용자 입력값 소독(Sanitization) 필터가 누락되어 프롬프트 인젝션 및 무단 시스템 탈옥 공격에 노출될 위험이 탐지될 경우 작업을 즉시 멈추고 보안 가이드를 작성하십시오.

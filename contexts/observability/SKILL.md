@@ -20,7 +20,7 @@ description: |
 | 분산 추적 (OpenTelemetry) | references/040-tracing-standard.md |
 | 대시보드 설계 및 SaaS 연동 (Grafana, Datadog) | references/050-dashboard-saas-standard.md |
 
-* **기본 관측성 코어 원칙**: references/010-observability-core.md
+* 해당 주제의 설계·검토가 필요한 경우: references/010-observability-core.md
 
 ## 2. 작업 프로세스 제약 (Operational Gate)
 

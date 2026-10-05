@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: 노드 5개 초과 다이어그램의 좌표·크기를 계산하거나, 생성 직후 배치 품질을 검증할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

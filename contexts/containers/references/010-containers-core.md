@@ -1,6 +1,4 @@
 ---
-role: Senior Container Platform Engineer
-priority: critical
 trigger: Apply these rules when writing, reviewing, or optimizing Dockerfile/OCI image build definitions.
 references:
   - contexts/containers/references/020-image-hardening-standard.md
@@ -44,26 +42,15 @@ USER 65532:65532
 CMD ["/app/index.js"]
 ```
 </example>
-<example>
-[Bad]
-```dockerfile
-FROM ubuntu:latest
-COPY . .
-RUN apt-get update && apt-get install -y nodejs npm && npm install && npm run build
-CMD ["node", "index.js"]
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 검증기 수정 시 회귀 테스트 선통과:** Dockerfile 검증 로직을 고칠 때는 `bash contexts/containers/tests/run.sh`를 먼저 실행해 전부 통과하는지 확인할 것. 각 픽스처는 조항 하나씩을 재현합니다(예: `fail-unpinned-base.Dockerfile`은 2.1절 Pinned Versions, `fail-root-user.Dockerfile`은 020 4절 중단 조건). 새 검증 로직을 추가할 때는 위반을 재현하는 픽스처와 기대 결과를 `tests/`에 함께 등록할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[PREFER] 공통 자가 비판 절차 (전 containers 모듈 SSOT):** 본 파일 및 하위 참조 모듈(020, 030, 040, 100)의 점검 기준 중 현재 변경에 해당하는 항목을 확인할 것. 필수 검증의 실패는 해결하고, 관련 없는 항목의 점검이나 별도 자가비판 출력은 생략할 것.
-- **[Trigger: Dockerfile Authored] 점검 기준 (빌드 효율):**
-  - 기준 1 (멀티스테이지): 빌드 도구가 최종 런타임 이미지와 완전히 격리되었는가?
-  - 기준 2 (캐시 효율): 의존성 설치 레이어와 소스 코드 레이어가 분리되어 캐시 적중이 가능한가?
+## 4. 변경 전 확인과 실행 경계
+- **[MUST] 빌드 캐시:** 의존성 정의 파일과 설치 레이어를 소스 코드 복사 레이어보다 먼저 배치하여 소스 변경이 의존성 캐시를 무효화하지 않도록 할 것.
+- **[PREFER] 공통 자가 비판 절차 (전 containers 모듈 SSOT):** 참조 모듈(020, 030, 040, 100) 중 현재 작업의 기준만 확인한다. 전체 조회나 별도 자가비판 출력은 필요하지 않다.
 - **[MUST] 중단 조건 (Halt Conditions):**
   - Dockerfile 내에 평문 비밀번호나 API 키가 `ENV`/`ARG`로 영구 레이어에 굽히는 패턴이 감지되면 즉시 작업을 중단(Hard Block)하고 BuildKit Secret Mount로 전환을 요구할 것.
-  - `hadolint` CLI가 로컬에 설치되어 있지 않을 경우, 검증을 생략하는 대신 즉시 작업을 중단(Halt & Clarify)하여 설치를 요청할 것.
+  - 필수 검증 도구가 없으면 설치된 동등 도구를 확인하고 미검증 범위를 보고한다. 해당 검증을 전제로 하는 배포는 진행하지 않는다.
   - `docker system prune -af --volumes`, `docker rm -f $(docker ps -aq)` 등 파괴적 명령이 대상 필터(컨테이너 ID, 라벨 등 명시) 검증 없이 전면 실행되는 코드가 감지되면 즉시 작업을 중단(Hard Block)하고 안전장치 추가를 요구할 것.

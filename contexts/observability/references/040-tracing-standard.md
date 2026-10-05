@@ -1,6 +1,4 @@
 ---
-role: Senior SRE / Observability Engineer
-priority: high
 trigger: Apply these rules ONLY when instrumenting distributed tracing or configuring OpenTelemetry Collectors.
 references:
   - contexts/observability/references/010-observability-core.md
@@ -38,22 +36,13 @@ processors:
         probabilistic: {sampling_percentage: 10}
 ```
 </example>
-<example>
-[Bad]
-```yaml
-# Head-based 확률 샘플링만 10% 적용 -> 희귀 에러 트레이스가 통계적으로 누락됨
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 서비스 간 호출 체인에서 단일 `trace_id`로 전체 요청 흐름이 끊김 없이 조회되어야 합니다.
 - **[MUST] 검증 도구 매핑:** OpenTelemetry Collector 설정 변경 시 `otelcol validate --config <file>`(Collector Contrib 배포판 기준)로 설정 문법을 검증하고, 실제 트레이스 백엔드(Grafana Tempo/Jaeger UI 등)에서 임의 요청의 `trace_id`로 전체 스팬이 조회되는지 팩트로 확인할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Tracing Instrumented] 점검 기준 (절차는 010-observability-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (전파 연속성): 서비스 간 호출 전 구간에서 트레이스 컨텍스트 전파가 끊기지 않는가?
-  - 기준 2 (에러 가시성): 에러/고지연 트레이스가 샘플링에 의해 누락되지 않고 보존되는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 서비스 간 호출 경로 중 `traceparent` 헤더가 전파되지 않아 트레이스가 끊기는 구간이 감지되면 즉시 작업을 중단(Halt & Clarify)하고 계측 누락 구간을 보완할 것.
   - Head-based 확률 샘플링만 적용되어 에러 트레이스 보존이 보장되지 않는 설계가 감지되면 작업을 멈추고 Tail-Based Sampling 도입을 요구할 것.

@@ -1,6 +1,4 @@
 ---
-role: Senior Container Security Engineer
-priority: high
 trigger: Apply these rules ONLY when hardening container images against runtime escape and privilege escalation.
 references:
   - contexts/containers/references/010-containers-core.md
@@ -36,22 +34,12 @@ USER 10001
 ENTRYPOINT ["/app/server"]
 ```
 </example>
-<example>
-[Bad]
-```dockerfile
-# USER 지정 없음 -> 컨테이너가 UID 0(root)으로 실행됨
-ENTRYPOINT ["/app/server"]
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 이미지 내 셸에서 `whoami`가 비루트 사용자로 출력되고, 불필요한 setuid 바이너리가 존재하지 않아야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Image Hardened] 점검 기준 (절차는 010-containers-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (권한 격리): 최종 이미지가 비루트 고정 UID로 실행되도록 강제되었는가?
-  - 기준 2 (공격 표면): 런타임에 불필요한 셸/패키지 매니저/setuid 바이너리가 제거되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 최종 스테이지에 `USER` 지시어가 누락되어 컨테이너가 root(UID 0)로 실행되는 상태가 감지되면 즉시 작업을 중단(Hard Block)하고 비루트 사용자 지정을 요구할 것.
-  - `dive` 또는 `trivy` CLI가 로컬에 설치되어 있지 않을 경우 검증을 생략하는 대신 즉시 작업을 중단(Halt & Clarify)하여 설치를 요청할 것.
+  - 필수 검증 도구가 없으면 설치된 동등 도구를 확인하고 미검증 범위를 보고한다. 해당 검증을 전제로 하는 배포는 진행하지 않는다.

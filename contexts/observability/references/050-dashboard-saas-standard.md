@@ -1,6 +1,4 @@
 ---
-role: Senior SRE / Observability Engineer
-priority: high
 trigger: Apply these rules ONLY when designing Grafana dashboards or integrating observability SaaS platforms (Datadog, New Relic, Grafana Cloud).
 references:
   - contexts/observability/references/010-observability-core.md
@@ -41,21 +39,13 @@ references:
 }
 ```
 </example>
-<example>
-[Bad]
-- Grafana UI에서 수동으로 패널을 드래그해 만든 뒤 버전 관리 없이 방치 (재현 불가, 리뷰 불가)
-- 모든 애플리케이션 커스텀 메트릭을 허용목록 없이 SaaS로 전량 전송 (예상치 못한 청구 폭증)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 대시보드 JSON이 스키마 오류 없이 프로비저닝되고, SaaS 전송 메트릭이 허용목록 범위 내로 확인되어야 합니다.
 - **[MUST] 검증 도구 매핑:** `jq empty <dashboard.json>`으로 JSON 구조 유효성을 검증하고, Datadog/New Relic API의 사용량 조회 엔드포인트로 실제 수집 볼륨을 팩트로 확인할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Dashboard or SaaS Integration Proposed] 점검 기준 (절차는 010-observability-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (코드화): 대시보드가 버전 관리되는 코드로 존재하며 재현 가능한가?
-  - 기준 2 (비용 통제): SaaS 전송 메트릭/로그가 허용목록 또는 샘플링으로 카디널리티 폭증이 통제되는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 허용목록 없이 고카디널리티 커스텀 메트릭을 SaaS로 전량 전송하는 설계가 감지되면 즉시 작업을 중단(Halt & Clarify)하고 필터링 적용을 요구할 것.
   - 버전 관리되지 않는 수동 생성 대시보드가 프로덕션 유일한 관측 수단으로 방치된 경우 작업을 멈추고 Dashboard as Code로 전환을 요구할 것.

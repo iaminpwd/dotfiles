@@ -1,54 +1,10 @@
 ---
-role: Senior Prompt Architect
-priority: high
-trigger: Apply these rules ONLY when managing the dotfiles repository, committing changes, or running global formatters.
-references:
-  - contexts/dotfiles/references/010-core.md
-  - contexts/dotfiles/references/050-dotfiles-security-standard.md
+trigger: dotfiles 파일 구조, 링크, 변경 및 검증 방법을 확인할 때 참조.
 ---
-# 컨텍스트 모듈: Dotfiles & Meta-Prompting 코어 아키텍처 가이드
+# dotfiles 구조와 변경
 
-`dotfiles` 시스템 구성 및 메타 프롬프팅 작업 시 적용되는 최상위 행동 강령임.
-
-## 2. 세부 오퍼레이션 조항 (Actionable Rules)
-
-### 2.1 버전 관리 (Git) 및 포매터 안전망
-- **[MUST] Commit Gate:** 사용자가 커밋을 명시적으로 요청한 경우에만 커밋을 수행할 것. 접두사 컨벤션·한국어 작성·원자적 그룹핑은 base.AGENTS.md §8을 그대로 따른다.
-- **[MUST] Targeted Execution:** 포매터 실행 시 의도한 파일만 정확히 수정하기 위해 반드시 단일 타겟 파일명을 명시(`shfmt -w <file>`)하여 안전하게 실행할 것.
-
-### 2.2 로컬 멱등성 및 환경 검증 (3D Local Verification)
-- **[MUST] Active Investigation:** 코드 제안 전, 반드시 터미널에서 대상 파일의 존재 유무, 기존 설정 내용(`grep`), 시스템 패키지 설치 여부(`which`, `dpkg` 등)를 물리적으로 조회할 것.
-- 그 후, 팩트를 바탕으로 다음 3가지 종속성을 검증할 것.
-  1. **Idempotency (멱등성 보장):** 스크립트를 여러 번 실행해도 환경 변수가 중복 추가되거나 기존 파일이 파괴되지 원천 무결성을 보장하는 방어 로직이 설계되었는가?
-  2. **Conflict Check (독립성 보장):** 기존에 선언된 Alias, PATH, 함수들과 이름이 충돌하여 오작동을 유발하지 않는가?
-  3. **Dependency (의존성):** 스크립트 실행에 필요한 OS, 권한, 선행 패키지가 존재하는가?
-
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-```bash
-# 의미 단위로 분리된 개별 커밋 (Atomic Commits)
-git commit -m "feat(aws): 보안 자가 비판 트리거 추가"
-git commit -m "fix(bash): set -e 멱등성 버그 해결"
-```
-</example>
-<example>
-[Bad]
-```bash
-# 여러 변경 사항을 하나로 뭉뚱그린 커밋 (안티패턴)
-git commit -m "파일 업데이트 및 버그 수정"
-```
-</example>
-</examples>
-
-## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 사용자가 커밋을 요청한 경우에 한해, 커밋 전 `TruffleHog` 시크릿 스캔이 통과되고 목적 단위로 분리된 시맨틱 커밋이 생성되어야 합니다. 커밋 요청이 없는 작업은 파일 수정과 검증 통과만으로 완료로 간주할 것.
-
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Commit] 점검 기준 (절차는 010-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (원자성): 현재 스테이징된 변경 사항이 단일 책임 원칙에 따라 논리적으로 분리되었는가?
-  - 기준 2 (시맨틱 규칙): 커밋 메시지가 `feat:`, `fix:`, `chore:` 등 시맨틱 컨벤션을 정확히 준수하는가?
-- **[MUST] 중단 조건 (Halt Conditions):**
-  - 이미 원격 저장소에 Push된 커밋 히스토리를 `git push --force`로 강제 재작성하려는 명령이 감지될 시 즉시 작업을 중단(Halt & Clarify)하고 사용자의 명시적 승인을 요청할 것.
-  - 단순 포매터(`shfmt`, `prettier` 등)를 전체 디렉토리에 일괄 적용(`-r` 플래그 등)하는 위험한 전역 실행 패턴이 감지되면 즉시 멈추고 단일 타겟 파일 명시 후 실행할 것.
+- 셸 설정 원본은 `stow/`, 초기 설치는 `bootstrap.sh`와 `ansible/`, 실행 도구는 `bin/`, 지침·검증 자산 원본은 `contexts/`에서 관리한다.
+- 링크를 통해 노출된 설정은 실제 원본을 확인한 뒤 수정한다. 포매터는 변경 대상 파일을 명시해 실행하며 사용자 설정을 일괄 덮어쓰지 않는다.
+- 셋업 변경은 재실행 시 중복 설정·파일 손실이 없는지, 기존 Alias·PATH·함수와 충돌하지 않는지, OS·권한·선행 도구 조건이 맞는지 확인한다.
+- 커밋 선호와 검증 훅 준수는 `base.AGENTS.md`를 따른다. 커밋 요청이 없으면 파일 변경과 해당 검증으로 완료한다.
+- 시크릿 변경과 원격 반영 전 검사는 `050-dotfiles-security-standard.md`를 참조한다. 원격 히스토리 강제 재작성은 명시적 승인 없이 실행하지 않는다.

@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: OpenStack 관련 drawio XML 파일을 생성하거나 수정할 때 적용
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

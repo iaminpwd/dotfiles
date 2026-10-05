@@ -1,54 +1,8 @@
 ---
-role: Senior AIOps Engineer
-priority: high
-trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new AIOps or Automation project.
-references:
-  - contexts/aiops/references/010-aiops-core.md
-  - contexts/aiops/references/020-security-compliance.md
-  - contexts/aiops/references/030-finops-optimization.md
+trigger: aiops 프로젝트 계획을 작성할 때 참조.
 ---
-# 컨텍스트 모듈: AIOps 파이프라인 마스터 플랜(계획서) 작성 표준
+# aiops 프로젝트 계획
 
-새로운 SRE 자동화 파이프라인 및 AI 에이전트 마스터 플랜 작성 시 적용되는 표준입니다.
-
-## 1. 핵심 설계 원칙
-- **[PREFER] 계획서 위치:** 사용자가 지정한 형식과 경로를 따를 것. 별도 파일이 필요한데 지정이 없으면 저장소의 기존 계획 문서 관례를 사용할 것.
-- **[PREFER] Agentic RAG:** 설계 전 사내 표준(SSOT) 룰북을 조회하여 계획서에 반영하십시오.
-
-## 2. 세부 오퍼레이션 조항 (Actionable Rules)
-
-### 2.1 마스터 플랜 구성 예시 (Master Plan Schema)
-아래 항목 중 현재 자동화 파이프라인에 해당하는 내용을 포함하고, 사용자 지정 형식에 맞게 구성하십시오.
-1. **프로젝트 요약 (Executive Summary)**: 자동화 목표 및 SRE 핵심 지표(MTTR 단축, DORA 메트릭 등)를 명시하십시오.
-2. **아키텍처 청사진 (Architecture Blueprint) & ADR**: 전체 시스템 구성도를 설계하고, 도입 기술에 대해 ADR(Architecture Decision Records) 형식을 적용하여 대안 평가 및 채택 사유를 명시하십시오.
-3. **관측성 및 텔레메트리 (Observability & Telemetry)**: 로그 수집, 분산 트레이싱, DORA 지표 연동 계획을 수립하십시오.
-4. **비용 및 리소스 최적화 (FinOps)**: 예측 비용 및 컴퓨팅 자원의 스케일링 리미트를 명시하십시오.
-5. **멱등성 및 상태 관리 (Idempotency & State)**: 중복 실행을 막기 위한 멱등 키(Idempotency Key) 및 상태 잠금 로직을 설계하십시오.
-6. **장애 허용 및 안전망 (Resiliency & Guardrails)**: 서킷 브레이커, DLQ 연동, Human-in-the-loop(수동 승인) 등 파괴적 명령에 대한 방어 가드레일을 명시하십시오.
-7. **Closed-Loop 자동화 설계 (Closed-Loop Automation)**: 탐지→진단→대응→검증 4단계 상태 전환 명세 및 동적 임계치 알림 노이즈 제거 방안을 수립하십시오.
-8. **금융 보안 및 비식별화 (ISMS-P & Anonymization)**: PII/금융 민감 데이터 비식별화 마스킹, 프라이빗 LLM 게이트웨이 통제 및 감사 로그 계획을 명시하십시오.
-9. **자동화 검증 (Eval-Driven Testing)**: 시스템 정상 작동을 확인하는 Fault Injection 및 카오스 엔지니어링 검증 방안을 포함하십시오.
-
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- 아키텍처 청사진 ADR: "기존의 Jenkins 수동 빌드 방식 대신, 리스크 격리를 위해 GitHub Actions와 ArgoCD Pull-based GitOps 방식을 채택합니다. 이를 통해 동기화 이력을 Git에 영구 기록합니다."
-</example>
-<example>
-[Bad]
-- 모호한 아키텍처 계획: "배포는 적당한 CI/CD 도구를 사용해 자동화할 계획임." (ADR 근거 및 설계 구체성 결여)
-</example>
-</examples>
-
-## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 요청 범위의 설계와 관련 보안·멱등성 조건 및 검증 방법이 정리되어야 합니다.
-- **[MUST] 검증 도구 매핑:** `markdownlint`로 형식 및 가독성을 자동 검증하십시오.
-
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aiops-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (설계 강건성): 보안(Credential 관리)과 멱등성(중복 실행 방어)이 완벽하게 아키텍처 설계 상에 보장되었는가?
-  - 기준 2 (리스크 완화): 자동화 오작동으로 인한 자원 파괴(Delete) 및 권한 남용을 차단하는 Guardrail이 포함되었는가?
-- **[MUST] 중단 조건 (Halt Conditions):**
-  - 자동화 파이프라인 내에 수동 승인 게이트(Human-in-the-loop) 없이 프로덕션 리소스를 파괴적으로 삭제/변경하는 자동화 룰이 감지될 시 즉시 작업을 중단(Halt & Clarify)하고 가드레일을 설계하십시오.
-  - 중요한 기술 선택의 근거가 부족하면 관련 대안과 트레이드오프를 보완하십시오. 표 누락만으로 작업을 중단하지 마십시오.
+- 사용자 지정 형식과 기존 저장소 관례를 따른다. 범위·구현 순서·검증·복구 방법과 중요한 선택의 근거를 적는다. 고정 목차나 모든 기술에 대한 별도 ADR을 강제하지 않는다.
+- 자동화 목표와 측정 지표, 탐지→진단→대응→검증 상태 전환, 멱등 키·잠금, 예외 격리·DLQ, 비용·리소스 상한, 텔레메트리·런북 근거, 감사 로그와 검증을 포함한다. 금융 환경에서는 비식별화·프라이빗 LLM 접근 통제를 명시한다. 프로덕션 파괴적 삭제·변경은 수동 승인 게이트로 보호한다.
+- 기존 환경을 변경하면 관련 실제 상태를 확인한다. 신규 환경은 가정과 적용 전 확인 사항을 구분한다. 세부 규칙은 SKILL.md에서 현재 작업의 참조만 선택한다.

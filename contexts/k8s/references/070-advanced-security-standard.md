@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing K8s runtime security, admission control policies, or threat detection.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -47,20 +45,12 @@ spec:
         - NET_BIND_SERVICE
 ```
 </example>
-<example>
-[Bad]
-- `readOnlyRootFilesystem: false` 또는 해당 설정 누락 (공격자의 런타임 악성코드 바이너리 설치 위험 노출)
-- `runAsNonRoot: false` 또는 root 사용자 실행 방치 (컨테이너 이탈 및 노드 루트 권한 탈취 안티패턴)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** `trivy`를 통한 취약점 스캔 분석 결과가 에러 없이 출력되고, 발견된 위반 내역과 조치 권고가 포함된 `security-audit-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** `trivy`를 통한 취약점 스캔 분석 결과가 에러 없이 출력되고, 발견된 위반 내역과 조치 권고를 보고해야 합니다. 별도 `security-audit-report.md`는 요청된 경우 작성합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Code Review / Security Scan] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (컨테이너 격리성): 컨테이너가 Root 권한 없이 가동되며 기본 OS Capability가 완벽하게 드롭(`drop: [ALL]`)되었는가?
-  - 기준 2 (이미지 신뢰성): 빌드/배포 단계에서 서명(Cosign) 유효성이 보증되어 비인증 이미지 배포가 완벽하게 통제되는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - K8s 파드/배포판 매니페스트 내에 `readOnlyRootFilesystem` 속성이 `false`로 주입되었거나 `runAsNonRoot` 설정이 누락되어 배포가 준비된 상태가 감지되면 즉시 작업을 중단(Hard Block)하고 가드레일을 주입할 것.
   - Trivy 스캔을 통해 CVE 취약점 중 Critical 등급의 위반 항목이 감지되고 보안 팀 예외 승인(Ignore File)이 부재할 시 즉시 작업을 멈추고 대체 이미지를 제안할 것.

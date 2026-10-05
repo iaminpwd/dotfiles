@@ -1,6 +1,4 @@
 ---
-role: Senior Security Architect
-priority: high
 trigger: Apply these rules whenever writing, modifying, or auditing AWS Security Groups, IAM Policies, Secrets, or general cloud infrastructure security.
 references:
   - contexts/aws/references/010-aws-core.md
@@ -38,29 +36,12 @@ AWS 자격 증명 및 IAM 권한 설계 시 적용되는 표준임.
 password = data.aws_secretsmanager_secret_version.db_pass.secret_string
 ```
 </example>
-<example>
-[Bad]
-- 과도한 권한 부여:
-```json
-{
-  "Action": "*",
-  "Resource": "*"
-}
-```
-- 평문 패스워드 노출:
-```hcl
-password = "SuperSecret123!"
-```
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 모든 자격 증명 노출 위반 검사가 무결하게 통과되고, IAM 정책의 범위가 승인된 리소스로 격리되어야 합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: IAM Policy Created] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (최소 권한): 정책이 와일드카드(`*`) 없이(또는 접두사 한정으로만) 작성되어 권한 상승(Privilege Escalation) 가능성이 통제되었는가?
-  - 기준 2 (자원 격리): `Resource` 구문에 명확한 ARN이 지정되어 리소스 격리가 보장되는가?
+## 4. 변경 전 확인과 실행 경계
 - **[Trigger: Security Vulnerability Found] 중단 조건 (Halt Conditions):**
   - 자격 증명(Access Key 등)이 평문으로 파일이나 주석에 유출되었음이 감지되면 즉시 모든 작업을 중단(Hard Block)하고 유출 상태를 사용자에게 경고할 것.
   - 관리자 권한(`AdministratorAccess`)이 불필요한 계정에 부여되거나 권한 범위가 과도한 IAM 정책 생성이 감지되면 작업을 멈추고 보안 검토를 요청할 것.

@@ -1,63 +1,8 @@
 ---
-role: Senior Cloud Architect
-priority: high
-trigger: Apply these rules ONLY when planning, architecting, or creating a Master Plan for a new AWS/Cloud project.
-references:
-  - contexts/aws/references/010-aws-core.md
-  - contexts/aws/references/020-security-compliance.md
-  - contexts/aws/references/025-cloud-security.md
-  - contexts/aws/references/030-finops-optimization.md
-  - contexts/aws/references/050-iac-standard.md
-  - contexts/aws/references/060-eks-standard.md
-  - contexts/aws/references/090-day2-operations.md
+trigger: aws 프로젝트 계획을 작성할 때 참조.
 ---
-# 컨텍스트 모듈: AWS 프로젝트 마스터 플랜(계획서) 작성 표준
+# aws 프로젝트 계획
 
-새로운 클라우드 프로젝트 마스터 플랜 기획 시 적용되는 표준임.
-
-## 1. 핵심 설계 원칙
-- **[PREFER] 계획서 위치:** 사용자가 지정한 형식과 경로를 따를 것. 별도 파일이 필요한데 지정이 없으면 저장소의 기존 계획 문서 관례를 사용할 것.
-- **[PREFER] 계획서 구성:** 아래 목차에서 현재 프로젝트에 필요한 항목을 선택할 것. 사용자 지정 형식이 있으면 그 형식을 따르되, 관련 보안·비용·검증 조건은 포함할 것.
-  1. 프로젝트 요약 (Executive Summary)
-  2. 아키텍처 청사진 (Architecture Blueprint) & ADR (Architecture Decision Records)
-  3. 네트워크 및 연결성 (Network & Connectivity)
-  4. 보안 및 자격 증명 (Security & IAM)
-  5. 비용 최적화 (FinOps & Cost Estimation)
-  6. 코드형 인프라 (IaC & Idempotency)
-  7. 운영 및 리스크 관리 (Risk Management & Day-2)
-  8. 구현 청사진 (Implementation Blueprint)
-  9. 자동화 검증 (Eval-Driven Testing)
-  10. AI 및 개발자 제약사항 (AI & Developer Constraints)
-
-## 2. 세부 오퍼레이션 조항 (Actionable Rules)
-
-### 2.1 아키텍처 설계 기획 표준
-- **[PREFER] Agentic RAG:** 설계 전 에이전트 스스로 파일 검색·조회로 `030`(FinOps), `060`(K8s) 등 사내 표준 프롬프트 룰을 능동 조사하여 반영할 것.
-- **[MUST] AWS Account Foraging:** 기존 계정에 적용하는 설계는 대상 계정·리전과 관련 리소스 상태를 확인할 것. 신규 환경의 개념 설계는 가정과 적용 전 확인 사항을 구분할 것.
-- **[PREFER] Cloud Alternatives Table:** 컴퓨팅·스토리지 선택이 열려 있고 비용이나 운영에 영향을 주면 관련 대안을 비교할 것. 사용자가 이미 선택한 서비스는 재선택을 요구하지 않을 것.
-- **[MUST] Architecture Blueprint & ADR:** 도입된 기술에 대해 ADR 형식을 차용하여 명시적인 채택/기각 사유와 트레이드오프를 기록할 것.
-- **[PREFER] Step-by-Step Execution:** 구현 청사진 설계 시 복잡도를 낮추기 위해 `vpc.tf` -> `iam.tf` -> `eks.tf` 등 의존성을 분리하여 순차적 생성 흐름을 작성할 것.
-
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- 구현 청사진: "VPC CIDR은 `10.0.0.0/16`으로, 리소스 접두사는 `prd-streaming-`으로 지정함."
-- AI 제약사항: "- **[MUST] Serverless First**: 이 프로젝트에서는 Fargate나 Lambda 자원을 우선적으로 채택할 것."
-</example>
-<example>
-[Bad]
-- 모호한 청사진: "VPC CIDR 및 리소스 접두사는 환경 변수들을 적당히 사용해 알아서 만드시오."
-- 모호한 제약사항: "서버는 Fargate로 할 것."
-</example>
-</examples>
-
-## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 요청한 범위의 설계, 관련 위험과 검증 방법이 사용자 지정 형식 또는 저장소 관례에 맞게 정리되어야 합니다.
-
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Before Finalizing Plan] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (설계 합치성): 보안(Least Privilege)과 비용(FinOps)이 타당한 ADR 근거와 함께 보완적으로 설계되었는가?
-  - 기준 2 (의존성 무결성): 생성될 파일들이 완벽하게 종속성이 해결된 순서로 구현 청사진에 기재되었는가?
-- **[MUST] 중단 조건 (Halt Conditions):**
-  - 가상 아키텍처가 해당 리전의 서비스 할당량(Quota)을 초과하는 사양이 감지되면, 즉시 Fargate/Lambda 등으로의 서버리스 우회 전환 설계를 구성하거나, 작업을 멈추고 사용자에게 Quota 상향 조정을 정식 보고할 것.
+- 사용자 지정 형식과 기존 저장소 관례를 따른다. 범위·구현 순서·검증·복구 방법과 중요한 선택의 근거를 적는다. 고정 목차나 모든 기술에 대한 별도 ADR을 강제하지 않는다.
+- 대상 계정·리전, 네트워크·IAM·상태 관리, 예상 비용, 가용성 요구, 검증과 롤백을 포함한다. 기존 환경의 상태와 개념 설계의 가정을 구분한다. 할당량 초과가 예상되면 구성 대안과 할당량 조정 필요성을 보고한다.
+- 기존 환경을 변경하면 관련 실제 상태를 확인한다. 신규 환경은 가정과 적용 전 확인 사항을 구분한다. 세부 규칙은 SKILL.md에서 현재 작업의 참조만 선택한다.

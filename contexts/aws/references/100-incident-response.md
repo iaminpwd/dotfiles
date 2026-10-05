@@ -1,6 +1,4 @@
 ---
-role: Senior Cloud Architect
-priority: high
 trigger: Apply these rules ONLY when investigating an error, bug, or system incident.
 references:
   - contexts/aws/references/010-aws-core.md
@@ -40,26 +38,11 @@ references:
   - **Action Items (액션 아이템)**: [시스템 강건성을 위한 아키텍처 개선 후속 조치 목록]
   ```
 
-### 예시 코드 및 패턴 (Few-Shot Examples)
-<examples>
-<example>
-[Good]
-- "작업자의 실수로 DB가 삭제됨" -> "운영 DB에 prevent_destroy 락이 걸려있지 않아 휴먼 에러가 시스템 파괴로 이어질 수 있는 구조적 취약점이 있었음"
-</example>
-<example>
-[Bad]
-- "담당자가 주의를 기울이지 않아 발생함. 앞으로 교육을 통해 주의를 주겠음." (개인을 탓함)
-</example>
-</examples>
-
 ## 3. 검증 및 수락 기준 (Success Criteria)
 - **[MUST] 완료 조건 (Done when):** 요청 범위의 조사·수정 결과, 확인된 근거와 미확정 사항, 필요한 후속 조치를 보고할 것. 코드 수정이 포함되면 해당 검증 결과를 함께 제시하고, 별도 보고서 파일은 요청된 경우에 작성할 것.
 - **[MUST] 검증 도구 매핑:** `aws logs filter-log-events` 및 CloudWatch CLI 도구를 활용하여 팩트 로그 상태를 기계적으로 추출할 것.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: RCA Completed] 점검 기준 (절차는 010-aws-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (시스템적 원인 규명): 장애의 원인이 사람의 부주의(Human Error)가 아닌 시스템적/구조적 결함으로 상세히 귀결되었는가?
-  - 기준 2 (액션 아이템의 구체성): 재발 예방을 위한 액션 아이템이 즉시 실행 가능한 형태(설정 파일 링크, 스크립트 수정 등)로 제시되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 문제 분석 및 데이터 수집 시, 로컬에 CloudWatch 로그 수집 등 핵심 CLI 도구(`aws cli`)가 누락되어 있거나 인증 권한 오류(`AccessDenied`)로 인해 팩트 수집이 3회 연속 실패할 경우 즉시 작업을 중단(Halt & Clarify)하고 권한을 요청할 것.
   - 임시 조치(Mitigation) 전, 장애 원인을 캐내기 위해 수정을 뒤로 미루고 복구 적용에 브레이크를 거는 동작이 확인될 시 작업을 멈추고 복구 최우선 조치를 먼저 취할 것.

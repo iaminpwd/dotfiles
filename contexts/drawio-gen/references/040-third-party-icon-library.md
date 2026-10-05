@@ -1,6 +1,4 @@
 ---
-role: Infrastructure Diagram Generator
-priority: high
 trigger: AWS/Azure 네이티브 리소스가 아닌 OSS/서드파티 도구 아이콘을 drawio XML에 표현할 때 적용 (클라우드 공통 SSOT)
 references:
   - contexts/drawio-gen/references/010-drawio-xml-standard.md

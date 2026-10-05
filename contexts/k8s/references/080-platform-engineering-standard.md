@@ -1,6 +1,4 @@
 ---
-role: Senior K8s Platform Architect
-priority: high
 trigger: Apply these rules ONLY when designing platform engineering, internal developer portals, or self-service workflows.
 references:
   - contexts/k8s/references/010-k8s-core.md
@@ -46,19 +44,12 @@ spec:
       class: ebs-gp3-sc
 ```
 </example>
-<example>
-[Bad]
-- 원시 StatefulSet을 직접 사용해 복제본 3개짜리 DB나 카프카 배포 (스토리지 마운트, 장애 조치 스크립팅을 플랫폼 관리자가 매번 수동 작성해야 하는 안티패턴)
-</example>
 </examples>
 
 ## 3. 검증 및 수락 기준 (Success Criteria)
-- **[MUST] 완료 조건 (Done when):** 작성된 Operator 매니페스트와 vcluster 템플릿의 문법 에러가 없고, 시스템 장애 시 대응 가이드를 포함한 `troubleshooting-report.md` 작성이 완료되어야 합니다.
+- **[MUST] 완료 조건 (Done when):** 작성된 Operator 매니페스트와 vcluster 템플릿의 문법 에러가 없고, 시스템 장애 시 대응 가이드를 제공해야 합니다. 별도 `troubleshooting-report.md`는 요청된 경우 작성합니다.
 
-## 4. 도메인 특화 자가 비판 및 중단 조건 (Self-Critique & Halt Conditions)
-- **[Trigger: Architecture Debugging] 점검 기준 (절차는 010-k8s-core.md의 공통 자가 비판 절차 참조):**
-  - 기준 1 (추상화 수준): 애플리케이션 개발자가 마크다운이나 템플릿 변수 3~4개 기입만으로 서비스 배포가 완료되는가?
-  - 기준 2 (다중 테넌시 격리): Namespace 소프트 격리(Soft Isolation)로 인한 크로스 테넌트 자원 탈취 리스크가 vcluster를 통해 완전히 통제되었는가?
+## 4. 변경 전 확인과 실행 경계
 - **[MUST] 중단 조건 (Halt Conditions):**
   - 클러스터 내부에 DB나 MQ 같은 상태 저장 미들웨어를 배포하면서, 전용 Operator CRD 없이 원시 StatefulSet으로 작성된 매니페스트가 감지될 시 즉시 작업을 중단(Halt & Clarify)하고 Operator 적용을 통보할 것.
   - Multi-tenant 네임스페이스 설계 시 다른 테넌트의 리소스 명세를 변조할 수 있는 와일드카드 RBAC (`Role` 내 `resources: ["*"]`, `verbs: ["*"]`) 권한이 감지되면 즉시 작업을 멈추고 보안 룰을 세분화할 것.
