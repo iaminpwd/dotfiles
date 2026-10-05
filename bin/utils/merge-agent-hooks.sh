@@ -4,13 +4,31 @@
 
 set -euo pipefail
 
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. fresh install 시 Homebrew
+# coreutils가 설치돼 있어도 현재 Ansible 프로세스는 새 .zshenv/gnubin PATH를 다시
+# 로드하지 않으므로, plain readlink + cd -P만으로 경로를 정규화한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
 # lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-MAH_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+MAH_SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}")
+MAH_SCRIPT_DIR=$(dirname "$MAH_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$MAH_SCRIPT_DIR/../lib/jq-resolve.sh"
 
 PLAYBOOK_DIR="${1:-$HOME/dotfiles/ansible}"
-HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh")"
+HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh")"
 
 GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
@@ -55,8 +73,8 @@ cp -p "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
 
 # 파일은 폐기했지만 이전 설치의 등록을 제거하기 위한 경로는 유지한다.
 LEGACY_LIVE_NAME="pre-flight-live-hook.sh"
-LIVE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME")"
-GATE_HOOK_SCRIPT="$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh" 2>/dev/null || echo "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
+LIVE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME")"
+GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
 
 # shellcheck disable=SC2016
 "$JQ" --arg cmd "$HOOK_SCRIPT" '
