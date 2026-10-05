@@ -1,17 +1,31 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":configMigration", "abandonments:recommended"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":configMigration",
+    "abandonments:recommended"
+  ],
   "timezone": "Asia/Seoul",
-  "schedule": ["before 6am on monday"],
+  "schedule": [
+    "before 6am on monday"
+  ],
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
-      "matchManagers": ["mise"],
+      "matchManagers": [
+        "mise"
+      ],
       "groupName": "mise 도구 버전 업데이트",
-      "labels": ["dependencies", "mise"]
+      "labels": [
+        "dependencies",
+        "mise"
+      ]
     },
     {
-      "matchManagers": ["mise"],
+      "matchManagers": [
+        "mise"
+      ],
       "matchDepNames": [
         "checkov",
         "fzf",
@@ -36,12 +50,37 @@
       ]
     },
     {
-      "matchManagers": ["custom.regex"],
+      "matchManagers": [
+        "custom.regex"
+      ],
       "groupName": "zsh 플러그인 버전 업데이트",
-      "labels": ["dependencies", "zsh"]
+      "labels": [
+        "dependencies",
+        "zsh"
+      ],
+      "matchDepNames": [
+        "oh-my-zsh",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting"
+      ]
     },
     {
-      "matchDepNames": ["oh-my-zsh"],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "mise"
+      ],
+      "groupName": "mise 자체 버전 업데이트",
+      "labels": [
+        "dependencies",
+        "mise"
+      ]
+    },
+    {
+      "matchDepNames": [
+        "oh-my-zsh"
+      ],
       "minimumReleaseAge": "14 days",
       "description": "oh-my-zsh는 릴리스 태그 없이 master 커밋을 그대로 추적하므로, 태그 기반 의존성과 달리 메인테이너의 사전 검증 절차가 없음. 갓 올라온 커밋이 되돌려지거나 문제로 드러날 시간을 벌기 위해 14일 숙성 기간을 둠."
     }
@@ -49,8 +88,24 @@
   "customManagers": [
     {
       "customType": "regex",
+      "description": "bin/utils/install-mise.sh의 MISE_VERSION pin을 jdx/mise GitHub Release로 추적",
+      "managerFilePatterns": [
+        "bin/utils/install-mise.sh"
+      ],
+      "matchStrings": [
+        "MISE_VERSION=\"(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)\""
+      ],
+      "depNameTemplate": "mise",
+      "packageNameTemplate": "jdx/mise",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
       "description": "ansible.builtin.git으로 커밋 SHA 고정된 oh-my-zsh 본체를 master 브랜치 최신 커밋으로 추적",
-      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "managerFilePatterns": [
+        "ansible/roles/zsh/tasks/main.yml"
+      ],
       "matchStrings": [
         "repo: '(?<packageName>https://github\\.com/ohmyzsh/ohmyzsh)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40})"
       ],
@@ -61,7 +116,9 @@
     {
       "customType": "regex",
       "description": "zsh-autosuggestions 플러그인은 실행값을 commit SHA로 고정하고 주석의 안정 태그와 digest를 함께 추적",
-      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "managerFilePatterns": [
+        "ansible/roles/zsh/tasks/main.yml"
+      ],
       "matchStrings": [
         "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-autosuggestions)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>\\S+)"
       ],
@@ -71,7 +128,9 @@
     {
       "customType": "regex",
       "description": "zsh-syntax-highlighting 플러그인은 실행값을 commit SHA로 고정하고 주석의 안정 태그와 digest를 함께 추적",
-      "managerFilePatterns": ["ansible/roles/zsh/tasks/main.yml"],
+      "managerFilePatterns": [
+        "ansible/roles/zsh/tasks/main.yml"
+      ],
       "matchStrings": [
         "repo: 'https://github\\.com/(?<packageName>zsh-users/zsh-syntax-highlighting)\\.git'[\\s\\S]*?version: (?<currentDigest>[0-9a-f]{40}) # (?<currentValue>\\S+)"
       ],
