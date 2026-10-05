@@ -61,7 +61,12 @@ fi
 if ! command -v zsh >/dev/null 2>&1; then
   echo "[WARNING] SKIP nested-shell-activation — zsh 미설치로 이 회귀가 수행되지 않았습니다"
 elif [ ! -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]; then
-  echo "[WARNING] SKIP nested-shell-activation — oh-my-zsh 미설치로 이 회귀가 수행되지 않았습니다"
+  if [ "${CI:-}" = "true" ]; then
+    report "nested-shell-activation prerequisite (CI에 oh-my-zsh 준비)" 1 \
+      "GitHub Actions의 Lint & Test Gate가 oh-my-zsh 없이 이 회귀를 SKIP하고 있습니다"
+  else
+    echo "[WARNING] SKIP nested-shell-activation — oh-my-zsh 미설치로 이 회귀가 수행되지 않았습니다"
+  fi
 elif ! command -v mise >/dev/null 2>&1 || [ ! -x "$HOME/.local/bin/mise" ]; then
   echo "[WARNING] SKIP nested-shell-activation — mise 미설치로 이 회귀가 수행되지 않았습니다"
 else
