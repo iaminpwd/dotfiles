@@ -191,7 +191,11 @@ jobs:
         run: bash .github/scripts/verify-bootstrap-env.sh
 
       - name: Bootstrap (2nd run - idempotency check)
-        run: ./bootstrap.sh < /dev/null
+        run: |
+          set -o pipefail
+          SECOND_BOOTSTRAP_LOG="$RUNNER_TEMP/bootstrap-second.log"
+          ./bootstrap.sh < /dev/null | tee "$SECOND_BOOTSTRAP_LOG"
+          bash .github/scripts/assert-idempotent-ansible-recap.sh "$SECOND_BOOTSTRAP_LOG"
 
       - name: Verify environment matches README's success criteria (after 2nd run)
         run: bash .github/scripts/verify-bootstrap-env.sh
