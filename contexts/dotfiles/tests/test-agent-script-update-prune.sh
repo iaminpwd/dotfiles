@@ -17,6 +17,7 @@ export ANSIBLE_REMOTE_TEMP="$TMP/remote"
 
 mkdir -p "$TMP/repo/ansible/roles/ai_agent/tasks" "$TMP/repo/bin/utils" "$TMP/repo/bin" "$TMP/repo/contexts" "$TMP/home/.local/bin"
 cp "$ROOT/bin/utils/safe-link-backup.sh" "$TMP/repo/bin/utils/safe-link-backup.sh"
+cp "$ROOT/bin/utils/prune-orphan-agent-scripts.sh" "$TMP/repo/bin/utils/prune-orphan-agent-scripts.sh"
 
 python3 - "$ROOT" "$TMP" <<'PY'
 from pathlib import Path
@@ -69,6 +70,10 @@ OLD_LINK="$TMP/home/.local/bin/old-tool.sh"
 }
 
 rm "$TMP/repo/bin/old-tool.sh"
+
+# 공유 ~/.local/bin의 외부 broken symlink는 dotfiles 소유가 아니므로 보존해야 한다.
+ln -s "$TMP/foreign/missing-tool.sh" "$TMP/home/.local/bin/foreign-tool.sh"
+
 cat >"$TMP/repo/bin/new-tool.sh" <<'EOF'
 #!/bin/sh
 exit 0
@@ -92,4 +97,10 @@ if [ -L "$OLD_LINK" ]; then
   exit 1
 fi
 
-echo 'PASS: ai_agent 업데이트가 저장소에서 삭제된 실행 스크립트 링크를 정리함'
+[ -L "$TMP/home/.local/bin/foreign-tool.sh" ] || {
+  cat "$TMP/second.out"
+  echo 'FAIL: 외부 사용자 소유 broken symlink까지 삭제했습니다.'
+  exit 1
+}
+
+echo 'PASS: ai_agent 업데이트가 저장소 소유 고아 링크만 정리하고 외부 링크는 보존함'
