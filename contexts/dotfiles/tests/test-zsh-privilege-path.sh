@@ -70,7 +70,7 @@ probe_task = source[start:end].rstrip() + "\n"
 PY
 
 status=0
-PATH="$TMP/user-bin:$PATH" ansible-playbook -i localhost, "$TMP/play.yml"   -e "expected_zsh=$EXPECTED_ZSH" -e "fake_zsh=$FAKE_ZSH" >"$TMP/out" 2>&1 || status=$?
+PATH="$TMP/user-bin:$PATH" ansible-playbook -i localhost, "$TMP/play.yml" -e "expected_zsh=$EXPECTED_ZSH" -e "fake_zsh=$FAKE_ZSH" >"$TMP/out" 2>&1 || status=$?
 
 if [ "$status" -ne 0 ]; then
   cat "$TMP/out"
