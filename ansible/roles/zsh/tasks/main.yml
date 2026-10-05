@@ -67,4 +67,3 @@
   when:
     - zsh_path.stdout is defined
     - zsh_path.stdout != ""
-  failed_when: false # 루트 권한이 없는 비권한(non-root) 실행 환경을 위한 안전 가드
