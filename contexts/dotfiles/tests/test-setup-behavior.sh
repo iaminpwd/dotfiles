@@ -8,6 +8,8 @@ mkdir -p "$TMP/bin" "$TMP/home"
 cat >"$TMP/bin/ansible-playbook" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >"$SETUP_ARGS"
+printf '%s\n' "$PWD" >"$SETUP_PWD"
+printf '%s\n' "$ANSIBLE_CONFIG" >"$SETUP_CONFIG"
 STUB
 
 # macOS 기본 BSD readlink처럼 -f 옵션을 지원하지 않는 환경을 재현한다.
@@ -23,11 +25,20 @@ exec /usr/bin/readlink "$@"
 STUB
 chmod +x "$TMP/bin/ansible-playbook" "$TMP/bin/readlink"
 status=0
-PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" bash "$ROOT/bin/utils/run-setup.sh" --check --tags stow </dev/null || status=$?
+PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/args" SETUP_PWD="$TMP/pwd" SETUP_CONFIG="$TMP/config" \
+  bash "$ROOT/bin/utils/run-setup.sh" --check --tags stow </dev/null || status=$?
 if [ "$status" -ne 0 ]; then
   echo 'FAIL: run-setup.sh가 GNU readlink -f 사전설치에 의존합니다.'
   exit 1
 fi
+[ "$(cat "$TMP/pwd")" = "$ROOT" ] || {
+  echo "FAIL: run-setup.sh가 repo root가 아닌 디렉터리에서 Ansible을 실행했습니다: $(cat "$TMP/pwd")"
+  exit 1
+}
+[ "$(cat "$TMP/config")" = "$ROOT/ansible/ansible.cfg" ] || {
+  echo "FAIL: run-setup.sh의 ANSIBLE_CONFIG가 repo root를 가리키지 않습니다: $(cat "$TMP/config")"
+  exit 1
+}
 for arg in --check --tags stow; do
   grep -qx -- "$arg" "$TMP/args"
 done
