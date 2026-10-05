@@ -27,7 +27,7 @@ for manager in config.get("customManagers", []):
     if "bin/utils/install-mise.sh" not in patterns:
         continue
     for expr in manager.get("matchStrings", []):
-        python_expr = re.sub(r"\\(\\?<([A-Za-z][A-Za-z0-9_]*)>", r"(?P<\\1>", expr)
+        python_expr = re.sub(r"\(\?<([A-Za-z][A-Za-z0-9_]*)>", r"(?P<\1>", expr)
         try:
             found = re.search(python_expr, installer)
         except re.error as exc:
