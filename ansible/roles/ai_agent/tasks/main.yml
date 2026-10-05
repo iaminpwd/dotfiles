@@ -129,6 +129,18 @@
     '/contexts/.' not in item.path and
     item.mode is search('^.[1357]')
 
+# ~/.local/bin은 공유 경로이므로 이름만 보고 지우지 않는다. 이 저장소의 bin/ 또는
+# contexts/를 가리키던 "깨진" 링크만 이전 버전의 배포 잔재로 판정해 정리한다.
+- name: 삭제된 에이전트 스크립트 고아 링크 정리
+  ansible.builtin.command:
+    argv:
+      - /bin/bash
+      - "{{ role_path }}/../../../bin/utils/prune-orphan-agent-scripts.sh"
+      - "{{ role_path }}/../../.."
+      - "{{ ansible_env.HOME }}/.local/bin"
+  register: ai_agent_script_prune_result
+  changed_when: "'[PRUNED]' in ai_agent_script_prune_result.stdout"
+
 - name: 컨텍스트 도메인 디렉토리 목록 조회
   ansible.builtin.find:
     paths: "{{ role_path }}/../../../contexts"
