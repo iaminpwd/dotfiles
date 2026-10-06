@@ -8,8 +8,8 @@ source "$RECORD_PROVENANCE_SCRIPT_DIR/../lib/git-relpath.sh"
 
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <file_path> <rule_source>[,<rule_source>...] <purpose>"
-  echo "Example (단일 참고): $0 src/main.py aws/050-iac-standard.md \"Refactor authentication\""
-  echo "Example (다중 참고): $0 src/main.py aws/050-iac-standard.md,aws/060-eks-standard.md \"Refactor authentication\""
+  echo "Example (단일 참고): $0 src/main.py dotfiles/030-dotfiles-core-standard.md \"Refactor authentication\""
+  echo "Example (다중 참고): $0 src/main.py dotfiles/030-dotfiles-core-standard.md,k8s/100-incident-response.md \"Refactor authentication\""
   exit 1
 fi
 
@@ -47,7 +47,7 @@ CONTEXTS_DIR="$(dirname "$(dirname "$RECORD_PROVENANCE_SCRIPT_DIR")")/contexts"
 
 # 스킬 접두사(<skill>/파일명)가 없는 rule_source를 검증/보정한다.
 # - contexts/ 전체에서 동일 파일명이 정확히 1곳뿐이면 자동으로 <skill>/파일명 으로 보정
-# - 2곳 이상이면(예: 050-iac-standard.md가 aws/azure/aiops/openstack에 모두 존재) 모호함
+# - 2곳 이상이면(예: 100-incident-response.md가 aiops/k8s에 모두 존재) 모호함
 #   -> 기록 자체를 누락시키지 않기 위해 AMBIGUOUS(...)로 치환해 반환한다
 #      (감사 로그에서 "무엇을 하려다 막혔는지"가 사라지면 안 되기 때문)
 # - 매칭이 없으면(임의 문자열) 입력값을 그대로 사용

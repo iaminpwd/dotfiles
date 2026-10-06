@@ -39,28 +39,28 @@ echo "=== record-provenance.sh 근거 보강/모호성 판정 로직 회귀 테�
 
 # 1. 이미 <스킬>/파일명 형태면 그대로 SUCCESS로 기록되어야 한다.
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" a.tf "aws/010-aws-core.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 0 ] && grep -qF "agent:aws/010-aws-core.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" a.tf "dotfiles/030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
   report "skill-qualified (그대로 SUCCESS)" 0
 else
   report "skill-qualified (그대로 SUCCESS)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
 fi
 
 # 2. contexts/ 전체에서 유일하게 존재하는 파일명은 <스킬>/파일명으로 자동 보정되어야 한다.
-#    (010-aws-core.md는 contexts/aws/references 아래 정확히 1곳에만 존재)
+#    (030-dotfiles-core-standard.md는 contexts/dotfiles/references 아래 정확히 1곳에만 존재)
 rm -f "$LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" b.tf "010-aws-core.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 0 ] && grep -qF "agent:aws/010-aws-core.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" b.tf "030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
   report "unique-basename (자동 스킬 보정)" 0
 else
   report "unique-basename (자동 스킬 보정)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
 fi
 
-# 3. 여러 "활성" 스킬에 동일 파일명이 있으면(050-iac-standard.md: aws/aiops) FLAGGED + exit 1.
+# 3. 여러 "활성" 스킬에 동일 파일명이 있으면(100-incident-response.md: aiops/k8s) FLAGGED + exit 1.
 rm -f "$LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" c.tf "050-iac-standard.md" "테스트 목적" 2>&1) || status=$?
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" c.tf "100-incident-response.md" "테스트 목적" 2>&1) || status=$?
 if [ "$status" -eq 1 ] && grep -qF "AMBIGUOUS(" "$LOG" && grep -qF "| FLAGGED" "$LOG" && grep -qF "여러 스킬에" <<<"$out"; then
   report "ambiguous-basename (AMBIGUOUS + FLAGGED + exit 1)" 0
 else
@@ -70,8 +70,8 @@ fi
 # 4. 콤마로 여러 rule_source를 넘기면 하나라도 모호하면 전체가 FAILED(exit 1)여야 한다.
 rm -f "$LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" d.tf "aws/010-aws-core.md,050-iac-standard.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 1 ] && grep -qF "aws/010-aws-core.md,AMBIGUOUS(" "$LOG"; then
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" d.tf "dotfiles/030-dotfiles-core-standard.md,100-incident-response.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 1 ] && grep -qF "dotfiles/030-dotfiles-core-standard.md,AMBIGUOUS(" "$LOG"; then
   report "multi-source (일부 모호하면 전체 FAILED)" 0
 else
   report "multi-source (일부 모호하면 전체 FAILED)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
@@ -83,9 +83,9 @@ rm -f "$LOG"
 mkdir -p "$(dirname "$LOG")"
 echo "2026-01-01T00:00:00+00:00 | e.tf | hook:Edit | - | OK" >"$LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "aws/010-aws-core.md" "테스트 목적" 2>&1) || status=$?
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
 LINES=$(wc -l <"$LOG")
-if [ "$status" -eq 0 ] && [ "$LINES" -eq 1 ] && grep -qF "agent:aws/010-aws-core.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+if [ "$status" -eq 0 ] && [ "$LINES" -eq 1 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
   report "미확정 라인 보강 (append 대신 overwrite, 1줄 유지)" 0
 else
   report "미확정 라인 보강 (append 대신 overwrite, 1줄 유지)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
@@ -93,7 +93,7 @@ fi
 
 # 6. 이미 SUCCESS로 확정된 라인은 더 이상 보강 대상이 아니므로, 재호출 시 새 줄이 append되어야 한다.
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "aws/010-aws-core.md" "두 번째 목적" 2>&1) || status=$?
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/030-dotfiles-core-standard.md" "두 번째 목적" 2>&1) || status=$?
 LINES=$(wc -l <"$LOG")
 if [ "$status" -eq 0 ] && [ "$LINES" -eq 2 ]; then
   report "확정된 SUCCESS 라인 이후 재호출 (append)" 0

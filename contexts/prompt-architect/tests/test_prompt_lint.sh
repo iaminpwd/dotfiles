@@ -514,6 +514,17 @@ cat >"$D/README.md" <<'EOF'
 EOF
 check "readme-archived-skill (표에만 남은 스킬 경고)" 0 "references 디렉토리가 없습니다" "$D"
 
+# 16b. reference를 SKILL.md에 모두 통합한 스킬은 숫자 모듈 수를 쓰지 않는다.
+#      숫자 claim이 없는 행에서 grep 무매치가 set -e에 걸리면 린터가 메시지 없이 exit 1로
+#      죽으므로, 실제 AWS 단일-SKILL 전환에서 드러난 경로를 회귀로 고정한다.
+D=$(new_case readme-skill-only)
+cat >"$D/README.md" <<'EOF'
+| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+|---|---|---|
+| **Demo** (`demo/`) | `SKILL.md` 단일 문서 | 저장소 검증 계약 |
+EOF
+check_clean "readme-skill-only (숫자 없는 단일 SKILL 행 허용)" "$D"
+
 # 17. 끊긴 파일 참조. 주석이 지목한 파일이 사라져도 아무것도 깨지지 않아 조용히 남는다.
 #     실제로 tf-fixture-lib.sh 를 인라인한 뒤 그 파일을 가리키던 참조가 6곳 남았고,
 #     손으로 훑어 고친 뒤에도 ansible 롤에 1곳이 더 있었다(이 검사가 그것을 잡아냈다).

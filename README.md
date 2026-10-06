@@ -55,7 +55,7 @@
 
 | 워크스페이스 | 모듈 수 | 주요 커버리지 |
 |---|---|---|
-| **AWS** (`aws/`) | 12개 (`005`~`100`) | 제로트러스트 보안, 자격증명 격리, FinOps, IaC(Terraform), EKS, Serverless, RDS, Day2 운영 및 사고 대응 |
+| **AWS** (`aws/`) | `SKILL.md` 단일 문서 | 저장소 검증 계약(tflint/Checkov/SAM), pre-flight 연결, 파괴적 실행 경계 |
 | **Dotfiles** (`dotfiles/`) | 6개 (`010`~`060`) | 저장소 구조·검증 명령, 계획서·배포 연결, 툴체인 관리, 시크릿 보호, 룰 근거 기록, 로컬 트러블슈팅 |
 
 > K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 작업별 참조 경로는 [contexts/INDEX.md](contexts/INDEX.md)를 참고하십시오.
