@@ -395,9 +395,12 @@ check_readme_skill_counts() {
   # shellcheck disable=SC2016
   while IFS= read -r line; do
     [ -n "$line" ] || continue
-    skill=$(grep -oE '\(`[a-z0-9-]+/`\)' <<<"$line" | tr -d '(`)/' | head -1)
-    claim=$(grep -oE '\| [0-9]+개' <<<"$line" | grep -oE '[0-9]+' | head -1)
-    [ -n "$skill" ] && [ -n "$claim" ] || continue
+    skill=$(grep -oE '\(`[a-z0-9-]+/`\)' <<<"$line" | tr -d '(`)/' | head -1 || true)
+    claim=$(grep -oE '\| [0-9]+개' <<<"$line" | grep -oE '[0-9]+' | head -1 || true)
+    [ -n "$skill" ] || continue
+    # reference를 모두 SKILL.md로 통합한 스킬은 숫자 개수 자체가 없을 수 있다.
+    # 숫자 claim이 없는 행은 이 검사의 대상이 아니며, set -e로 린터를 조용히 죽이지 않는다.
+    [ -n "$claim" ] || continue
     # 표에 있지만 이미 .archive 로 옮겨진 스킬은 references 디렉토리 자체가 없다.
     # 그 경우는 개수 불일치가 아니라 표에 남은 항목 자체가 문제이므로 따로 알린다.
     if [ ! -d "$CONTEXTS_DIR/$skill/references" ]; then
