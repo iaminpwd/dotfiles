@@ -6,7 +6,7 @@
 # 내야 한다(감사 로그 신뢰성의 핵심). 또한 agent-edits-hook.sh가 남긴 미확정("-") 라인이
 # 있으면 새 줄을 추가하는 대신 그 자리를 SUCCESS/FLAGGED로 보강(overwrite)하는 병합 로직도
 # 있다. 이 두 판정/병합 로직이 깨지면 근거 없는 SUCCESS가 찍히거나 로그가 중복될 수 있으므로
-# 격리된 CWD에서 실제 contexts/ 디렉토리를 대상으로 고정한다.
+# 실제 contexts/와 최소 합성 코퍼스를 각각 사용해 고정한다.
 #
 # 사용: bash ~/dotfiles/contexts/prompt-architect/tests/test-record-provenance.sh
 
@@ -57,24 +57,37 @@ else
   report "unique-basename (자동 스킬 보정)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
 fi
 
-# 3. 여러 "활성" 스킬에 동일 파일명이 있으면(100-incident-response.md: aiops/k8s) FLAGGED + exit 1.
-rm -f "$LOG"
+# 3~4. 모호성 판정은 실제 코퍼스에서 우연히 같은 basename이 남아 있는지에 의존하지
+# 않는다. 두 활성 스킬에 같은 파일명을 둔 최소 코퍼스를 합성해 알고리즘 자체를 고정한다.
+AMB_FAKE="$TMP/ambiguous-repo"
+mkdir -p "$AMB_FAKE/bin/utils" "$AMB_FAKE/bin/lib" \
+  "$AMB_FAKE/contexts/alpha/references" "$AMB_FAKE/contexts/beta/references" "$AMB_FAKE/work"
+cp "$RECORD_PROVENANCE" "$AMB_FAKE/bin/utils/"
+cp "$REPO_ROOT/bin/lib/git-relpath.sh" "$AMB_FAKE/bin/lib/"
+: >"$AMB_FAKE/contexts/alpha/references/duplicate-rule.md"
+: >"$AMB_FAKE/contexts/beta/references/duplicate-rule.md"
+: >"$AMB_FAKE/contexts/alpha/references/unique-rule.md"
+AMB_RP="$AMB_FAKE/bin/utils/record-provenance.sh"
+AMB_LOG="$AMB_FAKE/work/.agent-state/edits.log"
+
+# 3. 여러 활성 스킬에 동일 파일명이 있으면 FLAGGED + exit 1.
+rm -f "$AMB_LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" c.tf "100-incident-response.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 1 ] && grep -qF "AMBIGUOUS(" "$LOG" && grep -qF "| FLAGGED" "$LOG" && grep -qF "여러 스킬에" <<<"$out"; then
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" c.tf "duplicate-rule.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 1 ] && grep -qF "AMBIGUOUS(" "$AMB_LOG" && grep -qF "| FLAGGED" "$AMB_LOG" && grep -qF "여러 스킬에" <<<"$out"; then
   report "ambiguous-basename (AMBIGUOUS + FLAGGED + exit 1)" 0
 else
-  report "ambiguous-basename (AMBIGUOUS + FLAGGED + exit 1)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
+  report "ambiguous-basename (AMBIGUOUS + FLAGGED + exit 1)" 1 "exit=$status out=$out log=$(cat "$AMB_LOG" 2>/dev/null)"
 fi
 
 # 4. 콤마로 여러 rule_source를 넘기면 하나라도 모호하면 전체가 FAILED(exit 1)여야 한다.
-rm -f "$LOG"
+rm -f "$AMB_LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" d.tf "dotfiles/030-dotfiles-core-standard.md,100-incident-response.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 1 ] && grep -qF "dotfiles/030-dotfiles-core-standard.md,AMBIGUOUS(" "$LOG"; then
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" d.tf "alpha/unique-rule.md,duplicate-rule.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 1 ] && grep -qF "alpha/unique-rule.md,AMBIGUOUS(" "$AMB_LOG"; then
   report "multi-source (일부 모호하면 전체 FAILED)" 0
 else
-  report "multi-source (일부 모호하면 전체 FAILED)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
+  report "multi-source (일부 모호하면 전체 FAILED)" 1 "exit=$status out=$out log=$(cat "$AMB_LOG" 2>/dev/null)"
 fi
 
 # 5. agent-edits-hook.sh가 남긴 미확정 라인("- " 목적, 5번째 필드 SUCCESS 아님)이 있으면
