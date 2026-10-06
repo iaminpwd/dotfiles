@@ -74,7 +74,7 @@ STUB
 chmod +x "$TMP/bin/uname" "$TMP/bin/id"
 
 # 계정 DB에는 docker가 생겼지만 현재 프로세스 group vector에는 아직 없는 fresh-install 상태.
-out=$(PATH="$TMP/bin:/usr/bin:/bin"   FAKE_UID=1000 FAKE_USER=tester   FAKE_CURRENT_GROUPS='tester sudo'   FAKE_ACCOUNT_GROUPS='tester sudo docker'   warn_docker_group_refresh)
+out=$(PATH="$TMP/bin:/usr/bin:/bin" FAKE_UID=1000 FAKE_USER=tester FAKE_CURRENT_GROUPS='tester sudo' FAKE_ACCOUNT_GROUPS='tester sudo docker' warn_docker_group_refresh)
 
 grep -q 'Docker' <<<"$out"
 if ! grep -Eq '로그아웃|다시 로그인|newgrp docker' <<<"$out"; then
@@ -84,14 +84,14 @@ if ! grep -Eq '로그아웃|다시 로그인|newgrp docker' <<<"$out"; then
 fi
 
 # 이미 현재 세션에도 docker 그룹이 활성화된 경우 경고하면 안 된다.
-out=$(PATH="$TMP/bin:/usr/bin:/bin"   FAKE_UID=1000 FAKE_USER=tester   FAKE_CURRENT_GROUPS='tester sudo docker'   FAKE_ACCOUNT_GROUPS='tester sudo docker'   warn_docker_group_refresh)
+out=$(PATH="$TMP/bin:/usr/bin:/bin" FAKE_UID=1000 FAKE_USER=tester FAKE_CURRENT_GROUPS='tester sudo docker' FAKE_ACCOUNT_GROUPS='tester sudo docker' warn_docker_group_refresh)
 [ -z "$out" ] || {
   echo "FAIL: docker 그룹이 이미 활성화됐는데 불필요한 재로그인 경고가 출력됐습니다: $out"
   exit 1
 }
 
 # root는 docker socket 접근에 supplementary docker 그룹 갱신이 필요 없다.
-out=$(PATH="$TMP/bin:/usr/bin:/bin"   FAKE_UID=0 FAKE_USER=tester   FAKE_CURRENT_GROUPS='root'   FAKE_ACCOUNT_GROUPS='tester sudo docker'   warn_docker_group_refresh)
+out=$(PATH="$TMP/bin:/usr/bin:/bin" FAKE_UID=0 FAKE_USER=tester FAKE_CURRENT_GROUPS='root' FAKE_ACCOUNT_GROUPS='tester sudo docker' warn_docker_group_refresh)
 [ -z "$out" ] || {
   echo "FAIL: root 실행에도 docker 그룹 세션 경고를 출력했습니다: $out"
   exit 1
