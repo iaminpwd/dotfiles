@@ -22,6 +22,7 @@ RUNNER="$REPO/bin/hooks/stop-regression-check.sh"
 
 printf '#!/bin/bash\n# 수정\n' >"$REPO/bin/utils/safe-link-backup.sh"
 git -C "$REPO" add bin/utils/safe-link-backup.sh
+# idempotency:bypass (매 실행 새 mktemp Git fixture에서 staged 이후 unstaged 변경을 합성하는 1회성 append)
 printf '# 추가 수정\n' >>"$REPO/bin/utils/safe-link-backup.sh"
 selected=$(bash "$RUNNER" --list)
 [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]
