@@ -16,6 +16,12 @@
 #      남기고 나머지를 버린다. 접두사 없는 맥락 줄(파일 경로 등)만 남기면 그 줄들은
 #      run-suite 경로에서 버려지고, 직접 실행 시에는 반대로 설명 없는 경로 목록만
 #      덩그러니 출력된다(실측된 증상).
+set -euo pipefail
+
+PROMPT_LINT_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# shellcheck source-path=SCRIPTDIR
+source "$PROMPT_LINT_SCRIPT_DIR/../lib/script-init.sh"
+
 # 이 스크립트는 pre-flight-check.sh처럼 "호출 시점의 현재 저장소"를 검증하는 범용
 # 도구가 아니라 항상 자기 자신이 속한 dotfiles 저장소의 contexts/만 대상으로 하는
 # 전용 린터다. init_repo_root()(호출 CWD 기준 git rev-parse)를 쓰면 dotfiles 밖에서
