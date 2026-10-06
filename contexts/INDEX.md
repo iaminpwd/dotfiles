@@ -60,7 +60,7 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## pre-flight-check
 
-Terraform, Ansible, Helm, Dockerfile 및 셸 자동화 변경의 검증 명령·프로필·결과를 확인할 때 사용.
+이 저장소의 pre-flight 검증 대상, 프로필, 실행 명령과 WARNING/SKIP/실패 결과를 해석할 때 사용하는 로컬 스킬.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
