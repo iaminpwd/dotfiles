@@ -68,18 +68,7 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 Kubernetes(k8s) 클러스터 및 컨테이너 오케스트레이션 스킬. Pod, Deployment, Service, Ingress, CNI,
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| 파드 / Deployment / ConfigMap 등 기본 K8s 리소스 작업 | references/010-k8s-core.md |
-| 네트워크 리소스 (Ingress, Service, CNI) | references/020-networking-standard.md |
-| 스토리지 (PVC/PV) 및 StatefulSet | references/030-storage-stateful-standard.md |
-| CI/CD, GitOps (ArgoCD, Flux) | references/040-cicd-gitops-standard.md |
-| Prometheus Operator CRD 수집 문법 (ServiceMonitor 등) | references/050-observability-standard.md |
-| SLI/SLO, 알람 설계, 로깅, 분산 추적 등 관측성 일반 원칙 | `observability 스킬(SKILL.md)` (별도 스킬) |
-| 오토스케일링 (HPA, VPA) 및 FinOps | references/060-autoscaling-finops-standard.md |
-| 클러스터 보안 (RBAC, OPA, NetworkPolicy) | references/070-advanced-security-standard.md |
-| 플랫폼 엔지니어링, 멀티테넌시 | references/080-platform-engineering-standard.md |
-| K8s 장애 대응, 트러블슈팅, RCA | references/100-incident-response.md |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## observability
 
