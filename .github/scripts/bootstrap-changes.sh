@@ -52,7 +52,7 @@ done <"$changes"
 
 # symlink 대상 문서의 내용 수정은 smoke를 다시 돌릴 이유가 없지만, 파일 추가/삭제는
 # fresh install에서 생성해야 할 링크 집합 자체를 바꾼다.
-if ! git diff --quiet --no-renames --diff-filter=AD "$base" "$head" --   ':(glob)contexts/*/SKILL.md' contexts/base.AGENTS.md; then
+if ! git diff --quiet --no-renames --diff-filter=AD "$base" "$head" -- ':(glob)contexts/*/SKILL.md' contexts/base.AGENTS.md; then
   echo 'run=true'
   exit 0
 fi
