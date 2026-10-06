@@ -16,16 +16,15 @@ export PROFILE_TRACE="$TMP/trace"
 for module in pfc-iac-checks pfc-quality-checks; do
   : >"$TMP/repo/bin/lib/$module.sh"
 done
+cat >"$TMP/repo/bin/lib/pfc-quality-checks.sh" <<'EOF'
+has_tool() { return 0; }
+EOF
 for check in shell terraform sam ansible helm k8s_manifests docker yaml conftest security finops_costs; do
   # shellcheck disable=SC2016
   # idempotency:bypass (매 실행 새 mktemp fixture의 trace 기록과 임시 검증기 라이브러리 조립에만 쓰는 append)
   printf 'validate_%s() { echo %s >>"$PROFILE_TRACE"; [ "${FAIL_CHECK:-}" != %s ]; }\n' \
     "$check" "$check" "$check" >>"$TMP/repo/bin/lib/pfc-quality-checks.sh"
 done
-
-cat >>"$TMP/repo/bin/lib/pfc-quality-checks.sh" <<'EOF'
-has_tool() { return 0; }
-EOF
 cat >"$TMP/tools/terraform" <<'EOF'
 #!/usr/bin/env bash
 printf 'terraform %s\n' "$*" >>"$PROFILE_TRACE"
