@@ -120,11 +120,6 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## prompt-architect
 
-AI 프롬프트와 룰북(AGENTS.md, SKILL.md)을 작성·검토·간소화할 때 사용하는 스킬.
+AI 프롬프트와 룰북(AGENTS.md, SKILL.md)을 작성·검토·간소화할 때 사용하는 검증 스킬.
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| AI 프롬프트 설계(Meta-Prompting) 마스터 가이드 | references/030-prompt-engineering-standard.md |
-| 범용 AI 프롬프트 작성·수정·최적화 표준 | references/040-general-prompt-authoring-standard.md |
-| 룰북 조항 추가·검토·삭제 가이드 | references/050-rule-provenance-standard.md |
-| 쉘 스크립팅(bash/zsh) 범용 표준 | references/020-shell-scripting-standard.md |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
