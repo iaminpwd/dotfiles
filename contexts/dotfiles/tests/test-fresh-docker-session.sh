@@ -13,6 +13,12 @@ BOOTSTRAP="$ROOT/bootstrap.sh"
 grep -Fq 'groups: docker' "$DOCKER_ROLE"
 grep -Fq 'append: true' "$DOCKER_ROLE"
 
+# 감지 함수가 정의만 되고 실제 bootstrap 종료 경로에서 호출되지 않는 회귀도 막는다.
+grep -qx 'warn_docker_group_refresh' "$BOOTSTRAP" || {
+  echo "FAIL: bootstrap.sh가 Docker 그룹 세션 갱신 감지 함수를 호출하지 않습니다."
+  exit 1
+}
+
 python3 - "$BOOTSTRAP" "$TMP/function.sh" <<'PY'
 from pathlib import Path
 import re
