@@ -26,15 +26,9 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## dotfiles
 
-개인 로컬 환경 및 dotfiles 시스템 셋업 스킬. bootstrap.sh, ansible, zsh, bash, stow, mise,
+이 저장소의 bootstrap, Ansible, Stow, mise, shell 설정, hooks와 회귀 검증을 변경할 때 사용하는 로컬 스킬.
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| 이 저장소 작업의 계획서·핸드오프 설계도 작성 | references/020-project-planning-template.md |
-| dotfiles 아키텍처 및 핵심 구조 | references/030-dotfiles-core-standard.md |
-| 도구 및 패키지 관리 (apt, mise 등) | references/040-toolchain-management-standard.md |
-| 시크릿 관리, 권한 설정, 로컬 보안 정책 | references/050-dotfiles-security-standard.md |
-| 환경 셋업 오류 및 런타임 트러블슈팅 | references/060-troubleshooting-standard.md |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## drawio-gen
 
