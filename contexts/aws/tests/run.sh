@@ -15,9 +15,9 @@
 # 그 계약은 실제로 흔들린다.
 #
 # 아래 tf_* 러너는 예전에 aws/azure/openstack/multi-cloud 네 스킬이 공유하던
-# .shared/test-lib/tf-fixture-lib.sh 였다. 뒤의 셋을 지워 소비자가 이 파일 하나만 남은
+# tests/lib/tf-fixture-lib.sh 였다. 뒤의 셋을 지워 소비자가 이 파일 하나만 남은
 # 뒤로는 공유 파일로 둘 이유가 없어 여기로 인라인했다(그 파일 자신이 남긴 지침이다).
-# 벤더 스킬을 다시 살린다면 복제하지 말고 그때 다시 .shared 로 빼낼 것.
+# 벤더 스킬을 다시 살린다면 복제하지 말고 그때 다시 tests/lib 로 빼낼 것.
 #
 # 사용: bash ~/dotfiles/contexts/aws/tests/run.sh
 
@@ -26,14 +26,15 @@ export PFC_DOMAIN_CHECKS=1
 export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 # source-path=SCRIPTDIR 은 shellcheck 가 아래 상대 경로를 이 스크립트의 디렉토리 기준으로
 # 찾게 한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로, 이 설정 덕에 경로 오타나
 # 파일 이동으로 인한 깨짐까지 실제로 검증된다.
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
+source "$REPO_ROOT/tests/lib/parallel-pair.sh"
 # EXIT 트랩을 호출자 것을 파괴하지 않고 겹쳐 쓰기 위한 SSOT (exit-trap.sh 헤더 참조).
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../.shared/test-lib/exit-trap.sh"
+source "$REPO_ROOT/tests/lib/exit-trap.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
