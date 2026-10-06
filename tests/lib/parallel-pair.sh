@@ -13,7 +13,7 @@
 # [주의] source 전용 라이브러리이므로 호출자의 셸 옵션을 보존하기 위해 set -euo pipefail을 선언하지 않습니다.
 #
 # 사용법:
-#   source ".../lib/parallel-pair.sh"
+#   source ".../tests/lib/parallel-pair.sh"
 #   local -a CMD1=(sam validate --template-file "$f1")
 #   local -a CMD2=(sam validate --template-file "$f2")
 #   local rc1 rc2

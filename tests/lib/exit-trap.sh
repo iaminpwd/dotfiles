@@ -24,7 +24,7 @@
 # [주의] source 전용 라이브러리이므로 호출자의 셸 옵션을 보존하기 위해 set -euo pipefail을 선언하지 않습니다.
 #
 # 사용법:
-#   source ".../test-lib/exit-trap.sh"
+#   source ".../tests/lib/exit-trap.sh"
 #   tmpdir=$(mktemp -d)
 #   push_exit_trap 'rm -rf "${tmpdir:-}"'
 #   ...

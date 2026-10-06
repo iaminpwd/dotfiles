@@ -66,7 +66,7 @@ resolve_source() {
     ;;
   esac
   if [ -d "$CONTEXTS_DIR" ]; then
-    # 점으로 시작하는 컨텍스트 디렉토리(.archive 폐기 스킬, .shared 공유 라이브러리)는
+    # 점으로 시작하는 컨텍스트 디렉토리(과거 .archive 같은 비활성 트리)는
     # 후보에서 뺀다. 폐기된 룰북이 살아있는 룰북과 파일명을 대량으로 공유하기 때문에
     # (실측: azure/openstack 을 .archive 로 옮긴 뒤 080-database-standard.md 는 활성
     # 스킬 1곳에만 있는데도 "후보: .archive,.archive,aws" 로 모호 판정되어 exit 1 +

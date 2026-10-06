@@ -19,11 +19,9 @@ for _dir in "$PLAYBOOK_DIR/../contexts" "$PLAYBOOK_DIR/../bin"; do
 done
 unset _dir
 
-# 점으로 시작하는 컨텍스트 디렉토리(.shared 등)는 대상에서 뺀다. 이 검사는
-# "ansible ai_agent 롤이 ~/.local/bin 에 링크할 스크립트들"의 이름 충돌을 보는 것인데,
-# 그 롤이 아카이브된 스킬의 스크립트를 링크하지 않으므로 여기서도 세면 안 된다.
-# 세면 폐기된 스킬의 파일명이 새 스크립트 이름을 영구히 점유해, 실재하지 않는 충돌로
-# `just setup` 이 막힌다.
+# 점으로 시작하는 contexts 디렉토리는 대상에서 뺀다. 과거 .archive의 폐기 스크립트가
+# 실제 배포 대상처럼 충돌 검사에 섞인 결함이 있었기 때문이다. 공유 테스트 라이브러리는
+# tests/lib로 분리했지만 future hidden directories에 같은 문제가 재발하지 않도록 유지한다.
 {
   find "$PLAYBOOK_DIR/../contexts" -type f -path "*/scripts/*.sh" ! -path "*/contexts/.*" 2>/dev/null
   find "$PLAYBOOK_DIR/../bin" -type f -name "*.sh" 2>/dev/null

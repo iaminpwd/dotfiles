@@ -157,16 +157,12 @@ just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-s
 │   ├── base.AGENTS.md         # 전역 사용자 선호와 실행 경계
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── README.md              # 프롬프트 적용·유지보수와 검증 안내
-│   ├── aiops/, aws/, containers/, dotfiles/, drawio-gen/, k8s/,
-│   │   observability/, pre-flight-check/, prompt-architect/
-│   │                                      # 활성 스킬 및 저장소 검증 자산
-│   └── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
-│                              # ↑ 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob은
-│                              #   숨김 항목을 건너뛰지만 재귀 find/ansible.builtin.find는 숨김
-│                              #   디렉토리 안으로 들어갈 수 있어 배포·충돌 검사 코드가
-│                              #   '/contexts/.' 경로 가드로 명시적으로 제외한다.
-│                              #   사용 종료된 스킬은 보관 폴더를 두지 않고 지운다 — git 히스토리가
-│                              #   그 역할을 하며, 워킹 트리에 두면 모든 스캐너가 제외 토큰을 져야 한다.
+│   └── aiops/, aws/, containers/, dotfiles/, drawio-gen/, k8s/,
+│       observability/, pre-flight-check/, prompt-architect/
+│                                          # 활성 스킬 및 저장소 검증 자산
+│
+├── tests/
+│   └── lib/                   # 여러 스킬이 공유하는 회귀 테스트 전용 헬퍼
 │
 ├── stow/                 # GNU Stow 대상 패키지 모음 (이 하위 폴더만 심볼릭 링크 대상 — 화이트리스트 방식)
 │   ├── git/                  # [배포: ansible stow 역할이 자동 심볼릭 링크]
