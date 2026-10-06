@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # aws Terraform 검증 파이프라인 회귀 테스트
 #
-# 각 픽스처는 050-iac-standard.md 의 특정 조항이나 중단 조건을 재현한다. 목적은
-# pre-flight-check.sh 의 validate_terraform 을 손볼 때, 기존 검사가 조용히 죽어서
-# 위반 IaC 코드가 통과되는 상황을 제어하는 것이다.
+# 각 픽스처는 이 저장소의 Terraform/SAM 검증기가 의존하는 외부 도구·게이트
+# 계약을 재현한다. 목적은 pre-flight-check.sh 의 validate_terraform 을 손볼 때,
+# 기존 검사가 조용히 죽어서 위반 IaC 코드가 통과되는 상황을 제어하는 것이다.
 #
 # Terraform 계열 도구는 파일이 아니라 디렉토리를 대상으로 동작하므로 픽스처도
 # 디렉토리 단위다. ok-baseline 을 제외한 모든 픽스처는 게이트 하나씩만 건드린다.
