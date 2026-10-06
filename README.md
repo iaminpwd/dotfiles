@@ -29,7 +29,7 @@
 ### 2. 고성능 사전 안전성 검증 파이프라인 (DX 최적화)
 - **정적 분석 및 문법 검증:** `bin/hooks/pre-flight-check.sh`가 스테이징된 변경 파일 종류에 맞춰 `shellcheck`/`shfmt`(쉘), `terraform fmt`/`tflint`/`checkov`(IaC 문법+보안 오구성), `ansible-lint`, `hadolint`(Dockerfile), `conftest`(OPA 정책) 등을 자동 실행합니다. K8s처럼 워크스페이스 전용 도구(`kyverno`, `promtool` 등)가 필요하면 `bin/hooks/plugins/` 디렉토리를 자동 탐색해 위임 호출하므로, 그 디렉토리에 새 검증 스크립트를 넣는 것만으로 파이프라인이 확장됩니다. 위임 대상을 파일 이름이 아니라 위치로 판정하므로, 위임 대상이 아닌 스크립트가 이름만으로 딸려 들어가지 않습니다.
 - **의존성 취약점 스캔 (소스 레벨):** `trivy fs --scanners vuln`이 저장소 내 의존성 매니페스트(requirements.txt 등)를 빌드 없이 스캔합니다. 매 커밋마다 이미지를 빌드해 스캔하면 속도 목표와 충돌하므로 소스 레벨로 제한했으며, 취약점은 경고만 남기고 커밋을 막지는 않습니다. 이미지 레이어 자체의 SBOM/취약점/서명은 커밋이 아니라 릴리즈 단계의 책임이며 `syft`/`grype`/`cosign`이 담당합니다.
-- **FinOps 비용 게이트:** `RUN_COST_CHECK=true`로 요청한 검사에서 `infracost breakdown` 결과의 Extended Support/LTS(연장 지원) 추가 요금 항목을 탐지하면 커밋 자체를 차단하여, 의도치 않은 예산 초과를 소스에서 원천 방어합니다.
+- **도메인 검증 분리:** 기본 `full` 검사는 공통 품질·보안 게이트를 실행하고, Terraform validate·SAM·Helm·Kubernetes·Conftest·FinOps 같은 인프라 도메인 검사는 `just check-domain`(`PFC_DOMAIN_CHECKS=1`)로 명시적으로 실행합니다. quick/stop/full 통과를 도메인 검사 통과로 확대 해석하지 않습니다.
 - **시맨틱 커밋 컨벤션 강제:** `commit-msg` 훅이 `feat/fix/docs/chore/...(scope): subject` 형식을 검사하여, 컨벤션을 지키지 않은 커밋 메시지는 자체적으로 차단합니다.
 - **글로벌 훅:** `core.hooksPath`로 등록된 전역 훅이 `TruffleHog` 시크릿 스캔 후 위 검증을 실행합니다. 검증 스크립트는 저장소마다 링크를 두지 않고 `~/dotfiles`의 정본을 절대 경로로 직접 호출하므로, 개별 저장소에 훅이나 링크를 챙길 필요가 없습니다. 검증 대상은 `~/workspace` 하위 저장소와 `~/dotfiles` 자신이며, 그 밖의 저장소는 루트에 `bin/hooks/pre-flight-check.sh` 링크를 둔 경우에만 검증합니다.
 - **고속 DX 튜닝:** `Trivy` DB를 24시간 주기로 캐싱(`--skip-db-update`)하여 커밋 지연을 단축했습니다(직접 재현 실측: DB 캐시 미스 10.56초 → 캐시 적중 1.17초, 약 89% 단축). 파일 대상 수집은 `find` 전체 탐색이 아니라 `git diff --cached`/`git ls-files` 기반이라 `.git/`, `.terraform/` 등은 애초에 스캔 대상에 들어오지 않습니다. 성공 시 출력 노이즈를 완벽히 제거(`--quiet`)하여 AI가 소모하는 문맥(Context) 토큰도 최소화했습니다.
@@ -51,16 +51,21 @@
 ### 5. 작업별 지침과 검증 자산 (`contexts/` 폴더)
 공통 지침은 짧게 유지하고, 워크스페이스별 상세 룰북은 현재 작업에 필요한 문서만 선택해 읽습니다. 유지보수와 검증 방법은 [프롬프트와 검증 자산](contexts/README.md)를 참고하십시오.
 
-**워크스페이스별 특화 모듈 (🟢 Production만 표시):**
+**활성 스킬 구성:**
 
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+| 워크스페이스 | 구성 | 주요 커버리지 |
 |---|---|---|
-| **AWS** (`aws/`) | `SKILL.md` 단일 문서 | 저장소 검증 계약(tflint/Checkov/SAM), pre-flight 연결, 파괴적 실행 경계 |
-| **Dotfiles** (`dotfiles/`) | 6개 (`010`~`060`) | 저장소 구조·검증 명령, 계획서·배포 연결, 툴체인 관리, 시크릿 보호, 룰 근거 기록, 로컬 트러블슈팅 |
+| **AIOps** (`aiops/`) | `SKILL.md` 단일 문서 | 텔레메트리·Closed-Loop·PII 마스킹 회귀 계약 |
+| **AWS** (`aws/`) | `SKILL.md` 단일 문서 | tflint/Checkov/SAM 검증 계약과 파괴적 실행 경계 |
+| **Containers** (`containers/`) | `SKILL.md` 단일 문서 | Docker/OCI 하드닝과 공급망 검증 계약 |
+| **Dotfiles** (`dotfiles/`) | 3개 reference + `SKILL.md` | provenance, mise/toolchain, 시크릿 경계와 저장소 로컬 계약 |
+| **Drawio-gen** (`drawio-gen/`) | 8개 reference + `SKILL.md` | XML·레이아웃·클라우드 아이콘·가독성·검증 Output Contract |
+| **K8s** (`k8s/`) | `SKILL.md` 단일 문서 | kube-linter/promtool/Pluto/Kyverno/Helm/Conftest 회귀 계약 |
+| **Observability** (`observability/`) | `SKILL.md` 단일 문서 | PrometheusRule·알람 검증 계약 |
+| **Pre-flight-check** (`pre-flight-check/`) | `SKILL.md` 단일 문서 | 대상 선택·프로필·WARNING/SKIP/실패 해석 계약 |
+| **Prompt-architect** (`prompt-architect/`) | `SKILL.md` 단일 문서 | prompt-lint·routing·프롬프트 QA 검증 계약 |
 
-> K8s, AIOps, Containers, Observability, Drawio-gen은 아직 튜닝 중인 🟡 Draft 워크스페이스입니다. 작업별 참조 경로는 [contexts/INDEX.md](contexts/INDEX.md)를 참고하십시오.
->
-> Azure · Multi-Cloud · OpenStack 워크스페이스는 현재 사용하지 않아 워킹 트리에서 지웠습니다. 룰북은 git 히스토리에 그대로 남아 있으므로 다시 쓰게 되면 `git checkout 1104de6 -- contexts/.archive` 로 꺼내 `contexts/` 아래로 옮기기만 하면 됩니다(스킬 스캔·글로벌 등록·테스트 탐색이 모두 폴더 위치만 보고 자동으로 다시 잡습니다).
+> 현재 남은 reference는 dotfiles 3개(Repo-Specific)와 drawio-gen 8개(Output Contract)뿐입니다. 나머지 도메인은 일반 기술 지식을 반복하지 않고 `SKILL.md`의 저장소 검증 계약과 실행 자산을 사용합니다. 사용하지 않는 예전 워크스페이스는 워킹 트리에 보관하지 않고 Git 히스토리에서 필요할 때 복원합니다.
 
 ---
 
@@ -152,15 +157,14 @@ just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-s
 │   ├── base.AGENTS.md         # 전역 사용자 선호와 실행 경계
 │   ├── base.hooks.json        # Antigravity PostToolUse 훅 정의 템플릿
 │   ├── README.md              # 프롬프트 적용·유지보수와 검증 안내
-│   ├── aws/, dotfiles/                    # 🟢 Production 워크스페이스 룰북
-│   ├── aiops/, containers/, drawio-gen/, k8s/,
-│   │   observability/, pre-flight-check/,
-│   │   prompt-architect/                  # 🟡 Draft / 스킬 워크스페이스 룰북
+│   ├── aiops/, aws/, containers/, dotfiles/, drawio-gen/, k8s/,
+│   │   observability/, pre-flight-check/, prompt-architect/
+│   │                                      # 활성 스킬 및 저장소 검증 자산
 │   └── .shared/test-lib/      # 여러 스킬이 공유하는 회귀 테스트 헬퍼 (tf 픽스처 러너, 병렬 실행, EXIT 트랩)
-│                              # ↑ 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob과
-│                              #   ansible.builtin.find가 기본적으로 숨김 항목을 건너뛰므로, 스킬
-│                              #   스캔·글로벌 등록·테스트 탐색 대상에서 구조적으로 자동 제외된다
-│                              #   (평문 이름이면 제외 목록을 곳곳에 수동 등록해야 하고 그 목록이 낡는다).
+│                              # ↑ 폴더 이름이 점으로 시작하는 것은 의도된 설계다. bash glob은
+│                              #   숨김 항목을 건너뛰지만 재귀 find/ansible.builtin.find는 숨김
+│                              #   디렉토리 안으로 들어갈 수 있어 배포·충돌 검사 코드가
+│                              #   '/contexts/.' 경로 가드로 명시적으로 제외한다.
 │                              #   사용 종료된 스킬은 보관 폴더를 두지 않고 지운다 — git 히스토리가
 │                              #   그 역할을 하며, 워킹 트리에 두면 모든 스캐너가 제외 토큰을 져야 한다.
 │
@@ -311,11 +315,11 @@ src
 - 커밋: 스테이징된 내용의 시크릿 검사와 `PFC_PROFILE=quick` 문법·포맷 검사. 프롬프트 변경 시 관련 린트도 실행합니다.
 - 종료: 마지막 성공 결과와 달라진 경우 `pre-flight-check.sh --changed`와 저장소 검사를 실행합니다.
 - 푸시: 로컬 회귀 테스트는 기본 비활성화. 필요할 때 `DOTFILES_PRE_PUSH=1 git push`로 변경 스킬을 검증합니다.
-- CI: `PFC_PROFILE=full just verify`로 전체 파일 검증과 회귀 테스트를 실행합니다. 비용 API 검사는 별도 `RUN_COST_CHECK=true` 요청이 있을 때만 켭니다.
+- CI: `PFC_PROFILE=full just verify`로 공통 전체 파일 검증과 회귀 테스트를 실행합니다. Terraform/SAM/Helm/K8s/Conftest/FinOps 등 도메인 정책까지 확인할 때는 `just check-domain` 또는 `PFC_DOMAIN_CHECKS=1`을 명시합니다.
 
 훅 등록 변경은 `bash bin/utils/merge-agent-hooks.sh`로 적용합니다. 기존 에이전트 설정은 `.bak.*` 파일로 백업합니다.
 
-설치 CI는 설치 스크립트·설정·스킬 등록·테스트 관련 변경과 주간·수동 실행에서 수행합니다. 문서 본문만 바뀌면 생략하며, Git 비교가 불가능하면 실행합니다. TFLint 초기화는 실패 시 5초 간격으로 최대 3회 재시도합니다.
+설치 CI는 bootstrap/Ansible/Stow/bin/.github/context scripts처럼 설치 동작에 영향을 주는 변경, SKILL.md·base.AGENTS.md의 추가·삭제, 주간·수동 실행에서 수행합니다. SKILL.md·base.AGENTS.md의 내용 수정과 `contexts/*/tests/*`만 바뀐 경우에는 기존 symlink 설치 결과가 같으므로 smoke를 생략합니다. Git 비교가 불가능하면 안전하게 실행합니다. TFLint 초기화는 실패 시 5초 간격으로 최대 3회 재시도합니다.
 종료 훅은 `[ADVISORY]`로 분류한 단순 권고가 있어도 성공 캐시를 재사용합니다. 검사 누락이나 분류되지 않은 경고는 재검사합니다.
 
 검증 CI는 `.github/scripts/ci-tool-config.py`가 정본 mise 설정에서 검사·테스트용 도구만 추출해 설치합니다. 기본 검사기는 저장소 내부 경로를 우선 사용하며, CI에서 필수 검사기가 누락되면 실패합니다.

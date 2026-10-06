@@ -195,6 +195,12 @@ echo "=== prompt-lint.sh 회귀 테스트 ==="
 echo "--- 기준선 ---"
 check_clean "ok-baseline (지적 0건)" "$(new_case ok-baseline)"
 
+# Prompt Harness 경량화 이후에는 공통 자가비판 SSOT 문서가 아예 없는 구성이 정상이다.
+# 이 경우 경고를 남기면 모든 실제 실행에서 의미 없는 WARNING이 고정적으로 발생한다.
+D=$(new_case ok-no-self-critique-ssot)
+sed -i 's/공통 자가 비판 절차 (전 demo 모듈 SSOT)/저장소 고유 검증 계약/' "$D/contexts/demo/references/000-core.md"
+check_clean "ok-no-self-critique-ssot (SSOT 선언 없음은 정상)" "$D"
+
 echo "--- ERROR (커밋 중단) ---"
 
 # 1. SSOT 모듈 목록 불일치: 선언에 없는 모듈 파일을 추가한다.

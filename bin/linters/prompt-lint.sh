@@ -55,7 +55,7 @@ check_ssot_module_lists() {
   mapfile -d '' -t core_files < <(grep -lZE "공통 자가 비판 절차 \(전 .+ 모듈 SSOT\)" "$CONTEXTS_DIR"/*/references/*.md 2>/dev/null || true)
 
   if [ "${#core_files[@]}" -eq 0 ]; then
-    echo "[WARNING] 공통 자가 비판 절차 SSOT 선언 파일을 찾지 못했습니다."
+    log_info "[INFO] 공통 자가 비판 절차 SSOT 선언 없음 — 해당 검사 건너뜀."
     return
   fi
 
