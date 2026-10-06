@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # containers 검증 파이프라인 회귀 테스트
 #
-# 각 픽스처는 010-containers-core.md / 020-image-hardening-standard.md 의 특정
-# 조항이나 중단 조건을 재현한다. 목적은 pre-flight-check.sh 의 Dockerfile 검증
-# 로직을 손볼 때, 기존 검사가 조용히 죽어서 위반 이미지 정의가 통과되는 상황을
-# 제어하는 것이다.
+# 각 픽스처는 이 저장소의 Dockerfile 검증기가 의존하는 외부 도구·게이트
+# 계약을 하나씩 재현한다. 목적은 pre-flight-check.sh 의 Dockerfile 검증 로직을
+# 손볼 때, 기존 검사가 조용히 죽어서 위반 이미지 정의가 통과되는 상황을 제어하는
+# 것이다.
 #
 # 검증기가 스테이징된 파일을 대상으로 동작하는 것과 달리 이 러너는 픽스처를
 # 직접 넘긴다. 대신 검증기가 쓰는 것과 동일한 명령·옵션을 그대로 사용한다.
