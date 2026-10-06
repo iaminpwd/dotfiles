@@ -144,7 +144,7 @@ check "warn-orphaned-reference" 0 "고아 후보" "$D"
 
 echo "--- markdown 구조 ---"
 D=$(new_case fail-odd-code-fence)
-printf '\n\`\`\`bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
+printf '\n```bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-odd-code-fence" 1 "코드펜스 짝이 맞지 않음" "$D"
 
 echo "--- contexts 숨김 디렉토리 제외 ---"
