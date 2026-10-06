@@ -125,10 +125,12 @@ check_clean "ok-baseline" "$(new_case ok-baseline)"
 
 echo "--- reference 링크 / orphan ---"
 D=$(new_case fail-broken-relative-reference)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
 echo '| 없는 모듈 | references/999-missing.md |' >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-relative-reference" 1 "깨진 스킬-상대 참조 링크" "$D"
 
 D=$(new_case fail-broken-absolute-reference)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
 echo '상세 계약: contexts/demo/references/999-missing.md' >>"$D/contexts/demo/SKILL.md"
 check "fail-broken-absolute-reference" 1 "깨진 참조 링크" "$D"
 
@@ -144,6 +146,7 @@ check "warn-orphaned-reference" 0 "고아 후보" "$D"
 
 echo "--- markdown 구조 ---"
 D=$(new_case fail-odd-code-fence)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
 printf '\n```bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-odd-code-fence" 1 "코드펜스 짝이 맞지 않음" "$D"
 
