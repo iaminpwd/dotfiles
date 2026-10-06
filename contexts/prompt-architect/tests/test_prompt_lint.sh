@@ -618,7 +618,7 @@ fi
 # 19. [Good] bash 예제도 같은 판정을 받는가.
 #     예전에는 Dockerfile 한 언어만 봤는데, 이 저장소에서 가장 많이 쓰이는 언어는 bash 이고
 #     게이트(shellcheck -x)도 이미 있어 정작 가장 값싼 축이 비어 있었다. 그 사이에 실제로
-#     두 건이 드리프트했다 — aiops/020 의 `export VAR=$(...)`(SC2155: 시크릿 조회 실패를
+#     두 건이 드리프트했다 — `export VAR=$(...)`(SC2155: 시크릿 조회 실패를
 #     export 가 삼켜 빈 비밀번호가 전파된다)와 dotfiles/050 의 `source ~/.zshrc.local`(SC1090).
 #     차단·통과 양축과 오탐 축을 함께 고정한다.
 if ! command -v shellcheck >/dev/null 2>&1; then

@@ -38,7 +38,7 @@ if [ -n "$SECRET_HITS" ]; then
   echo "❌ [ERROR] Plaintext secrets detected in telemetry/IaC manifests!"
   # 위치(파일:줄)만 출력하고 매치된 줄의 내용은 절대 찍지 않는다. 여기 걸린 값은 정의상
   # 시크릿 후보라, 원문을 그대로 출력하면 이 스크립트가 도는 모든 로그·CI 출력·AI 컨텍스트에
-  # 시크릿을 퍼뜨리게 된다(base.AGENTS.md 7장 Sensitive Data Masking).
+  # 시크릿을 퍼뜨리게 된다. 저장소의 시크릿 경계를 지키기 위해 위치만 출력한다.
   while IFS= read -r hit; do
     [ -n "$hit" ] || continue
     printf '   - %s\n' "$(printf '%s' "$hit" | cut -d: -f1,2)"

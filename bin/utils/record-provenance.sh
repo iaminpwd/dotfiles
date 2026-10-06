@@ -9,7 +9,7 @@ source "$RECORD_PROVENANCE_SCRIPT_DIR/../lib/git-relpath.sh"
 if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <file_path> <rule_source>[,<rule_source>...] <purpose>"
   echo "Example (단일 참고): $0 src/main.py dotfiles/030-dotfiles-core-standard.md \"Refactor authentication\""
-  echo "Example (다중 참고): $0 src/main.py dotfiles/030-dotfiles-core-standard.md,aiops/060-agent-logic.md \"Refactor authentication\""
+  echo "Example (다중 참고): $0 src/main.py dotfiles/030-dotfiles-core-standard.md,aiops/SKILL.md \"Refactor authentication\""
   exit 1
 fi
 

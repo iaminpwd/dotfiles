@@ -8,20 +8,9 @@
 
 ## aiops
 
-AIOps 자동화 파이프라인 및 SRE 스킬. 동적 임계치 시계열 이상 탐지, 탐지→진단→대응→검증 Closed-Loop 자동화,
+AIOps 텔레메트리·Closed-Loop 자동화 검증 스킬. TelemetryCollectorConfig/ClosedLoopPolicy,
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| AIOps 프로젝트 및 자동화 파이프라인 기획 | references/005-project-planning-template.md |
-| 보안(SecOps), 규정 준수(ISMS-P/비식별화) | references/020-security-compliance.md |
-| 비용 분석(FinOps), DORA 메트릭 | references/030-finops-optimization.md |
-| 엣지 케이스, 복원력, 카오스 엔지니어링 | references/040-resiliency-chaos-standard.md |
-| IaC 및 GitOps 파이프라인 아키텍처 | references/050-iac-standard.md |
-| AI 에이전트 RAG, Self-healing 워크플로우 | references/060-agent-logic.md |
-| 장애 분석(RCA), 트러블슈팅, Blameless 사후 분석 | references/100-incident-response.md |
-| Closed-Loop 명세 및 RAG 참조 파이프라인 코드 예시 | examples/ |
-| 텔레메트리 파이프라인 및 동적 임계치 정량 검증 도구 | scripts/ |
-| scripts/examples 회귀 테스트 실행 | tests/run.sh |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## aws
 

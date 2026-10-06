@@ -570,7 +570,7 @@ check_dangling_file_references() {
 # [bash 축] 같은 판정을 ```bash [Good] 예제에도 적용한다. 예전에는 Dockerfile 한 언어만
 # 봤는데, 이 저장소에서 가장 많이 쓰이는 언어는 bash 이고 게이트(shellcheck -x)도 이미
 # 갖춰져 있어 정작 가장 값싼 축이 비어 있었다. 그 사이에 실제로 두 건이 드리프트했다:
-#   - aiops/020: `export DB_PASSWORD=$(aws secretsmanager ...)` (SC2155). 린트 지적으로
+#   - 과거 실제 결함: `export DB_PASSWORD=$(aws secretsmanager ...)` (SC2155). 린트 지적으로
 #     끝나지 않는다 — export 가 명령의 종료 코드를 삼켜 시크릿 조회 실패가 성공으로 보이고
 #     빈 비밀번호가 그대로 전파된다(실측: `export FOO=$(false)` -> $?=0). 시크릿 관리를
 #     다루는 보안 룰북의 [Good] 예제가 실패를 삼키는 패턴을 시연하고 있었다.
