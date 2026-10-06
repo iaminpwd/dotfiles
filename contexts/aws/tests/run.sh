@@ -15,9 +15,9 @@
 # 그 계약은 실제로 흔들린다.
 #
 # 아래 tf_* 러너는 예전에 aws/azure/openstack/multi-cloud 네 스킬이 공유하던
-# tests/lib/tf-fixture-lib.sh 였다. 뒤의 셋을 지워 소비자가 이 파일 하나만 남은
-# 뒤로는 공유 파일로 둘 이유가 없어 여기로 인라인했다(그 파일 자신이 남긴 지침이다).
-# 벤더 스킬을 다시 살린다면 복제하지 말고 그때 다시 tests/lib 로 빼낼 것.
+# 공용 tf-fixture-lib.sh 로 분리되어 있었다. 뒤의 셋을 지워 소비자가 이 파일 하나만 남은
+# 뒤로는 공유 파일로 둘 이유가 없어 여기로 인라인했다.
+# 벤더 스킬을 다시 살린다면 복제하지 말고 그때 tests/lib 로 다시 추출한다.
 #
 # 사용: bash ~/dotfiles/contexts/aws/tests/run.sh
 
