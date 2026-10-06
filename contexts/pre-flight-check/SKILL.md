@@ -21,7 +21,6 @@ description: |
 - `PFC_PROFILE=stop`: quick 범위에 Ansible 검사를 더한다. Stop 훅의 변경 파일 검증에 사용된다.
 - `PFC_PROFILE=full`(기본): shell/Ansible/Dockerfile/YAML/보안 검사를 실행한다.
 - full에서 Terraform validate, SAM, Helm, Kubernetes, Conftest, FinOps, delegated plugin까지 실행하려면 `PFC_DOMAIN_CHECKS=1`을 추가한다.
-- 비용 검사는 별도 실행 경로에서 `RUN_COST_CHECK=true`가 필요한 경우가 있으므로 자동 실행됐다고 가정하지 않는다.
 
 ## 저장소 명령
 
