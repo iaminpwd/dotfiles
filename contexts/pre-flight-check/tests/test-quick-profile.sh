@@ -18,8 +18,11 @@ for module in pfc-iac-checks pfc-quality-checks; do
 done
 for check in shell terraform sam ansible helm k8s_manifests docker yaml conftest security finops_costs; do
   # shellcheck disable=SC2016
+  # idempotency:bypass (생성 검증기 함수가 매 실행 새 mktemp trace에 호출 순서를 기록하는 테스트 전용 append)
   printf 'validate_%s() { echo %s >>"$PROFILE_TRACE"; [ "${FAIL_CHECK:-}" != %s ]; }\n' \
-    "$check" "$check" "$check" >>"$TMP/repo/bin/lib/pfc-quality-checks.sh"
+    "$check" \
+    "$check" \
+    "$check" >>"$TMP/repo/bin/lib/pfc-quality-checks.sh"
 done
 cat >>"$TMP/repo/bin/lib/pfc-quality-checks.sh" <<'EOF'
 has_tool() { return 0; }
