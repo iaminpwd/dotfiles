@@ -213,7 +213,7 @@ check_readme_skill_counts() {
 }
 
 # -----------------------------------------------------------------------------
-# `contexts/` 아래 점으로 시작하는 디렉토리(현재는 테스트 전용 라이브러리 `.shared` 하나)는
+# `contexts/` 아래 점으로 시작하는 디렉토리는
 # "어떤 소비자도 취급하지 않는다"가 이 코퍼스의 규약이다. 그런데 그 규약은 자동으로 지켜지지
 # 않는다 — 셸 glob(`"$CONTEXTS_DIR"/*/`)은 dotglob 없이 숨김 디렉토리를 건너뛰지만,
 # `find` 와 `ansible.builtin.find` 는 그렇지 않다. 특히 후자는 `hidden: false` 가 숨김
@@ -223,8 +223,8 @@ check_readme_skill_counts() {
 # 이어졌다(당시엔 폐기 스킬 보관소 `.archive` 도 있었다 — 지금은 지웠고 내용은 git 히스토리에
 # 남아 있다): 폐기 스킬의 스크립트가 매 setup 마다 사용자 PATH 에 링크됐고(ansible ai_agent
 # 롤), 폐기 룰북이 근거 기록의 스킬 보정 후보에 섞여 정상 기록을 막거나 존재하지 않는
-# 룰을 SUCCESS 로 남겼다(record-provenance.sh). 보관소를 지웠다고 규약이 없어지지는 않는다 —
-# `.shared` 가 그대로 있고, 숨김 디렉토리는 언제든 다시 생긴다.
+# 룰을 SUCCESS 로 남겼다(record-provenance.sh). 보관소와 공유 테스트 라이브러리를 contexts 밖으로 옮겼어도 규약이 없어지지는 않는다 —
+# 숨김 디렉토리는 언제든 다시 생길 수 있다.
 #
 # 숨김 디렉토리 제외 계약은 실행 경로마다 반복되므로 문서 규칙이 아니라 여기서
 # 기계적으로 대조한다.
@@ -257,7 +257,7 @@ check_archive_scope_consistency() {
       grep -qE '(-prune|! -path|-not -path|--exclude-dir)' <<<"$body" && continue
       echo "❌ [ERROR] contexts/ 루트를 훑는 find 에 숨김 디렉토리 제외가 없습니다: $rel:$lineno" >&2
       echo "    $(sed -E 's/^[[:space:]]+//' <<<"$body")" >&2
-      echo "    -> .shared 등 숨김 디렉토리가 결과에 섞입니다. -prune 또는 ! -path \"*/contexts/.*\" 를 추가하십시오." >&2
+      echo "    -> 숨김 contexts 디렉토리가 결과에 섞입니다. -prune 또는 ! -path \"*/contexts/.*\" 를 추가하십시오." >&2
       EXIT_CODE=1
     done < <(grep -nE '(^|[;|(&]|\$\()[[:space:]]*find[[:space:]]+("?\$\{?CONTEXTS_DIR\}?"?|"[^"]*/contexts")[[:space:]]' "$f" || true)
   done < <(find "$REPO_ROOT/bin" "$REPO_ROOT/stow" "$REPO_ROOT/.github" \
