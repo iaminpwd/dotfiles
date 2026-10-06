@@ -45,13 +45,7 @@ AWS 인프라 작업 스킬. VPC, EC2, S3, RDS, Lambda, EKS, IAM, CloudFormation
 
 컨테이너 이미지 엔지니어링 스킬. Dockerfile/OCI 이미지 빌드, 멀티스테이지,
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| Dockerfile 작성 및 멀티스테이지 빌드 | references/010-containers-core.md |
-| 이미지 하드닝 (non-root, distroless, RO rootfs) | references/020-image-hardening-standard.md |
-| SBOM, 이미지 서명, 취약점 스캔 (공급망 보안) | references/030-supply-chain-security-standard.md |
-| 레지스트리 태깅 규칙 및 라이프사이클 정책 | references/040-registry-lifecycle-standard.md |
-| 컨테이너 런타임 장애 대응 (OOMKilled, CrashLoop 등) | references/100-incident-response.md |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## dotfiles
 
