@@ -1,33 +1,18 @@
 ---
 name: aiops
 description: |
-  AIOps 자동화 파이프라인 및 SRE 스킬. 동적 임계치 시계열 이상 탐지, 탐지→진단→대응→검증 Closed-Loop 자동화,
-  이종 텔레메트리(메트릭·로그·트레이스) 수집, RAG 인시던트 지식베이스, Self-Healing, 서비스 토폴로지 RCA,
-  금융권 보안(ISMS-P, 데이터 비식별화, 망분리 프라이빗 LLM 게이트웨이), MTTD/MTTR 측정 및 AIOps 성숙도 로드맵,
-  SecOps, Policy-as-Code, DORA 메트릭, 카오스 엔지니어링, GitOps, 포스트모템(post-mortem) 리포트 작성.
+  AIOps 텔레메트리·Closed-Loop 자동화 검증 스킬. TelemetryCollectorConfig/ClosedLoopPolicy,
+  동적 이상 임계치, RAG/프라이빗 LLM용 PII 마스킹, AIOps 커밋 훅과 회귀 테스트에 사용.
 ---
 # aiops Skill
 
-aiops 관련 작업 시 발동됩니다. SRE 원칙 및 에이전트 기반 자동화 파이프라인 구축 시 사용하십시오.
+AIOps 자동화와 텔레메트리 관련 작업에 사용한다. 일반 AIOps/SRE/FinOps/RAG 설계 지식은 현재 코드와 공식 문서를 기준으로 판단하고, 이 저장소가 실제로 강제하는 검증 계약만 아래에 둔다.
 
-## 1. 작업 유형별 참조 문서 라우팅 (SSOT)
+## 저장소 검증 계약
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| AIOps 프로젝트 및 자동화 파이프라인 기획 | references/005-project-planning-template.md |
-| 보안(SecOps), 규정 준수(ISMS-P/비식별화) | references/020-security-compliance.md |
-| 비용 분석(FinOps), DORA 메트릭 | references/030-finops-optimization.md |
-| 엣지 케이스, 복원력, 카오스 엔지니어링 | references/040-resiliency-chaos-standard.md |
-| IaC 및 GitOps 파이프라인 아키텍처 | references/050-iac-standard.md |
-| AI 에이전트 RAG, Self-healing 워크플로우 | references/060-agent-logic.md |
-| 장애 분석(RCA), 트러블슈팅, Blameless 사후 분석 | references/100-incident-response.md |
-| Closed-Loop 명세 및 RAG 참조 파이프라인 코드 예시 | examples/ |
-| 텔레메트리 파이프라인 및 동적 임계치 정량 검증 도구 | scripts/ |
-| scripts/examples 회귀 테스트 실행 | tests/run.sh |
-
-* 해당 주제의 설계·검토가 필요한 경우: references/010-aiops-core.md
-
-## 2. 작업 프로세스 제약 (Operational Gate)
-
-- **[PREFER] 필요한 참조 선택:** 라우팅 표에서 현재 작업에 해당하는 문서를 읽고, 연결된 문서는 판단에 필요한 경우에만 추가로 읽을 것. 이미 읽은 내용은 재사용할 것.
-- **[MUST] 사후 통합 검증 (Pre-Flight Check)**: 변경 완료 시 관련 파일의 `pre-flight-check.sh` 정량 검증 결과를 확인할 것. 실행 시점과 결과 보고는 `contexts/pre-flight-check/SKILL.md`를 따른다.
+- AIOps 스크립트·예제·커밋 훅의 동작을 변경하면 `bash contexts/aiops/tests/run.sh`를 실행한다.
+- `bin/hooks/plugins/aiops-check.sh`는 스테이징된 YAML/YML에 `ClosedLoopPolicy` 또는 `TelemetryCollectorConfig`가 있을 때만 활성화하고, 같은 커밋의 YAML/YML/JSON/Terraform 파일을 격리된 임시 디렉터리에서 `contexts/aiops/scripts/validate-telemetry-schema.sh`로 검사한다.
+- 텔레메트리 검증기는 평문 시크릿 대입을 차단하되 로그에 시크릿 원문을 출력하지 않는다. `yamllint`가 없으면 YAML 문법 검사가 미실행임을 WARNING으로 드러내고, 평문 시크릿 검사는 계속 수행한다.
+- `eval-anomaly-threshold.py`는 빈 입력과 정상 입력의 반환 키 집합을 동일하게 유지하고, 알려진 데이터셋의 임계치 계산을 회귀 테스트로 고정한다.
+- `examples/anomaly-rag-pipeline.py`의 PII 마스킹은 주민번호·카드·계좌·전화·이메일과 중첩 payload를 대상으로 하며, 원문 민감값 유출과 일반 로그 과잉 마스킹을 모두 회귀 테스트로 막는다.
+- 실제 변경 파일의 quick/full 검사와 WARNING/SKIP 해석은 `contexts/pre-flight-check/SKILL.md`를 따른다.
