@@ -27,19 +27,7 @@ AIOps 자동화 파이프라인 및 SRE 스킬. 동적 임계치 시계열 이�
 
 AWS 인프라 작업 스킬. VPC, EC2, S3, RDS, Lambda, EKS, IAM, CloudFormation, Terraform,
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
-| IAM 정책 / 시크릿 관리 감사 | references/020-security-compliance.md |
-| 네트워크 설계 및 멀티계정 보안 | references/025-cloud-security.md |
-| 비용 최적화 및 FinOps | references/030-finops-optimization.md |
-| 쉘 스크립팅 및 자동화 스크립트 | references/040-automation-scripting.md |
-| Terraform 및 Ansible IaC 코드 | references/050-iac-standard.md |
-| EKS 및 Helm 오케스트레이션 | references/060-eks-standard.md |
-| Lambda 및 API Gateway 서버리스 | references/070-serverless-standard.md |
-| RDS 및 DynamoDB 데이터베이스 | references/080-database-standard.md |
-| CI/CD 파이프라인 및 Day-2 운영 | references/090-day2-operations.md |
-| 장애 대응 및 Post-Mortem 분석 | references/100-incident-response.md |
+_(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## containers
 
