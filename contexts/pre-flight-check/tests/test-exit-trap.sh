@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-exit-trap.sh
 #
-# contexts/.shared/test-lib/exit-trap.sh 는 라이브러리 함수가 자기 임시 디렉토리를
+# tests/lib/exit-trap.sh 는 라이브러리 함수가 자기 임시 디렉토리를
 # 치우려고 EXIT 트랩을 걸 때 호출자의 트랩을 파괴하지 않도록 하는 SSOT다.
 # `trap ... EXIT` 는 추가가 아니라 교체라, 이 계약이 깨지면 호출자가 걸어 둔 정리
 # 로직이 조용히 사라지고 임시 디렉토리가 스크립트 종료 후에도 남는다.
@@ -13,7 +13,7 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-LIB="$REPO_ROOT/contexts/.shared/test-lib/exit-trap.sh"
+LIB="$REPO_ROOT/tests/lib/exit-trap.sh"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
