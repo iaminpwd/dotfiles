@@ -20,7 +20,7 @@ git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: 테스트 초기 상태'
 RUNNER="$REPO/bin/hooks/stop-regression-check.sh"
 
-printf '# 수정\n' >>"$REPO/bin/utils/safe-link-backup.sh"
+printf '#!/bin/bash\n# 수정\n' >"$REPO/bin/utils/safe-link-backup.sh"
 git -C "$REPO" add bin/utils/safe-link-backup.sh
 printf '# 추가 수정\n' >>"$REPO/bin/utils/safe-link-backup.sh"
 selected=$(bash "$RUNNER" --list)
