@@ -16,9 +16,10 @@
 set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 FIXTURES="$TESTS_DIR/fixtures-ansible"
-# shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
+# shellcheck source=tests/lib/parallel-pair.sh
+source "$REPO_ROOT/tests/lib/parallel-pair.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -98,7 +99,6 @@ echo "--- validate_ansible (pre-flight-check.sh, 외부 저장소 배선) ---"
 # 두 케이스를 같이 둔다. 통과 케이스만 두면 "-c 를 떼는" 대신 "ansible-lint 자체를
 # 건너뛰게" 만드는 회귀도 통과해 버리기 때문에, 설정 파일 없이도 실제로 린트가
 # 도는지를 차단 케이스로 함께 고정한다.
-REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 PFC="$REPO_ROOT/bin/hooks/pre-flight-check.sh"
 if [ -f "$PFC" ] && require_tool ansible-lint; then
   ANS_TMP=$(mktemp -d)
