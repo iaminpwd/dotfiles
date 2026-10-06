@@ -1,54 +1,44 @@
 ---
 name: drawio-gen
 description: |
-  인프라 및 시스템 아키텍처 다이어그램 생성(draw.io) 스킬. "다이어그램 그려줘", "구성도 만들어줘", "도식화해줘",
-  ".drawio 로 정리해줘", "인프라 아키텍처 그려줘" 같은 draw.io 토폴로지 요청에 사용.
-  입력은 IaC 코드(Terraform, CloudFormation, Bicep/ARM, Heat HOT) 또는 자연어 아키텍처
-  설명(예: "EKS 2개와 NAT Gateway를 쓴다") 둘 다 가능하며,
-  AWS · Azure · OpenStack 아키텍처 다이어그램(.drawio XML)을 산출함.
-  클라우드 설계·정책 판단이 포함된 경우에 해당 클라우드 스킬을 추가 참조함.
+  인프라 및 시스템 아키텍처를 실제 .drawio XML로 생성·수정할 때 사용하는 스킬.
+  AWS/Azure/OpenStack 토폴로지, draw.io XML 형식, 레이아웃·아이콘·가독성·검증 계약을 제공함.
 ---
 # drawio-gen Skill
 
-아키텍처 다이어그램(draw.io) 생성 시 발동됨.
+아키텍처 다이어그램(.drawio) 생성·수정에 사용한다. 일반 클라우드 설계 판단은 해당 클라우드 스킬/공식 문서를 따르고, 이 스킬에는 draw.io 산출물 계약만 둔다.
 
-## 1. 작업 유형별 참조 문서 라우팅 (SSOT)
+## 참조 라우팅
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 근거 충실성 원칙 (Anti-Hallucination) | references/005-fidelity-anti-hallucination-standard.md |
-| DrawIO XML 공통 포맷 규격 | references/010-drawio-xml-standard.md |
-| 레이아웃 계산 및 배치 검증 (좌표/크기/정렬/waypoint) | references/015-layout-calculation-standard.md |
-| AWS 리소스 아이콘 스타일 | references/020-aws-icon-style-library.md |
-| Azure 리소스 아이콘 스타일 | references/030-azure-icon-style-library.md |
-| OpenStack 리소스 아이콘 스타일 | references/035-openstack-icon-style-library.md |
-| 서드파티/OSS 도구 아이콘 (클라우드 공통) | references/040-third-party-icon-library.md |
-| 가독성 (범례/제목/라벨 줄바꿈/타이포그래피) | references/050-readability-standard.md |
-| 검증 및 수락 기준 (완료 조건/검증 스크립트) | references/090-validation-standard.md |
-| 레이아웃 계산 공용 코드 (격자/스택/겹침검사) | scripts/layout_toolkit.py |
+| DrawIO XML 공통 포맷·계층·엣지·라벨 | references/010-drawio-xml-standard.md |
+| 좌표·크기·정렬·waypoint 계산 | references/015-layout-calculation-standard.md |
+| AWS 아이콘 스타일 | references/020-aws-icon-style-library.md |
+| Azure 아이콘 스타일 | references/030-azure-icon-style-library.md |
+| OpenStack 아이콘·도형·색상 계약 | references/035-openstack-icon-style-library.md |
+| OSS/서드파티 아이콘 | references/040-third-party-icon-library.md |
+| 제목·범례·라벨·타이포그래피 | references/050-readability-standard.md |
+| 완료 조건·기계 검증 | references/090-validation-standard.md |
+| 레이아웃 계산·검증 구현 | scripts/layout_toolkit.py |
 
-## 2. 생성 프로세스 (6단계)
+## 근거 계약
 
-| 단계 | 작업 | 상세 |
-|---|---|---|
-| 0 | 입력 모드 판별 | 사용자가 IaC 코드/리포지토리를 제공했는지, 자연어 설명만 제공했는지 판별(005 §0). 두 방식이 섞이면 코드를 SSOT로 하고 설명은 보완 근거로만 사용 |
-| 1 | 근거 수집 | **코드 기반**: 파일 검색·조회로 모든 리소스 정의 전수 수집. **설명 기반**: 사용자 발화에서 리소스 종류·수량·구성 힌트를 추출. 두 모드 모두 005 문서의 근거 충실성 원칙을 반드시 적용하며, 설명 기반 모드에서 미명시된 세부사항은 005 §6에 따라 표준 기본값을 명시적으로 라벨링하거나 사용자에게 질문 |
-| 2 | 클라우드 식별 | **코드 기반**: provider prefix 기반 자동 판별. **설명 기반**: 서비스 명칭 키워드(EKS/NAT Gateway 등=AWS, AKS/VNet 등=Azure, Nova/Neutron/Keystone/Octavia 등=OpenStack)로 판별하고 모호하면 질문 |
-| 3 | 리소스 그래프 추출 | 계층 매핑: Cloud > Region > VPC/VNet(OpenStack은 Neutron Network) > Subnet > Resource |
-| 4 | drawio XML 생성 | 클라우드별 아이콘 스타일(020/030/035/040) + 공통 XML 규격(010) 적용. 좌표는 손으로 하드코딩하는 대신 `layout_toolkit.py`의 `grid`/`hstack`/`vstack`으로 계산(015). 읽는 사람 가독성을 위해 `title()`(제목/범위)·`legend()`(색·선 범례)를 포함하고 아이콘 라벨 줄바꿈·타이포그래피 위계를 적용(050) |
-| 5 | 규칙 준수 검증 | 010 문서 2~9절(크기/헤더높이/라벨링/엣지/AZ 서브라벨/아이콘) + 015 문서(레이아웃 계산), 050 문서(범례/제목/라벨/타이포그래피), 005 문서(근거 충실성) 체크리스트 대조 검증. `layout_toolkit.validate()`로 겹침까지 기계적 확인 후 렌더링 결과를 육안으로도 확인 |
+- IaC/리포지토리가 있으면 코드가 SSOT다. README·모듈 주석·Helm/values 등은 실제 운영 위치·워크로드를 보완하는 근거로만 사용한다.
+- 주석 처리됐거나 실제 평가 결과가 비활성인 리소스는 배포된 것으로 그리지 않는다. 문서에 수동 운영 중이라고 명시된 경우에만 상태를 라벨로 표시해 포함한다.
+- 자연어 설명만 있으면 사용자가 명시한 리소스 종류·수량을 그대로 반영한다. 미명시 세부사항을 채워야 하면 실제 리소스로 단정하지 말고 `(가정: ...)`으로 표시한다. 토폴로지 자체가 달라지는 모호성은 확인 없이 임의 확정하지 않는다.
+- 코드와 설명이 충돌하면 코드를 덮어쓰지 말고 충돌을 드러낸다.
+- 이 스킬의 산출물은 Cloud/Region/VPC·VNet·Neutron Network/Subnet/Resource 계층의 인프라 토폴로지다. 단순 폴더·리포지토리 구조도에는 사용하지 않는다.
 
-## 3. 작업 프로세스 제약 (Operational Gate)
+## 산출물 계약
 
-- **[MUST] Infrastructure Topology Only**: 사용자 요청에 "폴더", "구조", "리포지토리" 등의 표현이 포함되어 있어도, 이 스킬의 산출물은 반드시 2절 프로세스 표의 계층(Cloud > Region > VPC/VNet > Subnet > Resource)을 따르는 실제 네트워크/클라우드 토폴로지로만 구성할 것.
-- **[PREFER] Template Inheritance**: 작업 대상과 동일한 인프라를 다루는 `.drawio` 파일이 워크스페이스에 이미 존재하면, XML 생성 전에 반드시 열어 확인할 것. 존재할 경우 해당 다이어그램의 규약(계층 구조, 아이콘 매핑, 라벨링 컨벤션)을 최우선 템플릿으로 상속하여 일관성을 강제할 것.
-- **[PREFER] 필요한 참조 선택:** 라우팅 표에서 현재 작업에 해당하는 문서를 읽고, 연결된 문서는 판단에 필요한 경우에만 추가로 읽을 것. 이미 읽은 내용은 재사용할 것.
-- **[MUST] 클라우드 식별**: 코드 기반 모드에서는 IaC 코드의 provider prefix로 대상 클라우드를 판별할 것. (`aws_` = AWS, `azurerm_` = Azure, `openstack_` = OpenStack, CloudFormation = AWS, Bicep/ARM = Azure, Heat HOT `type: OS::*` = OpenStack) 설명 기반 모드에서는 사용자 발화에 등장하는 서비스 명칭으로 판별할 것. (EKS/NAT Gateway/ALB/S3 등 = AWS, AKS/VNet/App Service 등 = Azure, Nova/Neutron/Cinder/Swift/Keystone/Octavia/Magnum/Ironic/Trove/Heat 등 = OpenStack) 두 클라우드 서비스가 함께 언급되면 하이브리드 구성으로 판단하고 양쪽 아이콘 라이브러리를 함께 적용할 것. (연동 구간의 아키텍처 규범을 다루던 `multi-cloud` 스킬은 현재 워크스페이스에 존재하지 않는다. 다이어그램 산출 자체는 이 스킬의 아이콘 라이브러리만으로 가능하므로, 그 룰북을 찾지 말 것.)
-- **[MUST] 설명 기반 모드의 근거 충실성**: 코드 없이 자연어 설명만으로 다이어그램을 생성할 때는 005-fidelity-anti-hallucination-standard.md §6의 규칙(명시된 요소만 반영, 미명시 세부사항은 표준 기본값 + 명시적 라벨링, 중대한 모호성은 질문)을 반드시 적용할 것.
-- **[MUST] 라벨링/컨벤션은 010 문서의 명시 규칙을 그대로 적용**: 서브넷 용도 설명(CIDR 필수 포함), 엣지 라벨 부여 기준, 다중 AZ 분산 서브라벨, 서드파티 도구 아이콘 표현, 컨테이너 헤더 높이·아이콘 기본 크기, 레이아웃 계산 원칙은 010-drawio-xml-standard.md 2~10절에 이미 규칙과 예시 문자열로 고정되어 있습니다. "이 정도 품질"을 해당 규칙을 그대로 기계적으로 적용할 것. 실행마다 결과가 달라지는 것을 방지하기 위한 것이므로 임의 재해석 없이 규칙을 준수함.
-- **[MUST] 아이콘 라이브러리 참조**: 대상 클라우드에 맞는 아이콘 스타일 라이브러리(AWS=020, Azure=030, OpenStack=035, 서드파티는 040)를 읽고 정확한 style 속성을 적용할 것. OpenStack은 테넌트 리소스 18종(`openstack_native_icon()`)에 한해 draw.io 내장 스텐실이 존재하고, 그 외 컨트롤 플레인 서비스는 035의 함수형 블록(`openstack_icon()`, 공식 색상 표준에 따라 기본 검정+절제된 강조) 규칙을 반드시 따르며 존재하지 않는 shape/로고 URL을 명시된 객체만 반영할 것.
-- **[MUST] 가독성 요소 필수 포함(범례/제목)**: 배치가 안 겹치는 것만으로는 "읽기 쉬운" 다이어그램이 아닙니다. 050-readability-standard.md에 따라 다이어그램에 등장한 색·선 종류를 설명하는 범례(`layout_toolkit.legend()`)와 대상·범위를 알리는 제목 블록(`layout_toolkit.title()`)을 반드시 포함하고, 아이콘 라벨 자동 줄바꿈과 타이포그래피 위계(제목20/헤더13/라벨12/서브라벨10)를 적용할 것. 색·선 종류가 2가지 이상인데 범례가 없으면 완료 요건 미달로 처리할 것.
-- **[MUST] 좌표는 공용 툴킷으로 계산**: 서브넷/컨테이너/아이콘 좌표를 손으로 하나씩 대입하는 대신 `layout_toolkit.py`를 import해서 `grid`/`hstack`/`vstack`/`offset_by_header`/`subnet_box_size`로 계산할 것(015). 헤더 높이 오프셋 누락, 형제 컨테이너 높이 불일치, 콘텐츠 대비 과도한 여백은 전부 이 툴킷을 안 쓰고 좌표를 즉흥적으로 정할 때 발생한 실제 재발 버그임.
-- **[MUST] 사후 통합 검증**: XML 생성 직후, 작업을 완료 선언하기 전에 `python3 scripts/layout_toolkit.py {파일경로}`로 ID 중복/끊어진 참조/형제 겹침/행 높이 불일치/라벨 폭 초과를 기계적으로 검증할 것(090-validation-standard.md §2~3). CLI의 종료 코드가 곧 판정임(0=통과, 1=위반). matplotlib이 설치되어 있으면 `{파일명}-preview.png`(엣지 포함 렌더링)가 함께 생성되므로, 이를 직접 열어 박스 정렬과 엣지 라우팅이 다른 서브넷을 뚫고 지나가지 않는지 육안으로도 확인한 뒤에만 완료를 선언할 것. matplotlib이 없으면 `[INFO]` 안내와 함께 미리보기만 생략되고 검증 판정은 그대로 수행되므로, 육안 확인이 필요하면 `pip install matplotlib` 후 다시 실행할 것. 서드파티 아이콘 URL은 네트워크가 가능하면 `check_icon_urls()`로 추가 확인할 것.
-- **[MUST] 최종 산출물은 실제 `.drawio` 파일로 저장**: 생성한 XML은 반드시 확장자 `.drawio`인 실제 파일로 저장할 것. 기본 저장 위치는 다이어그램이 다루는 대상 프로젝트의 저장소 루트(예: `his-infra` 아키텍처 요청 시 `his-infra/<파일명>.drawio`)이며, 파일명은 대상과 범위를 알 수 있는 kebab-case(예: `his-infra-architecture-aws-main.drawio`)로 지정할 것. 코드 없이 순수 설명 기반 요청 등 대상 프로젝트 저장소가 불분명한 경우에만 저장 위치를 사용자에게 확인할 것.
-- **[MUST] Explicit Artifact Request**: HTML/SVG 기반 시각화 아티팩트는 사용자가 "미리보기도 보여줘", "화면에서 보고 싶다"처럼 명시적으로 요청한 경우에만 예외적으로 생성할 것. 기본 완료 보고 시에는 저장된 `.drawio` 파일의 절대 경로와 diagrams.net(app.diagrams.net)에서 여는 방법만을 안내할 것.
+- 대상과 동일한 인프라의 기존 `.drawio`가 있으면 먼저 확인해 계층·아이콘·라벨 컨벤션을 상속한다.
+- XML/아이콘/레이아웃/가독성 규칙은 위 참조 문서를 SSOT로 사용하고, 좌표는 가능한 한 `layout_toolkit.py` 헬퍼로 계산한다.
+- 최종 산출물은 실제 `.drawio` 파일로 저장한다. 기본 위치는 대상 프로젝트 루트, 파일명은 대상·범위를 알 수 있는 kebab-case로 한다.
+- HTML/SVG 등 별도 시각화 산출물은 사용자가 명시적으로 요청한 경우에만 만든다.
+
+## 검증 계약
+
+- 생성 직후 `python3 contexts/drawio-gen/scripts/layout_toolkit.py <file.drawio>`를 실행해 XML/ID/참조/겹침/정렬/라벨·범례 경고를 확인한다.
+- matplotlib이 있으면 생성된 preview PNG를 열어 박스 정렬과 엣지 라우팅을 육안 확인한다. 서드파티 아이콘을 사용했고 네트워크가 가능하면 URL 검사도 수행한다.
+- `layout_toolkit.py`, drawio reference, 테스트 계약을 수정했으면 `bash contexts/drawio-gen/tests/run.sh`를 실행한다.

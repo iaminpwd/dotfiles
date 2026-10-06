@@ -38,20 +38,19 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## drawio-gen
 
-인프라 및 시스템 아키텍처 다이어그램 생성(draw.io) 스킬. "다이어그램 그려줘", "구성도 만들어줘", "도식화해줘",
+인프라 및 시스템 아키텍처를 실제 .drawio XML로 생성·수정할 때 사용하는 스킬.
 
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 근거 충실성 원칙 (Anti-Hallucination) | references/005-fidelity-anti-hallucination-standard.md |
-| DrawIO XML 공통 포맷 규격 | references/010-drawio-xml-standard.md |
-| 레이아웃 계산 및 배치 검증 (좌표/크기/정렬/waypoint) | references/015-layout-calculation-standard.md |
-| AWS 리소스 아이콘 스타일 | references/020-aws-icon-style-library.md |
-| Azure 리소스 아이콘 스타일 | references/030-azure-icon-style-library.md |
-| OpenStack 리소스 아이콘 스타일 | references/035-openstack-icon-style-library.md |
-| 서드파티/OSS 도구 아이콘 (클라우드 공통) | references/040-third-party-icon-library.md |
-| 가독성 (범례/제목/라벨 줄바꿈/타이포그래피) | references/050-readability-standard.md |
-| 검증 및 수락 기준 (완료 조건/검증 스크립트) | references/090-validation-standard.md |
-| 레이아웃 계산 공용 코드 (격자/스택/겹침검사) | scripts/layout_toolkit.py |
+| DrawIO XML 공통 포맷·계층·엣지·라벨 | references/010-drawio-xml-standard.md |
+| 좌표·크기·정렬·waypoint 계산 | references/015-layout-calculation-standard.md |
+| AWS 아이콘 스타일 | references/020-aws-icon-style-library.md |
+| Azure 아이콘 스타일 | references/030-azure-icon-style-library.md |
+| OpenStack 아이콘·도형·색상 계약 | references/035-openstack-icon-style-library.md |
+| OSS/서드파티 아이콘 | references/040-third-party-icon-library.md |
+| 제목·범례·라벨·타이포그래피 | references/050-readability-standard.md |
+| 완료 조건·기계 검증 | references/090-validation-standard.md |
+| 레이아웃 계산·검증 구현 | scripts/layout_toolkit.py |
 
 ## k8s
 
