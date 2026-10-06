@@ -39,22 +39,30 @@ echo "=== record-provenance.sh 근거 보강/모호성 판정 로직 회귀 테�
 
 # 1. 이미 <스킬>/파일명 형태면 그대로 SUCCESS로 기록되어야 한다.
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" a.tf "dotfiles/030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 0 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" a.tf "dotfiles/010-core.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:dotfiles/010-core.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
   report "skill-qualified (그대로 SUCCESS)" 0
 else
   report "skill-qualified (그대로 SUCCESS)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
 fi
 
-# 2. contexts/ 전체에서 유일하게 존재하는 파일명은 <스킬>/파일명으로 자동 보정되어야 한다.
-#    (030-dotfiles-core-standard.md는 contexts/dotfiles/references 아래 정확히 1곳에만 존재)
-rm -f "$LOG"
+# 2. 유일 basename 자동 보정은 실제 prompt corpus의 특정 파일명이 남아 있는지에
+#    의존하지 않는다. 최소 합성 코퍼스로 resolve_source 알고리즘 자체를 고정한다.
+UNIQUE_FAKE="$TMP/unique-repo"
+mkdir -p "$UNIQUE_FAKE/bin/utils" "$UNIQUE_FAKE/bin/lib" \
+  "$UNIQUE_FAKE/contexts/alpha/references" "$UNIQUE_FAKE/work"
+cp "$RECORD_PROVENANCE" "$UNIQUE_FAKE/bin/utils/"
+cp "$REPO_ROOT/bin/lib/git-relpath.sh" "$UNIQUE_FAKE/bin/lib/"
+: >"$UNIQUE_FAKE/contexts/alpha/references/unique-rule.md"
+UNIQUE_RP="$UNIQUE_FAKE/bin/utils/record-provenance.sh"
+UNIQUE_LOG="$UNIQUE_FAKE/work/.agent-state/edits.log"
+
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" b.tf "030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
-if [ "$status" -eq 0 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+out=$(cd "$UNIQUE_FAKE/work" && bash "$UNIQUE_RP" b.tf "unique-rule.md" "테스트 목적" 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "agent:alpha/unique-rule.md" "$UNIQUE_LOG" && grep -qF "| SUCCESS" "$UNIQUE_LOG"; then
   report "unique-basename (자동 스킬 보정)" 0
 else
-  report "unique-basename (자동 스킬 보정)" 1 "exit=$status out=$out log=$(cat "$LOG" 2>/dev/null)"
+  report "unique-basename (자동 스킬 보정)" 1 "exit=$status out=$out log=$(cat "$UNIQUE_LOG" 2>/dev/null)"
 fi
 
 # 3~4. 모호성 판정은 실제 코퍼스에서 우연히 같은 basename이 남아 있는지에 의존하지
@@ -96,9 +104,9 @@ rm -f "$LOG"
 mkdir -p "$(dirname "$LOG")"
 echo "2026-01-01T00:00:00+00:00 | e.tf | hook:Edit | - | OK" >"$LOG"
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/010-core.md" "테스트 목적" 2>&1) || status=$?
 LINES=$(wc -l <"$LOG")
-if [ "$status" -eq 0 ] && [ "$LINES" -eq 1 ] && grep -qF "agent:dotfiles/030-dotfiles-core-standard.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
+if [ "$status" -eq 0 ] && [ "$LINES" -eq 1 ] && grep -qF "agent:dotfiles/010-core.md" "$LOG" && grep -qF "| SUCCESS" "$LOG"; then
   report "미확정 라인 보강 (append 대신 overwrite, 1줄 유지)" 0
 else
   report "미확정 라인 보강 (append 대신 overwrite, 1줄 유지)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
@@ -106,7 +114,7 @@ fi
 
 # 6. 이미 SUCCESS로 확정된 라인은 더 이상 보강 대상이 아니므로, 재호출 시 새 줄이 append되어야 한다.
 status=0
-out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/030-dotfiles-core-standard.md" "두 번째 목적" 2>&1) || status=$?
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" e.tf "dotfiles/010-core.md" "두 번째 목적" 2>&1) || status=$?
 LINES=$(wc -l <"$LOG")
 if [ "$status" -eq 0 ] && [ "$LINES" -eq 2 ]; then
   report "확정된 SUCCESS 라인 이후 재호출 (append)" 0
@@ -133,8 +141,8 @@ fi
 # 보관소(contexts/.archive)가 실제 코퍼스에 있던 시절 실측으로 재현하고 고친 결함이다.
 # 그 보관소를 지운 뒤(내용은 git 히스토리에 그대로 남아 있다) 남은 숨김 디렉토리는
 # .shared 뿐인데 거기엔 룰북이 없어 실물로는 재현할 수 없다. 판정 로직 자체는 그대로
-# 살아 있으므로 최소 코퍼스를 합성해 고정한다 — 이 스위트에서 합성 픽스처를 쓰는 유일한
-# 케이스다(나머지는 헤더 방침대로 실제 contexts/ 를 쓴다).
+# 살아 있으므로 최소 코퍼스를 합성해 고정한다. 이 스위트는 basename 해석 알고리즘을
+# prompt corpus의 우연한 파일명에 결합하지 않기 위해 unique/ambiguous/hidden 케이스를 합성 코퍼스로 고정한다.
 #
 # record-provenance.sh 는 CONTEXTS_DIR 를 "자기 실경로의 상위 두 단계"로 계산하므로
 # (환경변수로 못 바꾼다) 합성 코퍼스를 태우려면 스크립트와 그 의존 lib 을 가짜 트리에
