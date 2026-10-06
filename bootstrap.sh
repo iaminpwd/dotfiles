@@ -21,6 +21,25 @@ run_as_root() {
   fi
 }
 
+# Ansible이 사용자를 docker 그룹에 추가해도 현재 로그인 프로세스의 supplementary
+# groups는 자동 갱신되지 않는다. 계정 DB에는 docker가 있지만 현재 세션에는 없을 때만
+# 재로그인/newgrp 안내를 출력해 fresh install 직후의 권한 오류를 설명한다.
+warn_docker_group_refresh() {
+  if [ "$(uname -s)" != "Linux" ] || [ "$(id -u)" -eq 0 ]; then
+    return 0
+  fi
+
+  local user current_groups account_groups
+  user="$(id -un)"
+  current_groups="$(id -nG)"
+  account_groups="$(id -nG "$user" 2>/dev/null || true)"
+
+  if [[ " $account_groups " == *" docker "* ]] && [[ " $current_groups " != *" docker "* ]]; then
+    echo "🐳 Docker 그룹 설정은 완료됐지만 현재 로그인 세션에는 아직 반영되지 않았습니다."
+    echo "   로그아웃 후 다시 로그인하거나, 현재 셸에서 'newgrp docker'를 실행한 뒤 Docker를 사용하세요."
+  fi
+}
+
 # RHEL 호환 배포판은 EPEL release 패키지가 기본 dnf 저장소에 없을 수 있다.
 # rpm의 %{rhel} 매크로가 숫자로 해석되는 Enterprise Linux 계열에서만, 해당 메이저
 # 버전의 Fedora EPEL release RPM을 직접 설치한다. Fedora 등 다른 dnf 계열은 건너뛴다.
@@ -214,6 +233,7 @@ echo "========================================================="
 bash "$SCRIPT_DIR/.github/scripts/verify-bootstrap-env.sh"
 echo "✅ Bootstrap 및 전체 환경 셋업(Ansible & mise)이 성공적으로 완료되었습니다!"
 echo "💡 변경된 환경 변수 및 쉘 환경을 적용하려면 'exec zsh' 를 실행하세요."
+warn_docker_group_refresh
 # ansible docker 롤의 안내 태스크는 다른 롤들 출력에 파묻혀 놓치기 쉬우므로,
 # 실제로 눈에 띄는 스크립트 맨 마지막에 한 번 더 띄운다.
 if [ "$(uname)" = "Darwin" ]; then
