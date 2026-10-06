@@ -47,7 +47,7 @@ else
 fi
 
 # 2. contexts/ 전체에서 유일하게 존재하는 파일명은 <스킬>/파일명으로 자동 보정되어야 한다.
-#    (030-dotfiles-core-standard.md는 contexts/aws/references 아래 정확히 1곳에만 존재)
+#    (030-dotfiles-core-standard.md는 contexts/dotfiles/references 아래 정확히 1곳에만 존재)
 rm -f "$LOG"
 status=0
 out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" b.tf "030-dotfiles-core-standard.md" "테스트 목적" 2>&1) || status=$?
