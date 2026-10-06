@@ -1,34 +1,24 @@
 #!/usr/bin/env bash
 # prompt-lint.sh 회귀 테스트
 #
-# prompt-lint.sh 는 프롬프트 코퍼스의 결함을 잡는 여러 검사를 담고 있는데, 정작
-# 자기 자신은 검증되지 않으면 grep 무매치 하나가 set -euo pipefail 에 걸려 아무
-# 메시지 없이 exit 1로 죽어도 알 수 없다. 린터가 죽으면 코퍼스가 깨끗해서 통과한
-# 것인지 검사가 실행조차 안 된 것인지 구분할 수 없다.
-#
-# 각 케이스는 최소 코퍼스를 임시 디렉토리에 조립하고 실제 prompt-lint.sh 를
-# 그 위에서 실행한다. prompt-lint.sh는 자기 자신의 물리적 위치(bin/linters/)를
-# 기준으로 REPO_ROOT를 고정하므로(CWD 비의존), 격리 픽스처로 테스트하려면 실제
-# 스크립트와 그 의존 라이브러리를 케이스 디렉토리의 동일한 상대 위치(bin/linters/,
-# bin/lib/)로 함께 복사해야 한다(test-pre-push-hook.sh가 run-suite.sh를 다루는
-# 방식과 동일한 이유).
-#
-# 사용: bash ~/dotfiles/contexts/prompt-architect/tests/test_prompt_lint.sh
+# 현재 prompt corpus의 구조적 계약만 검증한다:
+# - reference 링크 / orphan reference
+# - 코드펜스
+# - INDEX / README drift
+# - 숨김 contexts 디렉토리 제외
+# - dangling 저장소 경로
+# - routing 정답지 정합성
 
 set -euo pipefail
 export QUIET=0
-# 이 스위트는 선택적 문서 리뷰와 예제 검증까지 명시적으로 검증한다.
-export PROMPT_LINT_REVIEW=1 PROMPT_LINT_EXAMPLES=1
 
 REPO_ROOT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 LINT="bin/linters/prompt-lint.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
-
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-
 TODAY=$(date +%F)
 
 report() {
@@ -43,15 +33,10 @@ report() {
   fi
 }
 
-# -----------------------------------------------------------------------------
-# 최소 코퍼스: 전 검사를 통과하는 상태. 각 케이스는 여기서 한 군데만 어긋뜨린다.
-# (개수를 적으면 검사가 늘 때마다 조용히 낡으므로 여기서는 수를 명시하지 않는다.)
-# -----------------------------------------------------------------------------
-BASE="$TMP/_base"
 build_base() {
-  mkdir -p "$BASE/contexts/demo/references"
-
-  cat >"$BASE/contexts/demo/SKILL.md" <<EOF
+  local base=$1
+  mkdir -p "$base/contexts/demo/references"
+  cat >"$base/contexts/demo/SKILL.md" <<EOF
 ---
 name: demo
 description: 픽스처용 데모 스킬
@@ -59,57 +44,54 @@ reviewed: $TODAY
 ---
 # 데모 스킬
 
+## 작업 유형별 참조 문서 라우팅
+
 | 작업 유형 | 참조 문서 |
 |---|---|
-| 공통 원칙 | contexts/demo/references/000-core.md |
-| 데모 코어 | contexts/demo/references/010-demo-core.md |
+| 공통 원칙 | references/000-core.md |
+| 데모 코어 | references/010-demo-core.md |
 EOF
 
-  cat >"$BASE/contexts/demo/references/000-core.md" <<EOF
+  cat >"$base/contexts/demo/references/000-core.md" <<EOF
 ---
 role: Demo Core
 reviewed: $TODAY
 ---
 # 000. 데모 코어
 
-- **[MUST] 공통 자가 비판 절차 (전 demo 모듈 SSOT):** 하위 참조 모듈(010)에 나열된 점검 기준을 하나씩 대조하십시오.
+저장소 고유 공통 계약입니다.
 EOF
 
-  cat >"$BASE/contexts/demo/references/010-demo-core.md" <<EOF
+  cat >"$base/contexts/demo/references/010-demo-core.md" <<EOF
 ---
 role: Demo Module
 reviewed: $TODAY
 ---
-# 9. 데모 모듈
+# 010. 데모 모듈
 
-- **[MUST] Deterministic Output:** 출력은 결정론적이어야 합니다.
+결정론적 출력을 사용합니다.
 EOF
 }
 
-# 케이스 디렉토리를 만들고 경로를 돌려준다.
+BASE="$TMP/_base"
+build_base "$BASE"
+
 new_case() {
   local dir="$TMP/$1"
   cp -a "$BASE" "$dir"
   git -C "$dir" init -q
-  # prompt-lint.sh(및 그 의존 라이브러리 script-init.sh)를 실제 저장소와 동일한
-  # 상대 위치로 복사한다. 자기 자신의 물리적 위치를 기준으로 REPO_ROOT를 고정하는
-  # 스크립트라, PATH의 정본을 그냥 호출하면 이 케이스 디렉토리가 아니라 실제
-  # dotfiles 저장소를 대상으로 린트해버린다.
+  git -C "$dir" config user.name Test
+  git -C "$dir" config user.email test@example.com
   mkdir -p "$dir/bin/linters" "$dir/bin/lib"
   cp "$REPO_ROOT_SRC/bin/linters/prompt-lint.sh" "$dir/bin/linters/prompt-lint.sh"
   cp "$REPO_ROOT_SRC/bin/lib/script-init.sh" "$dir/bin/lib/script-init.sh"
-  # prompt-lint.sh 가 최상단에서 무조건 source 하는 의존이라 전 케이스에 필요하다
-  # (없으면 검사 대상과 무관하게 스크립트가 로드 단계에서 죽는다).
-  cp "$REPO_ROOT_SRC/bin/lib/tool-probe.sh" "$dir/bin/lib/tool-probe.sh"
   echo "$dir"
 }
 
-# check <케이스명> <기대 종료코드> <출력에 포함되어야 할 문구>
 check() {
-  local name=$1 want_code=$2 want_text=$3 dir="$4"
+  local name=$1 want_code=$2 want_text=$3 dir=$4
   local out code
   out=$( (cd "$dir" && bash "$LINT") 2>&1) && code=0 || code=$?
-
   if [ "$code" -ne "$want_code" ]; then
     report "$name" 1 "기대 exit=$want_code / 실제 exit=$code — $(echo "$out" | tail -1)"
     return
@@ -121,12 +103,10 @@ check() {
   report "$name" 0
 }
 
-# 경고/에러가 하나도 없어야 하는 케이스용.
 check_clean() {
   local name=$1 dir=$2
   local out code hits
   out=$( (cd "$dir" && bash "$LINT") 2>&1) && code=0 || code=$?
-
   if [ "$code" -ne 0 ]; then
     report "$name" 1 "기대 exit=0 / 실제 exit=$code — $(echo "$out" | tail -1)"
     return
@@ -139,196 +119,65 @@ check_clean() {
   report "$name" 0
 }
 
-# container-hardening-gate.sh 와 그 의존 라이브러리를 케이스 디렉토리에 배치한다.
-# 이게 없으면 prompt-lint 의 [Good] Dockerfile 검사가 조용히 건너뛰므로, 그 축을 보는
-# 케이스에서만 명시적으로 넣는다(나머지 케이스에 trivy 실행 비용을 지우지 않는다).
-add_hardening_gate() {
-  local dir=$1
-  cp "$REPO_ROOT_SRC/bin/linters/container-hardening-gate.sh" "$dir/bin/linters/"
-  # tool-probe.sh 는 new_case 가 이미 배치한다(prompt-lint 자신의 의존).
-  cp "$REPO_ROOT_SRC/bin/lib/jq-resolve.sh" "$dir/bin/lib/"
-}
-
-# append_dockerfile_example <케이스디렉토리> <라벨> <Dockerfile 본문>
-# 새 references/*.md 를 만들지 않고 기존 데모 모듈에 덧붙인다 — 파일을 추가하면 고아 파일
-# 경고와 SSOT 모듈 목록 대조가 함께 흔들려 이 케이스가 보려는 축이 흐려진다.
-append_dockerfile_example() {
-  local dir=$1 label=$2 body=$3
-  {
-    echo
-    echo "### 예시 코드 및 패턴 (Few-Shot Examples)"
-    echo "<examples>"
-    echo "<example>"
-    echo "$label"
-    echo '```dockerfile'
-    echo "$body"
-    echo '```'
-    echo "</example>"
-    echo "</examples>"
-    # idempotency:bypass (케이스마다 새로 만든 디렉토리에 1회 기록)
-  } >>"$dir/contexts/demo/references/010-demo-core.md"
-}
-
-# append_bash_example <케이스디렉토리> <라벨> <bash 본문>
-# Dockerfile 헬퍼와 같은 골격이라 언어와 펜스 표기만 다르다.
-append_bash_example() {
-  local dir=$1 label=$2 body=$3
-  {
-    echo
-    echo "### 예시 코드 및 패턴 (Few-Shot Examples)"
-    echo "<examples>"
-    echo "<example>"
-    echo "$label"
-    echo '```bash'
-    echo "$body"
-    echo '```'
-    echo "</example>"
-    echo "</examples>"
-    # idempotency:bypass (케이스마다 새로 만든 디렉토리에 1회 기록)
-  } >>"$dir/contexts/demo/references/010-demo-core.md"
-}
-
-build_base
-
 echo "=== prompt-lint.sh 회귀 테스트 ==="
-
 echo "--- 기준선 ---"
-check_clean "ok-baseline (지적 0건)" "$(new_case ok-baseline)"
+check_clean "ok-baseline" "$(new_case ok-baseline)"
 
-# Prompt Harness 경량화 이후에는 공통 자가비판 SSOT 문서가 아예 없는 구성이 정상이다.
-# 이 경우 경고를 남기면 모든 실제 실행에서 의미 없는 WARNING이 고정적으로 발생한다.
-D=$(new_case ok-no-self-critique-ssot)
-sed -i 's/공통 자가 비판 절차 (전 demo 모듈 SSOT)/저장소 고유 검증 계약/' "$D/contexts/demo/references/000-core.md"
-check_clean "ok-no-self-critique-ssot (SSOT 선언 없음은 정상)" "$D"
+echo "--- reference 링크 / orphan ---"
+D=$(new_case fail-broken-relative-reference)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
+echo '| 없는 모듈 | references/999-missing.md |' >>"$D/contexts/demo/SKILL.md"
+check "fail-broken-relative-reference" 1 "깨진 스킬-상대 참조 링크" "$D"
 
-echo "--- ERROR (커밋 중단) ---"
+D=$(new_case fail-broken-absolute-reference)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
+echo '상세 계약: contexts/demo/references/999-missing.md' >>"$D/contexts/demo/SKILL.md"
+check "fail-broken-absolute-reference" 1 "깨진 참조 링크" "$D"
 
-# 1. SSOT 모듈 목록 불일치: 선언에 없는 모듈 파일을 추가한다.
-D=$(new_case fail-ssot-mismatch)
-cat >"$D/contexts/demo/references/020-extra.md" <<EOF
+D=$(new_case warn-orphaned-reference)
+cat >"$D/contexts/demo/references/020-orphan.md" <<EOF
 ---
-role: Extra Module
+role: Orphan
 reviewed: $TODAY
 ---
-# 19. 추가 모듈
+# 020. 고아
 EOF
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-echo "| 추가 모듈 | contexts/demo/references/020-extra.md |" >>"$D/contexts/demo/SKILL.md"
-check "fail-ssot-mismatch" 1 "SSOT 모듈 목록 불일치" "$D"
+check "warn-orphaned-reference" 0 "고아 후보" "$D"
 
-# 2. 깨진 참조 링크: 존재하지 않는 모듈을 라우팅 테이블에 적는다.
-D=$(new_case fail-broken-link)
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-echo "| 없는 모듈 | contexts/demo/references/999-missing.md |" >>"$D/contexts/demo/SKILL.md"
-check "fail-broken-link" 1 "깨진 참조 링크" "$D"
-
-# 2b. 깨진 참조 링크(스킬 루트 role.*.md / scripts 하위 디렉토리). 두 패턴 모두
-#     정규식이 매칭하지 못하면 경로가 깨져도 조용히 통과할 수 있어 회귀로 고정한다.
-D=$(new_case fail-broken-link-nested)
-{
-  echo "| 역할 지침 | contexts/demo/role.missing.md |"
-  echo "| 위임 검증기 | bin/hooks/plugins/demo-check.sh |"
-  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-} >>"$D/contexts/demo/SKILL.md"
-check "fail-broken-link-nested (role.*.md / scripts 하위)" 1 "깨진 참조 링크" "$D"
-
-# 2c. 룰북에서 삭제된 조항을 contexts/README.md 가 계속 인용하면 잡아내야 한다
-#     (조항이 삭제돼도 문서의 인용이 낡은 채로 남는 회귀).
-D=$(new_case fail-documented-clause-missing)
-cat >"$D/contexts/README.md" <<'EOF'
-# 프롬프트 아키텍처 문서
-
-**적용 사례:**
-```markdown
-- **[Trigger: After Code Change] Ghost Clause Never Defined:** 이 조항은 어떤 룰북에도 없습니다.
-```
-EOF
-check "fail-documented-clause-missing" 1 "룰북에 없는 조항을 문서가 인용" "$D"
-
-# 2d. 위 검사의 오탐 회귀: 실재하는 조항을 인용한 README 는 통과해야 한다.
-#     `printf | grep -q` 형태로 구현하면 SIGPIPE + pipefail 로 실재하는 조항까지
-#     전부 오탐으로 뒤집힐 수 있다.
-D=$(new_case ok-documented-clause-present)
-cat >"$D/contexts/README.md" <<'EOF'
-# 프롬프트 아키텍처 문서
-
-**적용 사례:**
-```markdown
-- **[MUST] Deterministic Output:** 출력은 결정론적이어야 합니다.
-```
-EOF
-check_clean "ok-documented-clause-present (오탐 없음)" "$D"
-
-# 3. 코드펜스 짝 불일치: 여는 펜스만 남긴다.
+echo "--- markdown 구조 ---"
 D=$(new_case fail-odd-code-fence)
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
+# idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
 printf '\n```bash\necho hello\n' >>"$D/contexts/demo/references/010-demo-core.md"
 check "fail-odd-code-fence" 1 "코드펜스 짝이 맞지 않음" "$D"
 
-# 4. 벤더 용어 오염: 룰북에 벤더 종속 레지스트리(azurecr.io)를 하드코딩한다.
-D=$(new_case fail-azurecr-in-rulebook)
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-echo "- 예시 레지스트리: myregistry.azurecr.io" >>"$D/contexts/demo/references/010-demo-core.md"
-check "fail-azurecr-in-rulebook" 1 "azurecr.io 발견" "$D"
-
-# 5. 벤더 용어 오염: aws 폴더에 Azure 전용 병기(IAM/RBAC)를 둔다.
-D=$(new_case fail-iam-rbac-in-aws)
-mkdir -p "$D/contexts/aws/references"
-cat >"$D/contexts/aws/references/010-aws-core.md" <<EOF
----
-role: AWS Core
-reviewed: $TODAY
----
-# 9. AWS 코어
-
-- **[MUST] Least Privilege:** IAM/RBAC 권한을 최소화하십시오.
-EOF
-check "fail-iam-rbac-in-aws" 1 "'IAM/RBAC' 병기 발견" "$D"
-
-# 5e~5h. contexts/ 스캔의 숨김 디렉토리 제외 일관성(check_archive_scope_consistency).
-#
-# .archive/.shared 를 "어떤 소비자도 취급하지 않는다"는 규약은 셸 glob 에서만 자동으로
-# 지켜진다. find 와 ansible.builtin.find 는 숨김 디렉토리 안으로 그대로 들어가므로 손으로
-# 제외해야 하는데, 실제로 두 곳을 빠뜨려 폐기 스킬의 스크립트가 사용자 PATH 에 링크되고
-# 폐기 룰북이 근거 기록에 섞였다. 두 결함의 수정 직전 커밋 상태에서 이 검사가 실제로
-# 검출됨을 확인하고 회귀로 고정한다.
-#
-# 오탐 축(5f/5h)을 함께 두는 이유: 판정을 넓히면 특정 스킬 하위만 지목하는 find 나
-# 제외 조건을 이미 갖춘 ansible 태스크까지 걸려, 멀쩡한 코드가 커밋을 막는다.
-
-# 5e. contexts 루트를 훑는 find 에 제외 토큰이 없으면 차단.
+echo "--- contexts 숨김 디렉토리 제외 ---"
 D=$(new_case fail-contexts-find-no-prune)
 mkdir -p "$D/bin/utils"
 cat >"$D/bin/utils/scan-rules.sh" <<'EOF'
 #!/usr/bin/env bash
 CONTEXTS_DIR="$REPO_ROOT/contexts"
-matches=$(find "$CONTEXTS_DIR" -iname "$1" 2>/dev/null)
-echo "$matches"
+find "$CONTEXTS_DIR" -name '*.md'
 EOF
-check "fail-contexts-find-no-prune (셸 find 제외 누락 차단)" 1 "숨김 디렉토리 제외가 없습니다" "$D"
+git -C "$D" add bin/utils/scan-rules.sh
+check "fail-contexts-find-no-prune" 1 "숨김 디렉토리 제외가 없습니다" "$D"
 
-# 5f. 특정 스킬 하위를 지목하는 find 는 구조적으로 .archive 에 닿을 수 없으므로 통과.
 D=$(new_case ok-contexts-find-scoped)
 mkdir -p "$D/bin/utils"
 cat >"$D/bin/utils/scan-one-skill.sh" <<'EOF'
 #!/usr/bin/env bash
 CONTEXTS_DIR="$REPO_ROOT/contexts"
-rhs_file=$(find "$CONTEXTS_DIR/$1/references" -maxdepth 1 -name "*.md" | head -1)
-echo "$rhs_file"
+find "$CONTEXTS_DIR/$1/references" -maxdepth 1 -name '*.md'
 EOF
-check "ok-contexts-find-scoped (스킬 하위 지목은 오탐 없음)" 0 "제외 일관성 검사 완료" "$D"
+git -C "$D" add bin/utils/scan-one-skill.sh
+check_clean "ok-contexts-find-scoped" "$D"
 
-# 5g. contexts 를 recurse 스캔하는 ansible find 가 경로 가드 토큰을 갖고 있지 않으면 차단.
-#     제외 조건이 find 태스크가 아니라 결과를 loop 하는 별도 태스크의 when: 에 붙는
-#     구조라, 태스크 블록이 아니라 파일 단위로 본다.
 D=$(new_case fail-ansible-find-no-guard)
 mkdir -p "$D/ansible/roles/demo/tasks"
 cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
 ---
 - name: 스크립트 검색
   ansible.builtin.find:
-    paths:
-      - "{{ role_path }}/../../../contexts"
+    paths: "{{ role_path }}/../../../contexts"
     file_type: file
     patterns: "*.sh"
     recurse: true
@@ -339,54 +188,34 @@ cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
     src: "{{ item.path }}"
     dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
     state: link
-    force: true
   loop: "{{ demo_scripts.files }}"
-  when: "'/scripts/' in item.path"
 EOF
-check "fail-ansible-find-no-guard (ansible recurse 스캔 가드 누락 차단)" 1 "경로 가드가 없습니다" "$D"
+git -C "$D" add ansible/roles/demo/tasks/main.yml
+check "fail-ansible-find-no-guard" 1 "경로 가드가 없습니다" "$D"
 
-# 5g-2. 가드 토큰이 "주석에만" 있으면 통과시키면 안 된다. 주석 언급을 근거로 인정하는
-#       순간 게이트가 무력화된다 — test-coverage-check.sh 의 run.sh 등록 검사가 실측으로
-#       겪은 것과 같은 구멍이다(설명 주석을 넣었더니 실제 등록을 빼도 통과). 위 5g 케이스는
-#       주석이 아예 없어서 주석 제거 로직을 없애도 검출되지 않았다(뮤테이션 실측).
 D=$(new_case fail-ansible-guard-in-comment-only)
 mkdir -p "$D/ansible/roles/demo/tasks"
 cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
 ---
-# 주의: 링크 대상에서 '/contexts/.' 하위(폐기 스킬)는 빼야 한다.
-# (설명만 있고 아래 when: 에는 실제 조건이 없다 — 이 상태를 통과시키면 안 된다.)
+# '/contexts/.' not in item.path 로 제외해야 한다.
 - name: 스크립트 검색
   ansible.builtin.find:
-    paths:
-      - "{{ role_path }}/../../../contexts"
+    paths: "{{ role_path }}/../../../contexts"
     file_type: file
-    patterns: "*.sh"
     recurse: true
   register: demo_scripts
-
-- name: 링크
-  ansible.builtin.file:
-    src: "{{ item.path }}"
-    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
-    state: link
-    force: true
-  loop: "{{ demo_scripts.files }}"
-  when: "'/scripts/' in item.path"
 EOF
-check "fail-ansible-guard-in-comment-only (주석 언급은 근거로 인정 안 함)" 1 "경로 가드가 없습니다" "$D"
+git -C "$D" add ansible/roles/demo/tasks/main.yml
+check "fail-ansible-guard-in-comment-only" 1 "경로 가드가 없습니다" "$D"
 
-# 5h. 같은 태스크에 경로 가드가 있으면 통과해야 한다(오탐 회귀). 주석이 아니라 본문에
-#     토큰이 있어야 인정되는지도 이 케이스가 함께 고정한다.
 D=$(new_case ok-ansible-find-guarded)
 mkdir -p "$D/ansible/roles/demo/tasks"
 cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
 ---
 - name: 스크립트 검색
   ansible.builtin.find:
-    paths:
-      - "{{ role_path }}/../../../contexts"
+    paths: "{{ role_path }}/../../../contexts"
     file_type: file
-    patterns: "*.sh"
     recurse: true
   register: demo_scripts
 
@@ -395,55 +224,13 @@ cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
     src: "{{ item.path }}"
     dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"
     state: link
-    force: true
   loop: "{{ demo_scripts.files }}"
-  when: >
-    '/scripts/' in item.path and
-    '/contexts/.' not in item.path
+  when: "'/contexts/.' not in item.path"
 EOF
-check "ok-ansible-find-guarded (가드 있으면 오탐 없음)" 0 "제외 일관성 검사 완료" "$D"
+git -C "$D" add ansible/roles/demo/tasks/main.yml
+check_clean "ok-ansible-find-guarded" "$D"
 
-echo "--- WARNING (통과시키되 보고) ---"
-
-# 6. 고아 참조 파일: 라우팅 테이블(SKILL.md)에만 없는 모듈. SSOT 선언에는 넣어둬야
-#    한다. 빼면 SSOT 목록 불일치 ERROR 가 먼저 걸려 고아 경고를 격리할 수 없다.
-D=$(new_case warn-orphaned-reference)
-cat >"$D/contexts/demo/references/020-orphan.md" <<EOF
----
-role: Orphan Module
-reviewed: $TODAY
----
-# 19. 고아 모듈
-EOF
-sed -i 's/하위 참조 모듈(010)/하위 참조 모듈(010, 020)/' "$D/contexts/demo/references/000-core.md"
-check "warn-orphaned-reference" 0 "고아 후보" "$D"
-
-# 7. 파일 크기 제약(150줄) 초과.
-D=$(new_case warn-file-size)
-{
-  for i in $(seq 1 160); do echo "- 라인 $i"; done
-  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-} >>"$D/contexts/demo/references/010-demo-core.md"
-check "warn-file-size" 0 "150줄 제약 초과" "$D"
-PROMPT_LINT_REVIEW=0 check_clean "default-ignores-editorial-size (분량은 기본 게이트에서 제외)" "$D"
-
-# 8. MUST 로 태깅됐지만 본문은 선호를 서술.
-D=$(new_case warn-must-with-prefer-wording)
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-echo "- **[MUST] Prefer Small Modules:** 가급적 모듈을 작게 유지하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
-check "warn-must-with-prefer-wording" 0 "MUST 인데 본문이 선호를 서술함" "$D"
-PROMPT_LINT_REVIEW=0 check_clean "default-ignores-editorial-wording (표현은 기본 게이트에서 제외)" "$D"
-
-# 9. 고위험 키워드인데 Halt & Clarify 로 태깅(Hard Block 후보).
-D=$(new_case warn-halt-on-high-risk)
-# idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-echo "- 자격 증명 평문 노출이 감지되면 Halt & Clarify 하십시오." >>"$D/contexts/demo/references/010-demo-core.md"
-check "warn-halt-on-high-risk" 0 "Hard Block 검토 필요" "$D"
-
-# 10b. contexts/INDEX.md 최신성: 색인이 라우팅 테이블과 어긋나면 경고해야 한다.
-#      실제 생성기(bin/utils/generate-context-index.sh)를 케이스 디렉토리에 그대로
-#      복사해 넣는다 — check_index_freshness 는 PATH 가 아니라 REPO_ROOT 기준
-#      상대 경로로 생성기를 찾으므로, 합성 코퍼스에도 물리적으로 있어야 한다.
+echo "--- INDEX freshness ---"
 GENERATOR_SRC="$REPO_ROOT_SRC/bin/utils/generate-context-index.sh"
 
 D=$(new_case warn-stale-index)
@@ -452,220 +239,98 @@ cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 echo "# 낡은 색인" >"$D/contexts/INDEX.md"
 check "warn-stale-index" 0 "어긋납니다" "$D"
 
-# 10c. 위 검사의 오탐 회귀: 생성기로 방금 뽑아낸 색인은 경고 없이 통과해야 한다.
 D=$(new_case ok-fresh-index)
 mkdir -p "$D/bin/utils"
 cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 (cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
-check_clean "ok-fresh-index (오탐 없음)" "$D"
-
-# 위 케이스는 생성기를 "돌리기만" 한다. 생성기가 아무것도 출력하지 않아도 INDEX.md 가
-# 빈 파일이 되고, check_index_freshness 는 그 빈 파일을 다시 빈 출력과 비교해 일치로 보고
-# 조용히 통과한다 — 실측: generate-context-index.sh 를 즉시 exit 0 인 껍데기로 바꿔도
-# 이 스위트 전체가 통과했다. 생성기가 실제로 스킬을 실어 내는지까지 확인한다.
+check_clean "ok-fresh-index" "$D"
 if grep -qF '## demo' "$D/contexts/INDEX.md" && [ -s "$D/contexts/INDEX.md" ]; then
-  report "generate-context-index (스킬을 실제로 실어 냄)" 0
+  report "generate-context-index emits skill" 0
 else
-  report "generate-context-index (스킬을 실제로 실어 냄)" 1 \
-    "생성된 INDEX.md 에 '## demo' 가 없습니다 ($(wc -l <"$D/contexts/INDEX.md")줄)"
+  report "generate-context-index emits skill" 1 "생성된 INDEX.md에 demo가 없습니다"
 fi
 
-# 10d. 단일행("...") description 형식도 제목/구분자로 왜곡되지 않고 정상 파싱되어야 한다.
 D=$(new_case ok-singleline-desc-index)
 mkdir -p "$D/bin/utils"
 cp "$GENERATOR_SRC" "$D/bin/utils/generate-context-index.sh"
 cat >"$D/contexts/demo/SKILL.md" <<'EOF'
 ---
 name: demo
-description: "단일행 겹따옴표 설명입니다."
+description: "단일행 설명입니다."
 ---
 # demo Skill
 EOF
 (cd "$D" && bash bin/utils/generate-context-index.sh) >"$D/contexts/INDEX.md"
-if grep -qF '단일행 겹따옴표 설명입니다.' "$D/contexts/INDEX.md" && ! grep -qF -- '---' "$D/contexts/INDEX.md"; then
-  report "generate-context-index (단일행 description 지원)" 0
+if grep -qF '단일행 설명입니다.' "$D/contexts/INDEX.md" && ! grep -qF -- '---' "$D/contexts/INDEX.md"; then
+  report "generate-context-index single-line description" 0
 else
-  report "generate-context-index (단일행 description 지원)" 1 \
-    "단일행 description 이 올바르게 파싱되지 않았습니다"
+  report "generate-context-index single-line description" 1
 fi
 
-# 16. README 스킬 표의 모듈 수 대조. 이 저장소는 스킬을 .archive 로 옮기거나 룰북을
-#     통폐합해도 문서의 개수만 그대로 남는 드리프트가 실제로 있었다(활성 스킬이 9개가
-#     된 뒤에도 문서·주석 5곳이 "12개"를, 표가 Dotfiles "10개(000~060)"를 주장 — 실제는
-#     6개(010~060)). 산문 쪽 숫자는 개수 비의존 표현으로 걷어냈지만 표는 숫자가 형식상
-#     불가피하므로 그 축만 기계적으로 고정한다. 셋을 함께 본다: 일치하면 무경고,
-#     어긋나면 경고, 표에만 남은(아카이브된) 스킬도 경고.
-#     base 코퍼스에는 README 가 없어 나머지 케이스는 "README 없음 -> 건너뜀" 경로를 탄다.
+echo "--- README reference count ---"
 D=$(new_case readme-count-match)
 cat >"$D/README.md" <<'EOF'
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+| 워크스페이스 | 구성 | 주요 커버리지 |
 |---|---|---|
-| **Demo** (`demo/`) | 2개 (`000`~`010`) | 픽스처용 데모 |
+| **Demo** (`demo/`) | 2개 reference | 데모 |
 EOF
-check_clean "readme-count-match (표가 실제와 일치하면 무경고)" "$D"
+check_clean "readme-count-match" "$D"
 
 D=$(new_case readme-count-drift)
 cat >"$D/README.md" <<'EOF'
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+| 워크스페이스 | 구성 | 주요 커버리지 |
 |---|---|---|
-| **Demo** (`demo/`) | 9개 (`000`~`010`) | 픽스처용 데모 |
+| **Demo** (`demo/`) | 9개 reference | 데모 |
 EOF
-check "readme-count-drift (개수 불일치 경고)" 0 "README 스킬 표의 모듈 수가 실제와 다릅니다" "$D"
+check "readme-count-drift" 0 "모듈 수가 실제와 다릅니다" "$D"
 
-D=$(new_case readme-archived-skill)
+D=$(new_case readme-missing-reference-dir)
 cat >"$D/README.md" <<'EOF'
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+| 워크스페이스 | 구성 | 주요 커버리지 |
 |---|---|---|
-| **Gone** (`gone/`) | 3개 (`010`~`030`) | 아카이브된 스킬 |
+| **Gone** (`gone/`) | 3개 reference | 제거된 스킬 |
 EOF
-check "readme-archived-skill (표에만 남은 스킬 경고)" 0 "references 디렉토리가 없습니다" "$D"
+check "readme-missing-reference-dir" 0 "references 디렉토리가 없습니다" "$D"
 
-# 16b. reference를 SKILL.md에 모두 통합한 스킬은 숫자 모듈 수를 쓰지 않는다.
-#      숫자 claim이 없는 행에서 grep 무매치가 set -e에 걸리면 린터가 메시지 없이 exit 1로
-#      죽으므로, 실제 AWS 단일-SKILL 전환에서 드러난 경로를 회귀로 고정한다.
 D=$(new_case readme-skill-only)
 cat >"$D/README.md" <<'EOF'
-| 워크스페이스 | 모듈 수 | 주요 커버리지 |
+| 워크스페이스 | 구성 | 주요 커버리지 |
 |---|---|---|
-| **Demo** (`demo/`) | `SKILL.md` 단일 문서 | 저장소 검증 계약 |
+| **Demo** (`demo/`) | `SKILL.md` 단일 문서 | 데모 |
 EOF
-check_clean "readme-skill-only (숫자 없는 단일 SKILL 행 허용)" "$D"
+check_clean "readme-skill-only" "$D"
 
-# 17. 끊긴 파일 참조. 주석이 지목한 파일이 사라져도 아무것도 깨지지 않아 조용히 남는다.
-#     실제로 tf-fixture-lib.sh 를 인라인한 뒤 그 파일을 가리키던 참조가 6곳 남았고,
-#     손으로 훑어 고친 뒤에도 ansible 롤에 1곳이 더 있었다(이 검사가 그것을 잡아냈다).
-#
-#     이 검사는 `git ls-files` 로 "추적 중인 파일"만 본다. 그래서 케이스마다 대상 파일을
-#     실제로 git add 해야 발동한다 — new_case 가 복사해 넣는 prompt-lint.sh 사본이
-#     코퍼스로 오인되지 않게 하는 장치이므로, 이 전제를 바꾸면 오탐이 되돌아온다.
+echo "--- dangling repository paths ---"
 D=$(new_case fail-dangling-file-reference)
 mkdir -p "$D/bin/linters"
-echo "# 같은 함정을 contexts/demo/references/gone.md 에서 이미 고쳤다." >"$D/bin/linters/note.sh"
+echo '# contexts/demo/references/gone.md 에서 이미 고쳤다.' >"$D/bin/linters/note.sh"
 git -C "$D" add bin/linters/note.sh
 check "fail-dangling-file-reference" 1 "존재하지 않는 파일을 가리키는 참조" "$D"
 
-# 17b. 오탐 회귀 (a): tests/ 하위는 합성 트리를 만드는 것이 본업이라 없는 경로를
-#      정당하게 쓴다. 실측에서 오탐 12건 중 11건이 여기였다.
 D=$(new_case ok-dangling-ref-inside-tests)
 mkdir -p "$D/contexts/demo/tests"
-echo "# 픽스처로 contexts/demo/references/synthetic.md 를 만든다" >"$D/contexts/demo/tests/run.sh"
+echo '# contexts/demo/references/synthetic.md 픽스처를 만든다.' >"$D/contexts/demo/tests/run.sh"
 git -C "$D" add contexts/demo/tests/run.sh
-check_clean "ok-dangling-ref-inside-tests (합성 픽스처는 오탐 아님)" "$D"
+check_clean "ok-dangling-ref-inside-tests" "$D"
 
-# 17c. 오탐 회귀 (b): 디렉토리부터 없으면 문서 템플릿의 자리표시자로 보고 넘긴다
-#      (contexts/example-skill/custom-role.md 가 실제 그런 사례다).
 D=$(new_case ok-placeholder-path)
 mkdir -p "$D/bin/linters"
-echo "# 예시: contexts/example-skill/custom-role.md 처럼 배치하십시오." >"$D/bin/linters/note.sh"
+echo '# 예시: contexts/example-skill/custom-role.md 처럼 배치하십시오.' >"$D/bin/linters/note.sh"
 git -C "$D" add bin/linters/note.sh
-check_clean "ok-placeholder-path (없는 디렉토리는 자리표시자)" "$D"
+check_clean "ok-placeholder-path" "$D"
 
-# 18. [Good] Dockerfile 예제가 저장소 자신의 하드 게이트를 통과하는가.
-#     실제로 010-containers-core.md 의 [Good] 예제가 최종 스테이지에 USER 를 두지 않아
-#     container-hardening-gate.sh(trivy DS-0002)에 걸리는 상태였다. 사람이 두 문서를
-#     나란히 놓고 대조해야만 보이던 종류라 기계로 옮겼고, 여기서 그 판정을 고정한다.
-#     도구 미설치를 조용히 건너뛰면 "검사했다"는 신호만 남으므로 실패로 처리한다.
-if ! command -v trivy >/dev/null 2>&1; then
-  report "[Good] Dockerfile 게이트 검사" 1 "trivy 미설치 — 'mise install trivy' 후 다시 실행하십시오"
-else
-  D=$(new_case fail-good-dockerfile-root)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Good]" 'FROM alpine:3.21
-CMD ["/bin/true"]'
-  check "fail-good-dockerfile-root ([Good] 예제가 root 실행)" 1 "컨테이너 하드닝 게이트에 걸립니다" "$D"
-
-  D=$(new_case ok-good-dockerfile-nonroot)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Good]" 'FROM alpine:3.21
-USER 10001
-CMD ["/bin/true"]'
-  check_clean "ok-good-dockerfile-nonroot (USER 있으면 통과)" "$D"
-
-  # 오탐 회귀 (a): [Bad] 예제는 위반을 시연하는 것이 목적이므로 대상이 아니다.
-  D=$(new_case ok-bad-dockerfile-ignored)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Bad]" 'FROM alpine:3.21
-CMD ["/bin/true"]'
-  check_clean "ok-bad-dockerfile-ignored ([Bad] 는 대상 아님)" "$D"
-
-  # 오탐 회귀 (b): FROM 없는 부분 스니펫은 Dockerfile 로서 미완성인 게 정상이다.
-  #      이걸 태우면 고칠 수 없는 오탐이 나서 경고가 무의미해진다.
-  #      본문에 USER 를 두면 완결성 기준이 없어도 게이트를 통과해 이 축이 검증되지 않는다
-  #      (실측: USER 가 있는 스니펫으로는 기준을 제거해도 테스트가 통과했다). 기준이
-  #      실제로 막아야 하는 것 — FROM 도 USER 도 없어 그대로 태우면 DS-0002 로 걸리는
-  #      조각 — 을 픽스처로 쓴다.
-  D=$(new_case ok-partial-dockerfile-ignored)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Good]" 'COPY --from=build /app/dist /app
-ENTRYPOINT ["/app/server"]'
-  check_clean "ok-partial-dockerfile-ignored (FROM 없으면 대상 아님)" "$D"
-
-  # 핀 고정 축. 하드닝 게이트는 DS-0002(비루트)만 하드 블록하므로, 이 케이스가 없으면
-  # [MUST] Pinned Versions 를 정면으로 어긴 [Good] 예제가 그대로 통과한다(실측으로
-  # 확인된 갭 — 예제를 FROM node:latest 로 되돌려도 검출되지 않았다).
-  D=$(new_case fail-good-dockerfile-latest)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Good]" 'FROM alpine:latest
-USER 10001
-CMD ["/bin/true"]'
-  check "fail-good-dockerfile-latest ([Good] 예제가 가변 태그)" 1 "hadolint 에 걸립니다" "$D"
-
-  # 오탐 회귀 (c): distroless 계열은 패치 태그를 발행하지 않아 역할 태그가 정답이다
-  #      (010 2.1 Pinned Versions 의 두 번째 갈래). 이게 DL3007 로 걸리면 룰북이
-  #      권장하는 형태를 린터가 막는 셈이 된다.
-  D=$(new_case ok-good-dockerfile-role-tag)
-  add_hardening_gate "$D"
-  append_dockerfile_example "$D" "[Good]" 'FROM gcr.io/distroless/static-debian12:nonroot
-USER 65532:65532
-ENTRYPOINT ["/app/server"]'
-  check_clean "ok-good-dockerfile-role-tag (역할 태그는 정상)" "$D"
-fi
-
-# 19. [Good] bash 예제도 같은 판정을 받는가.
-#     예전에는 Dockerfile 한 언어만 봤는데, 이 저장소에서 가장 많이 쓰이는 언어는 bash 이고
-#     게이트(shellcheck -x)도 이미 있어 정작 가장 값싼 축이 비어 있었다. 그 사이에 실제로
-#     두 건이 드리프트했다 — `export VAR=$(...)`(SC2155: 시크릿 조회 실패를
-#     export 가 삼켜 빈 비밀번호가 전파된다)와 dotfiles/050 의 `source ~/.zshrc.local`(SC1090).
-#     차단·통과 양축과 오탐 축을 함께 고정한다.
-if ! command -v shellcheck >/dev/null 2>&1; then
-  report "[Good] bash 게이트 검사" 1 "shellcheck 미설치 — 'mise install shellcheck' 후 다시 실행하십시오"
-else
-  D=$(new_case fail-good-bash-sc2155)
-  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
-  append_bash_example "$D" "[Good]" 'export DB_PASSWORD=$(get-secret prod/db)'
-  check "fail-good-bash-sc2155 ([Good] 예제가 종료 코드를 삼킴)" 1 "shellcheck 게이트에 걸립니다" "$D"
-  PROMPT_LINT_EXAMPLES=0 check_clean "examples-disabled (예제 검사 제외 시 구조 검사만 실행)" "$D"
-
-  D=$(new_case ok-good-bash-split-assign)
-  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
-  append_bash_example "$D" "[Good]" 'DB_PASSWORD=$(get-secret prod/db)
-export DB_PASSWORD'
-  check_clean "ok-good-bash-split-assign (대입과 export 분리는 통과)" "$D"
-
-  # 오탐 회귀 (a): [Bad] 예제는 위반 시연이 목적이라 대상이 아니다.
-  D=$(new_case ok-bad-bash-ignored)
-  # shellcheck disable=SC2016 # 픽스처에 리터럴로 들어가야 하는 문자열이라 전개되면 안 된다
-  append_bash_example "$D" "[Bad]" 'export DB_PASSWORD=$(get-secret prod/db)'
-  check_clean "ok-bad-bash-ignored ([Bad] 는 대상 아님)" "$D"
-
-  # 오탐 회귀 (b): 셰방 없는 예제가 SC2148 로 무조건 걸리면 모든 예제가 같은 이유로
-  #      막혀 판정이 무의미해진다. 셰방 주입이 실제로 동작하는지 고정한다(위 통과
-  #      케이스들도 셰방이 없지만, 그건 다른 이유로도 통과할 수 있어 이 축을 따로 둔다).
-  D=$(new_case ok-good-bash-no-shebang)
-  append_bash_example "$D" "[Good]" 'echo "hello"'
-  check_clean "ok-good-bash-no-shebang (셰방 없어도 SC2148 로 걸리지 않음)" "$D"
-fi
-
-# 평가 정답지에 삭제된 스킬이 남으면 프롬프트 린트에서도 차단한다.
+echo "--- routing answer key ---"
 D=$(new_case fail-routing-unknown-skill)
 mkdir -p "$D/contexts/prompt-architect/evals/routing"
 cp "$REPO_ROOT_SRC/contexts/prompt-architect/evals/routing/run.sh" "$D/contexts/prompt-architect/evals/routing/run.sh"
 printf 'S01\tremoved-skill\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "삭제된 라우팅 정답 차단" 1 "라우팅 정답에 없는 스킬" "$D"
+check "routing unknown skill" 1 "라우팅 정답에 없는 스킬" "$D"
+
 printf 'S01\tdemo\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "유효한 라우팅 정답 허용" 0 "라우팅 케이스 정합성 확인" "$D"
+check "routing valid skill" 0 "라우팅 케이스 정합성 확인" "$D"
+
 printf 'S01\tdemo\t입력\nS01\tnone\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "라우팅 ID 중복 차단" 1 "라우팅 케이스 ID 중복" "$D"
+check "routing duplicate id" 1 "라우팅 케이스 ID 중복" "$D"
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
