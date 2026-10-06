@@ -9,25 +9,14 @@ description: |
 ---
 # k8s Skill
 
-이 스킬은 Kubernetes 관련 작업 시 발동됨.
+Kubernetes 작업에 사용한다. 일반 K8s 설계·운영 지식은 현재 코드와 공식 문서를 기준으로 판단한다. SLI/SLO·알람 정책·로깅·분산 추적의 일반 기준은 `contexts/observability/SKILL.md`에 위임한다.
 
-## 1. 작업 유형별 참조 문서 라우팅 (SSOT)
+## 저장소 검증 계약
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| 파드 / Deployment / ConfigMap 등 기본 K8s 리소스 작업 | references/010-k8s-core.md |
-| 네트워크 리소스 (Ingress, Service, CNI) | references/020-networking-standard.md |
-| 스토리지 (PVC/PV) 및 StatefulSet | references/030-storage-stateful-standard.md |
-| CI/CD, GitOps (ArgoCD, Flux) | references/040-cicd-gitops-standard.md |
-| Prometheus Operator CRD 수집 문법 (ServiceMonitor 등) | references/050-observability-standard.md |
-| SLI/SLO, 알람 설계, 로깅, 분산 추적 등 관측성 일반 원칙 | `observability 스킬(SKILL.md)` (별도 스킬) |
-| 오토스케일링 (HPA, VPA) 및 FinOps | references/060-autoscaling-finops-standard.md |
-| 클러스터 보안 (RBAC, OPA, NetworkPolicy) | references/070-advanced-security-standard.md |
-| 플랫폼 엔지니어링, 멀티테넌시 | references/080-platform-engineering-standard.md |
-| K8s 장애 대응, 트러블슈팅, RCA | references/100-incident-response.md |
-
-* 해당 주제의 설계·검토가 필요한 경우: references/010-k8s-core.md
-
-## 2. 작업 프로세스 제약 (Operational Gate)
-
-- **[PREFER] 필요한 참조 선택:** 라우팅 표에서 현재 작업에 해당하는 문서를 읽고, 연결된 문서는 판단에 필요한 경우에만 추가로 읽을 것. 이미 읽은 내용은 재사용할 것.
+- K8s/Helm/정책 검증 로직을 변경하면 `bash contexts/k8s/tests/run.sh`를 실행한다.
+- `kube-linter`의 `privileged-container` 체크, `promtool`의 PrometheusRule 문법 검사, `pluto`의 deprecated/removed API 검출, `kyverno test` 결과를 회귀로 고정한다.
+- `bin/hooks/plugins/k8s-check.sh`는 스테이징 대상만 검사하며 PrometheusRule 멀티 도큐먼트의 뒤쪽 규칙까지 검증하고, Pluto 스캔은 대상 매니페스트만 임시 디렉토리에 격리한다.
+- Helm은 루트 차트와 explicit-file 모드 모두 lint 대상이어야 한다. Conftest 정책 수집 시 `tests/fixtures*` 아래 정책은 실검증에서 제외하되 실제 정책은 계속 강제한다.
+- 회귀 테스트에 필요한 도구가 없으면 실패한다. YAML 다중 문서 처리에서 불필요한 `yq` 반복 호출을 만들지 않는다.
+- `kubectl delete namespace`, `kubectl delete deployment --all` 같은 광역 삭제는 리소스명·라벨 셀렉터 등 대상 범위를 명시적으로 검증한 경우에만 실행한다.
+- 실제 변경 파일의 quick/full 검사와 WARNING/SKIP 해석은 `contexts/pre-flight-check/SKILL.md`를 따른다.
