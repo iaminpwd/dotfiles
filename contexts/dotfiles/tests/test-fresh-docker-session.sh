@@ -37,7 +37,7 @@ if not match:
 Path(sys.argv[2]).write_text(match.group(0))
 PY
 
-# shellcheck disable=SC1090
+# shellcheck disable=SC1091
 source "$TMP/function.sh"
 
 mkdir -p "$TMP/bin"
