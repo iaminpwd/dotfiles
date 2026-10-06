@@ -71,6 +71,7 @@ echo "PASS: push 커밋 범위의 삭제된 시크릿도 차단"
 
 # 삭제 커밋 이후의 깨끗한 새 커밋만 범위로 주면 과거 시크릿 때문에 영구 차단되면 안 된다.
 CLEAN_BASE="$HEAD"
+# idempotency:bypass (매 실행마다 새 mktemp 저장소에 후속 커밋을 만드는 1회성 fixture mutation)
 printf 'clean\n' >>"$REPO/README.md"
 git -C "$REPO" add README.md
 git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: clean change"
