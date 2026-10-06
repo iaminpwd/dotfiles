@@ -1,26 +1,40 @@
 ---
 name: pre-flight-check
 description: |
-  Terraform, Ansible, Helm, Dockerfile 및 셸 자동화 변경의 검증 명령·프로필·결과를 확인할 때 사용.
-  커밋 전 검사 선택이나 검증 실패·스킵 해석을 다룸.
+  이 저장소의 pre-flight 검증 대상, 프로필, 실행 명령과 WARNING/SKIP/실패 결과를 해석할 때 사용하는 로컬 스킬.
 ---
-# 사전 검증 스킬 (Pre-Flight Check)
+# pre-flight-check Skill
 
-변경 파일 검사는 `bash bin/hooks/pre-flight-check.sh --changed`, 전체 검사는 `just verify`로 실행한다. 원본 저장소에서 실행한다.
+실행 로직의 SSOT는 `bin/hooks/pre-flight-check.sh`, 공용 검증 구현은 `bin/lib/pfc-*.sh`와 `bin/hooks/plugins/*.sh`다. 이 문서에는 호출 계약과 결과 해석만 둔다.
 
-## 1. 정량적 일괄 검증 파이프라인 (Automated Validation)
+## 대상 선택
 
-편집 직후 검사는 기본 비활성화입니다. 완료 훅(`pre-flight-gate-hook.sh`, Stop)은 마지막 성공 검증 이후 변경 내용이 달라졌을 때 `pre-flight-check.sh --changed`를 실행합니다. 훅이 비활성화되어 있거나 실행 결과가 없으면 관련 파일에 대해 수동 검증할 것.
+- 인자 없음: staged 파일만 검사한다.
+- `--changed`: staged + unstaged + untracked 변경 파일을 검사한다.
+- `--all`: tracked + untracked 파일 전체를 검사한다.
+- 파일 경로 직접 지정: 지정 파일만 대상 선택에 사용하며, 존재하지 않는 경로는 실패한다.
+- 회귀용 `tests/fixtures*`는 의도적 위반을 포함할 수 있어 전역 대상에서 제외한다.
 
-- 커밋 훅은 스테이징된 시크릿을 별도로 검사하고 `PFC_PROFILE=quick`으로 셸·YAML·Dockerfile 린트와 Terraform 포맷만 검사합니다. quick 통과는 전체 인프라 검증 통과를 뜻하지 않습니다.
-- 기본 `full` 프로필은 Terraform 초기화·validate, 인프라 및 보안 검사도 실행합니다. CI의 `PFC_PROFILE=full just verify`는 전체 파일과 회귀 스위트를 검증합니다.
-- pre-push 회귀 테스트는 `DOTFILES_PRE_PUSH=1 git push`로 선택 실행합니다. 비용 API 검사는 커밋·푸시에서 자동으로 켜지 않으며 `RUN_COST_CHECK=true`를 명시한 경우에만 실행합니다.
+## 프로필
 
-- **[MUST] 종료 코드 기준 판정:** 래퍼는 각 스크립트의 종료 코드로만 합격을 판정하며, 통과 항목은 `-> [✓] <경로>` 한 줄로 접고 실패 항목은 압축 없이 원형 로그를 출력함. 실패가 있어도 남은 항목을 끝까지 실행한 뒤 마지막에 `검증 실패 N/M` 을 남기므로, **마지막 요약 줄과 종료 코드까지 반드시 확인**하십시오. 통과 항목이라도 `[WARNING]` 은 접지 않으므로, 도구 미설치로 검증이 건너뛰어졌는지 함께 확인할 것. (래퍼 자신의 회귀 테스트: `contexts/dotfiles/tests/test-run-suite.sh`)
-- **[MUST] 자율 버전 변경의 종속성 확인:** `run-suite.sh` 검증 실패로 인해 에이전트가 실패 원인을 수정할 때, 특정 리소스(예: AWS RDS)의 엔진 버전을 올리는 경우 연관된 종속성 속성(예: `parameter_group_name`, `option_group_name` 등)을 해당 엔진 버전에 호환되는 규격으로 함께 변경하여 2차 유효성 검사(tflint, terraform validate 등)를 통과하도록 할 것.
-- **[MUST] Checkov 예외 처리:** `checkov` 스캔 결과 보안 정책상 불가피하게 수정이 불가능한 항목은 반드시 해당 리소스 블록 위에 `#checkov:skip=<Rule ID>: <근거>` 형태의 주석과 명확한 사유를 기재하여 예외 처리할 것.
+- `PFC_PROFILE=quick`: shell/YAML/Dockerfile과 Terraform fmt를 빠르게 검사한다. 전체 인프라 검증 통과를 의미하지 않는다.
+- `PFC_PROFILE=stop`: quick 범위에 Ansible 검사를 더한다. Stop 훅의 변경 파일 검증에 사용된다.
+- `PFC_PROFILE=full`(기본): shell/Ansible/Dockerfile/YAML/보안 검사를 실행한다.
+- full에서 Terraform validate, SAM, Helm, Kubernetes, Conftest, FinOps, delegated plugin까지 실행하려면 `PFC_DOMAIN_CHECKS=1`을 추가한다.
 
-## 2. 검증 결과 보고
+## 저장소 명령
 
-- **[MUST] 검증 근거:** 현재 변경에 해당하는 검사 결과와 미실행 항목을 보고할 것. 정책 판단에는 관련 코드 위치 또는 실행 결과를 연결하고, 웹에서 확인한 버전·지원 기간 등의 값에는 출처와 조회 일자를 함께 제공할 것.
-- **[PREFER] 보고 형식:** 간단한 변경은 짧은 설명으로 보고할 것. 여러 정책을 비교하거나 사용자가 감사 보고서를 요청한 경우에는 표를 사용할 것. 별도 보고서 파일과 고정 열 이름은 필수가 아님.
+- 변경 파일 검사: `bash bin/hooks/pre-flight-check.sh --changed`
+- 저장소 전체 기본 검사: `just check`
+- 인프라·도메인 정책까지 포함: `just check-domain`
+- 변경 영역 회귀: `just check-changed`
+- pre-flight + 전체 스킬 회귀 + prompt-lint: `just verify`
+- pre-flight 공용 로직 회귀: `bash contexts/pre-flight-check/tests/run.sh`
+
+## 결과 해석
+
+- 종료 코드가 비정상이면 실패다. 일부 러너는 다른 검사를 계속 실행하므로 마지막 요약과 최종 종료 코드를 함께 확인한다.
+- `[WARNING]` 또는 도구 미설치/비활성화 메시지는 검증 범위가 줄었다는 뜻일 수 있다. exit 0만 보고 해당 검사가 수행됐다고 보고하지 않는다.
+- staged/changed/all 모드의 대상이 0건이면 경고가 날 수 있다. 이 경우 실제 검증 대상이 있었는지 확인한다.
+- quick/stop 통과를 full 또는 domain 검사 통과로 확대 해석하지 않는다.
+- 실패 로그는 원인을 수정한 뒤 같은 대상과 프로필로 재실행한다. 훅이나 검증기를 우회해 성공으로 만들지 않는다.
