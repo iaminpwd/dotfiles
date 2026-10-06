@@ -7,21 +7,13 @@ description: |
 ---
 # observability Skill
 
-모니터링, 로깅, 분산 추적, 알람 설계 작업 시 발동됨. (장애 대응은 각 스킬의 `100-incident-response.md` 참조)
+관측성 작업에 사용한다. 일반 SLI/SLO·로깅·트레이싱·대시보드 설계 지식은 현재 코드와 공식 문서를 기준으로 판단하고, 이 저장소가 실제로 강제하는 검증 계약만 아래에 둔다.
 
-## 1. 작업 유형별 참조 문서 라우팅 (SSOT)
+## 저장소 검증 계약
 
-| 작업 유형 | 참조 문서 |
-|---|---|
-| 프로젝트 기획 및 아키텍처 설계 | references/005-project-planning-template.md |
-| 관측성 기본 원칙, SLI/SLO, Error Budget | references/010-observability-core.md |
-| 메트릭 설계 및 알람 (PromQL, CloudWatch, Azure Monitor) | references/020-metrics-alerting-standard.md |
-| 구조화 로깅 및 로그 파이프라인 (Loki/ELK/CloudWatch Logs) | references/030-logging-standard.md |
-| 분산 추적 (OpenTelemetry) | references/040-tracing-standard.md |
-| 대시보드 설계 및 SaaS 연동 (Grafana, Datadog) | references/050-dashboard-saas-standard.md |
-
-* 해당 주제의 설계·검토가 필요한 경우: references/010-observability-core.md
-
-## 2. 작업 프로세스 제약 (Operational Gate)
-
-- **[PREFER] 필요한 참조 선택:** 라우팅 표에서 현재 작업에 해당하는 문서를 읽고, 연결된 문서는 판단에 필요한 경우에만 추가로 읽을 것. 이미 읽은 내용은 재사용할 것.
+- PrometheusRule/알람 검증 로직을 변경하면 `bash contexts/observability/tests/run.sh`를 실행한다.
+- 실제 검증기는 `contexts/observability/scripts/validate-alert-rules.sh`, 커밋 시점 배선은 `bin/hooks/plugins/observability-check.sh`다.
+- Critical 알람은 `annotations.runbook_url`이 필요하고, `user_id`·`client_ip` 같은 고카디널리티 레이블은 차단한다.
+- YAML 파싱 실패·잘못된 `groups` 구조를 규칙 0건으로 오인해 통과시키지 않는다. 멀티 도큐먼트에서는 PrometheusRule 문서를 정확히 골라 정책을 검사한다.
+- 검증에 필요한 `yq`가 없으면 회귀 테스트는 실패한다. 다중 문서 입력도 파일당 `yq` 변환을 반복하지 않는 배치 계약을 유지한다.
+- 실제 변경 파일의 quick/full 검사와 WARNING/SKIP 해석은 `contexts/pre-flight-check/SKILL.md`를 따른다.
