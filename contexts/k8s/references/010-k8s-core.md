@@ -9,7 +9,7 @@ references:
 Kubernetes 클러스터 설계 및 컨테이너 플랫폼 운영 적용 표준임.
 
 ## 1. 핵심 설계 원칙
-- **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안할 것. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/references/010-observability-core.md`가 SSOT이므로 그 문서를 참조할 것.
+- **[MUST] Error Budget-Driven Decisions:** 배포 판단 시 에러 버짓 잔량을 확인하고, 고갈 상태라면 추가 배포를 동결하고 즉각 롤백을 제안할 것. 에러 버짓의 산정 기준과 소진 시 정책 자체는 observability 스킬의 `contexts/observability/SKILL.md`가 SSOT이므로 그 문서를 참조할 것.
 
 ## 2. 세부 오퍼레이션 조항 (Actionable Rules)
 
