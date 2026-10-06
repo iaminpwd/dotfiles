@@ -27,13 +27,11 @@ export QUIET=0
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-# source-path=SCRIPTDIR 은 shellcheck 가 아래 상대 경로를 이 스크립트의 디렉토리 기준으로
-# 찾게 한다. pre-flight-check.sh 가 shellcheck 를 -x 로 호출하므로, 이 설정 덕에 경로 오타나
-# 파일 이동으로 인한 깨짐까지 실제로 검증된다.
-# shellcheck source-path=SCRIPTDIR
+# 공용 테스트 헬퍼는 contexts 밖의 tests/lib가 SSOT다.
+# shellcheck source=../../../tests/lib/parallel-pair.sh
 source "$REPO_ROOT/tests/lib/parallel-pair.sh"
 # EXIT 트랩을 호출자 것을 파괴하지 않고 겹쳐 쓰기 위한 SSOT (exit-trap.sh 헤더 참조).
-# shellcheck source-path=SCRIPTDIR
+# shellcheck source=../../../tests/lib/exit-trap.sh
 source "$REPO_ROOT/tests/lib/exit-trap.sh"
 
 PASS_COUNT=0
