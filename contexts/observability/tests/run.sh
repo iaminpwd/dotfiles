@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # observability 검증 파이프라인 회귀 테스트
 #
-# 각 픽스처는 020-metrics-alerting-standard.md 4절의 중단 조건을 재현한다. 목적은
+# 각 픽스처는 이 저장소의 PrometheusRule 알람 검증 계약을 재현한다. 목적은
 # validate-alert-rules.sh(bin/hooks/plugins/observability-check.sh 가 커밋 시점에
 # 호출하는 검증기 본체)를 손볼 때, 기존 검사가 조용히 죽어서 위반 알람 규칙이
 # 통과되는 상황을 제어하는 것이다.

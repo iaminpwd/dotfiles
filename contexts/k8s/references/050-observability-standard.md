@@ -2,7 +2,7 @@
 trigger: Apply these rules ONLY when configuring Prometheus Operator CRDs (ServiceMonitor, PodMonitor, PrometheusRule) inside a Kubernetes cluster.
 references:
   - contexts/k8s/references/010-k8s-core.md
-  - contexts/observability/references/010-observability-core.md
+  - contexts/observability/SKILL.md
 ---
 # 컨텍스트 모듈: Kubernetes Prometheus Operator 수집 표준
 
