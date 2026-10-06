@@ -11,8 +11,9 @@
 set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
 # shellcheck source-path=SCRIPTDIR
-source "$TESTS_DIR/../../.shared/test-lib/parallel-pair.sh"
+source "$REPO_ROOT/tests/lib/parallel-pair.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
