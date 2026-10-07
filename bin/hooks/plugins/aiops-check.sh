@@ -68,8 +68,13 @@ fi
 
 # 텔레메트리 매니페스트(시크릿/ISMS-P 가드레일) 검증
 check_telemetry_manifests() {
-  local staged=() manifest_files=() scan_files=() f
+  local staged=() manifest_files=() scan_files=() f target_pid
   mapfile -d '' -t staged < <(plugin_target_files '*.yaml' '*.yml' '*.json' '*.tf')
+  target_pid=$!
+  if ! wait "$target_pid"; then
+    echo "❌ [ERROR] Git에서 AIOps 검사 대상을 수집하지 못했습니다." >&2
+    return 1
+  fi
   [ "${#staged[@]}" -eq 0 ] && return 0
 
   # 판정 트리거: yaml/yml 중 ClosedLoopPolicy/TelemetryCollectorConfig kind가 하나라도
