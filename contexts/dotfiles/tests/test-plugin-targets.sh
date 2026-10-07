@@ -100,7 +100,6 @@ else
   report "비-git 환경에서 빈 결과로 안전 종료" 1 "실제='$OUT'"
 fi
 
-
 # 6. Git 저장소로 판정됐지만 index/diff 조회 자체가 실패하면 실제 delegated plugin들이
 #    "대상 0건"으로 오인해 exit 0 하면 안 된다. plugin_target_files()는 git diff의
 #    nonzero를 반환하지만, consumer가 mapfile < <(...) 로 읽으면서 process substitution
