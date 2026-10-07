@@ -59,12 +59,20 @@ mkdir -p "$TMP/foreign-source/references"
 ln -s "$TMP/foreign-source/SKILL.md" "$SKILLS/my-linked-skill/SKILL.md"
 ln -s "$TMP/foreign-source/references" "$SKILLS/my-linked-skill/references"
 
-# 4. fail-foreign-real-file: 도메인 목록에 없어도 실제 파일이 하나라도 섞여 있으면 보존한다.
+# 4. fail-user-alias-to-managed-context: 사용자가 repo의 기존 스킬을 별칭 이름으로
+#    직접 등록할 수도 있다. 링크 대상이 contexts/aws 아래라는 이유만으로 aws-alias를
+#    ai_agent가 만든 폴더라고 볼 수 없다. role은 skills/<domain> -> contexts/<same-domain>
+#    형태만 만들므로 이름과 source domain이 다르면 외부/사용자 소유로 보존해야 한다.
+mkdir -p "$SKILLS/aws-alias"
+ln -s "$REPO_ROOT/contexts/aws/SKILL.md" "$SKILLS/aws-alias/SKILL.md"
+ln -s "$REPO_ROOT/contexts/aws/references" "$SKILLS/aws-alias/references"
+
+# 5. fail-foreign-real-file: 도메인 목록에 없어도 실제 파일이 하나라도 섞여 있으면 보존한다.
 mkdir -p "$SKILLS/my-own-skill"
 ln -s "$TMP/somewhere/SKILL.md" "$SKILLS/my-own-skill/SKILL.md"
 echo "사용자가 직접 만든 실제 파일" >"$SKILLS/my-own-skill/notes.txt"
 
-# 5. pruned-empty: 도메인 목록에 없고 비어 있으면 안전하게(잃을 게 없으므로) 삭제된다.
+# 6. pruned-empty: 도메인 목록에 없고 비어 있으면 안전하게(잃을 게 없으므로) 삭제된다.
 mkdir -p "$SKILLS/empty-orphan"
 
 OUT=$(bash "$SCRIPT" "$SKILLS" aws k8s 2>&1)
@@ -89,6 +97,14 @@ else
   report "fail-foreign-all-symlinks (외부 대상을 가리키는 symlink-only 스킬은 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
+if [ -d "$SKILLS/aws-alias" ] &&
+  [ -L "$SKILLS/aws-alias/SKILL.md" ] &&
+  [ -L "$SKILLS/aws-alias/references" ]; then
+  report "fail-user-alias-to-managed-context (다른 이름의 사용자 별칭 스킬 보존)" 0
+else
+  report "fail-user-alias-to-managed-context (다른 이름의 사용자 별칭 스킬 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
+fi
+
 if [ -d "$SKILLS/my-own-skill" ] && [ -f "$SKILLS/my-own-skill/notes.txt" ] && grep -qF "[SKIP]" <<<"$OUT"; then
   report "fail-foreign-real-file (실제 파일이 섞여 있으면 보존 + 경고)" 0
 else
@@ -101,7 +117,7 @@ else
   report "pruned-empty (빈 고아 폴더는 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
 fi
 
-# 6. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
+# 7. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
 status=0
 bash "$SCRIPT" "$TMP/does-not-exist" aws || status=$?
 if [ "$status" -eq 0 ]; then
