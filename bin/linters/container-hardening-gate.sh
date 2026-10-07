@@ -4,8 +4,25 @@
 
 set -euo pipefail
 
-# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-CHG_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피.
+# GNU readlink -f는 macOS 기본 BSD readlink에 없으므로 plain readlink + cd -P로
+# 자기 symlink 체인을 해석한다(run-suite.sh/플러그인들과 동일한 이식성 계약).
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+CHG_SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}")
+CHG_SCRIPT_DIR=$(dirname "$CHG_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$CHG_SCRIPT_DIR/../lib/jq-resolve.sh"
 # mise shim 환경에서도 trivy/dive 가용성을 정확히 판정하기 위해 SSOT has_tool()을 재사용한다
