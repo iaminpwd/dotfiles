@@ -178,6 +178,32 @@ EOF
       report "no-trigger-on-unrelated-kind (PrometheusRule 아니면 무동작)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
     fi
 
+    # Case 4: macOS 기본 BSD readlink처럼 -f가 없는 환경에서도 플러그인 자체가
+    # 시작되어야 한다. delegated loop가 호출에 성공해도 여기서 시작 실패하면
+    # observability 정책 검증 전체가 실행되기 전에 죽는다. 도구 의존성을 섞지 않기 위해
+    # PrometheusRule이 아닌 Case 3 저장소를 재사용해 경로 해석만 격리한다.
+    BSD_BIN="$PLUGIN_TMP/bsd-bin"
+    mkdir -p "$BSD_BIN"
+    cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+    chmod +x "$BSD_BIN/readlink"
+
+    status=0
+    out=$( (cd "$OR3" && PATH="$BSD_BIN:$PATH" QUIET=0 bash "$OBS_PLUGIN") 2>&1) || status=$?
+    if [ "$status" -eq 0 ] &&
+      grep -qF "Observability-Specific Checks Passed Successfully" <<<"$out" &&
+      ! grep -qF 'readlink: illegal option -- f' <<<"$out"; then
+      report "bsd-readlink-startup (GNU readlink -f 없이도 observability 플러그인 실행)" 0
+    else
+      report "bsd-readlink-startup (GNU readlink -f 없이도 observability 플러그인 실행)" 1 "exit=$status out=$out"
+    fi
+
     rm -rf "$PLUGIN_TMP"
   else
     report "observability-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/observability-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
