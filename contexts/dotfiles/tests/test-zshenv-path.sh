@@ -21,21 +21,21 @@ cat >"$HOME_DIR/.local/bin/mise" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
-cat >"$HOME_DIR/.local/bin/agent-edits-hook.sh" <<'EOF'
+cat >"$HOME_DIR/.local/bin/user-tool" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
-chmod +x "$HOME_DIR/.local/bin/mise" "$HOME_DIR/.local/bin/agent-edits-hook.sh"
+chmod +x "$HOME_DIR/.local/bin/mise" "$HOME_DIR/.local/bin/user-tool"
 
 # 로그인/인터랙티브 초기화에 기대지 않고, 모든 zsh가 읽는 .zshenv만으로 확인한다.
-# bootstrap은 mise 본체와 ai_agent 실행 스크립트를 ~/.local/bin에 배치하므로,
-# 기본 시스템 PATH에서 시작해도 둘 다 찾을 수 있어야 한다.
+# mise installer와 사용자의 일반 local command가 쓰는 ~/.local/bin 자체가 PATH에 있어야 한다.
+# dotfiles의 내부 agent script를 global PATH에 배포하는 정책은 별개이며 현재 사용하지 않는다.
 OUT=$(HOME="$HOME_DIR" PATH="/usr/bin:/bin" zsh -c '
   printf "mise=%s\n" "$(command -v mise || true)"
-  printf "agent=%s\n" "$(command -v agent-edits-hook.sh || true)"
+  printf "user=%s\n" "$(command -v user-tool || true)"
 ')
 
 grep -qx "mise=$HOME_DIR/.local/bin/mise" <<<"$OUT"
-grep -qx "agent=$HOME_DIR/.local/bin/agent-edits-hook.sh" <<<"$OUT"
+grep -qx "user=$HOME_DIR/.local/bin/user-tool" <<<"$OUT"
 
-echo "PASS: 비대화형 zsh에서도 ~/.local/bin의 mise와 agent 스크립트를 찾음"
+echo "PASS: 비대화형 zsh에서도 일반 ~/.local/bin 사용자 실행 경로를 찾음"
