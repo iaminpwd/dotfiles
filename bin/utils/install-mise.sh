@@ -80,5 +80,26 @@ if [ "$gpg_rc" -ne 0 ] || ! grep -q '^\[GNUPG:\] GOODSIG ' "$MISE_GPG_HOME/statu
   exit 1
 fi
 
-MISE_VERSION="$MISE_VERSION" sh "$MISE_INSTALL_SCRIPT"
+# installer 본체뿐 아니라 그 installer가 호출하는 하위 프로세스도 같은 pin을
+# 보도록 명시적으로 export한다.
+export MISE_VERSION
+sh "$MISE_INSTALL_SCRIPT"
+
+# installer 자체의 exit 0만으로 성공을 선언하지 않는다. 이 wrapper의 계약은
+# "고정된 mise가 실제로 설치됨"이므로 결과 바이너리와 버전까지 종단 검증한다.
+installed_version=""
+if [ ! -x "$MISE_BIN" ] || ! installed_version="$("$MISE_BIN" --version 2>/dev/null)"; then
+  echo "❌ [Hard Block] mise 설치 결과 검증 실패: 실행 가능한 $MISE_BIN 을 찾지 못했습니다." >&2
+  rm -rf "$MISE_GPG_HOME"
+  exit 1
+fi
+installed_version=${installed_version%% *}
+if [ "$installed_version" != "$MISE_VERSION" ]; then
+  echo "❌ [Hard Block] mise 설치 결과 검증 실패: 고정 버전과 다릅니다." >&2
+  echo "   기대: $MISE_VERSION" >&2
+  echo "   실제: ${installed_version:-알 수 없음}" >&2
+  rm -rf "$MISE_GPG_HOME"
+  exit 1
+fi
+
 rm -rf "$MISE_GPG_HOME"
