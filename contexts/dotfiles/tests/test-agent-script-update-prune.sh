@@ -52,7 +52,7 @@ done
 
 ROLE="$ROOT/ansible/roles/ai_agent/tasks/main.yml"
 if grep -Fq 'dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"' "$ROLE" ||
-   grep -Fq 'register: ai_agent_scripts_find' "$ROLE"; then
+  grep -Fq 'register: ai_agent_scripts_find' "$ROLE"; then
   echo 'FAIL: ai_agent role이 여전히 저장소 스크립트를 ~/.local/bin에 전역 평탄화합니다.'
   exit 1
 fi
