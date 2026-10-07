@@ -147,15 +147,16 @@ if [ "$FAILED" -eq 1 ]; then RESULT_TAG="FLAGGED"; else RESULT_TAG="SUCCESS"; fi
 #
 # 같은 파일의 "가장 최근" 로그가 보강 가능한 상태일 때만 그 자리를 갱신한다.
 # - hook:* | - | OK      : 성공 편집의 자동 더미 라인
-# - agent:* | ... | FLAGGED : 이전 provenance 시도의 미해결 라인
+# - agent:* | <same purpose> | FLAGGED : 같은 작업 목적의 provenance 재시도
+# FLAGGED라도 purpose가 다르면 독립 작업이므로 기존 행을 보존하고 새 행을 append한다.
 # ERROR는 실패한 편집이라는 독립 감사 이력이므로 절대 SUCCESS로 덮어쓰지 않는다.
 # 더 오래된 OK 뒤에 최신 ERROR/SUCCESS가 있는 경우도 과거 행을 소급 보강하지 않는다.
 is_latest_row_enrichable() {
-  awk -F' \\| ' -v r="$REL" '
+  awk -F' \\| ' -v r="$REL" -v new_purpose="$PURPOSE_CLEAN" '
     $2==r { src=$3; purpose=$4; result=$5 }
     END {
       ok = ((src ~ /^hook:/ && purpose=="-" && result=="OK") ||
-            (src ~ /^agent:/ && result=="FLAGGED"))
+            (src ~ /^agent:/ && result=="FLAGGED" && purpose==new_purpose))
       exit !ok
     }
   ' "$EDITS_LOG"
@@ -178,7 +179,7 @@ if [ -f "$EDITS_LOG" ] && is_latest_row_enrichable; then
     { line[NR]=$0 }
     END {
       enrich = ((target_src ~ /^hook:/ && target_purpose=="-" && target_result=="OK") ||
-                (target_src ~ /^agent:/ && target_result=="FLAGGED"))
+                (target_src ~ /^agent:/ && target_result=="FLAGGED" && target_purpose==purpose))
       for (i=1;i<=NR;i++) {
         if (enrich && i==target) {
           printf "%s | %s | %s | %s | %s\n", tf1, tf2, src, purpose, tag
