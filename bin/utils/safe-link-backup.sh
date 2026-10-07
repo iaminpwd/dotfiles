@@ -9,15 +9,31 @@
 # 대상을 가리키든 아니든)는 어차피 force가 안전하게 교체하므로 건드리지 않는다 — 오직
 # "실제 파일/디렉토리가 그 자리를 차지하고 있는" 경우만 백업 대상이다.
 #
+# 백업 이름은 초 단위 timestamp를 기본으로 쓰되 같은 초에 같은 경로를 다시 백업하면
+# 기존 백업을 덮어쓰지 않도록 .1, .2 ... suffix로 다음 빈 이름을 찾는다.
+#
 # 사용: safe-link-backup.sh [target ...]
 
 set -euo pipefail
 
+_next_backup_path() {
+  local target=$1 timestamp=$2 candidate suffix=0
+  candidate="$target.backup.$timestamp"
+
+  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
+    suffix=$((suffix + 1))
+    candidate="$target.backup.$timestamp.$suffix"
+  done
+
+  printf '%s\n' "$candidate"
+}
+
 for TARGET in "$@"; do
   if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
     BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
-    mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
-    echo "  [BACKUP] $TARGET -> $TARGET.backup.$BACKUP_TIMESTAMP (실제 파일이 이미 있어 백업 후 링크 예정)"
+    BACKUP_PATH=$(_next_backup_path "$TARGET" "$BACKUP_TIMESTAMP")
+    mv "$TARGET" "$BACKUP_PATH"
+    echo "  [BACKUP] $TARGET -> $BACKUP_PATH (실제 파일이 이미 있어 백업 후 링크 예정)"
   fi
 done
 exit 0
