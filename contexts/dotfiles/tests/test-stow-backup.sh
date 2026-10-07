@@ -143,17 +143,42 @@ else
   report "fail-live-foreign-parent-dirlink (공유 부모의 사용자 symlink 보존 + fail-closed)" 1 "exit=$status out=$out $(ls -la "$CASE2E/home" 2>&1)"
 fi
 
-# 3. ok-no-conflict: HOME에 해당 경로가 아예 없으면 아무 것도 하지 않고 exit 0이어야 한다.
+# 3. fail-same-second-collision: 같은 초에 같은 경로를 두 번 백업해도 첫 백업을
+#    덮어쓰면 안 된다. date를 고정해 초 단위 timestamp 충돌을 결정적으로 재현한다.
 CASE3="$TMP/case3"
-mkdir -p "$CASE3/dotfiles/pkg" "$CASE3/home"
-echo "dotfiles 버전" >"$CASE3/dotfiles/pkg/.newrc"
+mkdir -p "$CASE3/dotfiles/pkg" "$CASE3/home" "$CASE3/fixed-date-bin"
+echo "dotfiles 버전" >"$CASE3/dotfiles/pkg/.repeatrc"
+cat >"$CASE3/fixed-date-bin/date" <<'EOF'
+#!/usr/bin/env bash
+printf '2026-10-07-120000\n'
+EOF
+chmod +x "$CASE3/fixed-date-bin/date"
+
+printf 'first-version\n' >"$CASE3/home/.repeatrc"
+PATH="$CASE3/fixed-date-bin:$PATH" bash "$BACKUP" "pkg" "$CASE3/dotfiles" "$CASE3/home"
+printf 'second-version\n' >"$CASE3/home/.repeatrc"
+PATH="$CASE3/fixed-date-bin:$PATH" bash "$BACKUP" "pkg" "$CASE3/dotfiles" "$CASE3/home"
+
+REPEAT_BACKUPS=("$CASE3/home"/.repeatrc.backup.*)
+if [ "${#REPEAT_BACKUPS[@]}" -eq 2 ] &&
+  grep -qx 'first-version' "${REPEAT_BACKUPS[0]}" &&
+  grep -qx 'second-version' "${REPEAT_BACKUPS[1]}"; then
+  report "fail-same-second-collision (기존 백업 보존 + 새 백업 별도 생성)" 0
+else
+  report "fail-same-second-collision (기존 백업 보존 + 새 백업 별도 생성)" 1 "$(ls -la "$CASE3/home" 2>&1)"
+fi
+
+# 4. ok-no-conflict: HOME에 해당 경로가 아예 없으면 아무 것도 하지 않고 exit 0이어야 한다.
+CASE4="$TMP/case4"
+mkdir -p "$CASE4/dotfiles/pkg" "$CASE4/home"
+echo "dotfiles 버전" >"$CASE4/dotfiles/pkg/.newrc"
 
 status=0
-bash "$BACKUP" "pkg" "$CASE3/dotfiles" "$CASE3/home" || status=$?
-if [ "$status" -eq 0 ] && [ ! -e "$CASE3/home/.newrc" ]; then
+bash "$BACKUP" "pkg" "$CASE4/dotfiles" "$CASE4/home" || status=$?
+if [ "$status" -eq 0 ] && [ ! -e "$CASE4/home/.newrc" ]; then
   report "ok-no-conflict (대상 없으면 무동작 + exit 0)" 0
 else
-  report "ok-no-conflict (대상 없으면 무동작 + exit 0)" 1 "exit=$status $(ls -la "$CASE3/home" 2>&1)"
+  report "ok-no-conflict (대상 없으면 무동작 + exit 0)" 1 "exit=$status $(ls -la "$CASE4/home" 2>&1)"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
