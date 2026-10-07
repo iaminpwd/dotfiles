@@ -7,9 +7,27 @@
 
 set -euo pipefail
 
-# scripts/ 디렉토리는 ~/.claude/skills/observability/scripts 로 심볼릭 링크되어 배포되므로
-# BASH_SOURCE 를 그대로 쓰면 상대 경로가 배포 위치로 빗나간다(k8s-check.sh 와 동일 이유).
-OBS_CHECK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. delegated plugin은 Git hook과
+# 로컬 검증에서 실행되므로 Homebrew coreutils의 gnubin PATH를 전제로 하지 않고 plain
+# readlink + cd -P로 자기 symlink 체인을 해석한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+# scripts/ 디렉토리는 ~/.claude/skills/observability/scripts 로 심볼릭 링크되어 배포될 수
+# 있으므로 BASH_SOURCE의 정본 위치를 먼저 확정한다(k8s-check.sh와 동일 이유).
+OBS_CHECK_PATH=$(canonical_path "${BASH_SOURCE[0]}")
+OBS_CHECK_DIR=$(dirname "$OBS_CHECK_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$OBS_CHECK_DIR/../../lib/script-init.sh"
 # 검사 대상 수집 SSOT (k8s-check.sh 와 동일 이유 — bin/lib/plugin-targets.sh 헤더 참조).
@@ -31,8 +49,8 @@ elif [ -f "$REPO_ROOT/bin/lib/tool-probe.sh" ]; then
   source "$REPO_ROOT/bin/lib/tool-probe.sh"
 fi
 
-# 검증기 본체(validate-alert-rules.sh)도 같은 이유로 배포 위치가 아닌 정본 위치를
-# readlink -f 로 먼저 확정한 뒤 상대 경로로 접근한다.
+# 검증기 본체(validate-alert-rules.sh)도 같은 이유로 배포 위치가 아닌 위에서 확정한
+# 정본 디렉토리를 기준으로 상대 경로로 접근한다.
 VALIDATOR="$OBS_CHECK_DIR/../../../contexts/observability/scripts/validate-alert-rules.sh"
 if [ ! -f "$VALIDATOR" ]; then
   VALIDATOR="$REPO_ROOT/contexts/observability/scripts/validate-alert-rules.sh"
