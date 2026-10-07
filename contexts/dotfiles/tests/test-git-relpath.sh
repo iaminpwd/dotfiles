@@ -151,34 +151,3 @@ TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
 [ "$FAIL_COUNT" -eq 0 ] || exit 1
-\t' read -r resolved git_root <<<"$out"
-EXPECTED_PORTABLE="$(cd -P "$LINK_BASE/real/sub" && pwd)/file.txt"
-EXPECTED_ROOT="$(cd -P "$LINK_BASE/real" && pwd)"
-if [ "$resolved" = "$EXPECTED_PORTABLE" ] && [ "$git_root" = "$EXPECTED_ROOT" ]; then
-  report "BSD readlink 환경에서도 심볼릭 링크 실경로 정규화" 0
-else
-  report "BSD readlink 환경에서도 심볼릭 링크 실경로 정규화" 1 "resolved=$resolved git_root=$git_root"
-fi
-
-# 6. 소비자(agent-edits-hook.sh, record-provenance.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
-CONSUMERS=(
-  "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
-  "$REPO_ROOT/bin/utils/record-provenance.sh"
-)
-dup=0
-for consumer in "${CONSUMERS[@]}"; do
-  if ! grep -qF "source" "$consumer" || ! grep -qF "git-relpath.sh" "$consumer"; then
-    dup=1
-  fi
-  grep -qE 'rev-parse --show-toplevel' "$consumer" && dup=1
-done
-if [ "$dup" -eq 0 ]; then
-  report "소비자가 공용 라이브러리를 실제로 source하고 인라인 복제를 안 함" 0
-else
-  report "소비자가 공용 라이브러리를 실제로 source하고 인라인 복제를 안 함" 1 "복제본이 되살아났거나 source가 빠졌습니다"
-fi
-
-TOTAL=$((PASS_COUNT + FAIL_COUNT))
-echo
-echo "$PASS_COUNT/$TOTAL 통과"
-[ "$FAIL_COUNT" -eq 0 ] || exit 1
