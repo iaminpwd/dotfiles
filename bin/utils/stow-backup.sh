@@ -13,6 +13,18 @@ _canonicalize() {
   readlink -f "$1" 2>/dev/null || realpath "$1" 2>/dev/null || echo "$1"
 }
 
+_next_backup_path() {
+  local target=$1 candidate suffix=0
+  candidate="$target.backup.$BACKUP_TIMESTAMP"
+
+  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
+    suffix=$((suffix + 1))
+    candidate="$target.backup.$BACKUP_TIMESTAMP.$suffix"
+  done
+
+  printf '%s\n' "$candidate"
+}
+
 # TARGET이 이미 심볼릭 링크인데 stow 소유 형식이 아니면 백업으로 치운다. 절대경로
 # 심볼릭 링크는 같은 대상이어도 stow가 foreign으로 보고 -R을 거부하며, 상대경로
 # 링크도 패키지 디렉토리가 옮겨져(예: zsh/ -> stow/zsh/) 더는 SRC를 가리키지 못하면
@@ -30,12 +42,12 @@ _reconcile_symlink() {
   case "$(readlink "$target")" in
   /*)
     mkdir -p "$(dirname "$target")"
-    mv "$target" "$target.backup.$BACKUP_TIMESTAMP"
+    mv "$target" "$(_next_backup_path "$target")"
     ;;
   *)
     if [ "$(_canonicalize "$target")" != "$(_canonicalize "$src")" ]; then
       mkdir -p "$(dirname "$target")"
-      mv "$target" "$target.backup.$BACKUP_TIMESTAMP"
+      mv "$target" "$(_next_backup_path "$target")"
     fi
     ;;
   esac
@@ -70,7 +82,7 @@ while IFS= read -r -d '' SRC_FILE; do
     _reconcile_symlink "$TARGET" "$SRC_FILE"
   elif [ -e "$TARGET" ] && [ "$(_canonicalize "$TARGET")" != "$(_canonicalize "$SRC_FILE")" ]; then
     mkdir -p "$(dirname "$TARGET")"
-    mv "$TARGET" "$TARGET.backup.$BACKUP_TIMESTAMP"
+    mv "$TARGET" "$(_next_backup_path "$TARGET")"
   fi
 done < <(find "$DOTFILES_DIR/$PKG" -type f -print0)
 exit 0
