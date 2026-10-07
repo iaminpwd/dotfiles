@@ -294,6 +294,7 @@ chmod +x "$BSD_REPO/bin/hooks/run-suite.sh"
 stub "$BSD_REPO/bin/hooks/pre-flight-check.sh" 1 "BSD_PFC_FAIL_MARKER"
 git -C "$BSD_REPO" add -A
 git -C "$BSD_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: BSD readlink 게이트 픽스처"
+# idempotency:bypass (격리된 임시 픽스처를 dirty 상태로 만드는 1회성 기록)
 echo "dirty" >>"$BSD_REPO/README.md"
 
 BSD_BIN="$TMP/bsd-bin"
