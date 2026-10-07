@@ -113,6 +113,44 @@ else
   report "multi-source (일부 모호하면 전체 FAILED)" 1 "exit=$status out=$out log=$(cat "$AMB_LOG" 2>/dev/null)"
 fi
 
+# 4a. FLAGGED 재시도는 같은 작업 목적일 때만 기존 행을 SUCCESS로 승격해야 한다.
+rm -f "$AMB_LOG"
+status=0
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" retry-same.tf "duplicate-rule.md" "같은 작업" 2>&1) || status=$?
+[ "$status" -eq 1 ] || {
+  report "flagged-same-purpose-retry (초기 FLAGGED 생성)" 1 "exit=$status out=$out"
+}
+status=0
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" retry-same.tf "alpha/duplicate-rule.md" "같은 작업" 2>&1) || status=$?
+LINES=$(wc -l <"$AMB_LOG")
+if [ "$status" -eq 0 ] &&
+  [ "$LINES" -eq 1 ] &&
+  grep -qF "agent:alpha/duplicate-rule.md | 같은 작업 | SUCCESS" "$AMB_LOG"; then
+  report "flagged-same-purpose-retry (같은 목적이면 기존 행 SUCCESS 승격)" 0
+else
+  report "flagged-same-purpose-retry (같은 목적이면 기존 행 SUCCESS 승격)" 1 "exit=$status lines=$LINES log=$(cat "$AMB_LOG" 2>/dev/null)"
+fi
+
+# 4b. 같은 파일의 최신 FLAGGED라도 purpose가 다르면 별도 작업이다. 오래된 미해결 이력을
+# 새 작업의 SUCCESS로 덮어쓰지 말고 기존 FLAGGED를 보존한 채 새 행을 append해야 한다.
+rm -f "$AMB_LOG"
+status=0
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" retry-different.tf "duplicate-rule.md" "이전 미해결 작업" 2>&1) || status=$?
+[ "$status" -eq 1 ] || {
+  report "flagged-different-purpose-preserved (초기 FLAGGED 생성)" 1 "exit=$status out=$out"
+}
+status=0
+out=$(cd "$AMB_FAKE/work" && bash "$AMB_RP" retry-different.tf "alpha/duplicate-rule.md" "새 독립 작업" 2>&1) || status=$?
+LINES=$(wc -l <"$AMB_LOG")
+if [ "$status" -eq 0 ] &&
+  [ "$LINES" -eq 2 ] &&
+  grep -qF "이전 미해결 작업 | FLAGGED" "$AMB_LOG" &&
+  grep -qF "agent:alpha/duplicate-rule.md | 새 독립 작업 | SUCCESS" "$AMB_LOG"; then
+  report "flagged-different-purpose-preserved (다른 목적이면 FLAGGED 보존 + append)" 0
+else
+  report "flagged-different-purpose-preserved (다른 목적이면 FLAGGED 보존 + append)" 1 "exit=$status lines=$LINES log=$(cat "$AMB_LOG" 2>/dev/null)"
+fi
+
 # 5. agent-edits-hook.sh가 남긴 미확정 라인("- " 목적, 5번째 필드 SUCCESS 아님)이 있으면
 #    새 줄을 추가하는 대신 그 자리를 보강(overwrite)해야 한다 -> 총 줄 수 1 유지.
 rm -f "$LOG"
