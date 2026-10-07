@@ -202,7 +202,6 @@ else
   report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 1 "$OUT"
 fi
 
-
 echo "--- macOS/BSD 경로 해석 회귀 ---"
 
 # run-suite.sh는 pre-commit/Stop/CI가 공통으로 경유하므로, macOS 기본 BSD readlink처럼
