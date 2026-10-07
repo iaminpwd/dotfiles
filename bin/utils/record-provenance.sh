@@ -117,17 +117,39 @@ if [ "$FAILED" -eq 1 ]; then RESULT_TAG="FLAGGED"; else RESULT_TAG="SUCCESS"; fi
 # Format: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
 # idempotency:bypass (로그 파일 연속 기록이므로 상태 검증 불필요)
 #
-# 아직 SUCCESS로 확정되지 않은 직전 라인(훅의 더미 "-" 또는 이전 FLAGGED 시도)이
-# 있으면 새 줄을 추가하는 대신 그 자리에서 이번 결과로 보강(overwrite)한다.
-# 없으면(훅 미기동 등) 기존처럼 append한다.
-if [ -f "$EDITS_LOG" ] && awk -F' \\| ' -v r="$REL" '$2==r && $5!="SUCCESS" {found=1} END{exit !found}' "$EDITS_LOG"; then
-  TMP="$EDITS_LOG.tmp.$$"
+# 같은 파일의 "가장 최근" 로그가 보강 가능한 상태일 때만 그 자리를 갱신한다.
+# - hook:* | - | OK      : 성공 편집의 자동 더미 라인
+# - agent:* | ... | FLAGGED : 이전 provenance 시도의 미해결 라인
+# ERROR는 실패한 편집이라는 독립 감사 이력이므로 절대 SUCCESS로 덮어쓰지 않는다.
+# 더 오래된 OK 뒤에 최신 ERROR/SUCCESS가 있는 경우도 과거 행을 소급 보강하지 않는다.
+is_latest_row_enrichable() {
+  awk -F' \\| ' -v r="$REL" '
+    $2==r { src=$3; purpose=$4; result=$5 }
+    END {
+      ok = ((src ~ /^hook:/ && purpose=="-" && result=="OK") ||
+            (src ~ /^agent:/ && result=="FLAGGED"))
+      exit !ok
+    }
+  ' "$EDITS_LOG"
+}
+
+if [ -f "$EDITS_LOG" ] && is_latest_row_enrichable; then
+  TMP="$EDITS_LOG.tmp.$"
   awk -F' \\| ' -v r="$REL" -v src="agent:$RULE_SOURCE_CLEAN" -v purpose="$PURPOSE_CLEAN" -v tag="$RESULT_TAG" '
-    $2==r && $5!="SUCCESS" { target=NR; tf1=$1; tf2=$2 }
+    $2==r {
+      target=NR
+      tf1=$1
+      tf2=$2
+      target_src=$3
+      target_purpose=$4
+      target_result=$5
+    }
     { line[NR]=$0 }
     END {
+      enrich = ((target_src ~ /^hook:/ && target_purpose=="-" && target_result=="OK") ||
+                (target_src ~ /^agent:/ && target_result=="FLAGGED"))
       for (i=1;i<=NR;i++) {
-        if (i==target) {
+        if (enrich && i==target) {
           printf "%s | %s | %s | %s | %s\n", tf1, tf2, src, purpose, tag
         } else {
           print line[i]
