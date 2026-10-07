@@ -22,17 +22,19 @@ record_unavailable() {
 }
 
 has_tool() {
-  local resolved
+  local resolved mise_data_dir
   resolved=$(command -v "$1") || {
     record_unavailable "$1"
     return 1
   }
 
-  # mise shim 검증: PATH에 존재하더라도 현재 디렉토리 세션에서 해석 가능한지 점검
-  if [[ "$resolved" == "$HOME/.local/share/mise/shims/"* ]] && command -v mise &>/dev/null; then
+  # mise shim 검증: PATH에 존재하더라도 현재 디렉토리 세션에서 해석 가능한지 점검.
+  # MISE_DATA_DIR가 지정된 환경에서는 shim/install 루트도 그 값을 따라야 한다.
+  mise_data_dir="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
+  if [[ "$resolved" == "$mise_data_dir/shims/"* ]] && command -v mise &>/dev/null; then
     if ! mise which "$1" &>/dev/null; then
       local real
-      real=$(find "$HOME/.local/share/mise/installs/$1" -maxdepth 3 -name "$1" -type f -perm -u+x 2>/dev/null | sort -V | tail -1)
+      real=$(find "$mise_data_dir/installs/$1" -maxdepth 3 -name "$1" -type f -perm -u+x 2>/dev/null | sort -V | tail -1)
       if [ -n "$real" ] && "$real" --version &>/dev/null; then
         PATH="$(dirname "$real"):$PATH"
         export PATH

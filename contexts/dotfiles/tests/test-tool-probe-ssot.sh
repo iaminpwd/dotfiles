@@ -160,6 +160,57 @@ else
   report "has_tool: 설치된 도구 -> 성공 반환 + 기록 없음(오탐 회귀)" 1 "out=$OUT"
 fi
 
+# 4c. MISE_DATA_DIR가 기본 HOME 경로와 분리된 환경에서도 실행 불가능한 shim을
+#     가용 도구로 오판하면 안 된다. 실제 mise data dir의 installs 아래에 정상 바이너리가
+#     있으면 그 바이너리로 폴백하고 PATH를 교정해야 한다.
+CUSTOM_MISE="$TMP/custom-mise"
+CUSTOM_BIN="$TMP/custom-bin"
+FAKE_HOME="$TMP/fake-home"
+REAL_TOOL="$CUSTOM_MISE/installs/demo-tool/1.2.3/bin/demo-tool"
+mkdir -p "$CUSTOM_MISE/shims" "$(dirname "$REAL_TOOL")" "$CUSTOM_BIN" "$FAKE_HOME"
+
+cat >"$CUSTOM_MISE/shims/demo-tool" <<'EOF'
+#!/usr/bin/env bash
+exit 127
+EOF
+chmod +x "$CUSTOM_MISE/shims/demo-tool"
+
+cat >"$REAL_TOOL" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = "--version" ]; then
+  echo "demo-tool 1.2.3"
+fi
+EOF
+chmod +x "$REAL_TOOL"
+
+cat >"$CUSTOM_BIN/mise" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = "which" ]; then
+  exit 1
+fi
+exit 0
+EOF
+chmod +x "$CUSTOM_BIN/mise"
+
+code=0
+OUT=$(MISE_DATA_DIR="$CUSTOM_MISE" HOME="$FAKE_HOME" PATH="$CUSTOM_MISE/shims:$CUSTOM_BIN:/usr/bin:/bin" bash -c '
+  set -uo pipefail
+  source "$1"
+  rc=0
+  has_tool demo-tool || rc=$?
+  echo "rc=$rc"
+  echo "resolved=$(command -v demo-tool || true)"
+  demo-tool --version || echo "exec_rc=$?"
+' _ "$LIB" 2>&1) || code=$?
+if [ "$code" -eq 0 ] &&
+  grep -qF "rc=0" <<<"$OUT" &&
+  grep -qF "resolved=$REAL_TOOL" <<<"$OUT" &&
+  grep -qF "demo-tool 1.2.3" <<<"$OUT"; then
+  report "has_tool: custom MISE_DATA_DIR의 깨진 shim -> 실제 설치본으로 폴백" 0
+else
+  report "has_tool: custom MISE_DATA_DIR의 깨진 shim -> 실제 설치본으로 폴백" 1 "out=$OUT"
+fi
+
 # 5. 플러그인(bin/hooks/plugins/*.sh)은 tool-probe.sh 를 "조건부"로 source 한다(파일이
 #    없으면 건너뜀). 그런데 print_unavailable_tools 를 무가드로 호출하면, 라이브러리를
 #    못 찾은 환경에서 set -e 가 그 자리에서 스크립트를 죽여 "검증 실패"로 오보고된다.
