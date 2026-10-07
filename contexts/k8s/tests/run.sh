@@ -334,6 +334,32 @@ EOF
     fi
   fi
 
+  # Case 8: macOS 기본 BSD readlink처럼 -f가 없는 환경에서도 플러그인 자체가
+  # 시작되어야 한다. delegated loop가 플러그인을 호출해도 시작 단계에서 죽으면 K8s
+  # 전용 검증 전체가 실행되기 전에 실패한다. 도구 의존성을 섞지 않기 위해 kind: 없는
+  # Case 5 저장소를 재사용해 경로 해석만 격리한다.
+  BSD_BIN="$PLUGIN_TMP/bsd-bin"
+  mkdir -p "$BSD_BIN"
+  cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+  chmod +x "$BSD_BIN/readlink"
+
+  status=0
+  out=$( (cd "$KR5" && PATH="$BSD_BIN:$PATH" QUIET=0 bash "$K8S_PLUGIN") 2>&1) || status=$?
+  if [ "$status" -eq 0 ] &&
+    grep -qF "K8s-Specific Checks Passed Successfully" <<<"$out" &&
+    ! grep -qF 'readlink: illegal option -- f' <<<"$out"; then
+    report "bsd-readlink-startup (GNU readlink -f 없이도 K8s 플러그인 실행)" 0
+  else
+    report "bsd-readlink-startup (GNU readlink -f 없이도 K8s 플러그인 실행)" 1 "exit=$status out=$out"
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "k8s-check.sh 플러그인 배선 확인" 1 "bin/hooks/plugins/k8s-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
