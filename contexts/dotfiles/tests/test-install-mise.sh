@@ -221,7 +221,7 @@ printf 'ran:%s\n' "${MISE_VERSION:-}" >"$STUB_MARKER"
 if [ "${STUB_CREATE_MISE:-1}" = "1" ]; then
   mkdir -p "$HOME/.local/bin"
   cat >"$HOME/.local/bin/mise" <<EOF
-#!/usr/bin/env sh
+#!/bin/sh
 printf '%s linux-x64\\n' "${MISE_VERSION:-}"
 EOF
   chmod +x "$HOME/.local/bin/mise"
