@@ -212,21 +212,34 @@ esac
 exit 0
 STUB
 
-  # sh 스텁: "설치가 실제로 실행됐다"의 유일한 증거. 차단 케이스에서는 생기면 안 된다.
-  # 홑따옴표가 맞다 — $STUB_MARKER 는 지금이 아니라 스텁이 실행되는 시점에 전개돼야 한다.
-  # shellcheck disable=SC2016
-  printf '#!/usr/bin/env bash\nprintf "ran:%%s\\n" "${MISE_VERSION:-}" >"$STUB_MARKER"\nexit 0\n' >"$E2E_BIN/sh"
+  # sh 스텁: installer 실행 흔적을 남기고, 기본값에서는 실제 설치 결과처럼
+  # ~/.local/bin/mise도 만든다. STUB_CREATE_MISE=0이면 installer가 exit 0만 하고
+  # 바이너리를 만들지 않는 "거짓 성공"을 재현한다.
+  cat >"$E2E_BIN/sh" <<'STUB'
+#!/usr/bin/env bash
+printf 'ran:%s\n' "${MISE_VERSION:-}" >"$STUB_MARKER"
+if [ "${STUB_CREATE_MISE:-1}" = "1" ]; then
+  mkdir -p "$HOME/.local/bin"
+  cat >"$HOME/.local/bin/mise" <<EOF
+#!/usr/bin/env sh
+printf '%s linux-x64\\n' "${MISE_VERSION:-}"
+EOF
+  chmod +x "$HOME/.local/bin/mise"
+fi
+exit 0
+STUB
   chmod +x "$E2E_BIN/curl" "$E2E_BIN/gpg" "$E2E_BIN/sh"
 
-  # run_e2e <지문목록> <GOODSIG여부> -> "<exit코드>|<설치실행여부>|<출력>"
+  # run_e2e <지문목록> <GOODSIG여부> [mise생성여부]
+  # -> "<exit코드>|<설치실행여부>|<출력>"
   run_e2e() {
-    local fps=$1 goodsig=$2 home marker st out
+    local fps=$1 goodsig=$2 create_mise=${3:-1} home marker st out
     home="$TMP/e2e-home-$RANDOM"
     marker="$TMP/e2e-marker-$RANDOM"
     mkdir -p "$home"
     st=0
     out=$(HOME="$home" PATH="$E2E_BIN:$PATH" STUB_FPS="$fps" STUB_GOODSIG="$goodsig" \
-      STUB_MARKER="$marker" bash "$INSTALLER" 2>&1) || st=$?
+      STUB_MARKER="$marker" STUB_CREATE_MISE="$create_mise" bash "$INSTALLER" 2>&1) || st=$?
     if [ -e "$marker" ]; then echo "$st|$(cat "$marker")|$out"; else echo "$st|blocked|$out"; fi
   }
 
@@ -261,6 +274,18 @@ STUB
     report "e2e happy-path (고정 mise 버전으로 설치 진행)" 0
   else
     report "e2e happy-path (고정 mise 버전으로 설치 진행)" 1 "$r"
+  fi
+
+  # 3e. 서명도 맞고 installer 자체가 exit 0이어도 실제 mise 바이너리가 생성되지 않았다면
+  # install-mise.sh가 성공을 반환하면 안 된다. 이 스크립트의 0 계약은 "설치 완료 또는
+  # 이미 존재"이므로, installer의 종료 코드가 아니라 결과 바이너리/버전까지 종단 검증한다.
+  r=$(run_e2e "$REAL_FP" 1 0)
+  if [ "${r%%|*}" -ne 0 ] &&
+    [[ "$r" == *"|ran:$PINNED_VERSION|"* ]] &&
+    [[ "$r" == *"설치 결과 검증 실패"* ]]; then
+    report "e2e installer-false-success (바이너리 미생성은 Hard Block)" 0
+  else
+    report "e2e installer-false-success (바이너리 미생성은 Hard Block)" 1 "$r"
   fi
 fi
 
