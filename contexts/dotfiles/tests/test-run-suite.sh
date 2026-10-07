@@ -202,6 +202,33 @@ else
   report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 1 "$OUT"
 fi
 
+echo "--- macOS/BSD 경로 해석 회귀 ---"
+
+# run-suite.sh는 pre-commit/Stop/CI가 공통으로 경유하므로, macOS 기본 BSD readlink처럼
+# -f가 없는 PATH에서도 러너 자체가 시작되어야 한다. Homebrew coreutils의 gnubin PATH를
+# Git GUI/비대화형 프로세스가 상속한다는 보장은 없다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+
+CODE=0
+OUT=$(PATH="$BSD_BIN:$PATH" bash "$RUNNER" "$FIXTURES/ok-quiet.sh" 2>&1) || CODE=$?
+if [ "$CODE" -eq 0 ] &&
+  grep -qF "[✓]" <<<"$OUT" &&
+  ! grep -qF 'readlink: illegal option -- f' <<<"$OUT"; then
+  report "BSD readlink 환경에서도 run-suite 시작·실행" 0
+else
+  report "BSD readlink 환경에서도 run-suite 시작·실행" 1 "exit=$CODE out=$OUT"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
