@@ -65,6 +65,21 @@ else
   report "unique-basename (자동 스킬 보정)" 1 "exit=$status out=$out log=$(cat "$UNIQUE_LOG" 2>/dev/null)"
 fi
 
+# 2a. <skill>/<filename> 형식으로 이미 qualified된 입력도 실제 활성 contexts 아래에
+# 존재하는 근거인지 검증해야 한다. slash가 있다는 이유만으로 없는 파일을 SUCCESS로
+# 기록하면 감사 로그가 존재하지 않는 룰을 정당한 근거처럼 남긴다.
+rm -f "$UNIQUE_LOG"
+status=0
+out=$(cd "$UNIQUE_FAKE/work" && bash "$UNIQUE_RP" missing.tf "alpha/missing-rule.md" "존재 검증" 2>&1) || status=$?
+if [ "$status" -eq 1 ] &&
+  grep -qF "MISSING(alpha/missing-rule.md)" "$UNIQUE_LOG" &&
+  grep -qF "| FLAGGED" "$UNIQUE_LOG" &&
+  grep -qF "존재하지 않는 rule_source" <<<"$out"; then
+  report "qualified-missing-source (없는 근거는 FLAGGED + exit 1)" 0
+else
+  report "qualified-missing-source (없는 근거는 FLAGGED + exit 1)" 1 "exit=$status out=$out log=$(cat "$UNIQUE_LOG" 2>/dev/null)"
+fi
+
 # 3~4. 모호성 판정은 실제 코퍼스에서 우연히 같은 basename이 남아 있는지에 의존하지
 # 않는다. 두 활성 스킬에 같은 파일명을 둔 최소 코퍼스를 합성해 알고리즘 자체를 고정한다.
 AMB_FAKE="$TMP/ambiguous-repo"

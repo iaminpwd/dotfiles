@@ -45,12 +45,14 @@ PURPOSE_CLEAN=$(clean "$PURPOSE")
 # dotfiles/contexts 위치 계산 (RECORD_PROVENANCE_SCRIPT_DIR은 이미 실경로 기준 bin/utils)
 CONTEXTS_DIR="$(dirname "$(dirname "$RECORD_PROVENANCE_SCRIPT_DIR")")/contexts"
 
-# 스킬 접두사(<skill>/파일명)가 없는 rule_source를 검증/보정한다.
-# - contexts/ 전체에서 동일 파일명이 정확히 1곳뿐이면 자동으로 <skill>/파일명 으로 보정
-# - 2곳 이상이면(서로 다른 활성 스킬에 같은 basename이 존재) 모호함
-#   -> 기록 자체를 누락시키지 않기 위해 AMBIGUOUS(...)로 치환해 반환한다
-#      (감사 로그에서 "무엇을 하려다 막혔는지"가 사라지면 안 되기 때문)
-# - 매칭이 없으면(임의 문자열) 입력값을 그대로 사용
+# rule_source를 검증/보정한다.
+# - <skill>/<파일명> 형태면 해당 활성 contexts/<skill>/ 안에 그 basename이 실제로
+#   존재해야 한다. 없으면 MISSING(...)으로 남기고 FLAGGED 처리한다.
+# - 스킬 접두사가 없으면 contexts/ 전체에서 동일 파일명이 정확히 1곳뿐일 때
+#   <skill>/파일명 으로 자동 보정한다.
+# - 2곳 이상이면 모호함을 AMBIGUOUS(...)로 기록한다.
+# - 접두사 없는 이름이 어디에도 없으면 기존 계약대로 입력값 자체를 외부/논리 근거명으로
+#   보고 그대로 사용한다.
 #
 # 주의: 이 함수는 항상 command substitution($(...))으로 호출되어 서브셸에서 실행되므로,
 # 모호성 여부는 전역 변수가 아니라 반환 문자열의 "AMBIGUOUS(" 접두사로만 호출부에 전달된다.
@@ -61,7 +63,31 @@ resolve_source() {
   [ -n "$clean_src" ] || return 0
   case "$clean_src" in
   */*)
-    printf '%s' "$clean_src"
+    local skill_name file_name qualified_matches qualified_count
+    skill_name="${clean_src%%/*}"
+    file_name="${clean_src#*/}"
+
+    # 문서화된 qualified 형식은 <skill>/<파일명> 한 단계다. 숨김/없는 스킬이나
+    # 추가 경로 조각은 활성 rule_source로 인정하지 않는다.
+    if [ -z "$skill_name" ] || [ -z "$file_name" ] ||
+      [[ "$skill_name" = .* ]] || [[ "$file_name" = */* ]] ||
+      [ ! -d "$CONTEXTS_DIR/$skill_name" ]; then
+      echo "❌ 존재하지 않는 rule_source: $clean_src" >&2
+      printf 'MISSING(%s)' "$clean_src"
+      return 0
+    fi
+
+    qualified_matches=$(find "$CONTEXTS_DIR/$skill_name" -type f -iname "$file_name" -print 2>/dev/null)
+    qualified_count=$(printf '%s\n' "$qualified_matches" | grep -c . || true)
+    if [ "$qualified_count" -eq 1 ]; then
+      printf '%s/%s' "$skill_name" "$file_name"
+    elif [ "$qualified_count" -eq 0 ]; then
+      echo "❌ 존재하지 않는 rule_source: $clean_src" >&2
+      printf 'MISSING(%s)' "$clean_src"
+    else
+      echo "❌ '$clean_src'는 같은 스킬 안에 동일 basename이 여러 개 있어 모호합니다." >&2
+      printf 'AMBIGUOUS(%s)' "$clean_src"
+    fi
     return 0
     ;;
   esac
@@ -104,7 +130,9 @@ IFS=',' read -ra SRC_ITEMS <<<"$RULE_SOURCE"
 for item in "${SRC_ITEMS[@]}"; do
   resolved_item=$(resolve_source "$item")
   [ -n "$resolved_item" ] || continue
-  case "$resolved_item" in AMBIGUOUS\(*) FAILED=1 ;; esac
+  case "$resolved_item" in
+  AMBIGUOUS\(* | MISSING\(*) FAILED=1 ;;
+  esac
   RULE_SOURCE_RESOLVED="${RULE_SOURCE_RESOLVED:+$RULE_SOURCE_RESOLVED,}$resolved_item"
 done
 if [ -z "$RULE_SOURCE_RESOLVED" ]; then
