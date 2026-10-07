@@ -25,8 +25,9 @@ fi
 
 args=(-i "localhost," -c local ansible/site.yml)
 # 비대화형 실행은 CI의 passwordless sudo 또는 외부에서 제공한 become 설정을 사용한다.
-# 일반 터미널에서는 세션별 sudo 캐시 유무에 의존하지 않고 시작 시 비밀번호를 받는다.
-if [ -t 0 ]; then
+# 일반 사용자 터미널에서는 세션별 sudo 캐시 유무에 의존하지 않고 시작 시 비밀번호를 받는다.
+# root는 이미 권한을 갖고 있으므로 불필요한 become 비밀번호 프롬프트를 추가하지 않는다.
+if [ -t 0 ] && [ "$(id -u)" -ne 0 ]; then
   args+=(--ask-become-pass)
 fi
 exec ansible-playbook "${args[@]}" "$@"
