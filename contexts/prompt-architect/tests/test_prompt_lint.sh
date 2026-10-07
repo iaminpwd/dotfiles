@@ -171,6 +171,26 @@ EOF
 git -C "$D" add bin/utils/scan-one-skill.sh
 check_clean "ok-contexts-find-scoped" "$D"
 
+D=$(new_case ok-ansible-unrelated-recurse)
+mkdir -p "$D/ansible/roles/demo/tasks"
+cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
+---
+- name: 사용자 디렉토리 생성
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.example"
+    state: directory
+    recurse: true
+
+- name: 컨텍스트 도메인 조회
+  ansible.builtin.find:
+    paths: "{{ role_path }}/../../../contexts"
+    file_type: directory
+    recurse: false
+  register: demo_contexts
+EOF
+git -C "$D" add ansible/roles/demo/tasks/main.yml
+check_clean "ok-ansible-unrelated-recurse" "$D"
+
 D=$(new_case fail-ansible-find-no-guard)
 mkdir -p "$D/ansible/roles/demo/tasks"
 cat >"$D/ansible/roles/demo/tasks/main.yml" <<'EOF'
