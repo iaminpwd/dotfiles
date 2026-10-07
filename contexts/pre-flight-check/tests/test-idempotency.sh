@@ -53,6 +53,15 @@ else
   report "ok-comment-examples (주석 속 append 예시는 오탐 없어야 함)" 0
 fi
 
+# 명시적 # idempotency:bypass 는 일반 설명 주석과 달리 의도적인 예외 표식이므로
+# full-line comment 제외 로직을 추가해도 guard 로 유지되어야 한다.
+out=$(bash "$IDEMPOTENCY_SCRIPT" "$IDEMPOTENCY_FIXTURES/ok-explicit-bypass.sh" 2>&1 >/dev/null) || true
+if grep -qF "Idempotency check" <<<"$out"; then
+  report "ok-explicit-bypass (# idempotency:bypass 는 명시적 예외로 유지)" 1 "경고가 뜨면 안 되는데 떴습니다: $out"
+else
+  report "ok-explicit-bypass (# idempotency:bypass 는 명시적 예외로 유지)" 0
+fi
+
 out=$(bash "$IDEMPOTENCY_SCRIPT" "$IDEMPOTENCY_FIXTURES/fail-unguarded.sh" 2>&1 >/dev/null) || true
 if grep -qF "Idempotency check" <<<"$out"; then
   report "fail-unguarded (가드 없음, 경고 떠야 함)" 0
