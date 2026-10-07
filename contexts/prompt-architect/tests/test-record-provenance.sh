@@ -122,6 +122,22 @@ else
   report "확정된 SUCCESS 라인 이후 재호출 (append)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
 fi
 
+# 6a. 훅의 ERROR 라인은 실패한 편집 시도라는 독립 감사 이력이다. provenance 보강은
+# 성공 편집의 더미 OK 또는 이전 FLAGGED만 갱신해야 하며 ERROR를 SUCCESS로 덮어쓰면 안 된다.
+rm -f "$LOG"
+echo "2026-01-01T00:00:00+00:00 | error.tf | hook:Edit | - | ERROR:permission denied" >"$LOG"
+status=0
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" error.tf "dotfiles/010-core.md" "후속 정상 작업" 2>&1) || status=$?
+LINES=$(wc -l <"$LOG")
+if [ "$status" -eq 0 ] &&
+  [ "$LINES" -eq 2 ] &&
+  grep -qF "hook:Edit | - | ERROR:permission denied" "$LOG" &&
+  grep -qF "agent:dotfiles/010-core.md | 후속 정상 작업 | SUCCESS" "$LOG"; then
+  report "hook-error-preserved (실패 이력 보존 + provenance 별도 append)" 0
+else
+  report "hook-error-preserved (실패 이력 보존 + provenance 별도 append)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
+fi
+
 # 6b. 어떤 룰북과도 매칭되지 않는 이름은 입력값을 그대로 쓰고 정상 종료해야 한다.
 #     문서화된 동작인데 케이스가 없었다. 스킬 보정 find 가 0건일 때의 경로라,
 #     resolve_source 안에서 카운트를 세는 grep 이 무매치로 죽으면 여기서 드러난다.
