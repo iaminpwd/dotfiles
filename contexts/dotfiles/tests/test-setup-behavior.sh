@@ -45,6 +45,51 @@ done
 if grep -q -- --ask-become-pass "$TMP/args"; then exit 1; fi
 echo 'PASS: 비대화형 설치와 dry-run 인자 전달'
 
+# 대화형 TTY라도 root는 become 비밀번호가 필요 없다. bootstrap.sh 자체가 root 직접 실행을
+# 지원하므로, run-setup.sh가 무조건 --ask-become-pass를 붙이면 root bootstrap이
+# BECOME password 프롬프트에서 불필요하게 멈출 수 있다. PTY로 실제 -t 0 경로를 태운다.
+cat >"$TMP/bin/id" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-u" ]; then
+  printf '0\n'
+else
+  /usr/bin/id "$@"
+fi
+STUB
+chmod +x "$TMP/bin/id"
+: >"$TMP/root-tty-args"
+status=0
+PATH="$TMP/bin:$PATH" SETUP_ARGS="$TMP/root-tty-args" SETUP_PWD="$TMP/pwd" SETUP_CONFIG="$TMP/config" \
+  ROOT="$ROOT" python3 - <<'PY' || status=$?
+import os
+import pty
+
+pid, fd = pty.fork()
+if pid == 0:
+    os.execve(
+        "/bin/bash",
+        ["/bin/bash", os.path.join(os.environ["ROOT"], "bin/utils/run-setup.sh"), "--check"],
+        os.environ,
+    )
+
+while True:
+    try:
+        if not os.read(fd, 4096):
+            break
+    except OSError:
+        break
+_, wait_status = os.waitpid(pid, 0)
+raise SystemExit(os.waitstatus_to_exitcode(wait_status))
+PY
+if [ "$status" -eq 0 ] &&
+  ! grep -q -- --ask-become-pass "$TMP/root-tty-args"; then
+  echo 'PASS: root 대화형 실행은 become 비밀번호를 묻지 않음'
+else
+  echo "FAIL: root 대화형 실행에 --ask-become-pass가 추가됐습니다: $(tr '\n' ' ' <"$TMP/root-tty-args")"
+  exit 1
+fi
+rm -f "$TMP/bin/id"
+
 # ai_agent role은 실행 가능한 bin 스크립트를 ~/.local/bin에 링크하므로 symlink 경유 실행도
 # 같은 저장소 root로 수렴해야 한다. BSD readlink stub은 plain readlink는 허용한다.
 ln -s "$ROOT/bin/utils/run-setup.sh" "$TMP/bin/run-setup-link"
