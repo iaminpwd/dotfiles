@@ -41,13 +41,15 @@ for skill in (root / 'contexts').iterdir():
         if source.exists():
             for parent in ['.gemini/config', '.claude', '.agents']:
                 link(home / parent / 'skills' / skill.name / asset, source)
-for base in [root / 'bin', root / 'contexts']:
-    for source in base.rglob('*.sh'):
-        relative = source.relative_to(root)
-        if any(p.startswith('.') for p in relative.parts):
+local_bin = home / '.local/bin'
+if local_bin.is_dir():
+    managed_roots = [root / 'bin', root / 'contexts']
+    for candidate in local_bin.iterdir():
+        if not candidate.is_symlink():
             continue
-        if ('bin' in relative.parts or 'scripts' in relative.parts) and source.stat().st_mode & stat.S_IXUSR:
-            link(home / '.local/bin' / source.name, source)
+        resolved = candidate.resolve(strict=False)
+        if any(resolved == managed or managed in resolved.parents for managed in managed_roots):
+            require(False, f"레거시 dotfiles global script link가 남았습니다: {candidate}")
 for name in ['AGENTS.md', 'CLAUDE.md']:
     link(root / name, root / 'contexts/dotfiles/SKILL.md')
 local = home / '.zshrc.local'
