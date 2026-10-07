@@ -18,7 +18,22 @@
 #      덩그러니 출력된다(실측된 증상).
 set -euo pipefail
 
-PROMPT_LINT_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+prompt_lint_canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+PROMPT_LINT_SCRIPT_PATH=$(prompt_lint_canonical_path "${BASH_SOURCE[0]}")
+PROMPT_LINT_SCRIPT_DIR=$(dirname "$PROMPT_LINT_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$PROMPT_LINT_SCRIPT_DIR/../lib/script-init.sh"
 
