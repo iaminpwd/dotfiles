@@ -255,6 +255,34 @@ if [ -x "$PFC" ]; then
     fi
   fi
 
+  # Case 5: macOS 기본 BSD readlink처럼 -f가 없는 환경에서도 pre-flight-check.sh
+  # 자체가 시작되어야 한다. Homebrew coreutils는 greadlink/gnubin을 제공하지만 Git GUI나
+  # 비대화형 훅 PATH가 gnubin을 포함한다는 보장은 없다. 검증기가 시작도 못 하면 실제
+  # 변경 내용과 무관하게 커밋 게이트가 깨진다.
+  BSD_BIN="$PLUGIN_TMP/bsd-bin"
+  mkdir -p "$BSD_BIN"
+  cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+  chmod +x "$BSD_BIN/readlink"
+
+  SR5="$PLUGIN_TMP/repo5"
+  new_repo "$SR5"
+  cp "$FIXTURES/ok-baseline.sh" "$SR5/script.sh"
+  git -C "$SR5" add script.sh
+  status=0
+  (cd "$SR5" && PATH="$BSD_BIN:$PATH" PFC_PROFILE=quick QUIET=0 bash "$PFC" script.sh) >"$PLUGIN_TMP/out" 2>&1 || status=$?
+  if [ "$status" -eq 0 ] && ! grep -qF 'readlink: illegal option -- f' "$PLUGIN_TMP/out"; then
+    report "bsd-readlink-startup (GNU readlink -f 없이도 실행)" 0
+  else
+    report "bsd-readlink-startup (GNU readlink -f 없이도 실행)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
+  fi
+
   rm -rf "$PLUGIN_TMP"
 else
   report "pre-flight-check.sh 배선 확인" 1 "bin/hooks/pre-flight-check.sh 를 찾을 수 없거나 실행 권한이 없습니다"
