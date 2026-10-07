@@ -97,6 +97,30 @@ else
   report "batch (복수 경로 백업 및 링크 보존)" 1
 fi
 
+# 같은 초에 같은 경로를 두 번 백업해도 첫 백업을 덮어쓰면 안 된다.
+# timestamp가 초 단위이므로 date를 고정해 충돌을 결정적으로 재현한다.
+TARGET7="$TMP/same-second"
+mkdir "$TMP/fixed-date-bin"
+cat >"$TMP/fixed-date-bin/date" <<'EOF'
+#!/usr/bin/env bash
+printf '2026-10-07-120000\n'
+EOF
+chmod +x "$TMP/fixed-date-bin/date"
+
+printf 'first-version\n' >"$TARGET7"
+PATH="$TMP/fixed-date-bin:$PATH" bash "$SCRIPT" "$TARGET7"
+printf 'second-version\n' >"$TARGET7"
+PATH="$TMP/fixed-date-bin:$PATH" bash "$SCRIPT" "$TARGET7"
+
+BACKUPS7=("$TARGET7".backup.*)
+if [ "${#BACKUPS7[@]}" -eq 2 ] &&
+  grep -qx 'first-version' "${BACKUPS7[0]}" &&
+  grep -qx 'second-version' "${BACKUPS7[1]}"; then
+  report "same-second-collision (기존 백업 보존 + 새 백업 별도 생성)" 0
+else
+  report "same-second-collision (기존 백업 보존 + 새 백업 별도 생성)" 1 "$(ls -la "$TMP" 2>&1)"
+fi
+
 # 백업할 것이 없으면 date도 실행하지 않는다. 빈 대상 목록 역시 정상 무동작이다.
 mkdir "$TMP/tools"
 printf '#!/usr/bin/env bash\nexit 99\n' >"$TMP/tools/date"
