@@ -19,12 +19,13 @@ for _dir in "$PLAYBOOK_DIR/../contexts" "$PLAYBOOK_DIR/../bin"; do
 done
 unset _dir
 
-# 점으로 시작하는 contexts 디렉토리는 대상에서 뺀다. 과거 .archive의 폐기 스크립트가
-# 실제 배포 대상처럼 충돌 검사에 섞인 결함이 있었기 때문이다. 공유 테스트 라이브러리는
-# tests/lib로 분리했지만 future hidden directories에 같은 문제가 재발하지 않도록 유지한다.
+# 실제 ai_agent 배포 대상과 충돌 검사 대상을 동일하게 유지한다.
+# - 점으로 시작하는 contexts 디렉토리는 링크하지 않으므로 제외
+# - owner execute bit가 없는 내부 helper/lib도 ~/.local/bin에 링크하지 않으므로 제외
+#   (find -perm -0100은 GNU/BSD find 모두에서 owner execute bit가 켜진 파일을 뜻한다.)
 {
-  find "$PLAYBOOK_DIR/../contexts" -type f -path "*/scripts/*.sh" ! -path "*/contexts/.*" 2>/dev/null
-  find "$PLAYBOOK_DIR/../bin" -type f -name "*.sh" 2>/dev/null
+  find "$PLAYBOOK_DIR/../contexts" -type f -path "*/scripts/*.sh" ! -path "*/contexts/.*" -perm -0100 2>/dev/null
+  find "$PLAYBOOK_DIR/../bin" -type f -name "*.sh" -perm -0100 2>/dev/null
 } | awk -F/ '
 {
     name = $NF
