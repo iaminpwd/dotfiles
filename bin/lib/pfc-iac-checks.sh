@@ -50,16 +50,35 @@ validate_terraform() {
     fi
 
     log_info "Running terraform validate (offline initialization)..."
-    if [ ! -d ".terraform" ]; then
-      if ! terraform init -backend=false -input=false >/dev/null; then
-        echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 중단되었습니다." >&2
+    # pre-flight-check.sh 는 실행 초기에 저장소 루트로 cd 한다. 따라서 여기서 CWD만
+    # init/validate 하면 infra/dev/main.tf 같은 하위 Terraform root는 fmt만 받고
+    # 의미 검증을 전혀 받지 않는다. 대상 .tf가 속한 디렉터리를 중복 없이 모아 각각
+    # 독립적인 Terraform root로 검증한다. explicit 모드의 절대경로도 -chdir가 그대로
+    # 처리하므로 staged/changed/all/explicit의 경로 표현 차이도 흡수된다.
+    local tf_validate_dirs=() tf_dir existing found
+    for tf in "${tf_files[@]}"; do
+      [ -z "$tf" ] && continue
+      tf_dir=$(dirname "$tf")
+      found=0
+      for existing in "${tf_validate_dirs[@]:-}"; do
+        [ "$existing" = "$tf_dir" ] && found=1 && break
+      done
+      [ "$found" -eq 1 ] || tf_validate_dirs+=("$tf_dir")
+    done
+
+    for tf_dir in "${tf_validate_dirs[@]}"; do
+      log_info "Validating Terraform root: $tf_dir"
+      if [ ! -d "$tf_dir/.terraform" ]; then
+        if ! terraform -chdir="$tf_dir" init -backend=false -input=false >/dev/null; then
+          echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 중단되었습니다: $tf_dir" >&2
+          return 1
+        fi
+      fi
+      if ! terraform -chdir="$tf_dir" validate; then
+        echo "❌ [ERROR] terraform validate 검증에 실패하여 커밋이 중단되었습니다: $tf_dir" >&2
         return 1
       fi
-    fi
-    if ! terraform validate; then
-      echo "❌ [ERROR] terraform validate 검증에 실패하여 커밋이 중단되었습니다." >&2
-      return 1
-    fi
+    done
 
     if has_tool tflint; then
       log_info "Running tflint..."

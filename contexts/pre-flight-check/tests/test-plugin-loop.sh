@@ -145,6 +145,35 @@ printf 'resource "aws_s3_bucket" "b" {\n    bucket = "x"\n}\n' >"$SMOKE_TF/main.
 git -C "$SMOKE_TF" add main.tf
 run_smoke "validate_terraform 실제 호출 (커밋 차단)" "$SMOKE_TF" "terraform fmt 포맷이 맞지 않아"
 
+# 하위 Terraform root의 의미 오류도 그 디렉터리에서 terraform validate를 받아야 한다.
+# pre-flight-check.sh는 init_repo_root에서 저장소 루트로 cd 하므로, validate_terraform이
+# CWD에서만 init/validate 하면 infra/dev/main.tf 같은 별도 root는 fmt만 받고 의미 검증은
+# 전혀 받지 않는다. 다른 도구가 우연히 같은 오류를 잡는 것을 배제하기 위해 실제 Terraform
+# 바이너리만 PATH에 남겨 이 축만 직접 검증한다.
+SMOKE_TF_SUBDIR="$TMP/smoke-tf-subdir"
+smoke_repo "$SMOKE_TF_SUBDIR"
+mkdir -p "$SMOKE_TF_SUBDIR/infra/dev"
+cat >"$SMOKE_TF_SUBDIR/infra/dev/main.tf" <<'EOF'
+output "broken" {
+  value = var.missing
+}
+EOF
+git -C "$SMOKE_TF_SUBDIR" add infra/dev/main.tf
+
+TF_REAL=$(command -v terraform)
+if command -v mise >/dev/null 2>&1; then
+  TF_REAL=$(mise which terraform 2>/dev/null || printf '%s' "$TF_REAL")
+fi
+TF_ONLY_PATH="$(dirname "$TF_REAL"):/usr/bin:/bin"
+
+CODE=0
+OUT=$( (cd "$SMOKE_TF_SUBDIR" && PATH="$TF_ONLY_PATH" PFC_DOMAIN_CHECKS=1 QUIET=0 bash "$PFC") 2>&1) || CODE=$?
+if [ "$CODE" -ne 0 ] && grep -qF "terraform validate 검증에 실패" <<<"$OUT"; then
+  report "validate_terraform 하위 root 의미 오류 차단" 0
+else
+  report "validate_terraform 하위 root 의미 오류 차단" 1 "기대 exit≠0 + terraform validate 실패 / 실제 exit=$CODE: $(tail -5 <<<"$OUT" | tr '\n' ' ')"
+fi
+
 SMOKE_DOCKER="$TMP/smoke-docker"
 smoke_repo "$SMOKE_DOCKER"
 printf 'FROM ubuntu\nRUN apt-get install -y curl\n' >"$SMOKE_DOCKER/Dockerfile"
