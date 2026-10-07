@@ -237,8 +237,12 @@ validate_conftest() {
       # 목록은 위에서 픽스처를 걸러 둔 tracked_rego 를 그대로 쓴다 — 활성화 판정과 정책
       # 집합이 서로 다른 목록을 보면 "게이트는 켜졌는데 정책은 다른 것"이 되어 한쪽만
       # 고쳤을 때 조용히 어긋난다.
-      local policy_dirs=() rf pd found existing
-      for rf in "${tracked_rego[@]}"; do
+      # 추적 중인 정책뿐 아니라 현재 검증 대상인 Rego도 정책 집합에 포함한다.
+      # explicit 모드에서는 새 파일이 아직 git add 전일 수 있어 git ls-files 에 없으므로,
+      # tracked_rego 만 보면 "정책 변경"은 감지하면서 정작 그 새 정책은 conftest 에
+      # 전달하지 않는 거짓 초록불이 된다.
+      local policy_dirs=() policy_rego=("${tracked_rego[@]}" "${staged_rego[@]}") rf pd found existing
+      for rf in "${policy_rego[@]}"; do
         [ -z "$rf" ] && continue
         pd=$(dirname "$rf")
         found=0
