@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # test-check-agent-collision.sh
 #
-# check-agent-collision.sh는 contexts/*/scripts/*.sh 와 bin/**/*.sh 를 합쳐 파일명(basename)
-# 충돌을 awk로 탐지한다. seen[] 배열 갱신이나 exit err+0 계산이 깨지면 실제 이름 충돌이
-# 있어도 조용히 통과할 수 있으므로, 격리된 픽스처 디렉토리로 정상/충돌 두 케이스를 고정한다.
+# check-agent-collision.sh는 ai_agent role이 실제 ~/.local/bin에 배포하는 실행 가능한
+# contexts/*/scripts/*.sh 와 bin/**/*.sh 를 합쳐 파일명(basename) 충돌을 탐지한다.
+# 실행되지 않는 내부 라이브러리까지 세면 실제 배포 충돌이 아닌 이름 재사용 때문에
+# just setup이 막힐 수 있으므로, 배포 대상과 같은 owner-executable 기준을 고정한다.
 #
 # 사용: bash ~/dotfiles/contexts/dotfiles/tests/test-check-agent-collision.sh
 
@@ -38,6 +39,7 @@ OK_ROOT="$TMP/ok-baseline"
 mkdir -p "$OK_ROOT/ansible" "$OK_ROOT/contexts/aws/scripts" "$OK_ROOT/bin/linters"
 echo ": " >"$OK_ROOT/contexts/aws/scripts/deploy-check.sh"
 echo ": " >"$OK_ROOT/bin/linters/db-sg-checker.sh"
+chmod +x "$OK_ROOT/contexts/aws/scripts/deploy-check.sh" "$OK_ROOT/bin/linters/db-sg-checker.sh"
 
 status=0
 out=$(bash "$CHECKER" "$OK_ROOT/ansible" 2>&1) || status=$?
@@ -52,6 +54,7 @@ FAIL_ROOT="$TMP/fail-collision"
 mkdir -p "$FAIL_ROOT/ansible" "$FAIL_ROOT/contexts/aws/scripts" "$FAIL_ROOT/bin/linters"
 echo ": " >"$FAIL_ROOT/contexts/aws/scripts/duplicate-name.sh"
 echo ": " >"$FAIL_ROOT/bin/linters/duplicate-name.sh"
+chmod +x "$FAIL_ROOT/contexts/aws/scripts/duplicate-name.sh" "$FAIL_ROOT/bin/linters/duplicate-name.sh"
 
 status=0
 out=$(bash "$CHECKER" "$FAIL_ROOT/ansible" 2>&1) || status=$?
@@ -59,6 +62,24 @@ if [ "$status" -eq 1 ] && grep -qF "이름 충돌 감지" <<<"$out" && grep -qF 
   report "fail-collision (동일 파일명 충돌, 경로까지 보고)" 0
 else
   report "fail-collision (동일 파일명 충돌, 경로까지 보고)" 1 "기대 exit=1 + 충돌 보고 / 실제 exit=$status: $out"
+fi
+
+# 2b. ok-non-executable-name-reuse: 실행 비트가 없는 bin/lib 내부 helper는 ai_agent role이
+#     ~/.local/bin에 링크하지 않는다. 실행 가능한 context script와 basename이 같더라도
+#     실제 배포 충돌은 아니므로 setup을 막아서는 안 된다.
+NONEXEC_ROOT="$TMP/ok-non-executable-name-reuse"
+mkdir -p "$NONEXEC_ROOT/ansible" "$NONEXEC_ROOT/contexts/aws/scripts" "$NONEXEC_ROOT/bin/lib"
+echo ": " >"$NONEXEC_ROOT/contexts/aws/scripts/shared-name.sh"
+echo ": " >"$NONEXEC_ROOT/bin/lib/shared-name.sh"
+chmod +x "$NONEXEC_ROOT/contexts/aws/scripts/shared-name.sh"
+chmod 0644 "$NONEXEC_ROOT/bin/lib/shared-name.sh"
+
+status=0
+out=$(bash "$CHECKER" "$NONEXEC_ROOT/ansible" 2>&1) || status=$?
+if [ "$status" -eq 0 ]; then
+  report "ok-non-executable-name-reuse (배포되지 않는 helper 이름 재사용 허용)" 0
+else
+  report "ok-non-executable-name-reuse (배포되지 않는 helper 이름 재사용 허용)" 1 "기대 exit=0 / 실제 exit=$status: $out"
 fi
 
 # 3. ok-archived-name-reuse: 점으로 시작하는 컨텍스트 디렉토리의 스크립트는 세면 안 된다.
@@ -72,6 +93,7 @@ mkdir -p "$ARCHIVE_ROOT/ansible" "$ARCHIVE_ROOT/contexts/.archive/old-skill/scri
   "$ARCHIVE_ROOT/contexts/aws/scripts" "$ARCHIVE_ROOT/bin/linters"
 echo ": " >"$ARCHIVE_ROOT/contexts/.archive/old-skill/scripts/deploy.sh"
 echo ": " >"$ARCHIVE_ROOT/contexts/aws/scripts/deploy.sh"
+chmod +x "$ARCHIVE_ROOT/contexts/.archive/old-skill/scripts/deploy.sh" "$ARCHIVE_ROOT/contexts/aws/scripts/deploy.sh"
 
 status=0
 out=$(bash "$CHECKER" "$ARCHIVE_ROOT/ansible" 2>&1) || status=$?
