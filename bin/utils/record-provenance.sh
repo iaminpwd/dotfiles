@@ -162,7 +162,10 @@ is_latest_row_enrichable() {
 }
 
 if [ -f "$EDITS_LOG" ] && is_latest_row_enrichable; then
-  TMP="$EDITS_LOG.tmp.$"
+  # predictable filename이나 PID 조합 대신 mktemp를 사용한다. 같은 디렉터리에 만들어야
+  # 최종 mv가 같은 파일시스템 안에서 원자적 교체가 되고, 선점 symlink도 따라가지 않는다.
+  TMP=$(mktemp "${EDITS_LOG}.tmp.XXXXXX")
+  trap 'rm -f "$TMP"' EXIT HUP INT TERM
   awk -F' \\| ' -v r="$REL" -v src="agent:$RULE_SOURCE_CLEAN" -v purpose="$PURPOSE_CLEAN" -v tag="$RESULT_TAG" '
     $2==r {
       target=NR
@@ -183,7 +186,9 @@ if [ -f "$EDITS_LOG" ] && is_latest_row_enrichable; then
           print line[i]
         }
       }
-    }' "$EDITS_LOG" >"$TMP" && mv "$TMP" "$EDITS_LOG"
+    }' "$EDITS_LOG" >"$TMP"
+  mv "$TMP" "$EDITS_LOG"
+  trap - EXIT HUP INT TERM
   echo "✅ 미확정 라인을 [$RESULT_TAG]로 보강했습니다: $EDITS_LOG"
 else
   # idempotency:bypass chronologically append log entry
