@@ -200,7 +200,7 @@ if [ -L "$SYMLINK_HOME/.claude/settings.json" ] &&
   jq -e '."gemini-user" == "keep" and (."agent-edits-log".PostToolUse | length > 0)' "$BACKING/gemini-hooks.json" >/dev/null; then
   report "symlink-settings (링크 보존 + referent 병합)" 0
 else
-  report "symlink-settings (링크 보존 + referent 병합)" 1     "claude-link=$(test -L "$SYMLINK_HOME/.claude/settings.json" && echo yes || echo no) gemini-link=$(test -L "$SYMLINK_HOME/.gemini/config/hooks.json" && echo yes || echo no)"
+  report "symlink-settings (링크 보존 + referent 병합)" 1 "claude-link=$(test -L "$SYMLINK_HOME/.claude/settings.json" && echo yes || echo no) gemini-link=$(test -L "$SYMLINK_HOME/.gemini/config/hooks.json" && echo yes || echo no)"
 fi
 
 # -----------------------------------------------------------------------------
