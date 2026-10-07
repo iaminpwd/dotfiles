@@ -50,6 +50,36 @@ grep -q '재현 명령' "$TMP/output"
 grep -q 'test-safe-link-backup.sh' "$TMP/output"
 echo 'PASS: 회귀 실패와 개별 재현 명령 전달'
 
+# ai_agent role 변경 시 현재 존재하는 회귀 스위트만 선택해야 한다. 예전에 global
+# script collision 검사를 제거했는데 selector에 test-check-agent-collision이 남아 있으면
+# role을 건드리는 순간 존재하지 않는 테스트 때문에 Stop 검증이 하드 실패한다.
+git -C "$REPO" add -A
+git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: ai agent fixture 준비'
+mkdir -p "$REPO/ansible/roles/ai_agent/tasks"
+for name in agent-batch-backup safe-link-backup merge-agent-hooks prune-orphan-skills; do
+  printf '#!/usr/bin/env bash\necho "TEST %s"\n' "$name" >"$REPO/contexts/dotfiles/tests/test-$name.sh"
+done
+printf '%s\n' '---' '- name: fixture' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
+git -C "$REPO" add -A
+git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: ai agent baseline'
+printf '%s\n' '---' '- name: fixture' '# 수정' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
+
+status=0
+selected=$(bash "$RUNNER" --list 2>"$TMP/ai-agent.err") || status=$?
+if [ "$status" -eq 0 ] &&
+  [[ "$selected" == *test-agent-batch-backup.sh* ]] &&
+  [[ "$selected" == *test-safe-link-backup.sh* ]] &&
+  [[ "$selected" == *test-merge-agent-hooks.sh* ]] &&
+  [[ "$selected" == *test-prune-orphan-skills.sh* ]] &&
+  [[ "$selected" != *test-check-agent-collision.sh* ]]; then
+  echo 'PASS: ai_agent role 변경은 현재 존재하는 회귀 스위트만 선택'
+else
+  echo "FAIL: ai_agent role selector가 삭제된 회귀를 참조함 (exit=$status)"
+  cat "$TMP/ai-agent.err" >&2
+  printf '%s\n' "$selected" >&2
+  exit 1
+fi
+
 # 문서만 바뀐 저장소에서는 회귀 테스트를 실행하지 않는다.
 git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: 테스트 상태 저장'
