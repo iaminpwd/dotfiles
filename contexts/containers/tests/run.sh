@@ -231,6 +231,32 @@ else
 fi
 rm -rf "$stub_dir"
 
+# macOS 기본 BSD readlink는 GNU의 -f 옵션을 제공하지 않는다. container-hardening-gate.sh는
+# Git hook/pre-flight에서 직접 bash로 호출되므로 Homebrew coreutils의 gnubin PATH를
+# 전제로 하면 안 된다. -f를 거부하는 readlink 스텁으로도 유효한 Dockerfile 검증이
+# 정상 시작되고 통과하는지 고정한다.
+echo "--- container-hardening-gate.sh BSD readlink 호환 ---"
+bsd_bin=$(mktemp -d)
+cat >"$bsd_bin/readlink" <<'STUB_EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB_EOF
+chmod +x "$bsd_bin/readlink"
+bsd_status=0
+PATH="$bsd_bin:$PATH" bash "$REPO_ROOT/bin/linters/container-hardening-gate.sh" \
+  "$FIXTURES/ok-baseline.Dockerfile" >"$bsd_bin/out" 2>&1 || bsd_status=$?
+if [ "$bsd_status" -eq 0 ] && ! grep -qF 'readlink: illegal option -- f' "$bsd_bin/out"; then
+  report "bsd-readlink-startup (GNU readlink -f 없이도 hardening gate 실행)" 0
+else
+  report "bsd-readlink-startup (GNU readlink -f 없이도 hardening gate 실행)" 1 \
+    "exit=$bsd_status out=$(cat "$bsd_bin/out")"
+fi
+rm -rf "$bsd_bin"
+
 # 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.
 for path in "$FIXTURES"/*.Dockerfile; do
   name=$(basename "$path")
