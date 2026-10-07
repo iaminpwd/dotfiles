@@ -104,7 +104,53 @@ case "$resolved" in
 *) report "정규화 결과가 git_root 하위에 위치(컨테인먼트 불변식)" 1 "resolved=$resolved git_root=$git_root" ;;
 esac
 
-# 5. 소비자(agent-edits-hook.sh, record-provenance.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
+# 5. macOS 기본 BSD readlink처럼 -f가 없는 환경에서도 심볼릭 링크 정규화 계약을
+#    유지해야 한다. 현재 함수가 readlink -f 실패를 input 그대로로 폴백하면 오류가 아니라
+#    "정규화 성공처럼 보이는 값"을 반환해 두 소비자의 REL/로그 위치 기준이 갈라진다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+
+out=$(PATH="$BSD_BIN:$PATH" bash -c 'source "$1"; resolve_target_and_git_root "$2"' _ "$LIB" "$LINK_BASE/linkdir/sub/file.txt")
+IFS=CONSUMERS=(
+  "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
+  "$REPO_ROOT/bin/utils/record-provenance.sh"
+)
+dup=0
+for consumer in "${CONSUMERS[@]}"; do
+  if ! grep -qF "source" "$consumer" || ! grep -qF "git-relpath.sh" "$consumer"; then
+    dup=1
+  fi
+  grep -qE 'rev-parse --show-toplevel' "$consumer" && dup=1
+done
+if [ "$dup" -eq 0 ]; then
+  report "소비자가 공용 라이브러리를 실제로 source하고 인라인 복제를 안 함" 0
+else
+  report "소비자가 공용 라이브러리를 실제로 source하고 인라인 복제를 안 함" 1 "복제본이 되살아났거나 source가 빠졌습니다"
+fi
+
+TOTAL=$((PASS_COUNT + FAIL_COUNT))
+echo
+echo "$PASS_COUNT/$TOTAL 통과"
+[ "$FAIL_COUNT" -eq 0 ] || exit 1
+\t' read -r resolved git_root <<<"$out"
+EXPECTED_PORTABLE="$(cd -P "$LINK_BASE/real/sub" && pwd)/file.txt"
+EXPECTED_ROOT="$(cd -P "$LINK_BASE/real" && pwd)"
+if [ "$resolved" = "$EXPECTED_PORTABLE" ] && [ "$git_root" = "$EXPECTED_ROOT" ]; then
+  report "BSD readlink 환경에서도 심볼릭 링크 실경로 정규화" 0
+else
+  report "BSD readlink 환경에서도 심볼릭 링크 실경로 정규화" 1 "resolved=$resolved git_root=$git_root"
+fi
+
+# 6. 소비자(agent-edits-hook.sh, record-provenance.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
 CONSUMERS=(
   "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
   "$REPO_ROOT/bin/utils/record-provenance.sh"
