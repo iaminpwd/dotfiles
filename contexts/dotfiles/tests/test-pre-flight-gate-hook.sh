@@ -275,6 +275,47 @@ fi
 # 되므로 넣지 않는다. 그 축의 실증은 test-agent-edits-hook.sh 가 담당한다(거기서는 같은
 # 밀림이 감사 로그 훼손으로 실제 발현한다).
 
+# --- 픽스처 2c: macOS 기본 BSD readlink 환경에서 Stop 훅 자체가 실제로 실행됨 ---
+# merge-agent-hooks.sh가 등록에 성공해도 실행 대상인 pre-flight-gate-hook.sh가 GNU
+# readlink -f에 의존하면 Git GUI/비대화형 환경에서 시작 단계가 fail-open으로 끝난다.
+# 이 케이스는 gate 자체의 경로 해석만 격리하기 위해 run-suite는 최소 전달 스텁을 쓴다.
+BSD_REPO="$TMP/bsd-readlink-dotfiles"
+git_init_clean "$BSD_REPO"
+mkdir -p "$BSD_REPO/bin/hooks" "$BSD_REPO/bin/lib"
+cp "$HOOK" "$BSD_REPO/bin/hooks/pre-flight-gate-hook.sh"
+cp "$REPO_ROOT/bin/lib/jq-resolve.sh" "$BSD_REPO/bin/lib/jq-resolve.sh"
+cat >"$BSD_REPO/bin/hooks/run-suite.sh" <<'EOF'
+#!/usr/bin/env bash
+script=$1
+shift
+bash "$script"
+EOF
+chmod +x "$BSD_REPO/bin/hooks/run-suite.sh"
+stub "$BSD_REPO/bin/hooks/pre-flight-check.sh" 1 "BSD_PFC_FAIL_MARKER"
+git -C "$BSD_REPO" add -A
+git -C "$BSD_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: BSD readlink 게이트 픽스처"
+# idempotency:bypass (격리된 임시 픽스처를 dirty 상태로 만드는 1회성 기록)
+echo "dirty" >>"$BSD_REPO/README.md"
+
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+
+out_bsd=$(payload "$BSD_REPO" | PATH="$BSD_BIN:$PATH" bash "$BSD_REPO/bin/hooks/pre-flight-gate-hook.sh" 2>"$TMP/bsd-gate.err")
+if jq -e '.decision == "block" and (.hookSpecificOutput.additionalContext | contains("BSD_PFC_FAIL_MARKER"))' <<<"$out_bsd" >/dev/null 2>&1; then
+  report "BSD readlink 환경에서도 Stop gate 실제 실행" 0
+else
+  report "BSD readlink 환경에서도 Stop gate 실제 실행" 1 "out=${out_bsd:-<empty>} err=$(tr '\n' ' ' <"$TMP/bsd-gate.err")"
+fi
+
 # --- 픽스처 3: 스코프 밖 저장소 (pre-flight-check.sh 어디에도 없음) ---
 UNSCOPED_REPO="$TMP/unscoped-repo"
 git_init_clean "$UNSCOPED_REPO"

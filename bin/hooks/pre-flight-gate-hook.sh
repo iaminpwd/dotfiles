@@ -3,13 +3,31 @@
 # 실패 및 검사 중 변경은 캐시하지 않으며 stop_hook_active로 재응답 루프를 방지한다.
 set -uo pipefail
 
-PFG_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. Stop 훅은 Git GUI/에이전트
+# 프로세스에서 실행되므로 Homebrew coreutils의 gnubin PATH를 전제로 하지 않고 plain
+# readlink + cd -P만으로 자기 symlink 체인을 해석한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+PFG_SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}" 2>/dev/null) || exit 0
+PFG_SCRIPT_DIR=$(dirname "$PFG_SCRIPT_PATH")
 # 정본 저장소 루트는 이 훅의 물리적 위치에서 구한다. 예전엔 "$HOME/dotfiles" 를 하드코딩해서,
 # 저장소가 그 경로에 없으면(CI 체크아웃 경로, 여러 벌 클론, ~/src/dotfiles 같은 개인 배치)
 # 폴백이 존재하지 않는 파일을 가리키고 아래 `[ -x "$rs" ] || exit 0` 에 걸려 훅이 조용히
 # 빠졌다 — 게이트가 통째로 비어 있는데 아무 표시도 나지 않는다(실측: GitHub Actions 에서
-# 이 경로로 회귀 테스트가 실패). PFG_SCRIPT_DIR 은 readlink -f 로 심볼릭 링크를 이미
-# 해소했으므로 ~/.local/bin 링크를 통해 호출돼도 정본 위치를 가리킨다
+# 이 경로로 회귀 테스트가 실패). PFG_SCRIPT_DIR 은 위 canonical_path 로 심볼릭 링크를
+# 이미 해소했으므로 ~/.local/bin 링크를 통해 호출돼도 정본 위치를 가리킨다
 # (prompt-lint.sh / test-coverage-check.sh / generate-context-index.sh 와 동일한 관용구).
 DOTFILES_ROOT=$(cd "$PFG_SCRIPT_DIR/../.." && pwd)
 # shellcheck source-path=SCRIPTDIR
