@@ -264,12 +264,25 @@ check_archive_scope_consistency() {
     -type f \( -name '*.sh' -o -path '*/.githooks/*' \) -print0 2>/dev/null)
 
   # (b) ansible.builtin.find
+  # 파일 전체에 contexts/recurse:true 토큰이 각각 존재한다는 이유만으로 같은 find 태스크로
+  # 간주하지 않는다. 실제 find 태스크 블록 안에서 contexts 경로 + recurse:true가 함께
+  # 나타나는 경우에만 hidden-path guard 계약을 적용한다.
   while IFS= read -r -d '' f; do
     rel="${f#"$REPO_ROOT"/}"
     code=$(grep -vE '^[[:space:]]*#' "$f" || true)
-    grep -q 'ansible.builtin.find' <<<"$code" || continue
-    grep -q 'contexts' <<<"$code" || continue
-    grep -qE 'recurse:[[:space:]]*true' <<<"$code" || continue
+    if ! awk '
+      function flush() {
+        if (in_find && has_contexts && has_recurse) matched = 1
+        in_find = has_contexts = has_recurse = 0
+      }
+      /^[[:space:]]*-[[:space:]]+name:/ { flush() }
+      /ansible\.builtin\.find:/ { in_find = 1 }
+      in_find && /contexts/ { has_contexts = 1 }
+      in_find && /recurse:[[:space:]]*true/ { has_recurse = 1 }
+      END { flush(); exit(matched ? 0 : 1) }
+    ' <<<"$code"; then
+      continue
+    fi
     grep -qF '/contexts/.' <<<"$code" && continue
     echo "❌ [ERROR] contexts/ 를 recurse 스캔하는 ansible find 에 경로 가드가 없습니다: $rel" >&2
     echo "    -> hidden 기본값은 숨김 디렉토리를 걸러 주지 않습니다. 결과를 소비하는 태스크의" >&2
