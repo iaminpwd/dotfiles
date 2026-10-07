@@ -32,6 +32,14 @@ fi
 
 echo "=> Installing mise $MISE_VERSION (GPG 서명 검증 후 설치, https://mise.jdx.dev)..."
 MISE_GPG_HOME="$(mktemp -d)"
+cleanup_mise_gpg_home() {
+  rm -rf -- "$MISE_GPG_HOME"
+}
+trap cleanup_mise_gpg_home EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 MISE_INSTALL_SCRIPT="$MISE_GPG_HOME/install.sh"
 # https://mise.jdx.dev/installing-mise.html 에 명시된 mise 릴리스 서명 키 지문
 MISE_GPG_KEY_FP="24853EC9F655CE80B48E6C3A8B81C9D17413A06D"
@@ -58,7 +66,6 @@ if [ "$IMPORTED_FP" != "$MISE_GPG_KEY_FP" ]; then
   echo "❌ [Hard Block] mise GPG 키 지문이 예상 값과 다릅니다 (공급망 검증 실패)." >&2
   echo "   기대: $MISE_GPG_KEY_FP (주 키 정확히 1개)" >&2
   echo "   실제: ${IMPORTED_FP:-(주 키 없음)}" >&2
-  rm -rf "$MISE_GPG_HOME"
   exit 1
 fi
 
@@ -76,7 +83,6 @@ curl -fsSL https://mise.jdx.dev/install.sh.sig |
 if [ "$gpg_rc" -ne 0 ] || ! grep -q '^\[GNUPG:\] GOODSIG ' "$MISE_GPG_HOME/status.log"; then
   echo "❌ [Hard Block] mise 설치 스크립트 GPG 서명 검증 실패." >&2
   cat "$MISE_GPG_HOME/verify.log" >&2
-  rm -rf "$MISE_GPG_HOME"
   exit 1
 fi
 
@@ -90,7 +96,6 @@ sh "$MISE_INSTALL_SCRIPT"
 installed_version=""
 if [ ! -x "$MISE_BIN" ] || ! installed_version="$("$MISE_BIN" --version 2>/dev/null)"; then
   echo "❌ [Hard Block] mise 설치 결과 검증 실패: 실행 가능한 $MISE_BIN 을 찾지 못했습니다." >&2
-  rm -rf "$MISE_GPG_HOME"
   exit 1
 fi
 installed_version=${installed_version%% *}
@@ -98,8 +103,8 @@ if [ "$installed_version" != "$MISE_VERSION" ]; then
   echo "❌ [Hard Block] mise 설치 결과 검증 실패: 고정 버전과 다릅니다." >&2
   echo "   기대: $MISE_VERSION" >&2
   echo "   실제: ${installed_version:-알 수 없음}" >&2
-  rm -rf "$MISE_GPG_HOME"
   exit 1
 fi
 
-rm -rf "$MISE_GPG_HOME"
+cleanup_mise_gpg_home
+trap - EXIT HUP INT TERM
