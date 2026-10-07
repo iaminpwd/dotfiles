@@ -11,6 +11,6 @@ trigger: dotfiles 변경 범위와 룰 근거 기록을 확인할 때 참조.
 
 ## 룰 근거 기록
 
-- 특정 `contexts/` 룰을 근거로 코드를 수정했으면 `record-provenance.sh <file_path> <rule_source> <purpose>`로 기록한다. rule_source는 `<스킬>/<파일명>`이며 여러 근거는 콤마로 구분한다. 직접 지시·오타 수정처럼 대응 룰이 없으면 생략한다.
+- 특정 `contexts/` 룰을 근거로 코드를 수정했으면 `bash ~/dotfiles/bin/utils/record-provenance.sh <file_path> <rule_source> <purpose>`로 기록한다. rule_source는 `<스킬>/<파일명>`이며 여러 근거는 콤마로 구분한다. 직접 지시·오타 수정처럼 대응 룰이 없으면 생략한다.
 - 변경 근거를 질문받으면 저장소 루트 `.agent-state/edits.log`의 해당 이력을 확인한다. 룰 관련 실패가 반복되면 최근 20줄과 해당 룰을 확인해 개정안을 제안한다.
 - `/learn`으로 룰 수정 제안서를 작성할 때는 `prompt-architect` 스킬을 참조한다.
