@@ -80,7 +80,10 @@ if [ "$gpg_rc" -ne 0 ] || ! grep -q '^\[GNUPG:\] GOODSIG ' "$MISE_GPG_HOME/statu
   exit 1
 fi
 
-MISE_VERSION="$MISE_VERSION" sh "$MISE_INSTALL_SCRIPT"
+# installer 본체뿐 아니라 그 installer가 호출하는 하위 프로세스도 같은 pin을
+# 보도록 명시적으로 export한다.
+export MISE_VERSION
+sh "$MISE_INSTALL_SCRIPT"
 
 # installer 자체의 exit 0만으로 성공을 선언하지 않는다. 이 wrapper의 계약은
 # "고정된 mise가 실제로 설치됨"이므로 결과 바이너리와 버전까지 종단 검증한다.
