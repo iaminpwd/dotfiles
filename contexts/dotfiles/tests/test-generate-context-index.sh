@@ -67,11 +67,14 @@ description: 데모 스킬 설명 한 줄
 이 문단은 표가 끝난 뒤라 색인에 들어가면 안 된다.
 EOF
 
-# 라우팅 테이블이 없는 단일 문서 스킬
+# 라우팅 테이블이 없는 단일 문서 스킬.
+# 실제 저장소에서 흔한 block scalar description의 여러 줄이 모두 색인에 들어가야 한다.
 cat >"$FAKE/contexts/plain/SKILL.md" <<'EOF'
 ---
 name: plain
-description: 표가 없는 단일 문서 스킬
+description: |
+  표가 없는 단일 문서 스킬,
+  두 번째 설명 줄도 색인에 포함되어야 한다.
 ---
 
 # Plain Skill
@@ -112,21 +115,29 @@ else
   report "SKILL.md description 추출" 1 "out=$OUT"
 fi
 
-# 4. 표가 없는 스킬은 그 사실을 명시해야 한다(조용히 빈칸으로 남기지 않음).
+# 4. block scalar description은 첫 줄에서 잘리지 않고 전체 설명이 실려야 한다.
+if grep -qF "표가 없는 단일 문서 스킬," <<<"$OUT" &&
+  grep -qF "두 번째 설명 줄도 색인에 포함되어야 한다." <<<"$OUT"; then
+  report "멀티라인 SKILL.md description 전체 추출" 0
+else
+  report "멀티라인 SKILL.md description 전체 추출" 1 "out=$OUT"
+fi
+
+# 5. 표가 없는 스킬은 그 사실을 명시해야 한다(조용히 빈칸으로 남기지 않음).
 if grep -qF "라우팅 테이블 없음" <<<"$OUT"; then
   report "표 없는 스킬은 '라우팅 테이블 없음'으로 표기" 0
 else
   report "표 없는 스킬은 '라우팅 테이블 없음'으로 표기" 1 "out=$OUT"
 fi
 
-# 5. 스킬마다 제목 절이 나와야 한다(스킬 순회 자체가 죽지 않았는지).
+# 6. 스킬마다 제목 절이 나와야 한다(스킬 순회 자체가 죽지 않았는지).
 if grep -qE '^## demo$' <<<"$OUT" && grep -qE '^## plain$' <<<"$OUT"; then
   report "스킬별 제목 절 생성" 0
 else
   report "스킬별 제목 절 생성" 1 "out=$OUT"
 fi
 
-# 6. 파일을 직접 쓰지 않고 stdout 으로만 낸다는 계약(헤더 주석). 이게 깨지면
+# 7. 파일을 직접 쓰지 않고 stdout 으로만 낸다는 계약(헤더 주석). 이게 깨지면
 #    prompt-lint 의 check_index_freshness 가 대조할 대상 자체가 사라진다.
 if [ ! -e "$FAKE/contexts/INDEX.md" ]; then
   report "생성기가 INDEX.md 를 직접 쓰지 않음(stdout 전용)" 0
