@@ -131,6 +131,42 @@ bash "$DB_SG_SCRIPT" "$SCAN_TMP/repo" >/dev/null 2>&1 || code=$?
 report "root-scan-detects-real-code (제외가 과하지 않음: 일반 경로 위반은 검출)" \
   "$([ "$code" -eq 1 ] && echo 0 || echo 1)" "기대 exit=1 / 실제 exit=$code"
 
+# -----------------------------------------------------------------------------
+# validate_terraform consumer: 실행 비트가 없어도 hard gate가 살아 있어야 함
+# -----------------------------------------------------------------------------
+# db-sg-checker.sh는 `bash <경로>`로 호출되므로 실행 비트가 필요 없다. consumer가 -x로
+# 존재 판정하면 core.fileMode=false 환경이나 권한을 보존하지 않는 복사본에서 비트만
+# 사라져도 DB SG hard gate가 아무 경고 없이 통째로 건너뛰어진다.
+BITLESS="$SCAN_TMP/bitless"
+mkdir -p "$BITLESS/bin/lib" "$BITLESS/bin/linters" "$BITLESS/bin/hooks" "$BITLESS/repo"
+cp "$REPO_ROOT/bin/lib/pfc-iac-checks.sh" "$BITLESS/bin/lib/pfc-iac-checks.sh"
+cp "$DB_SG_SCRIPT" "$BITLESS/bin/linters/db-sg-checker.sh"
+chmod -x "$BITLESS/bin/linters/db-sg-checker.sh"
+write_violation "$BITLESS/repo"
+
+code=0
+out=$(
+  (
+    cd "$BITLESS/repo"
+    bash -c '
+      source "$1"
+      GLOBAL_TARGET_TF_FILES=("main.tf")
+      PFC_SCRIPT_DIR="$2"
+      tf_cache_status() { printf "miss\\n"; }
+      log_info() { :; }
+      has_tool() { [ "$1" = terraform ]; }
+      terraform() { return 0; }
+      validate_terraform
+    ' _ "$BITLESS/bin/lib/pfc-iac-checks.sh" "$BITLESS/bin/hooks"
+  ) 2>&1
+) || code=$?
+if [ "$code" -ne 0 ] && grep -qF "DB 보안 그룹 아키텍처 위반" <<<"$out"; then
+  report "bitless-db-sg-gate (실행 비트 없이도 validate_terraform이 hard gate 실행)" 0
+else
+  report "bitless-db-sg-gate (실행 비트 없이도 validate_terraform이 hard gate 실행)" 1 \
+    "기대 exit≠0 + DB SG 차단 / 실제 exit=$code out=$out"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
