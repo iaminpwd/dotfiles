@@ -111,14 +111,26 @@ GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-h
 
 MAH_CHANGED=0
 replace_if_changed() {
-  local original=$1 candidate=$2 backup
+  local original=$1 candidate=$2 backup resolved resolved_tmp
   # 들여쓰기·키 순서만 다른 경우에도 원본과 수정 시각을 유지한다.
   if "$JQ" -e -s '.[0] == .[1]' "$original" "$candidate" >/dev/null; then
     return 0
   fi
   backup=$(mktemp "${original}.bak.XXXXXX")
   cp -p "$original" "$backup"
-  mv "$candidate" "$original"
+
+  if [ -L "$original" ]; then
+    # 사용자 dotfiles/설정 저장소를 가리키는 symlink를 일반 파일로 치환하지 않는다.
+    # 최종 referent와 같은 디렉터리에 임시 파일을 만든 뒤 원자적으로 교체하면
+    # 링크 자체는 보존되고 실제 설정 파일만 갱신된다.
+    resolved=$(canonical_path "$original")
+    resolved_tmp=$(mktemp "${resolved}.tmp.XXXXXX")
+    cp -p "$candidate" "$resolved_tmp"
+    mv "$resolved_tmp" "$resolved"
+    rm -f "$candidate"
+  else
+    mv "$candidate" "$original"
+  fi
   MAH_CHANGED=1
 }
 
