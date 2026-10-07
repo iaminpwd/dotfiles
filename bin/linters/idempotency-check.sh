@@ -23,7 +23,12 @@ for FILE in "${FILES[@]}"; do
       # 문서 예시의 >>·tee -a 를 위반으로 오탐하거나, 반대로 grep -q 예시를 실제
       # 상태 가드로 오인하는 것을 함께 막는다. heredoc 본문은 아래 상태 머신이 별도로
       # 처리하므로 heredoc 밖에서만 적용한다.
-      if (!in_heredoc && $0 ~ /^[[:space:]]*#/) next
+      if (!in_heredoc && $0 ~ /^[[:space:]]*#/) {
+        # 명시적 예외 표식은 주석 형태가 정식 계약이다. 일반 문서 주석의 grep/append
+        # 예시는 무시하되, idempotency:bypass 만 인접 guard 로 보존한다.
+        if ($0 ~ /idempotency:bypass/) guard_lines[NR] = 1
+        next
+      }
 
       # heredoc 시작 탐지: <<EOF, <<EOL 뿐 아니라 대시 형식(탭 들여쓰기 허용)과
       # 구분자를 따옴표로 감싼 형식까지 받는다. 이들을 놓치면 히어독 본문을 코드로
