@@ -227,11 +227,7 @@ if [ "$CODE" -eq 0 ] &&
   ! grep -qF 'readlink: illegal option -- f' <<<"$OUT"; then
   report "BSD readlink 환경에서도 run-suite 시작·실행" 0
 else
-  report "BSD readlink 환경에서도 run-suite 시작·실행" 1 "exit=$CODE out=${OUT//
-echo
-echo "$PASS_COUNT/$TOTAL 통과"
-[ "$FAIL_COUNT" -eq 0 ] || exit 1
-\n'/ }"
+  report "BSD readlink 환경에서도 run-suite 시작·실행" 1 "exit=$CODE out=$OUT"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
