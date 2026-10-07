@@ -112,7 +112,7 @@ validate_terraform() {
       log_info "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
     fi
 
-    if [ -x "$PFC_SCRIPT_DIR/../linters/db-sg-checker.sh" ]; then
+    if [ -f "$PFC_SCRIPT_DIR/../linters/db-sg-checker.sh" ]; then
       log_info "Running DB SG architecture check..."
       if ! bash "$PFC_SCRIPT_DIR/../linters/db-sg-checker.sh" .; then
         echo "❌ [ERROR] DB 보안 그룹 아키텍처 위반(Web/WAS SG 미지정)으로 커밋이 중단되었습니다." >&2
