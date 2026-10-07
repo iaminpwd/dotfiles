@@ -62,7 +62,7 @@ done
 printf '%s\n' '---' '- name: fixture' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
 git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: ai agent baseline'
-printf '%s\n' '# 수정' >>"$REPO/ansible/roles/ai_agent/tasks/main.yml"
+printf '%s\n' '---' '- name: fixture' '# 수정' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
 
 status=0
 selected=$(bash "$RUNNER" --list 2>"$TMP/ai-agent.err") || status=$?
