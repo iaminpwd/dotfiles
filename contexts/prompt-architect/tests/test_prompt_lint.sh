@@ -123,6 +123,30 @@ echo "=== prompt-lint.sh 회귀 테스트 ==="
 echo "--- 기준선 ---"
 check_clean "ok-baseline" "$(new_case ok-baseline)"
 
+# macOS 기본 BSD readlink는 GNU -f 옵션을 제공하지 않는다. prompt-lint는 자기 물리적
+# 위치를 기준으로 dotfiles 저장소를 찾는 전용 린터이므로, symlink 호출도 지원하면서
+# GNU readlink에 의존하지 않아야 한다.
+D=$(new_case ok-bsd-readlink)
+ln -s bin/linters/prompt-lint.sh "$D/prompt-lint-link"
+BSD_BIN="$D/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+EOF
+chmod +x "$BSD_BIN/readlink"
+status=0
+out=$( (cd "$D" && PATH="$BSD_BIN:$PATH" bash ./prompt-lint-link) 2>&1) || status=$?
+if [ "$status" -eq 0 ] && ! grep -qF "illegal option -- f" <<<"$out"; then
+  report "ok-bsd-readlink (GNU readlink -f 없이 symlink 호출)" 0
+else
+  report "ok-bsd-readlink (GNU readlink -f 없이 symlink 호출)" 1 "exit=$status out=$out"
+fi
+
 echo "--- reference 링크 / orphan ---"
 D=$(new_case fail-broken-relative-reference)
 # idempotency:bypass (매 케이스마다 새 임시 저장소를 만드는 1회성 fixture mutation)
