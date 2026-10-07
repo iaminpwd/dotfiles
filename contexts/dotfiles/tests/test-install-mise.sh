@@ -100,6 +100,32 @@ else
     "기대 exit≠0 / 실제 exit=0 — 설치도 검증도 못 했는데 성공으로 끝났습니다: $out"
 fi
 
+# 1c. mktemp 이후 첫 공급망 fetch가 set -e로 조기 실패해도 임시 GPG 홈을 남기면 안 된다.
+#     고정 경로를 돌려주는 mktemp stub으로 cleanup 여부를 직접 관찰한다.
+CLEANUP_HOME="$TMP/cleanup-home"
+CLEANUP_BIN="$TMP/cleanup-bin"
+CLEANUP_GPG_HOME="$TMP/forced-mise-gpg-home"
+mkdir -p "$CLEANUP_HOME" "$CLEANUP_BIN"
+cat >"$CLEANUP_BIN/mktemp" <<'STUB'
+#!/usr/bin/env bash
+mkdir -p "$STUB_MKTEMP_DIR"
+printf '%s\n' "$STUB_MKTEMP_DIR"
+STUB
+cat >"$CLEANUP_BIN/curl" <<'STUB'
+#!/usr/bin/env bash
+exit 22
+STUB
+chmod +x "$CLEANUP_BIN/mktemp" "$CLEANUP_BIN/curl"
+
+status=0
+out=$(HOME="$CLEANUP_HOME" PATH="$CLEANUP_BIN:$PATH" STUB_MKTEMP_DIR="$CLEANUP_GPG_HOME" bash "$INSTALLER" 2>&1) || status=$?
+if [ "$status" -ne 0 ] && [ ! -e "$CLEANUP_GPG_HOME" ]; then
+  report "early-failure-cleanup (조기 실패에도 GPG tempdir 제거)" 0
+else
+  report "early-failure-cleanup (조기 실패에도 GPG tempdir 제거)" 1 \
+    "exit=$status tempdir_exists=$(test -e "$CLEANUP_GPG_HOME" && echo yes || echo no) out=$out"
+fi
+
 # 2. 지문 판정. 스크립트 본문에서 awk 식을 그대로 뽑아 쓴다(복제 금지 — 헤더 참조).
 FPR_AWK=$(grep -oE "awk -F: '/\^pub:/.*want = 0 \} \}'" "$INSTALLER" | head -1)
 if [ -z "$FPR_AWK" ]; then
