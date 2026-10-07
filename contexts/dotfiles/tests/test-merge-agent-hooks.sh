@@ -181,6 +181,28 @@ else
   report "Gemini 혼합 그룹 보존과 멱등성" 1
 fi
 
+# 설정 파일이 외부 dotfiles/설정 저장소를 가리키는 symlink여도 링크 자체를 깨뜨리지
+# 않고 referent 내용만 병합해야 한다. mv candidate -> symlink 경로를 그대로 하면 링크가
+# 일반 파일로 치환되어 외부 설정 저장소와의 연결이 끊긴다.
+SYMLINK_HOME="$TMP/symlink-home"
+BACKING="$TMP/settings-backing"
+mkdir -p "$SYMLINK_HOME/.claude" "$SYMLINK_HOME/.gemini/config" "$BACKING"
+echo '{"claude-user":"keep"}' >"$BACKING/claude-settings.json"
+echo '{"gemini-user":"keep"}' >"$BACKING/gemini-hooks.json"
+ln -s "$BACKING/claude-settings.json" "$SYMLINK_HOME/.claude/settings.json"
+ln -s "$BACKING/gemini-hooks.json" "$SYMLINK_HOME/.gemini/config/hooks.json"
+
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$SYMLINK_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null
+
+if [ -L "$SYMLINK_HOME/.claude/settings.json" ] &&
+  [ -L "$SYMLINK_HOME/.gemini/config/hooks.json" ] &&
+  jq -e '."claude-user" == "keep" and (.hooks.PostToolUse | length > 0) and (.hooks.Stop | length > 0)' "$BACKING/claude-settings.json" >/dev/null &&
+  jq -e '."gemini-user" == "keep" and (."agent-edits-log".PostToolUse | length > 0)' "$BACKING/gemini-hooks.json" >/dev/null; then
+  report "symlink-settings (링크 보존 + referent 병합)" 0
+else
+  report "symlink-settings (링크 보존 + referent 병합)" 1     "claude-link=$(test -L "$SYMLINK_HOME/.claude/settings.json" && echo yes || echo no) gemini-link=$(test -L "$SYMLINK_HOME/.gemini/config/hooks.json" && echo yes || echo no)"
+fi
+
 # -----------------------------------------------------------------------------
 # 실패를 드러내는가 (조용한 미등록 방지)
 # -----------------------------------------------------------------------------
