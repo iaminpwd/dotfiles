@@ -121,6 +121,31 @@ else
   report "tool_name 없는 페이로드 (경로·기록 위치 정상)" 1 "last=$(tail -1 "$LOG") 밖=$(ls "$TMP/.agent-state" 2>/dev/null || echo 없음)"
 fi
 
+# 7. fresh macOS처럼 BSD readlink만 있는 PATH에서도 설치된 훅 자체가 실제로 동작해야 한다.
+#    merge-agent-hooks.sh는 BSD readlink 환경에서 등록 가능하더라도, 실행 대상 hook이
+#    자기 경로 해석에 GNU readlink -f를 요구하면 PostToolUse가 조용히 no-op이 된다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+BEFORE=$(wc -l <"$LOG")
+payload8="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FIXTURE_REPO/qux.txt\"},\"cwd\":\"$FIXTURE_REPO\"}"
+BSD_OUT=$(echo "$payload8" | PATH="$BSD_BIN:$PATH" bash "$HOOK" 2>"$TMP/bsd-readlink.err")
+if [ "$(wc -l <"$LOG")" -eq $((BEFORE + 1)) ] &&
+  tail -1 "$LOG" | grep -qF "qux.txt" &&
+  [ "$BSD_OUT" = '{}' ]; then
+  report "BSD readlink 환경에서도 hook 실행" 0
+else
+  report "BSD readlink 환경에서도 hook 실행" 1 "out=${BSD_OUT:-<empty>} err=$(tr '\n' ' ' <"$TMP/bsd-readlink.err") last=$(tail -1 "$LOG")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
