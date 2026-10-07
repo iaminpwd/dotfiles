@@ -17,8 +17,26 @@ hook_ok() {
   exit 0
 }
 
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. 훅은 GUI 프로세스에서도
+# 실행될 수 있어 Homebrew coreutils의 gnubin PATH를 전제로 할 수 없으므로 plain
+# readlink + cd -P만으로 자기 symlink 체인을 해석한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
 # lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-AEH_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+AEH_SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}" 2>/dev/null) || hook_ok
+AEH_SCRIPT_DIR=$(dirname "$AEH_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$AEH_SCRIPT_DIR/../lib/git-relpath.sh"
 # shellcheck source-path=SCRIPTDIR
