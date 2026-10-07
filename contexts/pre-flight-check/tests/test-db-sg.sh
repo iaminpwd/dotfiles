@@ -167,6 +167,37 @@ else
     "기대 exit≠0 + DB SG 차단 / 실제 exit=$code out=$out"
 fi
 
+# -----------------------------------------------------------------------------
+# Terraform 주석 안의 보안 그룹 예시는 실제 규칙으로 오인하지 않아야 함
+# -----------------------------------------------------------------------------
+# HCL은 # 외에도 // 및 /* ... */ 주석을 허용한다. 검사기가 #만 제거하면 안전한
+# CIDR 규칙 옆에 문서화용으로 남긴 0.0.0.0/0 예시가 실제 개방으로 합산되어 false positive가
+# 된다. 특히 멀티라인 블록 주석은 중괄호/속성까지 포함할 수 있으므로 주석 상태를 줄 사이에
+# 유지해야 한다.
+COMMENT_SAFE="$SCAN_TMP/comment-safe"
+mkdir -p "$COMMENT_SAFE"
+cat >"$COMMENT_SAFE/main.tf" <<'EOF'
+resource "aws_security_group" "db" {
+  name = "db-sg"
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]
+
+    // cidr_blocks = ["0.0.0.0/0"]
+    /*
+    cidr_blocks = ["0.0.0.0/0"]
+    */
+  }
+}
+EOF
+code=0
+bash "$DB_SG_SCRIPT" "$COMMENT_SAFE" >/dev/null 2>&1 || code=$?
+report "hcl-comments-ignored (//·/* */ 안의 개방 CIDR은 실제 규칙이 아님)" \
+  "$([ "$code" -eq 0 ] && echo 0 || echo 1)" "기대 exit=0 / 실제 exit=$code"
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

@@ -56,12 +56,42 @@ FAILED=0
 # $0/$1 은 awk 자신의 필드 변수이므로 셸이 전개하면 안 된다. 홑따옴표가 맞다.
 # shellcheck disable=SC2016
 MATCHES=$(find "$TARGET_DIR" -type f -name "*.tf" "${FIXTURE_EXCLUDE[@]}" -print0 | xargs -0 awk '
-  # 파일이 바뀌면 블록 추적 상태를 초기화한다(여러 파일을 한 awk 프로세스로 받기 때문).
-  FNR == 1 { in_block = 0; depth = 0 }
+  # HCL 주석을 코드에서 제거한다. Terraform은 #, //, /* ... */를 모두 허용하므로
+  # #만 지우면 주석의 0.0.0.0/0 예시가 실제 개방 규칙으로 합산된다.
+  # 문자열 안의 https://, # 등은 주석이 아니므로 quote/escape 상태를 함께 추적한다.
+  function strip_hcl_comments(s,    out, i, c, n, in_string, escaped) {
+    out = ""; in_string = 0; escaped = 0
+    for (i = 1; i <= length(s); i++) {
+      c = substr(s, i, 1)
+      n = (i < length(s) ? substr(s, i + 1, 1) : "")
+
+      if (in_block_comment) {
+        if (c == "*" && n == "/") { in_block_comment = 0; i++ }
+        continue
+      }
+
+      if (in_string) {
+        out = out c
+        if (escaped) escaped = 0
+        else if (c == "\\") escaped = 1
+        else if (c == "\"") in_string = 0
+        continue
+      }
+
+      if (c == "\"") { in_string = 1; out = out c; continue }
+      if (c == "#") break
+      if (c == "/" && n == "/") break
+      if (c == "/" && n == "*") { in_block_comment = 1; i++; continue }
+      out = out c
+    }
+    return out
+  }
+
+  # 파일이 바뀌면 블록/주석 추적 상태를 초기화한다(여러 파일을 한 awk 프로세스로 받기 때문).
+  FNR == 1 { in_block = 0; depth = 0; in_block_comment = 0 }
 
   {
-    line = $0
-    sub(/#.*/, "", line)   # 주석 안의 0.0.0.0/0 등을 코드로 오인하지 않도록 제거
+    line = strip_hcl_comments($0)
 
     if (!in_block) {
       # 인그레스 블록 진입 판정. egress 는 의도적으로 대상에서 제외한다.
