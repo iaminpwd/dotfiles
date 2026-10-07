@@ -17,10 +17,11 @@
 # resolve_jq
 # stdout: 실행 가능한 jq 경로 (PATH 우선, 실패 시 mise 설치 디렉토리 최신 버전으로 폴백. 둘 다 없으면 빈 문자열)
 resolve_jq() {
-  local jq_bin
+  local jq_bin mise_data_dir
   jq_bin=$(command -v jq 2>/dev/null) || jq_bin=""
   if [ -z "$jq_bin" ] || ! "$jq_bin" --version >/dev/null 2>&1; then
-    jq_bin=$(find "$HOME/.local/share/mise/installs/jq" -maxdepth 3 -name jq -type f 2>/dev/null | sort -V | tail -1)
+    mise_data_dir="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
+    jq_bin=$(find "$mise_data_dir/installs/jq" -maxdepth 3 -name jq -type f 2>/dev/null | sort -V | tail -1)
   fi
   printf '%s' "$jq_bin"
 }
