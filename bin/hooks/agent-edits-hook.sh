@@ -7,8 +7,15 @@
 # agent-edits-hook.sh: AI 편집 이력을 .agent-state/edits.log에 기록
 # 포맷: <ISO8601> | <파일경로> | <출처> | <작업 목적> | <결과>
 # -e(errexit) 는 의도적으로 제외: 훅 실패가 에이전트 루프를 멈추지 않도록 보장.
-# 개별 오류 지점은 아래에서 각각 `|| exit 0` 으로 명시적 처리.
+# 개별 오류 지점은 아래에서 각각 `|| hook_ok` 으로 명시적 처리.
 set -uo pipefail
+
+# Antigravity PostToolUse 훅은 성공 시 stdout으로 JSON 객체를 반환해야 한다.
+# Claude Code도 빈 JSON 객체를 정상적인 구조화 응답으로 허용하므로 공통 성공 경로로 쓴다.
+hook_ok() {
+  printf '{}\n'
+  exit 0
+}
 
 # lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
 AEH_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
@@ -19,7 +26,7 @@ source "$AEH_SCRIPT_DIR/../lib/jq-resolve.sh"
 
 # 훅 실패가 에이전트 루프를 저해하지 않도록 보장
 JQ=$(resolve_jq)
-{ [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; } || exit 0
+{ [ -n "$JQ" ] && "$JQ" --version >/dev/null 2>&1; } || hook_ok
 
 payload=$(cat)
 
@@ -48,15 +55,15 @@ fields=$(
       (((.error // (.tool_response | objects | .error) // "") | clean))
     ] | join("\u001f")
   ' <<<"$payload" 2>/dev/null
-) || exit 0
+) || hook_ok
 
 IFS=$'\037' read -r tool target root err <<<"$fields"
 
 # 편집 대상이 없는 호출(조회 도구, toolCall이 null인 스텝)은 기록 대상이 아니다.
-[ -n "${target:-}" ] || exit 0
+[ -n "${target:-}" ] || hook_ok
 
 # 로그 자기 오염(에이전트가 로그 갱신 시 훅이 재기록) 방지를 위해 edits.log 경로 제외
-case "$target" in */.agent-state/edits.log) exit 0 ;; esac
+case "$target" in */.agent-state/edits.log) hook_ok ;; esac
 
 # 로그 디렉토리 결정: git 최상위 > 워크스페이스 > 파일 디렉토리
 # 모노레포 환경 통합 기록 및 심볼릭 링크 경로 불일치 방지를 위해 실경로(realpath) 사용
@@ -67,7 +74,7 @@ if [ -n "$git_root" ]; then
 elif [ -z "${root:-}" ] || [ ! -d "$root" ]; then
   root="$target_dir"
 fi
-[ -d "$root" ] || exit 0
+[ -d "$root" ] || hook_ok
 root=$(readlink -f "$root" 2>/dev/null || echo "$root")
 
 # root가 target을 실제로 포함하지 않으면(무관한 워크스페이스 cwd로 오귀속되는 경우,
@@ -100,4 +107,4 @@ if [ "$(wc -l <"$EDITS_LOG" 2>/dev/null || echo 0)" -gt 5000 ]; then
   rm -f "$EDITS_LOG.tmp" 2>/dev/null || true
 fi
 
-exit 0
+hook_ok
