@@ -9,8 +9,26 @@
 
 set -euo pipefail
 
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. 이 러너는 Git hook/Stop/CI에서
+# 호출되므로 Homebrew coreutils의 gnubin PATH를 전제로 하지 않고 plain readlink + cd -P로
+# 자기 symlink 체인을 해석한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
 # lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-RS_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+RS_SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}")
+RS_SCRIPT_DIR=$(dirname "$RS_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$RS_SCRIPT_DIR/../lib/script-init.sh"
 
