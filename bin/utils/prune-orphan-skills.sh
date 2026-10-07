@@ -10,9 +10,10 @@
 # 소유한다고 오판).
 #
 # 단순히 "전부 심볼릭 링크"인지만 봐도 부족하다. 사용자가 자신의 스킬 저장소를
-# SKILL.md/references symlink로 등록할 수 있기 때문이다. 이 롤이 만드는 에셋 링크의 src는
-# 항상 이 저장소의 contexts/ 아래 절대경로이므로, 모든 엔트리가 symlink이면서 그 링크
-# 대상도 contexts/ 아래일 때만 dotfiles 소유로 판정한다.
+# SKILL.md/references symlink로 등록하거나, 이 저장소의 스킬을 다른 이름의 alias로
+# 등록할 수도 있기 때문이다. 이 롤이 만드는 경로는 항상
+#   skills/<domain>/<asset> -> contexts/<same-domain>/<asset>
+# 이므로 폴더 이름과 source domain까지 일치할 때만 dotfiles 소유로 판정한다.
 #
 # 사용: prune-orphan-skills.sh <skills_dir> <유효 도메인 이름...>
 
@@ -49,9 +50,9 @@ for dir in "$SKILLS_DIR"/*/; do
 
     link_target=$(readlink "$entry")
     case "$link_target" in
-    "$MANAGED_CONTEXTS_DIR"/*)
-      # ai_agent 롤이 생성하는 링크는 정규화된 절대 src를 그대로 사용한다.
-      # ../ 같은 우회 경로를 소유 링크로 오판하지 않도록 clean target만 허용한다.
+    "$MANAGED_CONTEXTS_DIR/$name"/*)
+      # ai_agent 롤이 생성하는 링크는 같은 이름의 contexts/<domain>/ 아래 정규화된
+      # 절대 src를 그대로 사용한다. ../ 같은 우회 경로를 소유 링크로 오판하지 않는다.
       case "$link_target" in
       *"/../"* | *"/./")
         FOREIGN=1
