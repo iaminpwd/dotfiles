@@ -100,6 +100,38 @@ else
   report "비-git 환경에서 빈 결과로 안전 종료" 1 "실제='$OUT'"
 fi
 
+
+# 6. Git 저장소로 판정됐지만 index/diff 조회 자체가 실패하면 실제 delegated plugin들이
+#    "대상 0건"으로 오인해 exit 0 하면 안 된다. plugin_target_files()는 git diff의
+#    nonzero를 반환하지만, consumer가 mapfile < <(...) 로 읽으면서 process substitution
+#    상태를 버리면 그 실패가 사라진다. 깨진 index 경로로 세 consumer를 직접 실행해
+#    수집 실패가 최종 exit code에 전파되는지 고정한다.
+BROKEN_REPO="$TMP/broken-index-repo"
+BAD_INDEX="$TMP/bad-index"
+mkdir -p "$BROKEN_REPO" "$BAD_INDEX"
+git -C "$BROKEN_REPO" init -q
+printf 'kind: ConfigMap\nmetadata:\n  name: sample\n' >"$BROKEN_REPO/sample.yaml"
+git -C "$BROKEN_REPO" add sample.yaml
+
+CONSUMER_FAILURES=0
+CONSUMER_DETAIL=""
+for plugin in \
+  "$REPO_ROOT/bin/hooks/plugins/k8s-check.sh" \
+  "$REPO_ROOT/bin/hooks/plugins/observability-check.sh" \
+  "$REPO_ROOT/bin/hooks/plugins/aiops-check.sh"; do
+  code=0
+  out=$(cd "$BROKEN_REPO" && GIT_INDEX_FILE="$BAD_INDEX" QUIET=1 bash "$plugin" 2>&1) || code=$?
+  if [ "$code" -eq 0 ]; then
+    CONSUMER_FAILURES=$((CONSUMER_FAILURES + 1))
+    CONSUMER_DETAIL+=$(printf '%s => exit=0 out=%q; ' "$(basename "$plugin")" "$out")
+  fi
+done
+if [ "$CONSUMER_FAILURES" -eq 0 ]; then
+  report "Git target 수집 실패가 delegated plugin exit code로 전파" 0
+else
+  report "Git target 수집 실패가 delegated plugin exit code로 전파" 1 "$CONSUMER_DETAIL"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
