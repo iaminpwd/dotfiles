@@ -42,8 +42,6 @@ for skill in ['aws', 'k8s']:
             link(h / parent / 'skills' / skill / 'references', r / 'contexts/aws/references')
 for name in ['AGENTS.md', 'CLAUDE.md']:
     link(r / name, r / 'contexts/dotfiles/SKILL.md')
-for name in ['agent-edits-hook.sh', 'pre-flight-gate-hook.sh']:
-    link(h / '.local/bin' / name, r / 'bin/hooks' / name)
 link(h / '.local/bin/python3', Path(sys.argv[3]))
 p = h / '.local/bin/mise'
 p.write_text('#!/bin/sh\nexit 0\n')
@@ -63,14 +61,14 @@ run_sut() {
   HOME="$FAKE" bash "$REPO/.github/scripts/verify-bootstrap-env.sh" >"$TMP/out" 2>&1
 }
 failures=0
-for case in complete wrong-link missing-rule missing-skill missing-asset missing-script missing-hook unsafe-mode missing-tool; do
+for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook unsafe-mode missing-tool; do
   build_home
   case "$case" in
   wrong-link) ln -sf "$REPO/contexts/base.AGENTS.md" "$FAKE/.zshrc" ;;
   missing-rule) rm "$FAKE/.codex/AGENTS.md" ;;
   missing-skill) rm "$FAKE/.agents/skills/k8s/SKILL.md" ;;
   missing-asset) rm "$FAKE/.claude/skills/aws/references" ;;
-  missing-script) rm "$FAKE/.local/bin/agent-edits-hook.sh" ;;
+  legacy-script) ln -s "$REPO/bin/hooks/agent-edits-hook.sh" "$FAKE/.local/bin/agent-edits-hook.sh" ;;
   missing-hook) echo '{}' >"$FAKE/.claude/settings.json" ;;
   unsafe-mode) chmod 644 "$FAKE/.zshrc.local" ;;
   missing-tool) printf '#!/bin/sh\nexit 1\n' >"$FAKE/.local/bin/mise" ;;
