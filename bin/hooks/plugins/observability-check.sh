@@ -63,8 +63,13 @@ fi
 
 # Prometheus Alerting Rule 정책 검증 (PrometheusRule CRD)
 check_alert_rule_policy() {
-  local staged_yaml=() rule_files=() f
+  local staged_yaml=() rule_files=() f target_pid
   mapfile -d '' -t staged_yaml < <(plugin_target_files '*.yaml' '*.yml')
+  target_pid=$!
+  if ! wait "$target_pid"; then
+    echo "❌ [ERROR] Git에서 Observability 검사 대상을 수집하지 못했습니다." >&2
+    return 1
+  fi
   for f in "${staged_yaml[@]}"; do
     [ -z "$f" ] && continue
     [ -f "$f" ] || continue
