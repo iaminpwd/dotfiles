@@ -8,19 +8,19 @@
 
 ## aiops
 
-AIOps 텔레메트리·Closed-Loop 자동화 검증 스킬. TelemetryCollectorConfig/ClosedLoopPolicy,
+AIOps 텔레메트리·Closed-Loop 자동화 검증 스킬. TelemetryCollectorConfig/ClosedLoopPolicy, 동적 이상 임계치, RAG/프라이빗 LLM용 PII 마스킹, AIOps 커밋 훅과 회귀 테스트에 사용.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## aws
 
-AWS 인프라 작업 스킬. VPC, EC2, S3, RDS, Lambda, EKS, IAM, CloudFormation, Terraform,
+AWS 인프라 작업 스킬. VPC, EC2, S3, RDS, Lambda, EKS, IAM, CloudFormation, Terraform, 서버리스, CI/CD, FinOps 등 AWS 전반.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## containers
 
-컨테이너 이미지 엔지니어링 스킬. Dockerfile/OCI 이미지 빌드, 멀티스테이지,
+컨테이너 이미지 엔지니어링 스킬. Dockerfile/OCI 이미지 빌드, 멀티스테이지, 이미지 하드닝(non-root, distroless), SBOM/서명/취약점 스캔 등 공급망 보안, 레지스트리 태깅 및 라이프사이클, 컨테이너 런타임 트러블슈팅.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
@@ -32,7 +32,7 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## drawio-gen
 
-인프라 및 시스템 아키텍처를 실제 .drawio XML로 생성·수정할 때 사용하는 스킬.
+인프라 및 시스템 아키텍처를 실제 .drawio XML로 생성·수정할 때 사용하는 스킬. AWS/Azure/OpenStack 토폴로지, draw.io XML 형식, 레이아웃·아이콘·가독성·검증 계약을 제공함.
 
 | 작업 유형 | 참조 문서 |
 |---|---|
@@ -48,13 +48,13 @@ _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## k8s
 
-Kubernetes(k8s) 클러스터 및 컨테이너 오케스트레이션 스킬. Pod, Deployment, Service, Ingress, CNI,
+Kubernetes(k8s) 클러스터 및 컨테이너 오케스트레이션 스킬. Pod, Deployment, Service, Ingress, CNI, PVC, StatefulSet, ArgoCD, Flux, Prometheus, Grafana, HPA, VPA, RBAC, OPA, 멀티테넌시. 매니페스트 작성·검토, 클러스터 정책과 트러블슈팅에 사용. 관리형 클러스터에서도 워크로드는 이 스킬로 다루고, 클라우드 IAM·노드·네트워크 변경이 있을 때만 클라우드 스킬을 추가 참조함. Pod Security Admission(PSA), securityContext, PrometheusRule 등 K8s CRD 및 어드미션 정책도 다룸.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
 ## observability
 
-클라우드/K8s 전반의 관측성(Observability) 설계 스킬. 메트릭·로그·트레이스 3대 요소,
+클라우드/K8s 전반의 관측성(Observability) 설계 스킬. 메트릭·로그·트레이스 3대 요소, SLI/SLO/에러 버짓, 알람 설계, 구조화 로깅, OpenTelemetry 분산 추적, Grafana/Datadog 등 대시보드 및 SaaS 통합.
 
 _(라우팅 테이블 없음 — SKILL.md 단일 문서)_
 
