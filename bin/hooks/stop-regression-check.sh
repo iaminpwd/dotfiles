@@ -1,7 +1,26 @@
 #!/usr/bin/env bash
 # Stop용 핵심 회귀 테스트 선택. 도메인 스위트와 전체 회귀 검증은 CI/명시적 실행에 남긴다.
 set -euo pipefail
-SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. 이 selector는 Stop hook에서 호출되므로
+# Homebrew coreutils의 gnubin PATH를 전제로 하지 않고 plain readlink + cd -P로 자기
+# symlink 체인을 해석한다.
+canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+SCRIPT_PATH=$(canonical_path "${BASH_SOURCE[0]}")
+SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 cd "$ROOT"
 
