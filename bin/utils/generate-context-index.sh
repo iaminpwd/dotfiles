@@ -41,18 +41,27 @@ for skill_dir in "$CONTEXTS_DIR"/*/; do
   skill_md="${skill_dir}SKILL.md"
   [ -f "$skill_md" ] || continue
 
-  # description: 뒤에 인라인으로 오는 단일행("...")과 블록 스칼라(|, >) 멀티라인을 모두 안전하게 처리
+  # description: 뒤에 인라인으로 오는 단일행("...")과 블록 스칼라(|, >)를 모두 처리한다.
+  # block scalar는 첫 줄만 잘라내지 않고 사람이 읽는 색인용 한 문단으로 이어 붙인다.
   desc=$(awk '
-    /^description:[[:space:]]*[|>]/ { in_desc=1; next }
+    /^description:[[:space:]]*[|>][+-]?[[:space:]]*$/ { in_desc=1; next }
     /^description:[[:space:]]*/ {
       sub(/^description:[[:space:]]*/, "");
       gsub(/^["'\''"]|["'\''"]$/, "");
-      if ($0 != "") { print; exit }
+      if ($0 != "") print
+      exit
     }
     in_desc {
-      if (/^[a-z_]+:/ || /^---/) { exit }
-      gsub(/^[[:space:]]+/, "");
-      if ($0 != "") { print; exit }
+      if (/^---/ || /^[a-zA-Z0-9_-]+:[[:space:]]*/) { exit }
+      line=$0
+      sub(/^[[:space:]]+/, "", line)
+      if (line != "") {
+        if (out != "") out=out " "
+        out=out line
+      }
+    }
+    END {
+      if (in_desc && out != "") print out
     }
   ' "$skill_md")
 
