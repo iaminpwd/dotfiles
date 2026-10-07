@@ -84,6 +84,24 @@ else
   report "PATH 의 jq 가 먹통 -> mise 설치 디렉토리 폴백으로 발견" 1 "resolved='$out' (먹통 shim 을 그대로 반환했거나 폴백이 비었습니다)"
 fi
 
+# 3c. HOME과 mise data dir가 분리된 실제 격리 환경에서 PATH의 jq까지 먹통이면,
+#     resolve_jq는 MISE_DATA_DIR 아래의 실제 설치본을 찾아야 한다.
+#     현재 구현이 $HOME/.local/share/mise만 하드코딩하면 이 케이스에서 빈 문자열을 반환한다.
+CUSTOM_MISE_DATA_DIR="$TMP/custom-mise"
+CUSTOM_JQ="$CUSTOM_MISE_DATA_DIR/installs/jq/1.8.2/bin/jq"
+mkdir -p "$(dirname "$CUSTOM_JQ")"
+cat >"$CUSTOM_JQ" <<'EOF'
+#!/usr/bin/env bash
+printf 'jq-1.8.2\n'
+EOF
+chmod +x "$CUSTOM_JQ"
+out=$(MISE_DATA_DIR="$CUSTOM_MISE_DATA_DIR" HOME="$FAKE_HOME" PATH="$FAKE_BIN:$PATH" bash -c 'source "$1"; resolve_jq' _ "$LIB")
+if [ "$out" = "$CUSTOM_JQ" ] && "$out" --version >/dev/null 2>&1; then
+  report "HOME 격리 + PATH jq 먹통 -> MISE_DATA_DIR 설치본으로 폴백" 0
+else
+  report "HOME 격리 + PATH jq 먹통 -> MISE_DATA_DIR 설치본으로 폴백" 1 "resolved='$out' expected='$CUSTOM_JQ'"
+fi
+
 # 4. 소비자(agent-edits-hook.sh, merge-agent-hooks.sh)가 옛 인라인 로직을 되살리지 않았는지 확인한다.
 CONSUMERS=(
   "$REPO_ROOT/bin/hooks/agent-edits-hook.sh"
