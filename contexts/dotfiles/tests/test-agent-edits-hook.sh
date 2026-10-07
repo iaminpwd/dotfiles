@@ -121,7 +121,6 @@ else
   report "tool_name 없는 페이로드 (경로·기록 위치 정상)" 1 "last=$(tail -1 "$LOG") 밖=$(ls "$TMP/.agent-state" 2>/dev/null || echo 없음)"
 fi
 
-
 # 7. fresh macOS처럼 BSD readlink만 있는 PATH에서도 설치된 훅 자체가 실제로 동작해야 한다.
 #    merge-agent-hooks.sh는 BSD readlink 환경에서 등록 가능하더라도, 실행 대상 hook이
 #    자기 경로 해석에 GNU readlink -f를 요구하면 PostToolUse가 조용히 no-op이 된다.
