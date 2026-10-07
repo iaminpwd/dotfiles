@@ -518,6 +518,51 @@ YAML
       report "real-policy-still-enforced (픽스처 밖 정책은 그대로 차단)" 1 "기대 exit≠0 + 정책 위반 문구 / 실제 exit=$status out=$out"
     fi
 
+    # Case 3: explicit 모드에서 아직 git add 하지 않은 새 Rego 정책도 실제 정책 집합에
+    # 포함되어야 한다. staged_rego 는 explicit 인자를 보고 정책 변경으로 판정하지만,
+    # policy_dirs 를 git ls-files 로만 만들면 새 정책은 --policy 에 실리지 않아
+    # 편집 직후 검증이 거짓 초록불이 된다.
+    CR3="$CONFTEST_TMP/repo-explicit-untracked"
+    mkdir -p "$CR3/policy" "$CR3/rules"
+    git -C "$CR3" init -q
+    git -C "$CR3" config user.email test@example.com
+    git -C "$CR3" config user.name Test
+    cat >"$CR3/policy/baseline.rego" <<'REGO'
+package main
+
+deny contains msg if {
+  input.kind == "NeverMatch"
+  msg := "baseline"
+}
+REGO
+    cat >"$CR3/app.yaml" <<'YAML'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app
+data:
+  k: v
+YAML
+    git -C "$CR3" add policy/baseline.rego app.yaml
+    git -C "$CR3" -c core.hooksPath=/dev/null commit -q -m "test: baseline"
+
+    cat >"$CR3/rules/deny-configmap.rego" <<'REGO'
+package main
+
+deny contains msg if {
+  input.kind == "ConfigMap"
+  msg := "explicit untracked policy enforced"
+}
+REGO
+
+    status=0
+    out=$( (cd "$CR3" && QUIET=0 bash "$PFC" "$CR3/rules/deny-configmap.rego") 2>&1) || status=$?
+    if [ "$status" -ne 0 ] && grep -qF "Conftest 정책 위반" <<<"$out"; then
+      report "explicit-untracked-policy-enforced (새 Rego도 즉시 정책 집합에 포함)" 0
+    else
+      report "explicit-untracked-policy-enforced (새 Rego도 즉시 정책 집합에 포함)" 1 "기대 exit≠0 + Conftest 정책 위반 / 실제 exit=$status out=$out"
+    fi
+
     rm -rf "$CONFTEST_TMP"
   fi
 fi
