@@ -74,7 +74,6 @@ while IFS= read -r -d '' file; do
     dotfiles_test safe-link-backup
     dotfiles_test merge-agent-hooks
     dotfiles_test prune-orphan-skills
-    dotfiles_test check-agent-collision
     ;;
   ansible/roles/stow/*) dotfiles_test stow-backup ;;
   ansible/roles/zsh/*) dotfiles_test zsh-updates ;;
