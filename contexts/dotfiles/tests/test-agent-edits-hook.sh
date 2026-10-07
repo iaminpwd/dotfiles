@@ -51,11 +51,19 @@ fi
 
 # 2. Antigravity 스키마(toolCall.name/toolCall.args.TargetFile)도 동일하게 기록되어야 한다.
 payload2="{\"toolCall\":{\"name\":\"replace_file_content\",\"args\":{\"TargetFile\":\"$FIXTURE_REPO/bar.txt\"}},\"workspacePaths\":[\"$FIXTURE_REPO\"]}"
-echo "$payload2" | bash "$HOOK"
+ANTIGRAVITY_OUT=$(echo "$payload2" | bash "$HOOK")
 if [ "$(wc -l <"$LOG")" -eq 2 ] && grep -qF "bar.txt" "$LOG" && grep -qF "hook:replace_file_content" "$LOG"; then
   report "antigravity-schema (TargetFile 기록)" 0
 else
   report "antigravity-schema (TargetFile 기록)" 1 "log=$(cat "$LOG" 2>/dev/null || echo '<없음>')"
+fi
+
+# Antigravity PostToolUse 계약은 성공 시 stdout JSON 객체를 요구한다. 로깅 훅이 아무
+# 출력 없이 exit 0 하면 런타임 계약과 맞지 않으므로, 최소 응답인 {}를 반환해야 한다.
+if [ "$ANTIGRAVITY_OUT" = '{}' ]; then
+  report "antigravity-schema (PostToolUse stdout JSON 응답)" 0
+else
+  report "antigravity-schema (PostToolUse stdout JSON 응답)" 1 "기대={} / 실제=${ANTIGRAVITY_OUT:-<empty>}"
 fi
 
 # 3. 편집 대상이 없는 조회 도구 호출(Read 등)은 기록되면 안 된다.
