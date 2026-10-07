@@ -146,18 +146,20 @@ write_violation "$BITLESS/repo"
 
 code=0
 out=$(
-  cd "$BITLESS/repo"
-  bash -c '
-    source "$1"
-    GLOBAL_TARGET_TF_FILES=("main.tf")
-    PFC_SCRIPT_DIR="$2"
-    tf_cache_status() { printf "miss\n"; }
-    log_info() { :; }
-    has_tool() { [ "$1" = terraform ]; }
-    terraform() { return 0; }
-    validate_terraform
-  ' _ "$BITLESS/bin/lib/pfc-iac-checks.sh" "$BITLESS/bin/hooks"
-) 2>&1 || code=$?
+  (
+    cd "$BITLESS/repo"
+    bash -c '
+      source "$1"
+      GLOBAL_TARGET_TF_FILES=("main.tf")
+      PFC_SCRIPT_DIR="$2"
+      tf_cache_status() { printf "miss\\n"; }
+      log_info() { :; }
+      has_tool() { [ "$1" = terraform ]; }
+      terraform() { return 0; }
+      validate_terraform
+    ' _ "$BITLESS/bin/lib/pfc-iac-checks.sh" "$BITLESS/bin/hooks"
+  ) 2>&1
+) || code=$?
 if [ "$code" -ne 0 ] && grep -qF "DB 보안 그룹 아키텍처 위반" <<<"$out"; then
   report "bitless-db-sg-gate (실행 비트 없이도 validate_terraform이 hard gate 실행)" 0
 else
