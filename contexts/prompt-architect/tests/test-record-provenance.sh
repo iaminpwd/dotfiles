@@ -153,7 +153,31 @@ else
   report "hook-error-preserved (실패 이력 보존 + provenance 별도 append)" 1 "exit=$status lines=$LINES log=$(cat "$LOG" 2>/dev/null)"
 fi
 
-# 6b. 어떤 룰북과도 매칭되지 않는 이름은 입력값을 그대로 쓰고 정상 종료해야 한다.
+# 6b. 보강 임시파일은 예측 가능한 고정 경로를 쓰면 안 된다. 공격자/다른 프로세스가
+# 그 경로를 symlink로 선점하면 awk 리다이렉션이 임의 파일을 덮어쓰고, 이어지는 mv가
+# edits.log 자체를 그 symlink로 바꿀 수 있다. 임시파일은 mktemp로 안전하게 생성해야 한다.
+rm -f "$LOG"
+mkdir -p "$(dirname "$LOG")"
+echo "2026-01-01T00:00:00+00:00 | temp-race.tf | hook:Edit | - | OK" >"$LOG"
+VICTIM="$TMP/victim.txt"
+printf 'DO_NOT_TOUCH\n' >"$VICTIM"
+PREDICTABLE_TMP="$LOG.tmp.$"
+rm -f "$PREDICTABLE_TMP"
+ln -s "$VICTIM" "$PREDICTABLE_TMP"
+
+status=0
+out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" temp-race.tf "dotfiles/010-core.md" "임시파일 안전성" 2>&1) || status=$?
+if [ "$status" -eq 0 ] &&
+  grep -qxF "DO_NOT_TOUCH" "$VICTIM" &&
+  [ ! -L "$LOG" ] &&
+  grep -qF "agent:dotfiles/010-core.md | 임시파일 안전성 | SUCCESS" "$LOG"; then
+  report "secure-tempfile (선점 symlink 무시 + 감사 로그 정상 보강)" 0
+else
+  report "secure-tempfile (선점 symlink 무시 + 감사 로그 정상 보강)" 1 "exit=$status victim=$(cat "$VICTIM" 2>/dev/null) log_link=$(test -L "$LOG" && echo yes || echo no)"
+fi
+rm -f "$LOG" "$PREDICTABLE_TMP"
+
+# 6c. 어떤 룰북과도 매칭되지 않는 이름은 입력값을 그대로 쓰고 정상 종료해야 한다.
 #     문서화된 동작인데 케이스가 없었다. 스킬 보정 find 가 0건일 때의 경로라,
 #     resolve_source 안에서 카운트를 세는 grep 이 무매치로 죽으면 여기서 드러난다.
 rm -f "$LOG"
