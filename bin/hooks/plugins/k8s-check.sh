@@ -68,8 +68,13 @@ GLOBAL_STAGED_YAML_FILES=()
 
 # 1. Kyverno Native Policy Test
 check_kyverno() {
-  local test_files=()
+  local test_files=() target_pid
   mapfile -d '' -t test_files < <(plugin_target_files '*kyverno-test.yaml')
+  target_pid=$!
+  if ! wait "$target_pid"; then
+    echo "❌ [ERROR] Git에서 K8s 검사 대상을 수집하지 못했습니다." >&2
+    return 1
+  fi
   if [ "${#test_files[@]}" -eq 0 ] || [ -z "${test_files[0]}" ]; then
     return 0
   fi
@@ -193,7 +198,13 @@ check_deprecated_apis() {
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
 main() {
+  local target_pid
   mapfile -d '' -t GLOBAL_STAGED_YAML_FILES < <(plugin_target_files '*.yaml' '*.yml')
+  target_pid=$!
+  if ! wait "$target_pid"; then
+    echo "❌ [ERROR] Git에서 K8s 검사 대상을 수집하지 못했습니다." >&2
+    return 1
+  fi
 
   check_kyverno
   check_prometheus_rules
