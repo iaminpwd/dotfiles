@@ -28,6 +28,33 @@ selected=$(bash "$RUNNER" --list)
 [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]
 echo 'PASS: staged·unstaged 중복 제거, 관련 테스트만 선택'
 
+# macOS 기본 BSD readlink처럼 -f가 없는 PATH에서도 selector 자체가 시작되어야 한다.
+# Stop gate가 이 스크립트를 호출하므로 여기서 시작 실패하면 변경 영역 회귀가 통째로 빠진다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+
+status=0
+selected=$(PATH="$BSD_BIN:$PATH" bash "$RUNNER" --list 2>"$TMP/bsd-readlink.err") || status=$?
+if [ "$status" -eq 0 ] &&
+  [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ] &&
+  ! grep -qF 'readlink: illegal option -- f' "$TMP/bsd-readlink.err"; then
+  echo 'PASS: BSD readlink 환경에서도 변경 영역 회귀 선택기 실행'
+else
+  echo "FAIL: BSD readlink 환경에서 selector 시작 실패 (exit=$status)" >&2
+  cat "$TMP/bsd-readlink.err" >&2
+  printf '%s\n' "$selected" >&2
+  exit 1
+fi
+
 printf '# 새 변경\n' >"$REPO/contexts/dotfiles/tests/test-new.sh"
 selected=$(bash "$RUNNER" --list)
 [[ "$selected" == *test-new.sh* && "$selected" != *test-merge-agent-hooks.sh* ]]
