@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Cwd qw(abs_path getcwd);
 use File::Basename qw(dirname);
+use File::Find ();
 use File::Spec;
 
 @ARGV == 8 or die "usage: stow-filter-inventory.pl STOW_DIR PKG HOME SOURCE_PREFIX DIRS FILES OUT_DIRS OUT_FILES\n";
@@ -18,7 +19,24 @@ my $real_exe = abs_path($stow_exe)
   or die "Cannot resolve GNU Stow executable: $stow_exe\n";
 my $prefix = dirname(dirname($real_exe));
 unshift @INC, "$prefix/lib/perl5", "$prefix/share/perl5";
-require Stow;
+# Homebrew installs Stow.pm under a Perl-versioned subdirectory of its
+# Cellar formula prefix; the path varies across system Perl versions.
+# Search only this small formula's lib/share dirs, never the whole /usr tree.
+my $loaded = eval { require Stow; 1 };
+if (!$loaded) {
+  for my $root ("$prefix/lib", "$prefix/share") {
+    next unless -d $root;
+    File::Find::find({
+      no_chdir => 1,
+      wanted => sub {
+        return unless $File::Find::name =~ m{/Stow[.]pm$};
+        unshift @INC, dirname($File::Find::name);
+      },
+    }, $root);
+  }
+  eval { require Stow; 1 }
+    or die "Cannot load the Perl library used by GNU Stow: $@\n";
+}
 
 my $old_cwd = getcwd();
 chdir $home or die "Cannot enter HOME to evaluate Stow ignore rules: $home: $!\n";
