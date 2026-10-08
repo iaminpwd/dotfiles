@@ -48,6 +48,18 @@ while IFS= read -r -d '' file; do
     exit 0
     ;;
   esac
+  # ai_agent only changes the installed asset symlink when the top-level
+  # references/examples path appears, disappears, or changes its type.
+  # Edits inside an existing directory do not change the link set.
+  if [[ "$file" =~ ^(contexts/[^/]+/(references|examples))/ ]]; then
+    asset_dir=${BASH_REMATCH[1]}
+    old_type=$(git cat-file -t "$base:$asset_dir" 2>/dev/null || true)
+    new_type=$(git cat-file -t "$head:$asset_dir" 2>/dev/null || true)
+    if [ "$old_type" != "$new_type" ]; then
+      echo 'run=true'
+      exit 0
+    fi
+  fi
 done <"$changes"
 
 # symlink 대상 문서의 내용 수정은 smoke를 다시 돌릴 이유가 없지만, 파일 추가/삭제는
