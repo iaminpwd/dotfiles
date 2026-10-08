@@ -86,7 +86,6 @@ assert (external / "app/config").read_text() == "external secret\n"
 assert not (external / "app/config.backup.fixed").exists()
 PY
 
-
 # Competing backup creation between the old stat and rename used to be
 # overwritten silently. Hard-link creation must instead choose a new suffix.
 STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/dest-collision" "$REAL_PYTHON" - <<'PY'
