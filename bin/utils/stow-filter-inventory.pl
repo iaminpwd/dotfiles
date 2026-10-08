@@ -11,29 +11,36 @@ use File::Spec;
 @ARGV == 8 or die "usage: stow-filter-inventory.pl STOW_DIR PKG HOME SOURCE_PREFIX DIRS FILES OUT_DIRS OUT_FILES\n";
 my ($stow_dir, $pkg, $home, $source_prefix, $dirs, $files, $out_dirs, $out_files) = @ARGV;
 
-# GNU Stow may install its Perl modules beside the resolved stow executable
-# (particularly Homebrew), rather than in the system Perl's default @INC.
-my ($stow_exe) = grep { -f $_ && -x $_ } map { "$_/stow" } split /:/, $ENV{PATH} // '';
-defined $stow_exe or die "GNU Stow executable missing; refusing to move user files\n";
-my $real_exe = abs_path($stow_exe)
-  or die "Cannot resolve GNU Stow executable: $stow_exe\n";
-# GNU Stow's generated CLI has the authoritative Perl module path in a
-# literal "use lib" declaration (from @USE_LIB_PMDIR@ in stow.in).
-# Read it as data; do not execute/eval arbitrary code from the launcher.
-open my $launcher, '<', $real_exe or die "Cannot inspect GNU Stow launcher: $!\n";
-while (my $line = <$launcher>) {
-  if ($line =~ /^\s*use\s+lib\s+["']([^"']+)["']\s*;/) {
-    unshift @INC, $1;
+# GNU Stow can be behind a test-only invocation wrapper. Examine candidates
+# on PATH in order and use the first one that provides the actual Stow.pm
+# library. A missing or untrusted module fails closed before any user mv.
+my @stow_candidates =
+  grep { -f $_ && -x $_ } map { "$_/stow" } split /:/, $ENV{PATH} // '';
+@stow_candidates or die "GNU Stow executable missing; refusing to move user files\n";
+my %seen;
+my $loaded = 0;
+for my $stow_exe (@stow_candidates) {
+  my $real_exe = abs_path($stow_exe) or next;
+  next if $seen{$real_exe}++;
+
+  # GNU Stow's generated launcher records its authoritative Perl library
+  # location in a literal 'use lib' directive. Read data; do not eval code.
+  if (open my $launcher, '<', $real_exe) {
+    while (my $line = <$launcher>) {
+      if ($line =~ /^\s*use\s+lib\s+["']([^"']+)["']\s*;/) {
+        unshift @INC, $1;
+      }
+    }
+    close $launcher;
   }
-}
-close $launcher;
-my $prefix = dirname(dirname($real_exe));
-unshift @INC, "$prefix/lib/perl5", "$prefix/share/perl5";
-# Homebrew installs Stow.pm under a Perl-versioned subdirectory of its
-# Cellar formula prefix; the path varies across system Perl versions.
-# Search only this small formula's lib/share dirs, never the whole /usr tree.
-my $loaded = eval { require Stow; 1 };
-if (!$loaded) {
+
+  my $prefix = dirname(dirname($real_exe));
+  unshift @INC, "$prefix/lib/perl5", "$prefix/share/perl5";
+  $loaded = eval { require Stow; 1 };
+  last if $loaded;
+
+  # Homebrew stores Perl modules under version-specific subdirectories.
+  # Scope discovery to the installation's lib/share roots; do not scan /usr.
   for my $root ("$prefix/lib", "$prefix/share") {
     next unless -d $root;
     File::Find::find({
@@ -44,9 +51,10 @@ if (!$loaded) {
       },
     }, $root);
   }
-  eval { require Stow; 1 }
-    or die "Cannot load the Perl library used by GNU Stow: $@\n";
+  $loaded = eval { require Stow; 1 };
+  last if $loaded;
 }
+$loaded or die "Cannot load the Perl library used by GNU Stow: $@\n";
 
 my $old_cwd = getcwd();
 chdir $home or die "Cannot enter HOME to evaluate Stow ignore rules: $home: $!\n";
