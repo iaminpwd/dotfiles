@@ -80,6 +80,39 @@ else
   report "ok-already-symlink (이미 심볼릭 링크면 그대로 유지)" 1 "$(ls -la "$TMP" 2>&1)"
 fi
 
+# 4a. 설치 예정 원본과 다른 사용자 링크는 force:true 이전에 반드시 백업한다.
+SRC4A="$TMP/managed source"
+printf 'managed\n' >"$SRC4A"
+OWN4A="$TMP/owned-link"
+FOREIGN4A="$TMP/foreign-link"
+BROKEN4A="$TMP/broken-foreign-link"
+ln -s "$SRC4A" "$OWN4A"
+ln -s "$TMP/external-user-config" "$FOREIGN4A"
+ln -s "$TMP/missing-user-config" "$BROKEN4A"
+bash "$SCRIPT" --link-pairs "$SRC4A" "$OWN4A" "$SRC4A" "$FOREIGN4A" "$SRC4A" "$BROKEN4A"
+BACKUP_FOREIGN4A=("$FOREIGN4A".backup.*)
+BACKUP_BROKEN4A=("$BROKEN4A".backup.*)
+if [ -L "$OWN4A" ] && [ "$(readlink "$OWN4A")" = "$SRC4A" ] &&
+  [ "${#BACKUP_FOREIGN4A[@]}" -eq 1 ] && [ -L "${BACKUP_FOREIGN4A[0]}" ] &&
+  [ "$(readlink "${BACKUP_FOREIGN4A[0]}")" = "$TMP/external-user-config" ] &&
+  [ "${#BACKUP_BROKEN4A[@]}" -eq 1 ] && [ -L "${BACKUP_BROKEN4A[0]}" ] &&
+  [ "$(readlink "${BACKUP_BROKEN4A[0]}")" = "$TMP/missing-user-config" ]; then
+  report "source-aware-links (관리 링크 재사용·외부 링크와 broken 링크 백업)" 0
+else
+  report "source-aware-links (관리 링크 재사용·외부 링크와 broken 링크 백업)" 1
+fi
+
+# 매개변수의 쌍이 깨져 있으면 어떤 파일도 변경하지 않고 실패해야 한다.
+ODD4A="$TMP/odd-pairs"
+printf 'do-not-touch\n' >"$ODD4A"
+status=0
+bash "$SCRIPT" --link-pairs "$SRC4A" "$ODD4A" "$SRC4A" >"$TMP/odd-output" 2>&1 || status=$?
+if [ "$status" -eq 2 ] && grep -qx 'do-not-touch' "$ODD4A"; then
+  report "invalid-pairs-fail-closed (홀수 인자는 실행 전 차단)" 0
+else
+  report "invalid-pairs-fail-closed" 1 "exit=$status"
+fi
+
 # 여러 경로의 공백·개행을 보존하고 정상 링크와 없는 경로는 건너뛴다.
 TARGET5="$TMP/batch file"
 TARGET6="$TMP/"$'batch\ndir'
