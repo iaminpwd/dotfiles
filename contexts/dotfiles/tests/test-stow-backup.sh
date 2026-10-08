@@ -305,6 +305,62 @@ else
   report "ok-directory-collision-retry (사용자 수동 해결 후 일반 파일 안전 백업)" 1 "exit=$status"
 fi
 
+# 6. A late live foreign directory symlink used to block *after* earlier
+# stale directory links had already been moved. Validate the whole directory
+# inventory before any mutation; determine find order from the fixture rather
+# than assuming GNU/BSD filesystem traversal order.
+CASE6="$TMP/case6"
+mkdir -p "$CASE6/dotfiles/pkg/.alpha" "$CASE6/dotfiles/pkg/.omega" "$CASE6/home" "$CASE6/external"
+printf 'managed alpha\n' >"$CASE6/dotfiles/pkg/.alpha/config"
+printf 'managed omega\n' >"$CASE6/dotfiles/pkg/.omega/config"
+printf 'user private\n' >"$CASE6/external/private"
+CASE6_DIRS=()
+while IFS= read -r -d '' dir; do
+  CASE6_DIRS+=("${dir##*/}")
+done < <(find "$CASE6/dotfiles/pkg" -mindepth 1 -type d -print0)
+if [ "${#CASE6_DIRS[@]}" -ne 2 ]; then
+  echo 'FAIL: invalid foreign-dir fixture'
+  exit 1
+fi
+CASE6_FIRST=${CASE6_DIRS[0]}
+CASE6_SECOND=${CASE6_DIRS[1]}
+ln -s "../old-location/${CASE6_FIRST}" "$CASE6/home/$CASE6_FIRST"
+ln -s "$CASE6/external" "$CASE6/home/$CASE6_SECOND"
+
+status=0
+out=$(bash "$BACKUP" pkg "$CASE6/dotfiles" "$CASE6/home" 2>&1) || status=$?
+CASE6_BACKUPS=("$CASE6/home/$CASE6_FIRST".backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '외부 디렉토리 심볼릭 링크' <<<"$out" &&
+  [ -L "$CASE6/home/$CASE6_FIRST" ] &&
+  [ "$(readlink "$CASE6/home/$CASE6_FIRST")" = "../old-location/$CASE6_FIRST" ] &&
+  [ -L "$CASE6/home/$CASE6_SECOND" ] &&
+  [ "$(readlink "$CASE6/home/$CASE6_SECOND")" = "$CASE6/external" ] &&
+  grep -qx 'user private' "$CASE6/external/private" &&
+  [ ! -e "${CASE6_BACKUPS[0]}" ] &&
+  [ ! -L "${CASE6_BACKUPS[0]}" ]; then
+  report "fail-late-foreign-dirlink (사전 차단으로 다른 사용자 링크도 원위치 보존)" 0
+else
+  report "fail-late-foreign-dirlink (사전 차단으로 다른 사용자 링크도 원위치 보존)" 1 "exit=$status out=$out"
+fi
+
+# After the owner manually removes the conflicting foreign link from this
+# disposable HOME, a retry should still back up the stale managed link and
+# must not mutate the foreign directory or its contents.
+rm "$CASE6/home/$CASE6_SECOND"
+status=0
+bash "$BACKUP" pkg "$CASE6/dotfiles" "$CASE6/home" || status=$?
+CASE6_RETRY_BACKUPS=("$CASE6/home/$CASE6_FIRST".backup.*)
+if [ "$status" -eq 0 ] &&
+  [ ! -L "$CASE6/home/$CASE6_FIRST" ] &&
+  [ -L "${CASE6_RETRY_BACKUPS[0]}" ] &&
+  [ "$(readlink "${CASE6_RETRY_BACKUPS[0]}")" = "../old-location/$CASE6_FIRST" ] &&
+  grep -qx 'user private' "$CASE6/external/private"; then
+  report "ok-foreign-dirlink-retry (사용자 충돌 해결 후 정상 백업·외부 데이터 보존)" 0
+else
+  report "ok-foreign-dirlink-retry (사용자 충돌 해결 후 정상 백업·외부 데이터 보존)" 1 "exit=$status"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
