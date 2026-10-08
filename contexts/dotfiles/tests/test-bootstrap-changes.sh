@@ -10,6 +10,7 @@ git config user.name Test
 git config user.email test@example.com
 mkdir -p ansible contexts/aws/{references,tests,scripts}
 printf 'base\n' >README.md
+printf 'reference-v1\n' >contexts/aws/references/010-core.md
 printf 'skill-v1\n' >contexts/aws/SKILL.md
 printf 'agents-v1\n' >contexts/base.AGENTS.md
 printf 'test-v1\n' >contexts/aws/tests/test.sh
@@ -32,12 +33,29 @@ check() {
 }
 
 # reference 내용만 바뀌면 설치 링크 구조는 동일하다.
-printf 'docs\n' >contexts/aws/references/010-core.md
+printf 'reference-v2\n' >contexts/aws/references/010-core.md
 git add .
 git -c core.hooksPath=/dev/null commit -qm 'docs: 설명'
 docs=$(git rev-parse HEAD)
 check false EVENT_NAME=push BEFORE_SHA="$base" AFTER_SHA="$docs"
 check false EVENT_NAME=pull_request BASE_SHA="$base" HEAD_SHA="$docs"
+
+# ai_agent Ansible 롤은 references/examples/scripts 디렉터리의 존재 여부를 보고
+# 각 스킬 에셋 링크를 생성한다. 따라서 폴더 안의 문서 수정은 smoke 생략 가능하지만
+# 폴더 첫 생성/마지막 삭제는 링크 집합 변화이므로 smoke를 반드시 실행해야 한다.
+mkdir -p contexts/aws/examples
+printf 'first example\n' >contexts/aws/examples/sample.md
+git add contexts/aws/examples/sample.md
+git -c core.hooksPath=/dev/null commit -qm 'feat: 최초 examples 에셋 추가'
+examples_added=$(git rev-parse HEAD)
+check true EVENT_NAME=push BEFORE_SHA="$docs" AFTER_SHA="$examples_added"
+check true EVENT_NAME=pull_request BASE_SHA="$docs" HEAD_SHA="$examples_added"
+
+git rm -q contexts/aws/examples/sample.md
+git -c core.hooksPath=/dev/null commit -qm 'refactor: examples 에셋 마지막 파일 제거'
+examples_deleted=$(git rev-parse HEAD)
+check true EVENT_NAME=push BEFORE_SHA="$examples_added" AFTER_SHA="$examples_deleted"
+
 
 # SKILL/base.AGENTS 내용 수정은 이미 고정된 symlink의 소스 내용만 바뀌므로 smoke 불필요.
 printf 'skill-v2\n' >contexts/aws/SKILL.md
