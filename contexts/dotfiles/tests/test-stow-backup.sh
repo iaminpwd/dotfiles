@@ -361,6 +361,73 @@ else
   report "ok-foreign-dirlink-retry (사용자 충돌 해결 후 정상 백업·외부 데이터 보존)" 1 "exit=$status"
 fi
 
+# 7. Source directory occupied by a user file: Stow would fail its
+# directory/file conflict check, but unrelated file backups must not run first.
+CASE7="$TMP/case7"
+mkdir -p "$CASE7/dotfiles/pkg/.hooks" "$CASE7/home"
+printf 'managed config\n' >"$CASE7/dotfiles/pkg/.first"
+printf 'managed hook\n' >"$CASE7/dotfiles/pkg/.hooks/pre-commit"
+printf 'original config\n' >"$CASE7/home/.first"
+printf 'original user hooks file\n' >"$CASE7/home/.hooks"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE7/dotfiles" "$CASE7/home" 2>&1) || status=$?
+FIRST7_BACKUPS=("$CASE7/home"/.first.backup.*)
+HOOK7_BACKUPS=("$CASE7/home"/.hooks.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '[Hard Block]' <<<"$out" &&
+  grep -qx 'original config' "$CASE7/home/.first" &&
+  grep -qx 'original user hooks file' "$CASE7/home/.hooks" &&
+  [ ! -e "${FIRST7_BACKUPS[0]}" ] &&
+  [ ! -L "${FIRST7_BACKUPS[0]}" ] &&
+  [ ! -e "${HOOK7_BACKUPS[0]}" ]; then
+  report "fail-dir-file-blocker (소스 디렉터리 위치의 사용자 파일 보존 + 사전 차단)" 0
+else
+  report "fail-dir-file-blocker (소스 디렉터리 위치의 사용자 파일 보존 + 사전 차단)" 1 "exit=$status out=$out"
+fi
+
+# A symlink to a live user-owned file is also a file blocker, not a directory
+# symlink eligible for automatic migration. Preserve its path and contents.
+CASE7B="$TMP/case7b"
+mkdir -p "$CASE7B/dotfiles/pkg/.config/tools" "$CASE7B/home" "$CASE7B/external"
+printf 'managed config\n' >"$CASE7B/dotfiles/pkg/.first"
+printf 'managed tool\n' >"$CASE7B/dotfiles/pkg/.config/tools/config"
+printf 'user first\n' >"$CASE7B/home/.first"
+printf 'user external file\n' >"$CASE7B/external/settings"
+ln -s "$CASE7B/external/settings" "$CASE7B/home/.config"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE7B/dotfiles" "$CASE7B/home" 2>&1) || status=$?
+FIRST7B_BACKUPS=("$CASE7B/home"/.first.backup.*)
+PARENT7B_BACKUPS=("$CASE7B/home"/.config.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '[Hard Block]' <<<"$out" &&
+  [ -L "$CASE7B/home/.config" ] &&
+  [ "$(readlink "$CASE7B/home/.config")" = "$CASE7B/external/settings" ] &&
+  grep -qx 'user external file' "$CASE7B/external/settings" &&
+  grep -qx 'user first' "$CASE7B/home/.first" &&
+  [ ! -e "${FIRST7B_BACKUPS[0]}" ] &&
+  [ ! -e "${PARENT7B_BACKUPS[0]}" ] &&
+  [ ! -L "${PARENT7B_BACKUPS[0]}" ]; then
+  report "fail-dir-file-symlink (외부 사용자 파일 링크와 선행 설정 보존)" 0
+else
+  report "fail-dir-file-symlink (외부 사용자 파일 링크와 선행 설정 보존)" 1 "exit=$status out=$out"
+fi
+
+# Once the user manually resolves the directory/file collision in the
+# disposable HOME, the original file should still be safely backed up.
+mv "$CASE7/home/.hooks" "$CASE7/manual-hooks"
+status=0
+bash "$BACKUP" pkg "$CASE7/dotfiles" "$CASE7/home" || status=$?
+RETRY7_BACKUPS=("$CASE7/home"/.first.backup.*)
+if [ "$status" -eq 0 ] &&
+  [ ! -e "$CASE7/home/.first" ] &&
+  [ -f "${RETRY7_BACKUPS[0]}" ] &&
+  grep -qx 'original config' "${RETRY7_BACKUPS[0]}" &&
+  grep -qx 'original user hooks file' "$CASE7/manual-hooks"; then
+  report "ok-dir-file-retry (사용자 충돌 해소 후 일반 파일 정상 백업)" 0
+else
+  report "ok-dir-file-retry (사용자 충돌 해소 후 일반 파일 정상 백업)" 1 "exit=$status"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

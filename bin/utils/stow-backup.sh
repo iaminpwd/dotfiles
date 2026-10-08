@@ -99,11 +99,18 @@ while IFS= read -r -d '' SRC_FILE; do
   fi
 done <"$STOW_INVENTORY/files"
 
-# Detect all live foreign directory links before reconciling any stale links.
-# A late hard block must not leave earlier links already moved to backup names.
+# Preflight every source directory before any backup move. If a directory
+# is needed at TARGET but an existing user file (or live file symlink) occupies
+# that path, Stow cannot create the directory. Do not move other user files
+# first and then fail during Stow's conflict check.
+# Existing foreign directory symlinks remain protected by the check below.
 while IFS= read -r -d '' SRC_DIR; do
   REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
   TARGET="$HOME_DIR/$REL_PATH"
+  if [ -e "$TARGET" ] && [ ! -d "$TARGET" ]; then
+    echo "❌ [Hard Block] Stow 디렉토리 경로에 사용자 파일이 존재합니다: $TARGET" >&2
+    exit 1
+  fi
   if [ -L "$TARGET" ]; then
     _assert_dir_symlink_safe "$TARGET" "$SRC_DIR" || exit 1
   fi
