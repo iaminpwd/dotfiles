@@ -85,6 +85,14 @@
     }
 
     PKG_DIR="{{ role_path }}/../../../stow/{{ item.path | basename }}"
+    # Process substitution hides find's exit status. Do not report "no drift"
+    # or proceed to Stow if filesystem discovery is incomplete.
+    STOW_FILE_LIST=$(mktemp)
+    trap 'rm -f "$STOW_FILE_LIST"' EXIT
+    if ! find "$PKG_DIR" -type f -print0 >"$STOW_FILE_LIST"; then
+      echo "❌ [Hard Block] Stow 소스 탐색 실패 (drift): $PKG_DIR" >&2
+      exit 1
+    fi
     DRIFT=0
     while IFS= read -r -d '' SRC; do
       REL="${SRC#"$PKG_DIR"/}"
@@ -117,7 +125,7 @@
         DRIFT=1
         break
       fi
-    done < <(find "$PKG_DIR" -type f -print0)
+    done <"$STOW_FILE_LIST"
     echo "$DRIFT"
   args:
     executable: /bin/bash
