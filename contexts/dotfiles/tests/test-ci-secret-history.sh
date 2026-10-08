@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+# shellcheck source=tests/lib/parallel-pair.sh
+source "$ROOT/tests/lib/parallel-pair.sh"
 SCAN="$ROOT/.github/scripts/secret-history-scan.sh"
 WORKFLOW="$ROOT/.github/workflows/ci.yml"
 
@@ -44,27 +46,34 @@ git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: remove secret"
 HEAD=$(git -C "$REPO" rev-parse HEAD)
 
 run_scan() {
-  local event=$1 status=0
+  local event=$1
   shift
   (
     cd "$REPO"
     env EVENT_NAME="$event" "$@" bash "$SCAN"
-  ) >"$TMP/out" 2>&1 || status=$?
-  echo "$status"
+  )
 }
 
-status=$(run_scan pull_request BASE_SHA="$BASE" HEAD_SHA="$HEAD")
-if [ "$status" -eq 0 ]; then
+# 두 검사는 같은 불변 Git 커밋 범위를 PR/push 이벤트로 읽기만 한다.
+# 쓰기/임시 로그를 공유하지 않으므로 기존 검증된 parallel-pair.sh로 병행한다.
+# shellcheck disable=SC2034 # parallel_pair_run 이 nameref로 읽음
+CMD_PR=(run_scan pull_request BASE_SHA="$BASE" HEAD_SHA="$HEAD")
+# shellcheck disable=SC2034
+CMD_PUSH=(run_scan push BEFORE_SHA="$BASE" AFTER_SHA="$HEAD")
+pr_status=0
+push_status=0
+parallel_pair_run CMD_PR CMD_PUSH pr_status push_status "$TMP/pr-bad.out" "$TMP/push-bad.out"
+
+if [ "$pr_status" -eq 0 ]; then
   echo "FAIL: PR 범위의 중간 커밋 시크릿이 차단되지 않았습니다"
-  cat "$TMP/out"
+  cat "$TMP/pr-bad.out"
   exit 1
 fi
 echo "PASS: PR 커밋 범위의 삭제된 시크릿도 차단"
 
-status=$(run_scan push BEFORE_SHA="$BASE" AFTER_SHA="$HEAD")
-if [ "$status" -eq 0 ]; then
+if [ "$push_status" -eq 0 ]; then
   echo "FAIL: push 범위의 중간 커밋 시크릿이 차단되지 않았습니다"
-  cat "$TMP/out"
+  cat "$TMP/push-bad.out"
   exit 1
 fi
 echo "PASS: push 커밋 범위의 삭제된 시크릿도 차단"
@@ -77,10 +86,18 @@ git -C "$REPO" add README.md
 git -C "$REPO" -c core.hooksPath=/dev/null commit -q -m "test: clean change"
 CLEAN_HEAD=$(git -C "$REPO" rev-parse HEAD)
 
-status=$(run_scan pull_request BASE_SHA="$CLEAN_BASE" HEAD_SHA="$CLEAN_HEAD")
-if [ "$status" -ne 0 ]; then
+# 깨끗한 범위와 새 ref 전체 스캔은 동일한 고정 커밋을 독립적으로 읽는다.
+# shellcheck disable=SC2034 # parallel_pair_run 이 nameref로 읽음
+CMD_CLEAN=(run_scan pull_request BASE_SHA="$CLEAN_BASE" HEAD_SHA="$CLEAN_HEAD")
+# shellcheck disable=SC2034
+CMD_NEWREF=(run_scan push BEFORE_SHA=0000000000000000000000000000000000000000 AFTER_SHA="$CLEAN_HEAD")
+clean_status=0
+newref_status=0
+parallel_pair_run CMD_CLEAN CMD_NEWREF clean_status newref_status "$TMP/clean.out" "$TMP/newref.out"
+
+if [ "$clean_status" -ne 0 ]; then
   echo "FAIL: 깨끗한 신규 범위가 과거 히스토리 때문에 차단되었습니다"
-  cat "$TMP/out"
+  cat "$TMP/clean.out"
   exit 1
 fi
 echo "PASS: 검사 범위 밖의 과거 시크릿은 재차단하지 않음"
@@ -88,9 +105,9 @@ echo "PASS: 검사 범위 밖의 과거 시크릿은 재차단하지 않음"
 # 새 ref의 첫 push는 BEFORE_SHA=0이며 한 번에 여러 커밋을 포함할 수 있다.
 # 첫 커밋과 중간 커밋의 비밀이 마지막 트리에서 삭제됐어도 전체 이력을 검사해야 한다.
 # 기존 구현은 head^를 기준으로 삼아 마지막 커밋 한 개만 검사하므로 놓친다.
-status=$(run_scan push BEFORE_SHA=0000000000000000000000000000000000000000 AFTER_SHA="$CLEAN_HEAD")
-if [ "$status" -eq 0 ]; then
+if [ "$newref_status" -eq 0 ]; then
   echo "FAIL: 새 ref 첫 push에서 마지막 커밋 이전의 삭제된 시크릿을 놓쳤습니다"
+  cat "$TMP/newref.out"
   exit 1
 fi
 echo "PASS: 새 ref 첫 push는 전체 도달 가능 이력의 시크릿을 차단"
