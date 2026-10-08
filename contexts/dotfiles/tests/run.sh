@@ -53,6 +53,7 @@ for suite in \
   test-stow-real-failure \
   test-stow-real-unlink \
   test-stow-ignore \
+  test-stow-toctou \
   test-safe-link-backup \
   test-agent-batch-backup \
   test-agent-script-update-prune \
