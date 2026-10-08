@@ -46,8 +46,8 @@ if [ "$status" -eq 0 ] ||
 fi
 
 # A later swap, after O_NOFOLLOW opened the parent fd but immediately before
-# os.rename, must still operate on the ORIGINAL opened directory, not external.
-# Monkeypatch only the timing of the real rename syscall, not its fd semantics.
+# atomic os.link, must still operate on the ORIGINAL opened directory, not external.
+# Monkeypatch only syscall timing, not the kernel's dirfd/no-follow semantics.
 STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/after-open" "$REAL_PYTHON" - <<'PY'
 import importlib.util
 import os
@@ -64,26 +64,119 @@ spec = importlib.util.spec_from_file_location(
 )
 helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
-original_rename = os.rename
+original_link = os.link
 swapped = [False]
 
-def swap_parent_at_rename(source, dest, *args, **kwargs):
+def swap_parent_at_link(source, dest, *args, **kwargs):
     if kwargs.get("src_dir_fd") is not None and not swapped[0]:
-        original_rename(home / ".config", home / ".config-original")
+        os.rename(home / ".config", home / ".config-original")
         os.symlink(external, home / ".config")
         swapped[0] = True
-    return original_rename(source, dest, *args, **kwargs)
+    return original_link(source, dest, *args, **kwargs)
 
-os.rename = swap_parent_at_rename
+os.link = swap_parent_at_link
 try:
     helper.backup(str(home), str(home / ".config/app/config"), "fixed")
 finally:
-    os.rename = original_rename
-assert swapped[0], "fault injection did not reach fd-based rename"
+    os.link = original_link
+assert swapped[0], "fault injection did not reach fd-based hard link"
 assert (home / ".config").is_symlink()
 assert (home / ".config-original/app/config.backup.fixed").read_text() == "original user\n"
 assert (external / "app/config").read_text() == "external secret\n"
 assert not (external / "app/config.backup.fixed").exists()
 PY
 
-echo 'PASS: parent symlink swaps before/after opened dirfd cannot redirect backups'
+# Competing backup creation between the old stat and rename used to be
+# overwritten silently. Hard-link creation must instead choose a new suffix.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/dest-collision" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+(root / ".conf").write_text("original config\n")
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+original_link = os.link
+injected = [False]
+
+def create_competing_backup(source, dest, *args, **kwargs):
+    if kwargs.get("dst_dir_fd") is not None and not injected[0]:
+        (root / ".conf.backup.fixed").write_text("valuable concurrent data\n")
+        injected[0] = True
+    return original_link(source, dest, *args, **kwargs)
+
+os.link = create_competing_backup
+try:
+    helper.backup(str(root), str(root / ".conf"), "fixed")
+finally:
+    os.link = original_link
+
+assert injected[0], "atomic collision was not injected"
+assert (root / ".conf.backup.fixed").read_text() == "valuable concurrent data\n"
+assert (root / ".conf.backup.fixed.1").read_text() == "original config\n"
+assert not (root / ".conf").exists()
+PY
+
+# If the source entry changes before link(), do not unlink the replacement.
+# The original data and the new value must both survive the failed operation.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/leaf-swap" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+(root / ".conf").write_text("original config\n")
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+original_link = os.link
+injected = [False]
+
+def replace_leaf_before_link(source, dest, *args, **kwargs):
+    if kwargs.get("src_dir_fd") is not None and not injected[0]:
+        os.rename(root / ".conf", root / ".conf-original")
+        (root / ".conf").write_text("new user config\n")
+        injected[0] = True
+    return original_link(source, dest, *args, **kwargs)
+
+os.link = replace_leaf_before_link
+try:
+    try:
+        helper.backup(str(root), str(root / ".conf"), "fixed")
+    except RuntimeError as exc:
+        assert "changed during backup" in str(exc)
+    else:
+        raise AssertionError("source replacement was not blocked")
+finally:
+    os.link = original_link
+
+assert injected[0], "source replacement was not injected"
+assert (root / ".conf-original").read_text() == "original config\n"
+assert (root / ".conf").read_text() == "new user config\n"
+PY
+
+# Broken symlinks must remain symlinks after backup; a pre-existing broken
+# symlink at the destination also occupies its name and cannot be overwritten.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/symlink-collision" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+(root / ".link").symlink_to("old-missing-target")
+(root / ".link.backup.fixed").symlink_to("foreign-missing-target")
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+helper.backup(str(root), str(root / ".link"), "fixed")
+assert not (root / ".link").is_symlink()
+assert os.readlink(root / ".link.backup.fixed") == "foreign-missing-target"
+assert os.readlink(root / ".link.backup.fixed.1") == "old-missing-target"
+PY
+
+echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'

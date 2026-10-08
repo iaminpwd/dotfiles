@@ -10,6 +10,13 @@ import stat
 import sys
 
 
+# Check platform support once. Tests deliberately intercept link(), but
+# an unsupported dirfd/no-follow combination must always fail closed.
+SECURE_LINK_SUPPORTED = (
+    os.link in os.supports_dir_fd and os.link in os.supports_follow_symlinks
+)
+
+
 def backup(home: str, target: str, timestamp: str) -> None:
     home = os.path.abspath(home)
     target = os.path.abspath(target)
@@ -36,20 +43,39 @@ def backup(home: str, target: str, timestamp: str) -> None:
         if stat.S_ISDIR(current.st_mode):
             raise ValueError("refusing to move an existing user directory")
 
-        # Retain the existing timestamp + numeric suffix collision convention.
+        # A check-then-rename can overwrite a valuable file installed at
+        # dest by another process after the check. Claim the backup filename
+        # atomically with a no-follow hard link (EEXIST never overwrites).
+        # Both names are resolved through the same verified parent dirfd.
+        if not SECURE_LINK_SUPPORTED:
+            raise RuntimeError("dirfd/no-follow hard links are unavailable")
         base = f"{name}.backup.{timestamp}"
         suffix = 0
         while True:
             dest = base if suffix == 0 else f"{base}.{suffix}"
             try:
-                os.stat(dest, dir_fd=fd, follow_symlinks=False)
-            except FileNotFoundError:
+                os.link(
+                    name, dest, src_dir_fd=fd, dst_dir_fd=fd, follow_symlinks=False
+                )
                 break
-            suffix += 1
+            except FileExistsError:
+                suffix += 1
 
-        # Source and destination are resolved inside the SAME opened parent.
-        # Swapping HOME/.config for a foreign symlink cannot redirect this mv.
-        os.rename(name, dest, src_dir_fd=fd, dst_dir_fd=fd)
+        # A concurrent source replacement before the hard-link syscall must
+        # not be removed. If identity changed, retain both names and stop;
+        # an extra hard link on failure is safer than deleting user content.
+        original = (current.st_dev, current.st_ino, current.st_mode)
+        try:
+            backup_entry = os.stat(dest, dir_fd=fd, follow_symlinks=False)
+            source_entry = os.stat(name, dir_fd=fd, follow_symlinks=False)
+        except FileNotFoundError as exc:
+            raise RuntimeError("source or backup changed during backup") from exc
+        if any(
+            (entry.st_dev, entry.st_ino, entry.st_mode) != original
+            for entry in (source_entry, backup_entry)
+        ):
+            raise RuntimeError("source or backup changed during backup")
+        os.unlink(name, dir_fd=fd)
     finally:
         os.close(fd)
 
