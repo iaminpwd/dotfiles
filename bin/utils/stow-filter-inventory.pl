@@ -17,6 +17,16 @@ my ($stow_exe) = grep { -f $_ && -x $_ } map { "$_/stow" } split /:/, $ENV{PATH}
 defined $stow_exe or die "GNU Stow executable missing; refusing to move user files\n";
 my $real_exe = abs_path($stow_exe)
   or die "Cannot resolve GNU Stow executable: $stow_exe\n";
+# GNU Stow's generated CLI has the authoritative Perl module path in a
+# literal "use lib" declaration (from @USE_LIB_PMDIR@ in stow.in).
+# Read it as data; do not execute/eval arbitrary code from the launcher.
+open my $launcher, '<', $real_exe or die "Cannot inspect GNU Stow launcher: $!\n";
+while (my $line = <$launcher>) {
+  if ($line =~ /^\s*use\s+lib\s+["']([^"']+)["']\s*;/) {
+    unshift @INC, $1;
+  }
+}
+close $launcher;
 my $prefix = dirname(dirname($real_exe));
 unshift @INC, "$prefix/lib/perl5", "$prefix/share/perl5";
 # Homebrew installs Stow.pm under a Perl-versioned subdirectory of its
