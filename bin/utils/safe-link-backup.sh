@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # safe-link-backup.sh
 # ansible.builtin.file(state: link, force: true)로 심볼릭 링크를 강제 생성하기 전,
-# 그 목적지에 이미 있는 "실제(비-심볼릭) 파일/디렉토리"를 백업으로 치운다.
+# 목적지의 실제 파일과, 관리 원본이 아닌 사용자 심볼릭 링크를 백업한다.
 #
 # force: true는 사용자 파일과 외부 심볼릭 링크를 모두 교체할 수 있다.
 # 기본(target-only) 모드는 레거시 호출과 호환되도록 실제 파일/디렉토리만 백업한다.
