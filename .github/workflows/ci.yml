@@ -218,3 +218,4 @@ jobs:
           # GitHub Actions step starts with a fresh PATH (notably on macOS).
           export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
           bash contexts/dotfiles/tests/test-stow-real-failure.sh
+          bash contexts/dotfiles/tests/test-stow-real-unlink.sh

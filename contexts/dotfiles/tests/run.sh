@@ -51,6 +51,7 @@ for suite in \
   test-stow-legacy-mise-link \
   test-stow-drift-portability \
   test-stow-real-failure \
+  test-stow-real-unlink \
   test-safe-link-backup \
   test-agent-batch-backup \
   test-agent-script-update-prune \
