@@ -274,6 +274,50 @@ else
   report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 15. 길어진 runner를 유지보수하기 위해 줄당 하나씩 선언해도 전부 등록돼야 한다.
+R15="$TMP/repo15"
+new_fixture_repo "$R15"
+cat >"$R15/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+for suite in \
+  test-one \
+  test-two; do
+  bash "$suite.sh"
+done
+EOF
+printf '#!/usr/bin/env bash\n' >"$R15/contexts/fake/tests/test-one.sh"
+printf '#!/usr/bin/env bash\n' >"$R15/contexts/fake/tests/test-two.sh"
+status=$(run_checker "$R15")
+if [ "$status" -eq 0 ]; then
+  report "multiline-registration-passes (줄별 선언도 테스트 2건 모두 등록)" 0
+else
+  report "multiline-registration-passes" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
+# 16. 멀티라인 runner라도 목록 밖 테스트나 주석 속 이름을 등록으로 취급하지 않는다.
+R16="$TMP/repo16"
+new_fixture_repo "$R16"
+cat >"$R16/contexts/fake/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+# test-orphan 은 실행 목록이 아니라 주석에만 등장한다.
+for suite in \
+  test-one \
+  test-two; do
+  bash "$suite.sh"
+done
+EOF
+for suite in test-one test-two test-orphan; do
+  printf '#!/usr/bin/env bash\n' >"$R16/contexts/fake/tests/$suite.sh"
+done
+status=$(run_checker "$R16")
+if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" &&
+  ! grep -qF "  - contexts/fake/tests/test-one.sh" "$TMP/out" &&
+  ! grep -qF "  - contexts/fake/tests/test-two.sh" "$TMP/out"; then
+  report "multiline-unregistered-blocks (주석 언급은 등록 아님, 누락 파일만 차단)" 0
+else
+  report "multiline-unregistered-blocks" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
