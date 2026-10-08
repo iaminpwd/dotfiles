@@ -143,6 +143,66 @@ else
   report "fail-live-foreign-parent-dirlink (공유 부모의 사용자 symlink 보존 + fail-closed)" 1 "exit=$status out=$out $(ls -la "$CASE2E/home" 2>&1)"
 fi
 
+# 2f. find can print entries and then fail. Process-substitution would
+# swallow that status, moving user files even though the inventory is partial.
+# Test failures in both directory and file scans before *any* backup mutation.
+for FAIL_STAGE in 1 2; do
+  CASE_FIND="$TMP/find-failure-$FAIL_STAGE"
+  mkdir -p "$CASE_FIND/dotfiles/pkg/.hooks" "$CASE_FIND/home" "$CASE_FIND/fake-bin"
+  printf 'managed hook\n' >"$CASE_FIND/dotfiles/pkg/.hooks/pre-commit"
+  printf 'managed config\n' >"$CASE_FIND/dotfiles/pkg/.conflict"
+  printf 'user config\n' >"$CASE_FIND/home/.conflict"
+  ln -s "../old-stow/.hooks" "$CASE_FIND/home/.hooks"
+
+  # The injected find emits a valid NUL-delimited entry before exit 77.
+  # A successful first call delegates to the real find for normal ordering.
+  cat >"$CASE_FIND/fake-bin/find" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+count=0
+if [ -f "$STOW_FIND_COUNTER" ]; then
+  read -r count <"$STOW_FIND_COUNTER"
+fi
+count=$((count + 1))
+printf '%s\n' "$count" >"$STOW_FIND_COUNTER"
+if [ "$count" -eq "$STOW_FIND_FAIL_STAGE" ]; then
+  if [ "$count" -eq 1 ]; then
+    printf '%s\0' "$STOW_FIND_PARTIAL_DIR"
+  else
+    printf '%s\0' "$STOW_FIND_PARTIAL_FILE"
+  fi
+  exit 77
+fi
+exec "$STOW_FIND_REAL" "$@"
+EOF
+  chmod +x "$CASE_FIND/fake-bin/find"
+
+  status=0
+  out=$(STOW_FIND_COUNTER="$CASE_FIND/counter" \
+    STOW_FIND_FAIL_STAGE="$FAIL_STAGE" \
+    STOW_FIND_PARTIAL_DIR="$CASE_FIND/dotfiles/pkg/.hooks" \
+    STOW_FIND_PARTIAL_FILE="$CASE_FIND/dotfiles/pkg/.conflict" \
+    STOW_FIND_REAL="$(command -v find)" \
+    PATH="$CASE_FIND/fake-bin:$PATH" \
+    bash "$BACKUP" "pkg" "$CASE_FIND/dotfiles" "$CASE_FIND/home" 2>&1) || status=$?
+
+  moved=0
+  for backup in "$CASE_FIND/home/.hooks".backup.* "$CASE_FIND/home/.conflict".backup.*; do
+    if [ -e "$backup" ] || [ -L "$backup" ]; then
+      moved=1
+    fi
+  done
+  if [ "$status" -ne 0 ] && [ "$moved" -eq 0 ] &&
+    [ -L "$CASE_FIND/home/.hooks" ] &&
+    [ "$(readlink "$CASE_FIND/home/.hooks")" = "../old-stow/.hooks" ] &&
+    grep -qx 'user config' "$CASE_FIND/home/.conflict" &&
+    grep -qF "Stow 소스 탐색 실패" <<<"$out"; then
+    report "failed-find-stage-$FAIL_STAGE (부분 목록 이후 find 실패 → 사전 차단, 데이터 보존)" 0
+  else
+    report "failed-find-stage-$FAIL_STAGE (부분 목록 이후 find 실패 → 사전 차단, 데이터 보존)" 1 "exit=$status moved=$moved out=$out"
+  fi
+done
+
 # 3. fail-same-second-collision: 같은 초에 같은 경로를 두 번 백업해도 첫 백업을
 #    덮어쓰면 안 된다. date를 고정해 초 단위 timestamp 충돌을 결정적으로 재현한다.
 CASE3="$TMP/case3"
