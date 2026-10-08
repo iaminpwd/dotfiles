@@ -274,7 +274,6 @@ else
   report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
-
 # 15. 길어진 runner를 유지보수하기 위해 줄당 하나씩 선언해도 전부 등록돼야 한다.
 R15="$TMP/repo15"
 new_fixture_repo "$R15"
