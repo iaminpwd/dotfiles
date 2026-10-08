@@ -428,6 +428,87 @@ else
   report "ok-dir-file-retry (사용자 충돌 해소 후 일반 파일 정상 백업)" 1 "exit=$status"
 fi
 
+# 8. A nested foreign symlink in an otherwise normal ~/.config directory
+# must stop the whole package *before* an earlier user-owned leaf is backed up.
+# The link's user files are external and must not be moved or modified.
+CASE8="$TMP/case8"
+mkdir -p "$CASE8/dotfiles/pkg/.config/app" "$CASE8/home/.config" "$CASE8/external"
+printf 'managed first\n' >"$CASE8/dotfiles/pkg/.first"
+printf 'managed app config\n' >"$CASE8/dotfiles/pkg/.config/app/config.toml"
+printf 'user first\n' >"$CASE8/home/.first"
+printf 'user private\n' >"$CASE8/external/private.txt"
+ln -s "$CASE8/external" "$CASE8/home/.config/app"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE8/dotfiles" "$CASE8/home" 2>&1) || status=$?
+FIRST8_BACKUPS=("$CASE8/home"/.first.backup.*)
+APP8_BACKUPS=("$CASE8/home"/.config/app.backup.*)
+CONFIG8_BACKUPS=("$CASE8/external"/config.toml.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '외부 디렉토리 심볼릭 링크' <<<"$out" &&
+  [ -d "$CASE8/home/.config" ] &&
+  [ ! -L "$CASE8/home/.config" ] &&
+  [ -L "$CASE8/home/.config/app" ] &&
+  [ "$(readlink "$CASE8/home/.config/app")" = "$CASE8/external" ] &&
+  grep -qx 'user first' "$CASE8/home/.first" &&
+  grep -qx 'user private' "$CASE8/external/private.txt" &&
+  [ ! -e "${FIRST8_BACKUPS[0]}" ] &&
+  [ ! -L "${FIRST8_BACKUPS[0]}" ] &&
+  [ ! -e "${APP8_BACKUPS[0]}" ] &&
+  [ ! -L "${APP8_BACKUPS[0]}" ] &&
+  [ ! -e "${CONFIG8_BACKUPS[0]}" ]; then
+  report "fail-nested-foreign-dir (중첩 외부 링크·선행 사용자 파일 모두 원위치 보존)" 0
+else
+  report "fail-nested-foreign-dir (중첩 외부 링크·선행 사용자 파일 모두 원위치 보존)" 1 "exit=$status out=$out"
+fi
+
+# After manually removing just the foreign link, a retry may back up the
+# ordinary conflicting file; no operation may reach the external directory.
+rm "$CASE8/home/.config/app"
+status=0
+bash "$BACKUP" pkg "$CASE8/dotfiles" "$CASE8/home" || status=$?
+RETRY8_BACKUPS=("$CASE8/home"/.first.backup.*)
+if [ "$status" -eq 0 ] &&
+  [ ! -e "$CASE8/home/.first" ] &&
+  [ -f "${RETRY8_BACKUPS[0]}" ] &&
+  grep -qx 'user first' "${RETRY8_BACKUPS[0]}" &&
+  grep -qx 'user private' "$CASE8/external/private.txt" &&
+  [ ! -e "$CASE8/external/config.toml" ]; then
+  report "ok-nested-foreign-retry (수동 충돌 해소 후 안전한 백업)" 0
+else
+  report "ok-nested-foreign-retry (수동 충돌 해소 후 안전한 백업)" 1 "exit=$status"
+fi
+
+# 8b. Multiple symlink hops at a top-level parent are still foreign, even
+# if the initial link points to a directory within the disposable HOME.
+# The downstream hop resolves to an external user-owned tree.
+CASE8B="$TMP/case8b"
+mkdir -p "$CASE8B/dotfiles/pkg/.config/tools" "$CASE8B/home/shared" "$CASE8B/external"
+printf 'managed first\n' >"$CASE8B/dotfiles/pkg/.first"
+printf 'managed tool\n' >"$CASE8B/dotfiles/pkg/.config/tools/config"
+printf 'user first\n' >"$CASE8B/home/.first"
+printf 'user external\n' >"$CASE8B/external/private"
+ln -s "$CASE8B/external" "$CASE8B/home/shared/config"
+ln -s shared/config "$CASE8B/home/.config"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE8B/dotfiles" "$CASE8B/home" 2>&1) || status=$?
+FIRST8B_BACKUPS=("$CASE8B/home"/.first.backup.*)
+PARENT8B_BACKUPS=("$CASE8B/home"/.config.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '외부 디렉토리 심볼릭 링크' <<<"$out" &&
+  [ -L "$CASE8B/home/.config" ] &&
+  [ "$(readlink "$CASE8B/home/.config")" = shared/config ] &&
+  [ -L "$CASE8B/home/shared/config" ] &&
+  [ "$(readlink "$CASE8B/home/shared/config")" = "$CASE8B/external" ] &&
+  grep -qx 'user first' "$CASE8B/home/.first" &&
+  grep -qx 'user external' "$CASE8B/external/private" &&
+  [ ! -e "${FIRST8B_BACKUPS[0]}" ] &&
+  [ ! -e "${PARENT8B_BACKUPS[0]}" ] &&
+  [ ! -L "${PARENT8B_BACKUPS[0]}" ]; then
+  report "fail-multihop-foreign-dir (다중 경유 외부 링크·선행 파일 원위치 보존)" 0
+else
+  report "fail-multihop-foreign-dir (다중 경유 외부 링크·선행 파일 원위치 보존)" 1 "exit=$status out=$out"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
