@@ -72,6 +72,8 @@ for directory in (role, source / ".fold-a", source / ".fold-b", home,
 shutil.copy2(root / "ansible/roles/stow/tasks/package.yml", role / "package.yml")
 shutil.copy2(root / "bin/utils/stow-backup.sh",
              repo / "bin/utils/stow-backup.sh")
+shutil.copy2(root / "bin/utils/stow-filter-inventory.pl",
+             repo / "bin/utils/stow-filter-inventory.pl")
 (role / "main.yml").write_text("""---
 - name: Run actual package tasks
   ansible.builtin.include_tasks: package.yml

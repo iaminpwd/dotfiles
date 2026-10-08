@@ -87,6 +87,20 @@ if ! find "$DOTFILES_DIR/$PKG" -type f -print0 >"$STOW_INVENTORY/files"; then
   exit 1
 fi
 
+# Stow may ignore source files/directories via built-in, global or per-package
+# regexes. Backing up those targets would remove user files that Stow will
+# deliberately never replace. Ask Stow's own Perl matcher before ANY mv.
+# If discovery or matching fails, keep the original HOME paths untouched.
+if ! HOME="$HOME_DIR" perl "$(dirname "${BASH_SOURCE[0]}")/stow-filter-inventory.pl" \
+  "$DOTFILES_DIR" "$PKG" "$HOME_DIR" "$DOTFILES_DIR/$PKG/" \
+  "$STOW_INVENTORY/dirs" "$STOW_INVENTORY/files" \
+  "$STOW_INVENTORY/filtered-dirs" "$STOW_INVENTORY/filtered-files"; then
+  echo "❌ [Hard Block] GNU Stow ignore 판정에 실패했습니다: $PKG" >&2
+  exit 1
+fi
+mv "$STOW_INVENTORY/filtered-dirs" "$STOW_INVENTORY/dirs"
+mv "$STOW_INVENTORY/filtered-files" "$STOW_INVENTORY/files"
+
 # A Stow source file must not displace an existing user directory, including
 # a symlink to a live directory. Reject collisions across the whole file list
 # *before* moving any existing entries, so a late collision is fail-closed.

@@ -242,6 +242,8 @@ marker = "- name: Stow 패키지별 백업·드리프트 판정·적용"
 shutil.copy2(root / "ansible/roles/stow/tasks/package.yml", role / "package.yml")
 shutil.copy2(root / "bin/utils/stow-backup.sh",
              multi / "repo/bin/utils/stow-backup.sh")
+shutil.copy2(root / "bin/utils/stow-filter-inventory.pl",
+             multi / "repo/bin/utils/stow-filter-inventory.pl")
 (fakebin / "stow").write_text("""#!/usr/bin/env bash
 set -euo pipefail
 pkg=''
