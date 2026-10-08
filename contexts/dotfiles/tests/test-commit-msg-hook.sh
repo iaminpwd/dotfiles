@@ -206,6 +206,44 @@ else
   report "fail-leading-whitespace (원인을 지목해 차단)" 1 "기대 exit=1 + 공백 안내 / 실제 exit=$status: $out"
 fi
 
+# 12. macOS BSD readlink 환경에서도 dotfiles 클론이 ~/dotfiles 밖에 설치되면
+#     symlink 로 배포한 실제 commit-msg 훅이 Atomic Commit 분석기를 찾아야 한다.
+#     readlink -f 실패를 dirname이 삼키면 conventional 형식 커밋은 성공하지만
+#     서로 다른 3개 context/5개 파일에 대한 advisory가 조용히 빠진다.
+ATOMIC_REPO="$TMP/atomic-repo"
+ATOMIC_HOOKS="$TMP/atomic-hooks"
+ATOMIC_HOME="$TMP/nonstandard-home"
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$ATOMIC_REPO" "$ATOMIC_HOOKS" "$ATOMIC_HOME" "$BSD_BIN"
+ln -s "$HOOK" "$ATOMIC_HOOKS/commit-msg"
+cat >"$BSD_BIN/readlink" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+EOF
+chmod +x "$BSD_BIN/readlink"
+git -C "$ATOMIC_REPO" init -q
+git -C "$ATOMIC_REPO" config user.email test@example.com
+git -C "$ATOMIC_REPO" config user.name Test
+git -C "$ATOMIC_REPO" config core.hooksPath "$ATOMIC_HOOKS"
+mkdir -p "$ATOMIC_REPO/alpha" "$ATOMIC_REPO/beta" "$ATOMIC_REPO/gamma"
+printf 'one\n' >"$ATOMIC_REPO/alpha/a.txt"
+printf 'two\n' >"$ATOMIC_REPO/alpha/b.txt"
+printf 'three\n' >"$ATOMIC_REPO/beta/c.txt"
+printf 'four\n' >"$ATOMIC_REPO/beta/d.txt"
+printf 'five\n' >"$ATOMIC_REPO/gamma/e.txt"
+git -C "$ATOMIC_REPO" add alpha beta gamma
+status=0
+out=$( (cd "$ATOMIC_REPO" && HOME="$ATOMIC_HOME" PATH="$BSD_BIN:$PATH" git commit -q -m "feat: check atomic commit") 2>&1) || status=$?
+if [ "$status" -eq 0 ] && grep -qF "Atomic Commit 위반 가능성" <<<"$out"; then
+  report "bsd-readlink-atomic-warning (Git symlink 훅에서 비표준 HOME도 분석)" 0
+else
+  report "bsd-readlink-atomic-warning (Git symlink 훅에서 비표준 HOME도 분석)" 1 "exit=$status out=$out"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
