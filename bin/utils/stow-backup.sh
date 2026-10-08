@@ -82,6 +82,18 @@ if ! find "$DOTFILES_DIR/$PKG" -type f -print0 >"$STOW_INVENTORY/files"; then
   exit 1
 fi
 
+# A Stow source file must not displace an existing user directory, including
+# a symlink to a live directory. Reject collisions across the whole file list
+# *before* moving any existing entries, so a late collision is fail-closed.
+while IFS= read -r -d '' SRC_FILE; do
+  REL_PATH="${SRC_FILE#"$DOTFILES_DIR/$PKG/"}"
+  TARGET="$HOME_DIR/$REL_PATH"
+  if [ -d "$TARGET" ]; then
+    echo "❌ [Hard Block] Stow 파일 경로에 사용자 디렉토리가 존재합니다: $TARGET" >&2
+    exit 1
+  fi
+done <"$STOW_INVENTORY/files"
+
 while IFS= read -r -d '' SRC_DIR; do
   REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
   TARGET="$HOME_DIR/$REL_PATH"

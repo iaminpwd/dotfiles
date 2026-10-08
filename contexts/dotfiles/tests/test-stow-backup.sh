@@ -241,6 +241,70 @@ else
   report "ok-no-conflict (대상 없으면 무동작 + exit 0)" 1 "exit=$status $(ls -la "$CASE4/home" 2>&1)"
 fi
 
+# 5. A Stow file must never move a user-owned directory (or an external
+# live directory symlink) to a .backup.* name. Detect *all* such leaf collisions
+# before moving any regular file; later failure must not partially migrate HOME.
+CASE5="$TMP/case5"
+mkdir -p "$CASE5/dotfiles/pkg" "$CASE5/home/.leaf-dir"
+printf 'managed first\n' >"$CASE5/dotfiles/pkg/.first"
+printf 'managed leaf\n' >"$CASE5/dotfiles/pkg/.leaf-dir"
+printf 'user first\n' >"$CASE5/home/.first"
+printf 'user nested\n' >"$CASE5/home/.leaf-dir/important"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE5/dotfiles" "$CASE5/home" 2>&1) || status=$?
+DIR5_BACKUPS=("$CASE5/home"/.leaf-dir.backup.*)
+FIRST5_BACKUPS=("$CASE5/home"/.first.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '[Hard Block]' <<<"$out" &&
+  [ -d "$CASE5/home/.leaf-dir" ] &&
+  grep -qx 'user nested' "$CASE5/home/.leaf-dir/important" &&
+  grep -qx 'user first' "$CASE5/home/.first" &&
+  [ ! -e "${DIR5_BACKUPS[0]}" ] &&
+  [ ! -L "${DIR5_BACKUPS[0]}" ] &&
+  [ ! -e "${FIRST5_BACKUPS[0]}" ]; then
+  report "fail-real-directory-leaf (디렉터리 충돌 시 사전 차단, 이전 사용자 파일도 이동 금지)" 0
+else
+  report "fail-real-directory-leaf (디렉터리 충돌 시 사전 차단, 이전 사용자 파일도 이동 금지)" 1 "exit=$status out=$out"
+fi
+
+# A symlink to an external, existing directory must remain at its original
+# path too: backing up only the symlink still severs the user's configuration.
+CASE5B="$TMP/case5b"
+mkdir -p "$CASE5B/dotfiles/pkg" "$CASE5B/home" "$CASE5B/external"
+printf 'managed\n' >"$CASE5B/dotfiles/pkg/.linked-leaf"
+printf 'user private\n' >"$CASE5B/external/private"
+ln -s "$CASE5B/external" "$CASE5B/home/.linked-leaf"
+status=0
+out=$(bash "$BACKUP" pkg "$CASE5B/dotfiles" "$CASE5B/home" 2>&1) || status=$?
+DIR5B_BACKUPS=("$CASE5B/home"/.linked-leaf.backup.*)
+if [ "$status" -ne 0 ] &&
+  grep -qF '[Hard Block]' <<<"$out" &&
+  [ -L "$CASE5B/home/.linked-leaf" ] &&
+  [ "$(readlink "$CASE5B/home/.linked-leaf")" = "$CASE5B/external" ] &&
+  grep -qx 'user private' "$CASE5B/external/private" &&
+  [ ! -e "${DIR5B_BACKUPS[0]}" ] &&
+  [ ! -L "${DIR5B_BACKUPS[0]}" ]; then
+  report "fail-external-directory-leaf (외부 사용자 디렉터리 링크 보존)" 0
+else
+  report "fail-external-directory-leaf (외부 사용자 디렉터리 링크 보존)" 1 "exit=$status out=$out"
+fi
+
+# After the user manually resolves the directory collision, the next run
+# must still back up ordinary conflicting files without losing their content.
+mv "$CASE5/home/.leaf-dir" "$CASE5/manual-save"
+status=0
+bash "$BACKUP" pkg "$CASE5/dotfiles" "$CASE5/home" || status=$?
+RETRY5_BACKUPS=("$CASE5/home"/.first.backup.*)
+if [ "$status" -eq 0 ] &&
+  [ ! -e "$CASE5/home/.first" ] &&
+  [ -f "${RETRY5_BACKUPS[0]}" ] &&
+  grep -qx 'user first' "${RETRY5_BACKUPS[0]}" &&
+  grep -qx 'user nested' "$CASE5/manual-save/important"; then
+  report "ok-directory-collision-retry (사용자 수동 해결 후 일반 파일 안전 백업)" 0
+else
+  report "ok-directory-collision-retry (사용자 수동 해결 후 일반 파일 안전 백업)" 1 "exit=$status"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
