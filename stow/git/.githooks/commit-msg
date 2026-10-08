@@ -87,7 +87,24 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 # 3순위를 남기는 이유: 이 훅은 core.hooksPath 로 전역 배포되는데, 심볼릭 링크가 아니라
 # 복사본으로 배치한 환경에서는 2순위가 저장소 밖을 가리킨다. 그 경우 기존 동작을 그대로
 # 보존해 어떤 배포 형태에서도 지금보다 나빠지지 않게 한다.
-CM_HOOK_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# macOS 기본 BSD readlink에는 GNU -f가 없다. 전역 훅의 symlink 체인을
+# plain readlink + cd -P로 해석해야 비표준 HOME/클론 위치에서도 analyzer를 찾는다.
+cm_canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+CM_HOOK_PATH=$(cm_canonical_path "${BASH_SOURCE[0]}")
+CM_HOOK_DIR=$(dirname "$CM_HOOK_PATH")
 CM_DOTFILES_ROOT=$(cd "$CM_HOOK_DIR/../../.." 2>/dev/null && pwd || echo "")
 
 LINT_SCRIPT="$REPO_ROOT/bin/linters/semantic-commit-lint.sh"
