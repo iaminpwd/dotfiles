@@ -68,11 +68,25 @@ _reconcile_dir_symlink() {
   _reconcile_symlink "$target" "$src"
 }
 
+# Bash process substitution hides the exit code of find. Inventory *both*
+# lists before moving any user file: a partial scan must fail closed instead
+# of leaving a half-migrated home directory.
+STOW_INVENTORY=$(mktemp -d)
+trap 'rm -rf "$STOW_INVENTORY"' EXIT
+if ! find "$DOTFILES_DIR/$PKG" -mindepth 1 -type d -print0 >"$STOW_INVENTORY/dirs"; then
+  echo "❌ [Hard Block] Stow 소스 탐색 실패 (directories): $DOTFILES_DIR/$PKG" >&2
+  exit 1
+fi
+if ! find "$DOTFILES_DIR/$PKG" -type f -print0 >"$STOW_INVENTORY/files"; then
+  echo "❌ [Hard Block] Stow 소스 탐색 실패 (files): $DOTFILES_DIR/$PKG" >&2
+  exit 1
+fi
+
 while IFS= read -r -d '' SRC_DIR; do
   REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
   TARGET="$HOME_DIR/$REL_PATH"
   [ -L "$TARGET" ] && _reconcile_dir_symlink "$TARGET" "$SRC_DIR"
-done < <(find "$DOTFILES_DIR/$PKG" -mindepth 1 -type d -print0)
+done <"$STOW_INVENTORY/dirs"
 
 # 파일은 심볼릭 링크 정리 + "실제 파일이 그 경로를 차지하고 있는" 진짜 충돌까지 다룬다.
 while IFS= read -r -d '' SRC_FILE; do
@@ -84,5 +98,5 @@ while IFS= read -r -d '' SRC_FILE; do
     mkdir -p "$(dirname "$TARGET")"
     mv "$TARGET" "$(_next_backup_path "$TARGET")"
   fi
-done < <(find "$DOTFILES_DIR/$PKG" -type f -print0)
+done <"$STOW_INVENTORY/files"
 exit 0
