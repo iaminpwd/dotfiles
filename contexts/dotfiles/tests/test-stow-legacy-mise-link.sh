@@ -73,4 +73,60 @@ if [ -e "$TMP/home-legacy/.mise.toml" ] || [ -L "$TMP/home-legacy/.mise.toml" ];
   exit 1
 fi
 
-echo 'PASS: stow role removes only repository-owned legacy ~/.mise.toml links'
+# The role must reject foreign shared-config symlinks before attempting
+# the first mkdir; an external directory must remain untouched on failure.
+FOREIGN_HOME="$TMP/home-foreign"
+FOREIGN_STORE="$TMP/user-config-store"
+mkdir -p "$FOREIGN_HOME" "$FOREIGN_STORE"
+printf 'personal configuration\n' >"$FOREIGN_STORE/private.conf"
+ln -s "../user-config-store" "$FOREIGN_HOME/.config"
+status=0
+STOW_TEST_HOME="$FOREIGN_HOME" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
+  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/foreign.out" 2>&1 || status=$?
+if [ "$status" -eq 0 ] || [ ! -L "$FOREIGN_HOME/.config" ] ||
+  [ "$(readlink "$FOREIGN_HOME/.config")" != "../user-config-store" ] ||
+  [ -e "$FOREIGN_STORE/mise" ] ||
+  [ ! -f "$FOREIGN_STORE/private.conf" ] ||
+  ! grep -qF "외부 Mise 설정 디렉토리 링크 사전 차단" "$TMP/foreign.out"; then
+  cat "$TMP/foreign.out"
+  echo 'FAIL: stow role modified a foreign ~/.config before rejecting it'
+  exit 1
+fi
+
+# Nested ~/.config/mise may likewise be a user-owned directory symlink.
+NESTED_HOME="$TMP/home-nested"
+NESTED_STORE="$TMP/user-mise-store"
+mkdir -p "$NESTED_HOME/.config" "$NESTED_STORE"
+printf 'personal configuration\n' >"$NESTED_STORE/config.toml"
+ln -s "../../user-mise-store" "$NESTED_HOME/.config/mise"
+status=0
+STOW_TEST_HOME="$NESTED_HOME" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
+  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/nested.out" 2>&1 || status=$?
+if [ "$status" -eq 0 ] || [ ! -L "$NESTED_HOME/.config/mise" ] ||
+  [ "$(readlink "$NESTED_HOME/.config/mise")" != "../../user-mise-store" ] ||
+  [ ! -f "$NESTED_STORE/config.toml" ]; then
+  cat "$TMP/nested.out"
+  echo 'FAIL: stow role altered an external ~/.config/mise symlink'
+  exit 1
+fi
+
+# Previous Stow tree-folding may have created a symlink to *our* .config tree.
+# The preflight must not block this valid managed link on upgrades.
+MANAGED_HOME="$TMP/home-managed"
+mkdir -p "$MANAGED_HOME" "$TMP/repo/stow/mise/.config/mise"
+ln -s "../repo/stow/mise/.config" "$MANAGED_HOME/.config"
+STOW_TEST_HOME="$MANAGED_HOME" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
+  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/managed.out" 2>&1 || {
+  cat "$TMP/managed.out"
+  echo 'FAIL: stow preflight incorrectly rejected an existing managed .config symlink'
+  exit 1
+}
+if [ ! -L "$MANAGED_HOME/.config" ] ||
+  [ "$(readlink "$MANAGED_HOME/.config")" != "../repo/stow/mise/.config" ] ||
+  [ ! -d "$MANAGED_HOME/.config/mise" ]; then
+  cat "$TMP/managed.out"
+  echo 'FAIL: existing Stow-owned .config symlink was disturbed'
+  exit 1
+fi
+
+echo 'PASS: stow role preserves foreign .config/mise links before mkdir and keeps managed links'
