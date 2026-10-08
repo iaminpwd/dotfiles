@@ -241,3 +241,45 @@ printf '[core]\n    editor = user-editor\n' >"$TMP/local-config"
 sed "s#~/.gitconfig.local#$TMP/local-config#" "$ROOT/stow/git/.gitconfig" >"$TMP/gitconfig"
 [ "$(git config --file "$TMP/gitconfig" --includes --get core.editor)" = user-editor ]
 echo 'PASS: Git 로컬 오버라이드 우선순위'
+
+# bootstrap.sh is a public entrypoint as well. Calling it through a symbolic
+# link must resolve the source repository before invoking install-mise.sh.
+# Exercise the actual bootstrap file, but stop at a stub installer before
+# anything touches the network, package manager, or real HOME.
+BOOT_SOURCE="$TMP/bootstrap-source"
+BOOT_ENTRY="$TMP/bootstrap-entry"
+BOOT_OUTER="$TMP/bootstrap-outer"
+BOOT_MOCK="$TMP/bootstrap-mock-bin"
+mkdir -p "$BOOT_SOURCE/bin/utils" "$BOOT_ENTRY" "$BOOT_OUTER" "$BOOT_MOCK" "$TMP/bootstrap-home"
+cp "$ROOT/bootstrap.sh" "$BOOT_SOURCE/bootstrap.sh"
+cat >"$BOOT_SOURCE/bin/utils/install-mise.sh" <<'STUB'
+#!/bin/sh
+echo BOOTSTRAP_MISE_STUB_REACHED
+exit 73
+STUB
+cat >"$BOOT_MOCK/apt-get" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+cat >"$BOOT_MOCK/id" <<'STUB'
+#!/bin/sh
+if [ "\${1:-}" = "-u" ]; then
+  echo 0
+else
+  exec /usr/bin/id "$@"
+fi
+STUB
+chmod +x "$BOOT_MOCK/apt-get" "$BOOT_MOCK/id"
+ln -s "../bootstrap-source/bootstrap.sh" "$BOOT_ENTRY/bootstrap.sh"
+ln -s "../bootstrap-entry/bootstrap.sh" "$BOOT_OUTER/bootstrap.sh"
+
+for entry in "$BOOT_SOURCE/bootstrap.sh" "$BOOT_ENTRY/bootstrap.sh" "$BOOT_OUTER/bootstrap.sh"; do
+  bootstrap_rc=0
+  bootstrap_out=$(HOME="$TMP/bootstrap-home" PATH="$BOOT_MOCK:$PATH" bash "$entry" </dev/null 2>&1) || bootstrap_rc=$?
+  if [ "$bootstrap_rc" -ne 73 ] || ! grep -qF 'BOOTSTRAP_MISE_STUB_REACHED' <<<"$bootstrap_out"; then
+    echo "FAIL: bootstrap.sh cannot reach its own installer through entrypoint $entry (exit=$bootstrap_rc)"
+    printf '%s\n' "$bootstrap_out"
+    exit 1
+  fi
+done
+echo 'PASS: bootstrap direct/single-link/chained-link execution resolves source repo'
