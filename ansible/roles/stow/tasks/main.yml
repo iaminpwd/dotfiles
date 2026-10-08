@@ -1,4 +1,33 @@
 ---
+# Guard the user-owned shared config tree *before* creating .config/mise.
+# Otherwise the mkdir below follows a foreign ~/.config or ~/.config/mise
+# symlink and writes into that external directory before stow-backup blocks it.
+# Preserve historical Stow links only when they resolve to this package's
+# exact managed .config or .config/mise source.
+- name: Mise 설정 경로의 심볼릭 링크 소유권 확인
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/{{ item }}"
+    follow: false
+  loop:
+    - .config
+    - .config/mise
+  register: stow_mise_path_stat
+
+- name: 외부 Mise 설정 디렉토리 링크 사전 차단
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (item.stat.islnk | default(false)) or
+        (item.stat.lnk_source | default('')) ==
+        ((role_path | dirname | dirname | dirname) ~ '/stow/mise/' ~ item.item)
+    fail_msg: >-
+      사용자 설정 디렉토리의 외부 심볼릭 링크를 변경하지 않습니다:
+      {{ ansible_env.HOME }}/{{ item.item }}
+      (Stow 설치 전에 해당 링크를 수동 확인해야 합니다)
+  loop: "{{ stow_mise_path_stat.results }}"
+  loop_control:
+    label: "{{ ansible_env.HOME }}/{{ item.item }}"
+
 - name: Local 전용 오버라이드 폴더 확보
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.config/mise"
