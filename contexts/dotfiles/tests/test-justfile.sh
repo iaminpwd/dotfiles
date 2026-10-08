@@ -49,3 +49,60 @@ if ! grep -Fq "Idempotency check: '$INJECTION_TARGET'" <<<"$out"; then
   exit 1
 fi
 echo 'PASS: Justfile filename substitutions stay literal'
+
+# docs-index must replace the index atomically in its own directory, while
+# preserving the current document's access mode and leaving it intact on errors.
+INDEX_FAKE="$TMP/docs-index-repo"
+mkdir -p "$INDEX_FAKE/contexts" "$INDEX_FAKE/bin/utils" "$INDEX_FAKE/mock-bin"
+cp "$ROOT/Justfile" "$INDEX_FAKE/Justfile"
+cat >"$INDEX_FAKE/bin/utils/generate-context-index.sh" <<'GEN'
+#!/usr/bin/env bash
+printf '# regenerated index\n'
+if [ "${INDEX_FIXTURE_FAIL:-0}" = 1 ]; then
+  printf '# partial content\n'
+  exit 19
+fi
+GEN
+cat >"$INDEX_FAKE/mock-bin/mv" <<'MOVE'
+#!/usr/bin/env bash
+set -euo pipefail
+source_file=$1
+source_dir=$(cd -P "$(dirname "$source_file")" && pwd)
+if [ "$source_dir" != "$INDEX_EXPECTED_DIR" ]; then
+  echo "FAIL: docs-index temp is outside the destination filesystem: $source_file" >&2
+  exit 88
+fi
+exec /bin/mv "$@"
+MOVE
+chmod +x "$INDEX_FAKE/mock-bin/mv"
+INDEX_FILE="$INDEX_FAKE/contexts/INDEX.md"
+printf '# existing index\n' >"$INDEX_FILE"
+index_mode() {
+  stat -c %a "$INDEX_FILE" 2>/dev/null || stat -f %Lp "$INDEX_FILE"
+}
+for expected_mode in 644 640; do
+  chmod "$expected_mode" "$INDEX_FILE"
+  index_rc=0
+  index_out=$(cd "$INDEX_FAKE" && INDEX_EXPECTED_DIR="$INDEX_FAKE/contexts" PATH="$INDEX_FAKE/mock-bin:$PATH" just docs-index 2>&1) || index_rc=$?
+  if [ "$index_rc" -ne 0 ] || ! grep -qx '# regenerated index' "$INDEX_FILE" ||
+    [ "$(index_mode)" != "$expected_mode" ]; then
+    echo "FAIL: docs-index replacement must use same-directory rename and preserve mode $expected_mode (exit=$index_rc, mode=$(index_mode))" >&2
+    printf '%s\n' "$index_out" >&2
+    exit 1
+  fi
+done
+echo 'PASS: docs-index keeps original mode and uses same-directory rename'
+
+# Generation that emits a partial document and fails must not truncate the
+# original INDEX.md or leave stale private staging files in contexts/.
+printf '# original preserved on failure\n' >"$INDEX_FILE"
+chmod 640 "$INDEX_FILE"
+index_rc=0
+index_out=$(cd "$INDEX_FAKE" && INDEX_FIXTURE_FAIL=1 INDEX_EXPECTED_DIR="$INDEX_FAKE/contexts" PATH="$INDEX_FAKE/mock-bin:$PATH" just docs-index 2>&1) || index_rc=$?
+if [ "$index_rc" -eq 0 ] || ! grep -qx '# original preserved on failure' "$INDEX_FILE" ||
+  [ "$(index_mode)" != 640 ] || compgen -G "$INDEX_FAKE/contexts/.INDEX.md.*" >/dev/null; then
+  echo "FAIL: docs-index generator error overwrote the original or left staging files (exit=$index_rc)" >&2
+  printf '%s\n' "$index_out" >&2
+  exit 1
+fi
+echo 'PASS: docs-index preserves the document and removes temp on generator failure'
