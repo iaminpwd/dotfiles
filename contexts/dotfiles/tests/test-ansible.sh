@@ -113,26 +113,33 @@ if [ -f "$PFC" ] && require_tool ansible-lint; then
     git -C "$root" add playbook.yml
   }
 
-  # Case 1: ansible/ansible-lint.yml 이 없는 저장소 — 지적 없는 플레이북은 통과해야 한다.
+  # Both external repositories have independent Git indexes, working trees and
+  # ansible-lint's per-repository .ansible directories. Prepare both before
+  # starting their pre-flight checks; use the existing parallel-pair SSOT.
   AR1="$ANS_TMP/repo-ok"
+  AR2="$ANS_TMP/repo-fail"
   new_ansible_repo "$AR1" "$FIXTURES/lint-ok/playbook.yml"
-  status=0
-  out=$( (cd "$AR1" && QUIET=0 bash "$PFC") 2>&1) || status=$?
-  if [ "$status" -eq 0 ]; then
+  new_ansible_repo "$AR2" "$FIXTURES/lint-fail/playbook.yml"
+  # shellcheck disable=SC2034,SC2016 # nameref / expand positional args in child
+  CMD_FOREIGN_OK=(bash -c 'cd "$1" && QUIET=0 bash "$2"' _ "$AR1" "$PFC")
+  # shellcheck disable=SC2034,SC2016
+  CMD_FOREIGN_FAIL=(bash -c 'cd "$1" && QUIET=0 bash "$2"' _ "$AR2" "$PFC")
+  ok_status=0
+  fail_status=0
+  parallel_pair_run CMD_FOREIGN_OK CMD_FOREIGN_FAIL ok_status fail_status "$ANS_TMP/foreign-ok.out" "$ANS_TMP/foreign-fail.out"
+
+  # Case 1: an external repository without ansible/ansible-lint.yml is valid.
+  if [ "$ok_status" -eq 0 ]; then
     report "foreign-repo-no-config (설정 파일 없는 저장소 -> 오탐 차단 없음)" 0
   else
-    report "foreign-repo-no-config (설정 파일 없는 저장소 -> 오탐 차단 없음)" 1 "기대 exit=0 / 실제 exit=$status out=$out"
+    report "foreign-repo-no-config (설정 파일 없는 저장소 -> 오탐 차단 없음)" 1 "기대 exit=0 / 실제 exit=$ok_status out=$(cat "$ANS_TMP/foreign-ok.out")"
   fi
 
-  # Case 2: 같은 조건에서 실제 위반은 여전히 잡아야 한다(린트가 살아 있음을 증명).
-  AR2="$ANS_TMP/repo-fail"
-  new_ansible_repo "$AR2" "$FIXTURES/lint-fail/playbook.yml"
-  status=0
-  out=$( (cd "$AR2" && QUIET=0 bash "$PFC") 2>&1) || status=$?
-  if [ "$status" -ne 0 ] && grep -qF "ansible-lint 지적 사항이 발견되어" <<<"$out"; then
+  # Case 2: the same no-config situation must still reject real lint findings.
+  if [ "$fail_status" -ne 0 ] && grep -qF "ansible-lint 지적 사항이 발견되어" "$ANS_TMP/foreign-fail.out"; then
     report "foreign-repo-no-config-still-lints (설정 파일 없어도 실제 위반은 차단)" 0
   else
-    report "foreign-repo-no-config-still-lints (설정 파일 없어도 실제 위반은 차단)" 1 "기대 exit≠0 + ansible-lint 문구 / 실제 exit=$status out=$out"
+    report "foreign-repo-no-config-still-lints (설정 파일 없어도 실제 위반은 차단)" 1 "기대 exit≠0 + ansible-lint 문구 / 실제 exit=$fail_status out=$(cat "$ANS_TMP/foreign-fail.out")"
   fi
 
   rm -rf "$ANS_TMP"
