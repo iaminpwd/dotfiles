@@ -55,7 +55,14 @@ for sha in $COMMITS; do
   # 즉시 exit 0 했고, 이 게이트가 통째로 무력화됐다(실측: e914651 머지 이후 24개 커밋이
   # 한 번도 검증되지 않음). --no-walk 는 조상을 따라가지 않고 주어진 커밋 자체만 본다.
   SOURCE=""
-  [ -n "$(git rev-list --no-walk --merges "$sha")" ] && SOURCE="merge"
+  # A Git error is not a valid "non-merge" result: fail closed.
+  if ! MERGE_COMMITS=$(git rev-list --no-walk --merges "$sha"); then
+    echo "❌ 커밋 병합 여부 확인 실패: $sha" >&2
+    exit 1
+  fi
+  if [ -n "$MERGE_COMMITS" ]; then
+    SOURCE="merge"
+  fi
   MSG_FILE=$(mktemp)
   git log --format=%B -n1 "$sha" >"$MSG_FILE"
   if ! bash stow/git/.githooks/commit-msg "$MSG_FILE" "$SOURCE"; then
