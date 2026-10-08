@@ -174,9 +174,9 @@
   register: ai_agent_hooks_merge_result
   changed_when: "'[CHANGED]' in ai_agent_hooks_merge_result.stdout"
 
-# 폴더 전체가 심볼릭 링크로만 구성된(=이 롤이 만든) 경우에만 삭제한다. 사용자가 직접
-# 만들었거나 다른 도구로 설치해 실제 파일이 섞여 있는 폴더는 이름이 우연히 contexts/
-# 도메인 목록에 없어도 건드리지 않는다 (bin/utils/prune-orphan-skills.sh 참고).
+# 폐기 도메인은 과거 ai_agent가 만든 네 종류의 동일 도메인 에셋 링크만 있고
+# 실제로 관리 링크가 하나 이상 확인된 경우에만 삭제한다. 사용자 에셋, 빈 폴더,
+# 다른 도구가 링크한 스킬 디렉토리는 보존한다 (prune-orphan-skills.sh 참고).
 - name: 고아(Orphan) 스킬 폴더 정리 (소유권 검증 후 삭제)
   ansible.builtin.command:
     cmd: >-
