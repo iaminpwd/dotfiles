@@ -39,7 +39,22 @@ _is_valid_domain() {
 for dir in "$SKILLS_DIR"/*/; do
   [ -d "$dir" ] || continue
   name=$(basename "$dir")
-  _is_valid_domain "$name" && continue
+  # A live skill domain can lose an individual optional asset. Ansible only
+  # links assets that currently exist and otherwise leaves old links behind.
+  # Prune only a broken symlink at this role's exact managed source path:
+  # never remove user files, foreign symlinks, or working managed links.
+  if _is_valid_domain "$name"; then
+    for asset in SKILL.md references scripts examples; do
+      entry="${dir}${asset}"
+      managed_source="$MANAGED_CONTEXTS_DIR/$name/$asset"
+      if [ -L "$entry" ] && [ "$(readlink "$entry")" = "$managed_source" ] &&
+        [ ! -e "$managed_source" ]; then
+        rm "$entry"
+        echo "  [PRUNED] $entry (removed managed asset: $managed_source)"
+      fi
+    done
+    continue
+  fi
 
   FOREIGN=0
   while IFS= read -r -d '' entry; do
