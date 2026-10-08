@@ -70,12 +70,12 @@ verify:
 # 쓰면 생성기가 실패한 경우 INDEX.md가 빈 파일로 날아간 채 끝난다(실측 재현). 임시 파일에
 # 먼저 받아 성공했을 때만 제자리로 옮긴다.
 # contexts/INDEX.md 재생성 (SKILL.md 라우팅 테이블이 바뀐 뒤 실행)
-docs-index:
-    @echo "=> Regenerating contexts/INDEX.md..."
 # 임시 파일은 반드시 목적지와 같은 디렉토리에 생성해 rename이 원자적으로 동작하도록 한다.
 # mktemp 기본 권한(0600)을 그대로 mv하면 기존 INDEX.md의 읽기 권한까지 사라지므로
 # 기존 모드를 GNU/BSD stat으로 보존하고 새 파일은 0644로 생성한다.
 # 생성/권한 변경/이동 도중 오류가 나도 EXIT trap으로 스테이징 파일을 정리한다.
+docs-index:
+    @echo "=> Regenerating contexts/INDEX.md..."
     tmp=$(mktemp contexts/.INDEX.md.XXXXXXXX) && \
     trap 'rm -f "$tmp"' EXIT && \
     if bash bin/utils/generate-context-index.sh > "$tmp"; then \
