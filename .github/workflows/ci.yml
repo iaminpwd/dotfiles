@@ -222,3 +222,4 @@ jobs:
           bash contexts/dotfiles/tests/test-stow-real-failure.sh
           bash contexts/dotfiles/tests/test-stow-real-unlink.sh
           bash contexts/dotfiles/tests/test-stow-ignore.sh
+          bash contexts/dotfiles/tests/test-stow-toctou.sh
