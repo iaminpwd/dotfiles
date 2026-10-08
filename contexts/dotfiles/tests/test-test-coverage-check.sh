@@ -61,6 +61,31 @@ else
   report "unreferenced-script-allowed" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# macOS의 BSD readlink는 GNU -f 옵션을 지원하지 않는다. 외부 저장소의
+# 테스트 게이트가 symlink 경로로 호출돼도 자신의 실제 저장소를 찾아야 한다.
+BSD_REPO="$TMP/repo-bsd-readlink"
+new_fixture_repo "$BSD_REPO"
+printf '#!/usr/bin/env bash\n' >"$BSD_REPO/contexts/fake/tests/run.sh"
+ln -s bin/linters/test-coverage-check.sh "$BSD_REPO/coverage-check-link"
+BSD_BIN="$BSD_REPO/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+EOF
+chmod +x "$BSD_BIN/readlink"
+status=0
+out=$( (cd "$BSD_REPO" && PATH="$BSD_BIN:$PATH" QUIET=0 bash ./coverage-check-link) 2>&1) || status=$?
+if [ "$status" -eq 0 ] && ! grep -qF 'illegal option -- f' <<<"$out"; then
+  report "bsd-readlink-symlink (GNU readlink -f 없이 실제 저장소의 검사기 실행)" 0
+else
+  report "bsd-readlink-symlink (GNU readlink -f 없이 실제 저장소의 검사기 실행)" 1 "exit=$status out=$out"
+fi
+
 # 7. 등록 누락 하드 게이트: tests/ 에 테스트 파일이 있는데 run.sh 목록에 없으면 exit 1.
 R7="$TMP/repo7"
 new_fixture_repo "$R7"

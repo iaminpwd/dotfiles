@@ -5,7 +5,24 @@
 
 set -euo pipefail
 
-TCC_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# GNU readlink -f는 macOS 기본 BSD readlink에 없다. symlink/상대 경로를
+# plain readlink + cd -P로 해석해 호출 CWD와 관계없이 정본 저장소를 찾는다.
+tcc_canonical_path() {
+  local path=$1 dir target
+  while [ -L "$path" ]; do
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+TCC_SCRIPT_PATH=$(tcc_canonical_path "${BASH_SOURCE[0]}")
+TCC_SCRIPT_DIR=$(dirname "$TCC_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
 source "$TCC_SCRIPT_DIR/../lib/script-init.sh"
 
