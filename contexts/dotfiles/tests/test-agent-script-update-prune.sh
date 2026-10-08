@@ -30,6 +30,15 @@ ln -s "$REPO/bin/live-tool.sh" "$LOCAL_BIN/live-tool.sh"
 ln -s "$REPO/contexts/demo/scripts/live-context.sh" "$LOCAL_BIN/live-context.sh"
 ln -s "$REPO/bin/missing-tool.sh" "$LOCAL_BIN/missing-tool.sh"
 
+# 사용자 별칭은 같은 dotfiles 원본을 가리켜도 과거 Ansible 배포물이 아니다.
+ln -s "$REPO/bin/live-tool.sh" "$LOCAL_BIN/my-tool-alias.sh"
+ln -s "$REPO/contexts/demo/scripts/live-context.sh" "$LOCAL_BIN/my-context-alias.sh"
+
+# 스크립트가 아닌 파일과 비정규화 경로는 과거 배포 경로가 아니다.
+printf 'name: demo\n' >"$REPO/contexts/demo/SKILL.md"
+ln -s "$REPO/contexts/demo/SKILL.md" "$LOCAL_BIN/SKILL.md"
+ln -s "$REPO/bin/../bin/live-tool.sh" "$LOCAL_BIN/traversal-tool.sh"
+
 # ~/.local/bin은 공유 경로이므로 외부 소유 링크는 살아 있든 깨졌든 보존해야 한다.
 ln -s "$TMP/foreign/live.sh" "$LOCAL_BIN/foreign-live.sh"
 ln -s "$TMP/foreign/missing.sh" "$LOCAL_BIN/foreign-broken.sh"
@@ -43,7 +52,7 @@ for name in live-tool.sh live-context.sh missing-tool.sh; do
   fi
 done
 
-for name in foreign-live.sh foreign-broken.sh; do
+for name in foreign-live.sh foreign-broken.sh my-tool-alias.sh my-context-alias.sh SKILL.md traversal-tool.sh; do
   if [ ! -L "$LOCAL_BIN/$name" ]; then
     echo "FAIL: 외부 사용자 소유 ~/.local/bin 링크까지 삭제했습니다: $name"
     exit 1
@@ -54,6 +63,13 @@ ROLE="$ROOT/ansible/roles/ai_agent/tasks/main.yml"
 if grep -Fq 'dest: "{{ ansible_env.HOME }}/.local/bin/{{ item.path | basename }}"' "$ROLE" ||
   grep -Fq 'register: ai_agent_scripts_find' "$ROLE"; then
   echo 'FAIL: ai_agent role이 여전히 저장소 스크립트를 ~/.local/bin에 전역 평탄화합니다.'
+  exit 1
+fi
+
+# 재실행해도 보존된 사용자 링크는 건드리지 않고 추가 [PRUNED]가 없어야 한다.
+second_run=$(bash "$ROOT/bin/utils/prune-orphan-agent-scripts.sh" "$REPO" "$LOCAL_BIN")
+if grep -qF '[PRUNED]' <<<"$second_run"; then
+  echo 'FAIL: 레거시 정리기가 두 번째 실행에서도 링크를 삭제했습니다.'
   exit 1
 fi
 
