@@ -72,8 +72,17 @@ mkdir -p "$SKILLS/my-own-skill"
 ln -s "$TMP/somewhere/SKILL.md" "$SKILLS/my-own-skill/SKILL.md"
 echo "사용자가 직접 만든 실제 파일" >"$SKILLS/my-own-skill/notes.txt"
 
-# 6. pruned-empty: 도메인 목록에 없고 비어 있으면 안전하게(잃을 게 없으므로) 삭제된다.
+# 6. keep-empty-user-dir: 빈 폴더만으로는 ai_agent가 생성했다는 소유권을 증명하지 못한다.
 mkdir -p "$SKILLS/empty-orphan"
+
+# 6a. Even a matching contexts/<domain> source is not proof of ownership
+# when the asset name was never deployed by the ai_agent role.
+mkdir -p "$SKILLS/custom-only" "$SKILLS/managed-plus-custom" "$SKILLS/managed-plus-hidden"
+ln -s "$REPO_ROOT/contexts/custom-only/notes.md" "$SKILLS/custom-only/notes.md"
+ln -s "$REPO_ROOT/contexts/managed-plus-custom/SKILL.md" "$SKILLS/managed-plus-custom/SKILL.md"
+ln -s "$REPO_ROOT/contexts/managed-plus-custom/notes.md" "$SKILLS/managed-plus-custom/notes.md"
+ln -s "$REPO_ROOT/contexts/managed-plus-hidden/SKILL.md" "$SKILLS/managed-plus-hidden/SKILL.md"
+printf 'my hidden file\n' >"$SKILLS/managed-plus-hidden/.private-note"
 
 OUT=$(bash "$SCRIPT" "$SKILLS" aws k8s 2>&1)
 
@@ -111,10 +120,47 @@ else
   report "fail-foreign-real-file (실제 파일이 섞여 있으면 보존 + 경고)" 1 "$(ls -la "$SKILLS/my-own-skill" 2>&1)"
 fi
 
-if [ ! -e "$SKILLS/empty-orphan" ]; then
-  report "pruned-empty (빈 고아 폴더는 삭제)" 0
+if [ -d "$SKILLS/empty-orphan" ]; then
+  report "keep-empty-user-dir (소유권 불명 빈 폴더는 보존)" 0
 else
-  report "pruned-empty (빈 고아 폴더는 삭제)" 1 "$(ls -la "$SKILLS" 2>&1)"
+  report "keep-empty-user-dir (소유권 불명 빈 폴더는 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
+fi
+
+# 6a. Custom names and hidden user files must never be treated as old role output.
+if [ -L "$SKILLS/custom-only/notes.md" ] &&
+  [ -L "$SKILLS/managed-plus-custom/notes.md" ] &&
+  [ -L "$SKILLS/managed-plus-custom/SKILL.md" ] &&
+  [ -f "$SKILLS/managed-plus-hidden/.private-note" ]; then
+  report "keep-custom-assets (임의 에셋 링크 및 숨김 사용자 파일 보존)" 0
+else
+  report "keep-custom-assets (임의 에셋 링크 및 숨김 사용자 파일 보존)" 1 "$(ls -la "$SKILLS" 2>&1)"
+fi
+
+# A top-level alias to a skill directory may be managed by another application.
+LINKED="$TMP/symlinked-skills"
+mkdir -p "$LINKED" "$TMP/external-skill-folder"
+ln -s "$REPO_ROOT/contexts/aws/references" "$TMP/external-skill-folder/references"
+ln -s "$TMP/external-skill-folder" "$LINKED/aws"
+OUT_LINK=$(bash "$SCRIPT" "$LINKED" aws k8s 2>&1)
+if [ -L "$LINKED/aws" ] && [ -L "$TMP/external-skill-folder/references" ]; then
+  report "keep-linked-skill-dir (외부 폴더로 연결된 도메인 링크를 탐색·삭제하지 않음)" 0
+else
+  report "keep-linked-skill-dir (외부 폴더로 연결된 도메인 링크를 탐색·삭제하지 않음)" 1 "output=$OUT_LINK"
+fi
+
+# A failed inventory scan must fail closed, not treat a directory as empty.
+FAIL_FIND="$TMP/failing-find"
+FAIL_DIR="$TMP/unreadable-inventory"
+mkdir -p "$FAIL_FIND" "$FAIL_DIR/lost-skill"
+ln -s "$REPO_ROOT/contexts/lost-skill/SKILL.md" "$FAIL_DIR/lost-skill/SKILL.md"
+printf '#!/bin/sh\nexit 1\n' >"$FAIL_FIND/find"
+chmod +x "$FAIL_FIND/find"
+OUT_FAIL_FIND=$(PATH="$FAIL_FIND:$PATH" bash "$SCRIPT" "$FAIL_DIR" aws k8s 2>&1)
+if [ -L "$FAIL_DIR/lost-skill/SKILL.md" ] &&
+  grep -qF "[SKIP]" <<<"$OUT_FAIL_FIND"; then
+  report "failed-inventory-preserves-dir (find 실패는 삭제가 아닌 보존)" 0
+else
+  report "failed-inventory-preserves-dir (find 실패는 삭제가 아닌 보존)" 1 "output=$OUT_FAIL_FIND"
 fi
 
 # 7. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
