@@ -111,17 +111,18 @@ jobs:
           CURRENT_SHA: ${{ github.sha }}
         run: bash .github/scripts/secret-history-scan.sh
 
-      - name: Install zsh (required by test-shell zsh -n subtest)
+      - name: Install zsh and GNU Stow (required by shell and ignore regression)
         run: |
           # Hosted runners already carry apt package indexes. Use them first to
           # avoid an unnecessary network-bound update on every Verify run.
           # If the pinned base image is stale, refresh indexes and retry.
           APT_OPTS=(-o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20)
-          if ! sudo apt-get "${APT_OPTS[@]}" install -y zsh; then
+          if ! sudo apt-get "${APT_OPTS[@]}" install -y zsh stow; then
             sudo apt-get "${APT_OPTS[@]}" update -qq
-            sudo apt-get "${APT_OPTS[@]}" install -y zsh
+            sudo apt-get "${APT_OPTS[@]}" install -y zsh stow
           fi
           zsh --version
+          stow --version
 
       # test-zshrc-activation.sh 는 실제 .zshrc가 source하는 Oh My Zsh까지 로드한 상태에서
       # 중첩 zsh의 mise/fzf 훅을 검증한다. 별도 버전 정본을 만들지 않고 zsh role의 고정 SHA를
