@@ -199,6 +199,9 @@ if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1
   # A local clone of the committed base fixture isolates both Git indexes.
   RENAME_REPO="$TMP/rename-environment"
   git clone -q "$FIXTURE_REPO" "$RENAME_REPO"
+  # Git clone does not copy local user identity needed by the fixture commit.
+  git -C "$RENAME_REPO" config user.email "test@example.com"
+  git -C "$RENAME_REPO" config user.name "Test"
   mkdir -p "$RENAME_REPO/stow/git/.githooks"
   cp "$HOOK" "$RENAME_REPO/stow/git/.githooks/pre-commit"
   for i in $(seq 1 200); do echo "filler line $i for rename similarity"; done >"$RENAME_REPO/notes.txt"
