@@ -61,7 +61,7 @@ run_sut() {
   HOME="$FAKE" bash "$REPO/.github/scripts/verify-bootstrap-env.sh" >"$TMP/out" 2>&1
 }
 failures=0
-for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook unsafe-mode missing-tool; do
+for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook unsafe-mode missing-tool unmanaged-stale stale-asset; do
   build_home
   case "$case" in
   wrong-link) ln -sf "$REPO/contexts/base.AGENTS.md" "$FAKE/.zshrc" ;;
@@ -72,10 +72,14 @@ for case in complete wrong-link missing-rule missing-skill missing-asset legacy-
   missing-hook) echo '{}' >"$FAKE/.claude/settings.json" ;;
   unsafe-mode) chmod 644 "$FAKE/.zshrc.local" ;;
   missing-tool) printf '#!/bin/sh\nexit 1\n' >"$FAKE/.local/bin/mise" ;;
+  # Deleting the final asset removes its source directory, but Ansible currently
+  # leaves its original links behind; verification must not report a clean install.
+  unmanaged-stale) ln -s "$TMP/user-owned-examples" "$FAKE/.claude/skills/k8s/examples" ;;
+  stale-asset) rm -rf "$REPO/contexts/aws/references" ;;
   esac
   rc=0
   run_sut || rc=$?
-  if { [ "$case" = complete ] && [ "$rc" = 0 ]; } || { [ "$case" != complete ] && [ "$rc" != 0 ]; }; then
+  if { { [ "$case" = complete ] || [ "$case" = unmanaged-stale ]; } && [ "$rc" = 0 ]; } || { [ "$case" != complete ] && [ "$rc" != 0 ]; }; then
     echo "PASS: $case"
   else
     echo "FAIL: $case"
