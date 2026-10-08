@@ -55,4 +55,17 @@ bash "$ASSERT" "$TMP/missing.log" >"$TMP/missing.out" 2>&1 || status=$?
   exit 1
 }
 
+# Ansible이 실제 PLAY RECAP을 출력하지 않았는데 일반 진단 로그에
+# 동일한 카운터 문자열이 있는 경우도 성공으로 오인해서는 안 된다.
+# exit 0으로 끝난 bootstrap에서 Ansible 실행 자체가 생략된 회귀를 차단한다.
+cat >"$TMP/fake-recap.log" <<'EOF'
+[INFO] package summary: ok=57 changed=0 unreachable=0 failed=0 skipped=11
+EOF
+status=0
+bash "$ASSERT" "$TMP/fake-recap.log" >"$TMP/fake-recap.out" 2>&1 || status=$?
+[ "$status" -ne 0 ] || {
+  echo 'FAIL: PLAY RECAP 헤더가 없는 일반 카운터 출력이 idempotency gate를 통과했습니다.'
+  exit 1
+}
+
 echo 'PASS: 2차 bootstrap은 Ansible changed=0을 실제로 강제함'
