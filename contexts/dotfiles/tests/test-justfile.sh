@@ -31,10 +31,11 @@ echo 'PASS: Justfile check-idempotency가 공백 포함 파일 경로를 단일 
 
 # A repository filename may contain literal shell substitutions. The diagnostic
 # echo in the Justfile must never evaluate argument text as shell source.
+# shellcheck disable=SC2016 # a literal shell fragment in an adversarial filename
 INJECTION_NAME='$(touch${IFS}$JUST_INJECTION_MARKER).sh'
 INJECTION_TARGET="$TMP/$INJECTION_NAME"
 INJECTION_MARKER="$TMP/injected-by-just-echo"
-printf '#!/usr/bin/env bash\n' >"$INJECTION_TARGET"
+printf 'echo value >> /tmp/unused\n' >"$INJECTION_TARGET"
 status=0
 out=$(cd "$ROOT" && JUST_INJECTION_MARKER="$INJECTION_MARKER" just check-idempotency "$INJECTION_TARGET" 2>&1) || status=$?
 if [ "$status" -ne 0 ] || [ -e "$INJECTION_MARKER" ]; then
