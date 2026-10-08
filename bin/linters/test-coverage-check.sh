@@ -46,10 +46,28 @@ for tdir in "${TEST_DIRS[@]}"; do
   runner="$tdir/run.sh"
   registered_suites=""
   if [ -f "$runner" ]; then
-    # 현재 tests/run.sh 관례의 실제 실행 목록만 추출한다.
-    # 코드 어딘가의 echo/변수/dead branch 에 이름이 남아 있다는 이유로 등록됐다고
-    # 오판하지 않도록, `for suite in ...; do` 의 토큰만 진실의 원천으로 삼는다.
-    registered_suites=$(sed -nE 's/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+([^;]+);[[:space:]]*do[[:space:]]*$/\1/p' "$runner" | tr '\n' ' ')
+    # for suite in ...; do 목록만 읽는다. 길어진 dotfiles 목록은 Bash의
+    # backslash-newline 이어쓰기 한 줄에 테스트 하나씩 두며, 기존 한 줄 형식도 지원한다.
+    # 주석/echo/dead branch에서 이름을 발견해도 등록으로 인정하지 않는다.
+    # POSIX awk만 사용하여 macOS 기본 도구에서도 동일하게 검사한다.
+    registered_suites=$(awk '
+      /^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]/ {
+        statement = $0
+        while (statement ~ /\\[[:space:]]*$/) {
+          sub(/\\[[:space:]]*$/, "", statement)
+          if ((getline continuation) <= 0) {
+            statement = ""
+            break
+          }
+          statement = statement " " continuation
+        }
+        if (statement ~ /^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+[^;]+;[[:space:]]*do[[:space:]]*$/) {
+          sub(/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+/, "", statement)
+          sub(/;[[:space:]]*do[[:space:]]*$/, "", statement)
+          print statement
+        }
+      }
+    ' "$runner" | tr '\n' ' ')
   fi
   while IFS= read -r -d '' tfile; do
     if [ ! -f "$runner" ]; then
