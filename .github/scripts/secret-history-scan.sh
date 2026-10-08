@@ -46,6 +46,10 @@ if [ -n "$base_candidate" ] &&
     echo "❌ [Hard Block] 시크릿 스캔 범위의 merge-base를 계산할 수 없습니다." >&2
     exit 1
   fi
+elif [ "$event" = push ] && [ "$base_candidate" = "0000000000000000000000000000000000000000" ]; then
+  # A newly created ref can introduce many commits. Scan all reachable history.
+  # Choosing head^ here silently misses secrets added and removed before the tip.
+  :
 elif git rev-parse --verify -q "${head}^" >/dev/null; then
   base="${head}^"
 fi
