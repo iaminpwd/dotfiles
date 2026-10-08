@@ -29,7 +29,14 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #   bash bin/utils/broken-symlink-detector.sh
 FAILED=()
 for suite in test-zsh-updates test-zsh-supply-chain test-zsh-check-mode test-zsh-privilege-path test-zsh-shell-failure test-fresh-docker-session test-setup-behavior test-justfile test-ci-tool-config test-ci-secret-history test-bootstrap-changes test-bootstrap-idempotency-gate test-tflint-init test-tflint-interrupted-install test-detector-logic test-dead-legacy-aiexclude test-docs-aiexclude-consistency test-ansible test-agent-edits-hook test-semantic-commit-lint test-merge-agent-hooks test-fresh-install-agent-hooks test-stow-backup test-stow-legacy-mise-link test-stow-drift-portability test-safe-link-backup test-agent-batch-backup test-agent-script-update-prune test-prune-orphan-skills test-git-relpath test-jq-resolve test-tool-probe-ssot test-script-init test-plugin-targets test-run-suite test-pre-flight-gate-hook test-stop-regression-check test-commit-msg-hook test-pre-commit-hook test-pre-push-hook test-test-coverage-check test-zshrc-activation test-zshenv-path test-lint-commit-messages test-verify-bootstrap-env test-install-mise test-renovate-mise-self-pin test-generate-context-index; do
+  # CI-only diagnostic. Avoid output changes unless a caller requests timings.
+  if [ -n "${DOTFILES_SUITE_TIMING_LOG:-}" ]; then
+    started=$SECONDS
+  fi
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
+  if [ -n "${DOTFILES_SUITE_TIMING_LOG:-}" ]; then
+    printf '%s\t%d\n' "$suite" "$((SECONDS - started))" >> "$DOTFILES_SUITE_TIMING_LOG"
+  fi
   echo
 done
 

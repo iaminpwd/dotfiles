@@ -133,7 +133,19 @@ jobs:
           git -C "$HOME/.oh-my-zsh" checkout -q --detach FETCH_HEAD
 
       - name: Run full regression verification (check + test + prompt-lint)
-        run: PFC_PROFILE=full just verify
+        run: |
+          # Profile only the existing dotfiles test runner, without changing test
+          # order or passing criteria. Preserve the original failure exit code.
+          export DOTFILES_SUITE_TIMING_LOG="$RUNNER_TEMP/dotfiles-test-timings.tsv"
+          result=0
+          PFC_PROFILE=full just verify || result=$?
+          if [ -f "$DOTFILES_SUITE_TIMING_LOG" ]; then
+            echo "=== dotfiles test durations (seconds, slowest first) ==="
+            sort -t "$(printf '\t')" -k2,2nr "$DOTFILES_SUITE_TIMING_LOG"
+          else
+            echo "[WARNING] Dotfiles timing report was not produced."
+          fi
+          exit "$result"
 
   # bootstrap.sh가 지원 OS에서 끝까지 동작하고 재실행해도 안전한지(멱등성) 검증.
   # RHEL(dnf)은 네이티브 러너가 없고, 컨테이너로 대체하면 ansible docker 롤의 systemd 요구를
