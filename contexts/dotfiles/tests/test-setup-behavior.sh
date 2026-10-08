@@ -263,7 +263,7 @@ exit 0
 STUB
 cat >"$BOOT_MOCK/id" <<'STUB'
 #!/bin/sh
-if [ "\${1:-}" = "-u" ]; then
+if [ "${1:-}" = "-u" ]; then
   echo 0
 else
   exec /usr/bin/id "$@"
