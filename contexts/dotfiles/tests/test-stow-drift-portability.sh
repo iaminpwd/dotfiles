@@ -244,6 +244,8 @@ shutil.copy2(root / "bin/utils/stow-backup.sh",
              multi / "repo/bin/utils/stow-backup.sh")
 shutil.copy2(root / "bin/utils/stow-filter-inventory.pl",
              multi / "repo/bin/utils/stow-filter-inventory.pl")
+shutil.copy2(root / "bin/utils/stow-safe-backup.py",
+             multi / "repo/bin/utils/stow-safe-backup.py")
 (fakebin / "stow").write_text("""#!/usr/bin/env bash
 set -euo pipefail
 pkg=''
