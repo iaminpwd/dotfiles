@@ -1,0 +1,102 @@
+---
+- name: 기존 파일 백업 (stow 충돌 방지)
+  ansible.builtin.command:
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh" "{{ stow_package.path | basename }}" "{{ role_path }}/../../../stow/" "{{ ansible_env.HOME }}"
+  changed_when: false
+
+# stow 명령의 verbose stdout 문구("LINK:"/"UNLINK:")로 변경 여부를 판정하면 GNU Stow
+# 버전에 따라 출력 포맷이 달라질 때 조용히 changed=false 오판이 날 수 있다. 대신 stow를
+# 실행하기 전 실제 심볼릭 링크 상태(readlink)를 직접 비교해 드리프트 여부를 판정한다.
+- name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정
+  ansible.builtin.shell: |
+    set -euo pipefail
+
+    canonical_existing_file() {
+      local path=$1 dir base
+      dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
+      base=$(basename "$path")
+      [ -e "$dir/$base" ] || return 1
+      printf '%s/%s\n' "$dir" "$base"
+    }
+
+    PKG_DIR="{{ role_path }}/../../../stow/{{ stow_package.path | basename }}"
+    # Process substitution hides the exit status of find. Do not report "no drift"
+    # or proceed to Stow if filesystem discovery is incomplete.
+    STOW_FILE_LIST=$(mktemp)
+    trap 'rm -f "$STOW_FILE_LIST"' EXIT
+    if ! find "$PKG_DIR" -type f -print0 >"$STOW_FILE_LIST"; then
+      echo "❌ [Hard Block] Stow 소스 탐색 실패 (drift): $PKG_DIR" >&2
+      exit 1
+    fi
+    DRIFT=0
+    while IFS= read -r -d '' SRC; do
+      REL="${SRC#"$PKG_DIR"/}"
+      TARGET="{{ ansible_env.HOME }}/$REL"
+
+      # --no-folding 정책상 관리 대상은 파일 단위 symlink여야 한다.
+      # macOS 기본 BSD readlink에는 -f가 없으므로 plain readlink로 raw target을 읽고,
+      # 양쪽 부모 디렉토리는 cd -P로 정규화해 실제 파일 경로를 비교한다.
+      if [ ! -L "$TARGET" ]; then
+        DRIFT=1
+        break
+      fi
+      LINK_TARGET=$(readlink "$TARGET" 2>/dev/null) || {
+        DRIFT=1
+        break
+      }
+      case "$LINK_TARGET" in
+      /*) LINK_PATH="$LINK_TARGET" ;;
+      *) LINK_PATH="$(dirname "$TARGET")/$LINK_TARGET" ;;
+      esac
+      SRC_CANON=$(canonical_existing_file "$SRC") || {
+        DRIFT=1
+        break
+      }
+      LINK_CANON=$(canonical_existing_file "$LINK_PATH") || {
+        DRIFT=1
+        break
+      }
+      if [ "$LINK_CANON" != "$SRC_CANON" ]; then
+        DRIFT=1
+        break
+      fi
+    done <"$STOW_FILE_LIST"
+    echo "$DRIFT"
+  args:
+    executable: /bin/bash
+  register: stow_drift_check
+  changed_when: false
+  # 상태를 전혀 바꾸지 않는 읽기 전용 판정이라 --check(dry-run)에서도 그대로 실행한다.
+  # command/shell 모듈은 check 모드에서 기본적으로 건너뛰는데, 그러면 이 판정이 스킵되고
+  # stow_drift_check.results 가 비어 아래 stow 태스크까지 통째로 스킵돼, `just setup-dryrun`
+  # 이 stow 롤에 대해 아무것도 판정하지 않은 채 "변경 없음"처럼 보였다
+  # (실측: --tags stow --check → ok=4 skipped=4).
+  check_mode: false
+
+# --no-folding 필수: 대상 디렉토리(예: ~/.config/mise)를 미리 만들어 둬도 비어 있으면
+# GNU Stow가 그 부모(~/.config)까지 통째로 하나의 심볼릭 링크로 접어버린다(실측
+# 재현됨). 그러면 이후 다른 프로그램이 ~/.config/<자기이름>/에 쓰는 실제 설정·시크릿이
+# 전부 그 링크를 타고 이 저장소 디렉토리 안으로 흘러들어간다(실측: gh/infracost 인증
+# 정보가 유출된 사고). --no-folding으로 항상 리프 파일 단위로만 링크해 부모 디렉토리는
+# 실제 디렉토리로 남긴다.
+- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
+  ansible.builtin.command:
+    cmd: stow -t {{ ansible_env.HOME }} -R --no-folding --verbose {{ stow_package.path | basename }}
+    chdir: "{{ role_path }}/../../../stow/"
+  # GNU Stow -R unstows and restows the package. Running it on a clean package
+  # creates unnecessary filesystem mutations while reporting changed=false.
+  when:
+    - not ansible_check_mode
+    - stow_drift_check.stdout is defined
+    - stow_drift_check.stdout | trim == '1'
+  changed_when: "stow_drift_check.stdout is defined and stow_drift_check.stdout | trim == '1'"
+
+# 위 stow 태스크는 실제로 상태를 바꾸므로 check 모드에서는 계속 스킵된다. 그러면 dry-run
+# 사용자가 "무엇이 재링크될 예정인가"를 알 수 없으므로, 위 드리프트 판정 결과를 근거로
+# 대상 패키지 목록만 따로 출력한다.
+- name: 재링크 예정 stow 패키지 안내 (dry-run 전용)
+  ansible.builtin.debug:
+    msg: >-
+      {{ stow_package.path | basename }}:
+      {{ '재링크 예정' if (stow_drift_check.stdout | default('0') | trim == '1') else '드리프트 없음' }}
+  when: ansible_check_mode
