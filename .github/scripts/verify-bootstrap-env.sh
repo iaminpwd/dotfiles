@@ -38,9 +38,15 @@ for skill in (root / 'contexts').iterdir():
         continue
     for asset in ['SKILL.md', 'references', 'scripts', 'examples']:
         source = skill / asset
-        if source.exists():
-            for parent in ['.gemini/config', '.claude', '.agents']:
-                link(home / parent / 'skills' / skill.name / asset, source)
+        for parent in ['.gemini/config', '.claude', '.agents']:
+            target = home / parent / 'skills' / skill.name / asset
+            if source.exists():
+                link(target, source)
+            elif target.is_symlink():
+                # Source removal must not leave an old managed asset link unnoticed.
+                # Other user-owned symlinks are not our installation artifacts.
+                require(target.resolve(strict=False) != source.resolve(strict=False),
+                        f"삭제된 스킬 에셋 링크 잔존: {target}")
 local_bin = home / '.local/bin'
 if local_bin.is_dir():
     managed_roots = [root / 'bin', root / 'contexts']
