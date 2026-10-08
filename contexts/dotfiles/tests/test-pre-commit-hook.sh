@@ -18,6 +18,8 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
+# shellcheck source=tests/lib/parallel-pair.sh
+source "$REPO_ROOT/tests/lib/parallel-pair.sh"
 HOOK="$REPO_ROOT/stow/git/.githooks/pre-commit"
 
 PASS_COUNT=0
@@ -64,9 +66,16 @@ git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh
 # 셋업 커밋이므로 훅을 꺼서 격리한다.
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 초기 스텁 커밋"
 
+# The parallel secret cases use distinct Git directories and indexes. Never run two
+# staged-state mutations or scanners concurrently against the same fixture repository.
+run_hook() {
+  local repo=$1
+  (cd "$repo" && bash "$repo/stow/git/.githooks/pre-commit")
+}
+
 run_hook_allow_fail() {
   local status=0
-  (cd "$FIXTURE_REPO" && bash "$HOOK") >"$TMP/out" 2>&1 || status=$?
+  run_hook "$FIXTURE_REPO" >"$TMP/out" 2>&1 || status=$?
   echo "$status"
 }
 
@@ -178,51 +187,61 @@ git -C "$FIXTURE_REPO" reset -q -- ghost.txt 2>/dev/null || true
 #    실행 시점에 임시로 키를 만들어 쓴다.
 if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1 &&
   command -v openssl >/dev/null 2>&1; then
-  openssl genrsa -out "$FIXTURE_REPO/deploy_key" 2048 2>/dev/null
-  # -f: 전역 gitignore 가 키 계열 확장자를 걸러낼 수 있어 강제 스테이징한다.
+  # Reuse one ephemeral private key, but give each independent security case its own
+  # repository, Git index, working tree, hook path and output file.
+  openssl genrsa -out "$TMP/secret-key" 2048 2>/dev/null
+  cp "$TMP/secret-key" "$FIXTURE_REPO/deploy_key"
   git -C "$FIXTURE_REPO" add -f deploy_key
-  # 워킹트리에서만 시크릿 제거 (git add 를 다시 하지 않으므로 인덱스에는 그대로 남는다)
+  # Index retains the private key while worktree is clean (no second git add).
   echo "redacted" >"$FIXTURE_REPO/deploy_key"
-  status=$(run_hook_allow_fail)
-  if [ "$status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/out"; then
+
+  # The rename case must not commit or reset the first case's staged secret.
+  # A local clone of the committed base fixture isolates both Git indexes.
+  RENAME_REPO="$TMP/rename-environment"
+  git clone -q "$FIXTURE_REPO" "$RENAME_REPO"
+  # Git clone does not copy local user identity needed by the fixture commit.
+  git -C "$RENAME_REPO" config user.email "test@example.com"
+  git -C "$RENAME_REPO" config user.name "Test"
+  mkdir -p "$RENAME_REPO/stow/git/.githooks"
+  cp "$HOOK" "$RENAME_REPO/stow/git/.githooks/pre-commit"
+  for i in $(seq 1 200); do echo "filler line $i for rename similarity"; done >"$RENAME_REPO/notes.txt"
+  git -C "$RENAME_REPO" add notes.txt
+  git -C "$RENAME_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 이름 변경 픽스처 추가"
+  git -C "$RENAME_REPO" mv notes.txt notes-renamed.txt
+  # Keep similarity above Git's rename threshold; otherwise this would test D+A.
+  cat "$TMP/secret-key" >>"$RENAME_REPO/notes-renamed.txt"
+  git -C "$RENAME_REPO" add -f notes-renamed.txt
+  RENAME_VALID=0
+  if git -C "$RENAME_REPO" diff --cached --name-status | grep -q '^R'; then
+    RENAME_VALID=1
+  fi
+
+  # Both prepared indexes are now immutable until both hook processes finish.
+  # shellcheck disable=SC2034 # parallel_pair_run reads commands by nameref
+  CMD_STAGED=(run_hook "$FIXTURE_REPO")
+  # shellcheck disable=SC2034
+  CMD_RENAMED=(run_hook "$RENAME_REPO")
+  staged_status=0
+  renamed_status=0
+  parallel_pair_run CMD_STAGED CMD_RENAMED staged_status renamed_status "$TMP/staged.out" "$TMP/renamed.out"
+
+  if [ "$staged_status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/staged.out"; then
     report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 0
   else
-    report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 1 "exit=$status out=$(cat "$TMP/out")"
+    report "fail-staged-secret-cleaned-in-worktree (인덱스 내용 기준 스캔)" 1 "exit=$staged_status out=$(cat "$TMP/staged.out")"
   fi
-  # 5. [보안] `git mv` 로 옮기면서 시크릿을 넣은 경우도 차단해야 한다.
-  #    git 은 유사도 50% 이상이면 변경을 R(rename)로 판정하는데, 스테이징 목록 수집이
-  #    --diff-filter=ACM 이라 R 이 통째로 빠졌다. 그러면 STAGED_FILES 가 0건이 되어
-  #    trufflehog 스캔이 아예 실행되지 않는다 — 위 4번이 "스캔한 바이트와 커밋될 바이트를
-  #    일치시킨다"고 맞춰 둔 전제가 목록 단계에서 깨져 있었다(실측: rename 커밋에서 훅
-  #    출력이 한 줄도 없었고, 같은 내용 변경을 rename 없이 하면 스캔이 정상 실행됐다).
-  #    유사도가 임계값 위로 유지되도록 원본을 채운 뒤 rename + 키 추가로 재현한다
-  #    (전체를 키로 갈아치우면 유사도가 낮아 git 이 D+A 로 분해해 이 경로를 안 탄다).
-  for i in $(seq 1 200); do echo "filler line $i for rename similarity"; done >"$FIXTURE_REPO/notes.txt"
-  git -C "$FIXTURE_REPO" add notes.txt
-  git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 이름 변경 픽스처 추가"
-  git -C "$FIXTURE_REPO" mv notes.txt notes-renamed.txt
-  openssl genrsa -out "$TMP/rename_key" 2048 2>/dev/null
-  # idempotency:bypass (임시 픽스처에 대한 1회성 기록이라 상태 검증 불필요)
-  cat "$TMP/rename_key" >>"$FIXTURE_REPO/notes-renamed.txt"
-  git -C "$FIXTURE_REPO" add -f notes-renamed.txt
-  # 실제로 R 로 잡히는 상태인지 먼저 확인한다. D+A 로 분해됐다면 이 케이스는 의도한
-  # 사각지대를 재현하지 못한 것이므로, 통과하더라도 의미가 없다.
-  if git -C "$FIXTURE_REPO" diff --cached --name-status | grep -q '^R'; then
-    status=$(run_hook_allow_fail)
-    if [ "$status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/out"; then
-      report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 0
-    else
-      report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 1 "exit=$status out=$(cat "$TMP/out")"
-    fi
-  else
+
+  if [ "$RENAME_VALID" -ne 1 ]; then
     report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 1 "픽스처가 rename(R)으로 잡히지 않아 사각지대를 재현하지 못했습니다"
+  elif [ "$renamed_status" -eq 1 ] && grep -qF "시크릿 유출이 발견되어" "$TMP/renamed.out"; then
+    report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 0
+  else
+    report "fail-renamed-file-with-secret (git mv 한 파일도 시크릿 스캔 대상)" 1 "exit=$renamed_status out=$(cat "$TMP/renamed.out")"
   fi
-  git -C "$FIXTURE_REPO" reset -q
-  rm -f "$FIXTURE_REPO/notes-renamed.txt" "$TMP/rename_key"
-  git -C "$FIXTURE_REPO" checkout -q -- notes.txt 2>/dev/null || true
 
   git -C "$FIXTURE_REPO" reset -q
   rm -f "$FIXTURE_REPO/deploy_key"
+
 else
   # 접두사가 반드시 [WARNING] 이어야 한다. run-suite.sh 는 통과한 스크립트의 출력에서
   # [WARNING]/⚠ 로 시작하는 줄만 남기고 나머지를 버리므로(run-suite.sh 의 압축 필터),
