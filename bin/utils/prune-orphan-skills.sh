@@ -36,16 +36,28 @@ _is_valid_domain() {
   return 1
 }
 
+# The registry is shared. A directory is ours only if it contains at least one
+# exact historical asset symlink and every entry matches the old role's layout.
+# Capture find's exit status: a failed scan must never authorize rm -rf.
+SCAN_FILE=$(mktemp)
+trap 'rm -f "$SCAN_FILE"' EXIT
+
 for dir in "$SKILLS_DIR"/*/; do
+  dir=${dir%/}
   [ -d "$dir" ] || continue
-  name=$(basename "$dir")
+  # A linked skill directory may point to an external registry. Never traverse it.
+  if [ -L "$dir" ]; then
+    echo "  [SKIP] $dir 는 사용자 소유 심볼릭 링크 디렉토리로 보존" >&2
+    continue
+  fi
+  name=${dir##*/}
   # A live skill domain can lose an individual optional asset. Ansible only
   # links assets that currently exist and otherwise leaves old links behind.
   # Prune only a broken symlink at this role's exact managed source path:
   # never remove user files, foreign symlinks, or working managed links.
   if _is_valid_domain "$name"; then
     for asset in SKILL.md references scripts examples; do
-      entry="${dir}${asset}"
+      entry="$dir/$asset"
       managed_source="$MANAGED_CONTEXTS_DIR/$name/$asset"
       if [ -L "$entry" ] && [ "$(readlink "$entry")" = "$managed_source" ] &&
         [ ! -e "$managed_source" ]; then
@@ -56,37 +68,40 @@ for dir in "$SKILLS_DIR"/*/; do
     continue
   fi
 
+  if ! find "$dir" -mindepth 1 -print0 >"$SCAN_FILE"; then
+    echo "  [SKIP] $dir 항목 조회 실패 — 소유권을 검증할 수 없어 삭제하지 않음" >&2
+    continue
+  fi
+
   FOREIGN=0
+  OWNED=0
   while IFS= read -r -d '' entry; do
     if [ ! -L "$entry" ]; then
       FOREIGN=1
       break
     fi
-
-    link_target=$(readlink "$entry")
-    case "$link_target" in
-    "$MANAGED_CONTEXTS_DIR/$name"/*)
-      # ai_agent 롤이 생성하는 링크는 같은 이름의 contexts/<domain>/ 아래 정규화된
-      # 절대 src를 그대로 사용한다. ../ 같은 우회 경로를 소유 링크로 오판하지 않는다.
-      case "$link_target" in
-      *"/../"* | *"/./")
-        FOREIGN=1
-        break
-        ;;
-      esac
-      ;;
+    # The old role linked only these four named assets to exact absolute paths.
+    # An arbitrary custom symlink beneath contexts/<same-name>/ is user-owned.
+    asset=${entry##*/}
+    case "$asset" in
+    SKILL.md | references | scripts | examples) ;;
     *)
       FOREIGN=1
       break
       ;;
     esac
-  done < <(find "$dir" -mindepth 1 -print0)
+    if [ "$(readlink "$entry")" != "$MANAGED_CONTEXTS_DIR/$name/$asset" ]; then
+      FOREIGN=1
+      break
+    fi
+    OWNED=1
+  done <"$SCAN_FILE"
 
-  if [ "$FOREIGN" -eq 0 ]; then
+  if [ "$FOREIGN" -eq 0 ] && [ "$OWNED" -eq 1 ]; then
     rm -rf "$dir"
-    echo "  [PRUNED] $dir (contexts/에서 사라진 도메인 — 모든 링크가 이 저장소 contexts/ 소유라 안전하게 정리)"
+    echo "  [PRUNED] $dir (삭제된 contexts/ 도메인의 관리 에셋 링크만 존재)"
   else
-    echo "  [SKIP] $dir 는 contexts/ 도메인 목록에 없지만 외부 소유 파일/링크가 있어 건드리지 않음 (수동 확인 필요)" >&2
+    echo "  [SKIP] $dir 는 관리 링크만 있는 폴더로 확인되지 않아 보존 (수동 확인 필요)" >&2
   fi
 done
 exit 0
