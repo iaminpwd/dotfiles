@@ -154,6 +154,12 @@
   loop: "{{ stow_drift_check.results }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
+  # GNU Stow -R unstows and restows the package. Running it on a clean package
+  # creates unnecessary filesystem mutations while reporting changed=false.
+  when:
+    - not ansible_check_mode
+    - item.stdout is defined
+    - item.stdout | trim == '1'
   changed_when: "item.stdout is defined and item.stdout.strip() == '1'"
 
 # 위 stow 태스크는 실제로 상태를 바꾸므로 check 모드에서는 계속 스킵된다. 그러면 dry-run
