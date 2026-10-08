@@ -18,7 +18,18 @@ import sys, os, glob
 
 tests_dir, scripts_dir = sys.argv[1], sys.argv[2]
 sys.path.insert(0, scripts_dir)
-from layout_toolkit import validate
+from layout_toolkit import validate, _abs_geom, _style_val, _edge_label_pos, render_preview, _register_korean_font
+import _layout_geometry, _layout_preview
+
+# Existing users import all helpers from layout_toolkit; the extraction must
+# preserve identity without importing optional matplotlib until rendering.
+assert _abs_geom is _layout_geometry._abs_geom
+assert _style_val is _layout_geometry._style_val
+assert _edge_label_pos is _layout_geometry._edge_label_pos
+assert render_preview is _layout_preview.render_preview
+assert _register_korean_font is _layout_preview._register_korean_font
+assert 'matplotlib' not in sys.modules
+print('  PASS  module split preserves public API and optional matplotlib imports')
 
 # 픽스처별 기대 결과: (ok 여부, 리포트에 반드시 등장해야 할 문구)
 EXPECTED = {
