@@ -55,6 +55,8 @@ play = [{
     "gather_facts": False,
     "environment": {
         "PATH": str(tmp / "fakebin") + ":/usr/bin:/bin",
+        "STOW_TEST_FIND_MODE": "{{ lookup('env', 'STOW_TEST_FIND_MODE') }}",
+        "STOW_TEST_PARTIAL_FILE": "{{ lookup('env', 'STOW_TEST_PARTIAL_FILE') }}",
     },
     "vars": {
         "role_path": str(tmp / "repo/ansible/roles/stow"),
@@ -88,4 +90,38 @@ if [ "$status" -ne 0 ]; then
   exit "$status"
 fi
 
-echo 'PASS: stow drift detector works without GNU readlink -f'
+# Simulate a failing find command inside the real Ansible drift task.
+# A partial NUL-delimited output must not yield a successful "drift=1",
+# and an empty failed inventory must not be reported as "drift=0".
+cat >"$FAKEBIN/find" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+case "${STOW_TEST_FIND_MODE:-}" in
+partial)
+  printf '%s\0' "$STOW_TEST_PARTIAL_FILE"
+  exit 77
+  ;;
+empty)
+  exit 77
+  ;;
+esac
+exec /usr/bin/find "$@"
+STUB
+chmod +x "$FAKEBIN/find"
+
+for mode in partial empty; do
+  status=0
+  STOW_TEST_FIND_MODE="$mode" \
+    STOW_TEST_PARTIAL_FILE="$PKG/.config/demo/config" \
+    ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/find-$mode.out" 2>&1 || status=$?
+  if [ "$status" -eq 0 ] ||
+    ! grep -qF "Stow 소스 탐색 실패 (drift)" "$TMP/find-$mode.out" ||
+    ! grep -qF "심볼릭 링크 드리프트(변경 필요 여부) 사전 판정" "$TMP/find-$mode.out" ||
+    [ ! -f "$PKG/.config/demo/config" ]; then
+    cat "$TMP/find-$mode.out"
+    echo "FAIL: find $mode failure did not stop the Stow drift task"
+    exit 1
+  fi
+done
+
+echo 'PASS: stow drift fails closed on partial/empty find errors and supports BSD readlink'
