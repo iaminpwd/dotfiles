@@ -37,7 +37,8 @@ ln -s "$REPO/contexts/demo/scripts/live-context.sh" "$LOCAL_BIN/my-context-alias
 # 스크립트가 아닌 파일과 비정규화 경로는 과거 배포 경로가 아니다.
 printf 'name: demo\n' >"$REPO/contexts/demo/SKILL.md"
 ln -s "$REPO/contexts/demo/SKILL.md" "$LOCAL_BIN/SKILL.md"
-ln -s "$REPO/bin/../bin/live-tool.sh" "$LOCAL_BIN/traversal-tool.sh"
+cp "$REPO/bin/live-tool.sh" "$REPO/bin/traversal-tool.sh"
+ln -s "$REPO/bin/../bin/traversal-tool.sh" "$LOCAL_BIN/traversal-tool.sh"
 
 # ~/.local/bin은 공유 경로이므로 외부 소유 링크는 살아 있든 깨졌든 보존해야 한다.
 ln -s "$TMP/foreign/live.sh" "$LOCAL_BIN/foreign-live.sh"
