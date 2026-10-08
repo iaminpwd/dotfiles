@@ -126,6 +126,37 @@ else
   report "ok-missing-skills-dir (skills 디렉토리 없으면 무동작 + exit 0)" 1 "exit=$status"
 fi
 
+# 8. Existing domain, deleted asset: the installer must not leave its old
+#    managed dangling symlink in a global agent registry.
+#    A foreign link and an existing managed asset must remain untouched.
+STALE_SKILLS="$TMP/stale-skills"
+mkdir -p "$STALE_SKILLS/aws" "$TMP/foreign-skill-asset"
+# aws/references has been removed from contexts; it used to be a managed asset.
+if [ -e "$REPO_ROOT/contexts/aws/references" ]; then
+  report "missing-asset-fixture (aws/references must be absent)" 1
+else
+  ln -s "$REPO_ROOT/contexts/aws/references" "$STALE_SKILLS/aws/references"
+  ln -s "$REPO_ROOT/contexts/aws/SKILL.md" "$STALE_SKILLS/aws/SKILL.md"
+  ln -s "$TMP/foreign-skill-asset" "$STALE_SKILLS/aws/examples"
+  OUT_STALE=$(bash "$SCRIPT" "$STALE_SKILLS" aws k8s 2>&1)
+  if [ ! -L "$STALE_SKILLS/aws/references" ] &&
+    [ -L "$STALE_SKILLS/aws/SKILL.md" ] &&
+    [ -L "$STALE_SKILLS/aws/examples" ] &&
+    grep -qF "[PRUNED]" <<<"$OUT_STALE"; then
+    report "stale-asset-removed (유효 도메인의 삭제된 관리 에셋만 정리)" 0
+  else
+    report "stale-asset-removed (유효 도메인의 삭제된 관리 에셋만 정리)" 1 "output=$OUT_STALE"
+  fi
+  OUT_STALE_2=$(bash "$SCRIPT" "$STALE_SKILLS" aws k8s 2>&1)
+  if [ ! -L "$STALE_SKILLS/aws/references" ] &&
+    [ -L "$STALE_SKILLS/aws/examples" ] &&
+    ! grep -qF "[PRUNED]" <<<"$OUT_STALE_2"; then
+    report "stale-asset-idempotent (재실행 후 추가 변경 없음)" 0
+  else
+    report "stale-asset-idempotent (재실행 후 추가 변경 없음)" 1 "output=$OUT_STALE_2"
+  fi
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
