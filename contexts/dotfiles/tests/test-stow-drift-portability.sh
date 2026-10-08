@@ -39,7 +39,7 @@ import json
 import sys
 
 root, tmp = map(Path, sys.argv[1:])
-source = (root / "ansible/roles/stow/tasks/main.yml").read_text()
+source = (root / "ansible/roles/stow/tasks/package.yml").read_text()
 
 start_marker = "- name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정"
 end_marker = "- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용"
@@ -61,7 +61,7 @@ play = [{
     "vars": {
         "role_path": str(tmp / "repo/ansible/roles/stow"),
         "ansible_env": {"HOME": str(tmp / "home")},
-        "stow_dirs": {"files": [{"path": str(tmp / "repo/stow/demo")}]},
+        "stow_package": {"path": str(tmp / "repo/stow/demo")},
     },
     "tasks": [
         {
@@ -72,8 +72,8 @@ play = [{
             "name": "Assert missing target is detected as drift",
             "ansible.builtin.assert": {
                 "that": [
-                    "stow_drift_check.results | length == 1",
-                    "stow_drift_check.results[0].stdout | trim == '1'",
+                    "stow_drift_check.stdout is defined",
+                    "stow_drift_check.stdout | trim == '1'",
                 ],
                 "fail_msg": "stow drift detector treated BSD readlink -f failure as no drift",
             },
@@ -82,7 +82,7 @@ play = [{
 }]
 (tmp / "play.yml").write_text(json.dumps(play))
 
-# Import the actual detector AND Stow apply task to assert repeat-install
+# Import the actual package detector AND Stow apply task to assert repeat-install
 # behavior. No production roles or real HOME are modified by this fixture.
 apply_start = source.index(end_marker)
 apply_end = source.index(
@@ -107,7 +107,7 @@ apply_play = [{
     "vars": {
         "role_path": str(tmp / "repo/ansible/roles/stow"),
         "ansible_env": {"HOME": str(tmp / "home")},
-        "stow_dirs": {"files": [{"path": str(tmp / "repo/stow/demo")}]},
+        "stow_package": {"path": str(tmp / "repo/stow/demo")},
     },
     "tasks": [{
         "name": "Import actual Stow detection and apply tasks",
@@ -213,5 +213,145 @@ if [ "$status" -ne 0 ] ||
   echo 'FAIL: clean package needlessly invoked Stow or misreported changed'
   exit 1
 fi
+
+# Test the actual role include -> backup -> drift -> apply order under an
+# injected partial Stow failure. Every path is inside the disposable TMP.
+python3 - "$ROOT" "$TMP" <<'PY'
+from pathlib import Path
+import json
+import shutil
+import sys
+
+root, tmp = map(Path, sys.argv[1:])
+multi = tmp / "multi"
+role = multi / "repo/ansible/roles/stow/tasks"
+source = multi / "repo/stow"
+home = multi / "home"
+fakebin = multi / "fakebin"
+for directory in (role, source / "alpha", source / "beta", home, fakebin,
+                  multi / "repo/bin/utils"):
+    directory.mkdir(parents=True, exist_ok=True)
+(source / "alpha/.a-one").write_text("managed one\n")
+(source / "alpha/.a-two").write_text("managed two\n")
+(source / "beta/.beta").write_text("managed beta\n")
+(home / ".a-one").write_text("original one\n")
+(home / ".beta").write_text("original beta\n")
+main = (root / "ansible/roles/stow/tasks/main.yml").read_text()
+marker = "- name: Stow 패키지별 백업·드리프트 판정·적용"
+(role / "main.yml").write_text("---\n" + main[main.index(marker):])
+shutil.copy2(root / "ansible/roles/stow/tasks/package.yml", role / "package.yml")
+shutil.copy2(root / "bin/utils/stow-backup.sh",
+             multi / "repo/bin/utils/stow-backup.sh")
+(fakebin / "stow").write_text("""#!/usr/bin/env bash
+set -euo pipefail
+pkg=''
+for arg in "$@"; do pkg="$arg"; done
+printf '%s\\n' "$pkg" >>"$STOW_MULTI_LOG"
+case "$pkg" in
+alpha)
+  if [ ! -L "$STOW_MULTI_HOME/.a-one" ]; then
+    ln -s ../repo/stow/alpha/.a-one "$STOW_MULTI_HOME/.a-one"
+  fi
+  if [ "$STOW_MULTI_FAIL" = 1 ]; then exit 17; fi
+  if [ ! -L "$STOW_MULTI_HOME/.a-two" ]; then
+    ln -s ../repo/stow/alpha/.a-two "$STOW_MULTI_HOME/.a-two"
+  fi
+  ;;
+beta)
+  if [ ! -L "$STOW_MULTI_HOME/.beta" ]; then
+    ln -s ../repo/stow/beta/.beta "$STOW_MULTI_HOME/.beta"
+  fi
+  ;;
+*) exit 98 ;;
+esac
+""")
+(fakebin / "stow").chmod(0o755)
+play = [{
+    "hosts": "localhost", "connection": "local", "gather_facts": False,
+    "environment": {
+        "PATH": str(fakebin) + ":/usr/bin:/bin",
+        "STOW_MULTI_LOG": str(multi / "stow-calls"),
+        "STOW_MULTI_HOME": str(home),
+        "STOW_MULTI_FAIL": "{{ lookup('env', 'STOW_MULTI_FAIL') }}",
+    },
+    "vars": {
+        "ansible_env": {"HOME": str(home)},
+        "stow_dirs": {"files": [
+            {"path": str(source / "alpha")},
+            {"path": str(source / "beta")},
+        ]},
+    },
+    "roles": ["stow"],
+}]
+(multi / "play.yml").write_text(json.dumps(play))
+PY
+
+MULTI="$TMP/multi"
+MULTI_ROLES="$MULTI/repo/ansible/roles"
+status=0
+STOW_MULTI_FAIL=1 ANSIBLE_ROLES_PATH="$MULTI_ROLES" \
+  ansible-playbook -i localhost, "$MULTI/play.yml" \
+  >"$MULTI/failed.out" 2>&1 || status=$?
+ALPHA_BACKUPS=("$MULTI/home"/.a-one.backup.*)
+BETA_BACKUPS=("$MULTI/home"/.beta.backup.*)
+if [ "$status" -eq 0 ] ||
+  ! grep -Eq 'failed=1([^0-9]|$)' "$MULTI/failed.out" ||
+  [ ! -L "$MULTI/home/.a-one" ] ||
+  [ -e "$MULTI/home/.a-two" ] ||
+  [ ! -f "${ALPHA_BACKUPS[0]}" ] ||
+  ! grep -qx 'original one' "${ALPHA_BACKUPS[0]}" ||
+  ! grep -qx 'original beta' "$MULTI/home/.beta" ||
+  [ -e "${BETA_BACKUPS[0]}" ] ||
+  [ "$(wc -l <"$MULTI/stow-calls")" -ne 1 ] ||
+  [ "$(cat "$MULTI/stow-calls")" != alpha ]; then
+  cat "$MULTI/failed.out"
+  echo 'FAIL: partial Stow failure preemptively backed up untouched package'
+  exit 1
+fi
+
+status=0
+STOW_MULTI_FAIL=0 ANSIBLE_ROLES_PATH="$MULTI_ROLES" \
+  ansible-playbook -i localhost, "$MULTI/play.yml" --check \
+  >"$MULTI/check.out" 2>&1 || status=$?
+if [ "$status" -ne 0 ] ||
+  ! grep -q '재링크 예정' "$MULTI/check.out" ||
+  ! grep -qx 'original beta' "$MULTI/home/.beta" ||
+  [ -e "${BETA_BACKUPS[0]}" ] ||
+  [ "$(wc -l <"$MULTI/stow-calls")" -ne 1 ]; then
+  cat "$MULTI/check.out"
+  echo 'FAIL: dry-run changed user data or missed partial drift'
+  exit 1
+fi
+
+status=0
+STOW_MULTI_FAIL=0 ANSIBLE_ROLES_PATH="$MULTI_ROLES" \
+  ansible-playbook -i localhost, "$MULTI/play.yml" \
+  >"$MULTI/retry.out" 2>&1 || status=$?
+BETA_BACKUPS=("$MULTI/home"/.beta.backup.*)
+if [ "$status" -ne 0 ] ||
+  ! grep -qx 'original one' "${ALPHA_BACKUPS[0]}" ||
+  ! grep -qx 'original beta' "${BETA_BACKUPS[0]}" ||
+  [ ! -L "$MULTI/home/.a-one" ] ||
+  [ ! -L "$MULTI/home/.a-two" ] ||
+  [ ! -L "$MULTI/home/.beta" ] ||
+  [ "$(wc -l <"$MULTI/stow-calls")" -ne 3 ] ||
+  ! grep -Eq 'changed=2([^0-9]|$)' "$MULTI/retry.out"; then
+  cat "$MULTI/retry.out"
+  echo 'FAIL: retry did not preserve backups and finish both packages'
+  exit 1
+fi
+
+status=0
+STOW_MULTI_FAIL=0 ANSIBLE_ROLES_PATH="$MULTI_ROLES" \
+  ansible-playbook -i localhost, "$MULTI/play.yml" \
+  >"$MULTI/clean.out" 2>&1 || status=$?
+if [ "$status" -ne 0 ] ||
+  [ "$(wc -l <"$MULTI/stow-calls")" -ne 3 ] ||
+  ! grep -Eq 'changed=0([^0-9]|$)' "$MULTI/clean.out"; then
+  cat "$MULTI/clean.out"
+  echo 'FAIL: clean retry re-applied already correct packages'
+  exit 1
+fi
+echo 'PASS: partial Stow failure preserves untouched package, retry and dry-run safe'
 
 echo 'PASS: Stow apply fails on command error, runs on drift, skips clean package, and supports BSD readlink'
