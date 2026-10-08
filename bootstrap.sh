@@ -5,8 +5,18 @@
 
 set -euo pipefail
 export ANSIBLE_HOME="$HOME/.cache/ansible"
-# 실행 경로에 무관하게 스크립트 위치 기준 절대경로 확정
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 실행 경로나 심볼릭 링크 체인에 무관하게 실제 저장소 루트를 찾는다.
+# mise 설치 이전에 실행되므로 macOS 기본 BSD readlink와도 호환돼야 한다.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  SOURCE_DIR=$(cd -P "$(dirname "$SOURCE")" && pwd)
+  LINK_TARGET=$(readlink "$SOURCE")
+  case "$LINK_TARGET" in
+  /*) SOURCE="$LINK_TARGET" ;;
+  *) SOURCE="$SOURCE_DIR/$LINK_TARGET" ;;
+  esac
+done
+SCRIPT_DIR=$(cd -P "$(dirname "$SOURCE")" && pwd)
 
 # Linux 최소 설치에서도 root 사용자는 sudo 없이 bootstrap할 수 있어야 한다.
 # 일반 사용자는 sudo를 사용하고, 둘 다 불가능하면 command-not-found 대신 명확히 차단한다.
