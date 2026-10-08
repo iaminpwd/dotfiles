@@ -114,13 +114,22 @@ status=0
 STOW_UNLINK_FAULT_AT=2 ANSIBLE_ROLES_PATH="$ROLES" \
   ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/fail.out" 2>&1 || status=$?
 BACKUPS=("$HOME_DIR"/.custom.backup.*)
+# Stow's unlink task order is not necessarily lexical source order.
+# Assert against the actual syscall order observed by the fault wrapper.
+FIRST_UNLINK=$(sed -n '1p' "$TMP/unlinks" 2>/dev/null || true)
+SECOND_UNLINK=$(sed -n '2p' "$TMP/unlinks" 2>/dev/null || true)
+FIRST_LEAF=${FIRST_UNLINK##*/}
+SECOND_LEAF=${SECOND_UNLINK##*/}
 if [ "$status" -eq 0 ] ||
+  [ "$FIRST_LEAF" = "$SECOND_LEAF" ] ||
+  { [ "$FIRST_LEAF" != .fold-a ] && [ "$FIRST_LEAF" != .fold-b ]; } ||
+  { [ "$SECOND_LEAF" != .fold-a ] && [ "$SECOND_LEAF" != .fold-b ]; } ||
   ! grep -q 'Could not remove link' "$TMP/fail.out" ||
   ! grep -Eq 'failed=1([^0-9]|$)' "$TMP/fail.out" ||
-  [ -e "$HOME_DIR/.fold-a" ] ||
-  [ -L "$HOME_DIR/.fold-a" ] ||
-  [ ! -L "$HOME_DIR/.fold-b" ] ||
-  [ "$(readlink "$HOME_DIR/.fold-b")" != "../repo/stow/demo/.fold-b" ] ||
+  [ -e "$HOME_DIR/$FIRST_LEAF" ] ||
+  [ -L "$HOME_DIR/$FIRST_LEAF" ] ||
+  [ ! -L "$HOME_DIR/$SECOND_LEAF" ] ||
+  [ "$(readlink "$HOME_DIR/$SECOND_LEAF")" != "../repo/stow/demo/$SECOND_LEAF" ] ||
   [ "$(wc -l <"$TMP/unlinks")" -ne 2 ] ||
   [ ! -f "${BACKUPS[0]}" ] ||
   ! grep -qx 'original user custom' "${BACKUPS[0]}" ||
@@ -135,8 +144,8 @@ status=0
 STOW_UNLINK_FAULT_AT=0 ANSIBLE_ROLES_PATH="$ROLES" \
   ansible-playbook -i localhost, "$TMP/play.yml" --check >"$TMP/check.out" 2>&1 || status=$?
 if [ "$status" -ne 0 ] ||
-  [ -e "$HOME_DIR/.fold-a" ] ||
-  [ ! -L "$HOME_DIR/.fold-b" ] ||
+  [ -e "$HOME_DIR/$FIRST_LEAF" ] ||
+  [ ! -L "$HOME_DIR/$SECOND_LEAF" ] ||
   [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
   ! grep -q '재링크 예정' "$TMP/check.out" ||
   ! grep -qx 'original user custom' "${BACKUPS[0]}"; then
