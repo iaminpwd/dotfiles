@@ -85,7 +85,7 @@
     }
 
     PKG_DIR="{{ role_path }}/../../../stow/{{ item.path | basename }}"
-    # Process substitution hides find's exit status. Do not report "no drift"
+    # Process substitution hides the exit status of find. Do not report "no drift"
     # or proceed to Stow if filesystem discovery is incomplete.
     STOW_FILE_LIST=$(mktemp)
     trap 'rm -f "$STOW_FILE_LIST"' EXIT
