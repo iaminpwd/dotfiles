@@ -72,11 +72,20 @@ verify:
 # contexts/INDEX.md 재생성 (SKILL.md 라우팅 테이블이 바뀐 뒤 실행)
 docs-index:
     @echo "=> Regenerating contexts/INDEX.md..."
-    tmp=$(mktemp) && \
+# 임시 파일은 반드시 목적지와 같은 디렉토리에 생성해 rename이 원자적으로 동작하도록 한다.
+# mktemp 기본 권한(0600)을 그대로 mv하면 기존 INDEX.md의 읽기 권한까지 사라지므로
+# 기존 모드를 GNU/BSD stat으로 보존하고 새 파일은 0644로 생성한다.
+# 생성/권한 변경/이동 도중 오류가 나도 EXIT trap으로 스테이징 파일을 정리한다.
+    tmp=$(mktemp contexts/.INDEX.md.XXXXXXXX) && \
+    trap 'rm -f "$tmp"' EXIT && \
     if bash bin/utils/generate-context-index.sh > "$tmp"; then \
+        mode=644; \
+        if [ -e contexts/INDEX.md ]; then \
+            mode=$(stat -c %a contexts/INDEX.md 2>/dev/null || stat -f %Lp contexts/INDEX.md); \
+        fi; \
+        chmod "$mode" "$tmp"; \
         mv "$tmp" contexts/INDEX.md; \
     else \
-        rm -f "$tmp"; \
         echo "❌ 색인 생성 실패 — contexts/INDEX.md를 그대로 보존했습니다." >&2; \
         exit 1; \
     fi
