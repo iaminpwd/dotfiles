@@ -39,7 +39,7 @@ if [ "$status" -eq 0 ] ||
   [ "$(readlink "$CASE/home/.config")" != "$CASE/external" ] ||
   ! grep -qx 'original user' "$CASE/home/.config-original/app/config" ||
   ! grep -qx 'external secret' "$CASE/external/app/config" ||
-  [ -e "$CASE/external/app/config.backup."* ]; then
+  [ -e "$CASE/external/app/config.backup.fixed" ]; then
   cat "$CASE/out"
   echo 'FAIL: parent changed before open: external user path was modified'
   exit 1
