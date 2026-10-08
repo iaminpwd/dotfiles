@@ -84,3 +84,13 @@ if [ "$status" -ne 0 ]; then
   exit 1
 fi
 echo "PASS: 검사 범위 밖의 과거 시크릿은 재차단하지 않음"
+
+# 새 ref의 첫 push는 BEFORE_SHA=0이며 한 번에 여러 커밋을 포함할 수 있다.
+# 첫 커밋과 중간 커밋의 비밀이 마지막 트리에서 삭제됐어도 전체 이력을 검사해야 한다.
+# 기존 구현은 head^를 기준으로 삼아 마지막 커밋 한 개만 검사하므로 놓친다.
+status=$(run_scan push BEFORE_SHA=0000000000000000000000000000000000000000 AFTER_SHA="$CLEAN_HEAD")
+if [ "$status" -eq 0 ]; then
+  echo "FAIL: 새 ref 첫 push에서 마지막 커밋 이전의 삭제된 시크릿을 놓쳤습니다"
+  exit 1
+fi
+echo "PASS: 새 ref 첫 push는 전체 도달 가능 이력의 시크릿을 차단"
