@@ -9,7 +9,12 @@
 # 이미 관리하는 링크는 유지하고, 외부 링크/파일은 교체 전에 백업한다.
 - name: Gemini 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
+    argv:
+      - /bin/bash
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - --link-pairs
+      - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+      - "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
   changed_when: false
 
 - name: Gemini 글로벌 AGENTS.md 링크 설정
@@ -27,7 +32,12 @@
 
 - name: Claude 글로벌 CLAUDE.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+    argv:
+      - /bin/bash
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - --link-pairs
+      - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+      - "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
   changed_when: false
 
 - name: Claude 글로벌 CLAUDE.md 링크 설정
@@ -45,7 +55,12 @@
 
 - name: Codex 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+    argv:
+      - /bin/bash
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - --link-pairs
+      - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
+      - "{{ ansible_env.HOME }}/.codex/AGENTS.md"
   changed_when: false
 
 - name: Codex 글로벌 AGENTS.md 링크 설정
