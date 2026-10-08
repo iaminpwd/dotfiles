@@ -56,7 +56,6 @@ git -c core.hooksPath=/dev/null commit -qm 'refactor: examples 에셋 마지막 
 examples_deleted=$(git rev-parse HEAD)
 check true EVENT_NAME=push BEFORE_SHA="$examples_added" AFTER_SHA="$examples_deleted"
 
-
 # SKILL/base.AGENTS 내용 수정은 이미 고정된 symlink의 소스 내용만 바뀌므로 smoke 불필요.
 printf 'skill-v2\n' >contexts/aws/SKILL.md
 git add .
