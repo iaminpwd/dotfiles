@@ -57,7 +57,7 @@ printf 'user excluded\n' >"$CASE/home/.excluded"
 printf 'user install\n' >"$CASE/home/.install"
 printf '^\\.skip$\n^\\.excluded$\n' >"$CASE/stow/demo/.stow-local-ignore"
 printf '^\\.something-else$\n' >"$CASE/home/.stow-global-ignore"
-HOME="$CASE/home" bash "$BACKUP" demo "$CASE/stow" "$CASE/home"
+STOW_FILTER_TRACE=1 HOME="$CASE/home" bash "$BACKUP" demo "$CASE/stow" "$CASE/home"
 BACKUPS=("$CASE/home"/.install.backup.*)
 SKIP_BACKUPS=("$CASE/home"/.skip.backup.*)
 EXCLUDED_BACKUPS=("$CASE/home"/.excluded.backup.*)
