@@ -39,7 +39,7 @@ import json
 import sys
 
 root, tmp = map(Path, sys.argv[1:])
-source = (root / "ansible/roles/stow/tasks/main.yml").read_text()
+source = (root / "ansible/roles/stow/tasks/package.yml").read_text()
 
 start_marker = "- name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정"
 end_marker = "- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용"
@@ -61,7 +61,7 @@ play = [{
     "vars": {
         "role_path": str(tmp / "repo/ansible/roles/stow"),
         "ansible_env": {"HOME": str(tmp / "home")},
-        "stow_dirs": {"files": [{"path": str(tmp / "repo/stow/demo")}]},
+        "stow_package": {"path": str(tmp / "repo/stow/demo")},
     },
     "tasks": [
         {
@@ -72,8 +72,8 @@ play = [{
             "name": "Assert missing target is detected as drift",
             "ansible.builtin.assert": {
                 "that": [
-                    "stow_drift_check.results | length == 1",
-                    "stow_drift_check.results[0].stdout | trim == '1'",
+                    "stow_drift_check.stdout is defined",
+                    "stow_drift_check.stdout | trim == '1'",
                 ],
                 "fail_msg": "stow drift detector treated BSD readlink -f failure as no drift",
             },
@@ -82,7 +82,7 @@ play = [{
 }]
 (tmp / "play.yml").write_text(json.dumps(play))
 
-# Import the actual detector AND Stow apply task to assert repeat-install
+# Import the actual package detector AND Stow apply task to assert repeat-install
 # behavior. No production roles or real HOME are modified by this fixture.
 apply_start = source.index(end_marker)
 apply_end = source.index(
@@ -107,7 +107,7 @@ apply_play = [{
     "vars": {
         "role_path": str(tmp / "repo/ansible/roles/stow"),
         "ansible_env": {"HOME": str(tmp / "home")},
-        "stow_dirs": {"files": [{"path": str(tmp / "repo/stow/demo")}]},
+        "stow_package": {"path": str(tmp / "repo/stow/demo")},
     },
     "tasks": [{
         "name": "Import actual Stow detection and apply tasks",
