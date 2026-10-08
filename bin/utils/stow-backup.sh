@@ -59,12 +59,17 @@ _reconcile_symlink() {
 # 디렉토리를 외부의 "살아있는 디렉토리"로 연결해 둔 경우까지 자동 takeover하면, 그 아래의
 # 무관한 앱 설정 전체가 기존 경로에서 이탈한다. 이런 링크는 그대로 보존하고 fail-closed한다.
 # 반면 끊어진 과거 Stow 디렉토리 링크는 기존처럼 백업해 새 배치를 복구할 수 있게 한다.
-_reconcile_dir_symlink() {
+_assert_dir_symlink_safe() {
   local target=$1 src=$2
   if [ -d "$target" ] && [ "$(_canonicalize "$target")" != "$(_canonicalize "$src")" ]; then
     echo "❌ [Hard Block] 외부 디렉토리 심볼릭 링크를 자동 교체하지 않습니다: $target -> $(readlink "$target")" >&2
     return 1
   fi
+}
+
+_reconcile_dir_symlink() {
+  local target=$1 src=$2
+  _assert_dir_symlink_safe "$target" "$src" || return 1
   _reconcile_symlink "$target" "$src"
 }
 
@@ -93,6 +98,16 @@ while IFS= read -r -d '' SRC_FILE; do
     exit 1
   fi
 done <"$STOW_INVENTORY/files"
+
+# Detect all live foreign directory links before reconciling any stale links.
+# A late hard block must not leave earlier links already moved to backup names.
+while IFS= read -r -d '' SRC_DIR; do
+  REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
+  TARGET="$HOME_DIR/$REL_PATH"
+  if [ -L "$TARGET" ]; then
+    _assert_dir_symlink_safe "$TARGET" "$SRC_DIR" || exit 1
+  fi
+done <"$STOW_INVENTORY/dirs"
 
 while IFS= read -r -d '' SRC_DIR; do
   REL_PATH="${SRC_DIR#"$DOTFILES_DIR/$PKG/"}"
