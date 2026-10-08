@@ -13,16 +13,11 @@ _canonicalize() {
   readlink -f "$1" 2>/dev/null || realpath "$1" 2>/dev/null || echo "$1"
 }
 
-_next_backup_path() {
-  local target=$1 candidate suffix=0
-  candidate="$target.backup.$BACKUP_TIMESTAMP"
-
-  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
-    suffix=$((suffix + 1))
-    candidate="$target.backup.$BACKUP_TIMESTAMP.$suffix"
-  done
-
-  printf '%s\n' "$candidate"
+# Backup paths are resolved relative to a no-follow parent dirfd by Python.
+# Revalidating a string path here would leave a race between check and mv.
+_safe_backup() {
+  python3 "$(dirname "${BASH_SOURCE[0]}")/stow-safe-backup.py" \
+    "$HOME_DIR" "$1" "$BACKUP_TIMESTAMP"
 }
 
 # TARGET이 이미 심볼릭 링크인데 stow 소유 형식이 아니면 백업으로 치운다. 절대경로
@@ -41,13 +36,11 @@ _reconcile_symlink() {
   local target=$1 src=$2
   case "$(readlink "$target")" in
   /*)
-    mkdir -p "$(dirname "$target")"
-    mv "$target" "$(_next_backup_path "$target")"
+    _safe_backup "$target"
     ;;
   *)
     if [ "$(_canonicalize "$target")" != "$(_canonicalize "$src")" ]; then
-      mkdir -p "$(dirname "$target")"
-      mv "$target" "$(_next_backup_path "$target")"
+      _safe_backup "$target"
     fi
     ;;
   esac
@@ -143,8 +136,7 @@ while IFS= read -r -d '' SRC_FILE; do
   if [ -L "$TARGET" ]; then
     _reconcile_symlink "$TARGET" "$SRC_FILE"
   elif [ -e "$TARGET" ] && [ "$(_canonicalize "$TARGET")" != "$(_canonicalize "$SRC_FILE")" ]; then
-    mkdir -p "$(dirname "$TARGET")"
-    mv "$TARGET" "$(_next_backup_path "$TARGET")"
+    _safe_backup "$TARGET"
   fi
 done <"$STOW_INVENTORY/files"
 exit 0
