@@ -207,3 +207,10 @@ jobs:
 
       - name: Verify environment matches README's success criteria (after 2nd run)
         run: bash .github/scripts/verify-bootstrap-env.sh
+
+      # Run only after bootstrap installed GNU Stow + Ansible. Deliberately
+      # inject EIO on the second real symlink syscall in a disposable HOME.
+      - name: Verify real GNU Stow I/O failure recovery
+        env:
+          STOW_REQUIRE_REAL: '1'
+        run: bash contexts/dotfiles/tests/test-stow-real-failure.sh
