@@ -10,9 +10,15 @@ if [ -z "$LOG" ] || [ ! -f "$LOG" ]; then
 fi
 
 found=0
+in_recap=0
 while IFS= read -r line; do
   case "$line" in
+  "PLAY RECAP "*)
+    # 단순 카운터 로그가 아니라 실제 Ansible PLAY RECAP 이후의 행만 검사한다.
+    in_recap=1
+    ;;
   *" ok="*" changed="*" failed="*)
+    [ "$in_recap" -eq 1 ] || continue
     changed=${line#* changed=}
     changed=${changed%%[!0-9]*}
     if [ -z "$changed" ] || [[ "$changed" == *[!0-9]* ]]; then
