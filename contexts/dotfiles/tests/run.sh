@@ -35,7 +35,7 @@ for suite in test-zsh-updates test-zsh-supply-chain test-zsh-check-mode test-zsh
   fi
   bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
   if [ -n "${DOTFILES_SUITE_TIMING_LOG:-}" ]; then
-    printf '%s\t%d\n' "$suite" "$((SECONDS - started))" >> "$DOTFILES_SUITE_TIMING_LOG"
+    printf '%s\t%d\n' "$suite" "$((SECONDS - started))" >>"$DOTFILES_SUITE_TIMING_LOG"
   fi
   echo
 done
