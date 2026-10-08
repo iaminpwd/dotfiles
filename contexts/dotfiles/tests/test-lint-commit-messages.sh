@@ -129,6 +129,26 @@ else
   report "new-branch-push (신규 브랜치는 팁 커밋 검증)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# 7. 머지 여부를 확인하는 Git 호출 실패는 정상 일반 커밋으로 오인하면 안 된다.
+#    메세지 자체가 정상이어도 분류용 Git 호출이 실패했다면 게이트를 실패시킨다.
+mkdir -p "$TMP/git-failure-bin"
+cat >"$TMP/git-failure-bin/git" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = rev-list ] && [ "${2:-}" = --no-walk ] && [ "${3:-}" = --merges ]; then
+  echo 'simulated merge-probe git failure' >&2
+  exit 97
+fi
+exec "$REAL_GIT" "$@"
+SH
+chmod +x "$TMP/git-failure-bin/git"
+status=$(run_sut REAL_GIT="$(command -v git)" PATH="$TMP/git-failure-bin:$PATH" \
+  EVENT_NAME=push BEFORE_SHA="$BAD_SHA" AFTER_SHA="$GOOD_SHA" PUSHED_SHAS="")
+if [ "$status" -ne 0 ] && grep -qF 'simulated merge-probe git failure' "$TMP/out"; then
+  report "merge-probe-git-failure (분류 Git 오류가 나면 fail closed)" 0
+else
+  report "merge-probe-git-failure (분류 Git 오류가 나면 fail closed)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"
