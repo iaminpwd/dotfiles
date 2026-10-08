@@ -25,14 +25,31 @@ assets = [
 ]
 expected = []
 excluded = []
-for client in (".gemini/config", ".claude", ".agents"):
-    expected.append(home / client / "skills" / domain / "SKILL.md")
+foreign_links = []
+owned_links = []
+source = "/source/contexts/" + domain + "/SKILL.md"
+for index, client in enumerate((".gemini/config", ".claude", ".agents")):
+    path = home / client / "skills" / domain / "SKILL.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if index == 0:
+        path.write_text("preserve\n")
+        expected.append(path)
+    elif index == 1:
+        path.symlink_to("/private/user-defined/CLAUDE.md")
+        foreign_links.append(path)
+    else:
+        path.symlink_to(source)
+        owned_links.append(path)
     excluded.extend([home / client / "skills" / domain / "scripts",
                      home / client / "skills/dotfiles/SKILL.md"])
-for path in expected + excluded:
+for path in excluded:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("preserve\n")
-(tmp / "paths.json").write_text(json.dumps([list(map(str, expected)), list(map(str, excluded))]))
+(tmp / "paths.json").write_text(json.dumps([list(map(str, expected)),
+                                            list(map(str, excluded)),
+                                            list(map(str, foreign_links)),
+                                            list(map(str, owned_links)),
+                                            source]))
 variables = {"ansible_env": {"HOME": str(home)},
              "role_path": str(root / "ansible/roles/ai_agent"),
              "ai_agent_skill_assets_stat": {"results": assets}}
@@ -52,12 +69,23 @@ import json
 import sys
 from pathlib import Path
 
-expected, excluded = json.loads((Path(sys.argv[1]) / "paths.json").read_text())
+expected, excluded, foreign_links, owned_links, source = json.loads(
+    (Path(sys.argv[1]) / "paths.json").read_text())
 for name in expected:
     path = Path(name)
     backups = list(path.parent.glob(path.name + ".backup.*"))
     assert not path.exists() and len(backups) == 1, name
     assert backups[0].read_text() == "preserve\n", name
+for name in foreign_links:
+    path = Path(name)
+    backups = list(path.parent.glob(path.name + ".backup.*"))
+    assert not path.is_symlink() and len(backups) == 1, name
+    assert backups[0].is_symlink(), name
+    assert backups[0].readlink() == Path("/private/user-defined/CLAUDE.md"), name
+for name in owned_links:
+    path = Path(name)
+    assert path.is_symlink() and path.readlink() == Path(source), name
+    assert not list(path.parent.glob(path.name + ".backup.*")), name
 for name in excluded:
     path = Path(name)
     assert path.read_text() == "preserve\n", name

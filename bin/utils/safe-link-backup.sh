@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # safe-link-backup.sh
 # ansible.builtin.file(state: link, force: true)로 심볼릭 링크를 강제 생성하기 전,
-# 그 목적지에 이미 있는 "실제(비-심볼릭) 파일/디렉토리"를 백업으로 치운다.
+# 목적지의 실제 파일과, 관리 원본이 아닌 사용자 심볼릭 링크를 백업한다.
 #
-# force: true는 목적지가 이미 존재하면 그게 무엇이든 조용히 덮어쓴다. 목적지 이름이
-# 우연히 이 저장소가 배포하는 이름과 겹치는 사용자 자신의 파일(예: ~/.local/bin/foo.sh를
-# 직접 만들어 둔 경우)이 있으면 백업 없이 사라진다. 이미 우리가 만든 심볼릭 링크(같은
-# 대상을 가리키든 아니든)는 어차피 force가 안전하게 교체하므로 건드리지 않는다 — 오직
-# "실제 파일/디렉토리가 그 자리를 차지하고 있는" 경우만 백업 대상이다.
+# force: true는 사용자 파일과 외부 심볼릭 링크를 모두 교체할 수 있다.
+# 기본(target-only) 모드는 레거시 호출과 호환되도록 실제 파일/디렉토리만 백업한다.
+# Ansible의 force:true 링크 설치 경로는 반드시 --link-pairs <source> <target>을
+# 사용한다. 설치할 원본과 정확히 같은 링크만 보존하고, 다른 링크(깨진 링크 포함)는
+# 기존 사용자 설정을 복원할 수 있도록 이름을 바꿔 백업한다.
 #
 # 백업 이름은 초 단위 timestamp를 기본으로 쓰되 같은 초에 같은 경로를 다시 백업하면
 # 기존 백업을 덮어쓰지 않도록 .1, .2 ... suffix로 다음 빈 이름을 찾는다.
 #
-# 사용: safe-link-backup.sh [target ...]
+# 사용: safe-link-backup.sh [target ...] (레거시)
+#       safe-link-backup.sh --link-pairs <source> <target> [...] (Ansible 링크 설치 전)
 
 set -euo pipefail
 
@@ -28,12 +29,40 @@ _next_backup_path() {
   printf '%s\n' "$candidate"
 }
 
-for TARGET in "$@"; do
-  if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-    BACKUP_TIMESTAMP=$(date +%F-%H%M%S)
-    BACKUP_PATH=$(_next_backup_path "$TARGET" "$BACKUP_TIMESTAMP")
-    mv "$TARGET" "$BACKUP_PATH"
-    echo "  [BACKUP] $TARGET -> $BACKUP_PATH (실제 파일이 이미 있어 백업 후 링크 예정)"
+_backup_target() {
+  local target=$1 timestamp backup
+  timestamp=$(date +%F-%H%M%S)
+  backup=$(_next_backup_path "$target" "$timestamp")
+  mv "$target" "$backup"
+  echo "  [BACKUP] $target -> $backup (기존 사용자 파일 또는 링크 보존)"
+}
+
+if [ "${1:-}" = "--link-pairs" ]; then
+  shift
+  if [ "$(($# % 2))" -ne 0 ]; then
+    echo "usage: $0 --link-pairs <source> <target> [<source> <target> ...]" >&2
+    exit 2
   fi
-done
+  while [ "$#" -gt 0 ]; do
+    SOURCE=$1
+    TARGET=$2
+    shift 2
+    if [ -L "$TARGET" ]; then
+      # Ansible creates an absolute link with precisely this src. A different
+      # link is not ours: back it up before force:true replaces the path.
+      [ "$(readlink "$TARGET")" = "$SOURCE" ] && continue
+      _backup_target "$TARGET"
+    elif [ -e "$TARGET" ]; then
+      _backup_target "$TARGET"
+    fi
+  done
+else
+  # Legacy target-only contract: no source is provided, so symlink ownership
+  # cannot be established. Preserve existing caller semantics.
+  for TARGET in "$@"; do
+    if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+      _backup_target "$TARGET"
+    fi
+  done
+fi
 exit 0
