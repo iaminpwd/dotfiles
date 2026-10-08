@@ -25,7 +25,10 @@ for link in "$LOCAL_BIN"/*; do
   "$REPO_ROOT"/bin/* | "$REPO_ROOT"/contexts/*/scripts/*)
     # ../ 또는 ./ 경유는 원본 롤이 생성하지 않았으므로 정리 권한을 추정하지 않는다.
     case "$target" in
-    */../* | */./*) echo "[SKIP] foreign symlink: $link"; continue ;;
+    */../* | */./*)
+      echo "[SKIP] foreign symlink: $link"
+      continue
+      ;;
     esac
     [ "${target##*/}" = "${link##*/}" ] || {
       echo "[SKIP] foreign symlink: $link"
