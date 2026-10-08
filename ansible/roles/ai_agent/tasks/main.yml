@@ -5,11 +5,11 @@
     state: directory
     recurse: true
 
-# force: true는 목적지에 이미 있는 게 무엇이든 조용히 덮어쓴다. 실제 파일이 있으면
-# 미리 백업해 둔다 (bin/utils/safe-link-backup.sh 참고).
+# force:true는 사용자 링크도 덮어쓸 수 있다. 원본과 대상의 쌍을 전달해
+# 이미 관리하는 링크는 유지하고, 외부 링크/파일은 교체 전에 백업한다.
 - name: Gemini 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
   changed_when: false
 
 - name: Gemini 글로벌 AGENTS.md 링크 설정
@@ -27,7 +27,7 @@
 
 - name: Claude 글로벌 CLAUDE.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
   changed_when: false
 
 - name: Claude 글로벌 CLAUDE.md 링크 설정
@@ -45,7 +45,7 @@
 
 - name: Codex 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/safe-link-backup.sh" --link-pairs "{{ playbook_dir }}/../contexts/base.AGENTS.md" "{{ ansible_env.HOME }}/.codex/AGENTS.md"
   changed_when: false
 
 - name: Codex 글로벌 AGENTS.md 링크 설정
@@ -121,12 +121,13 @@
       {%- for asset in ai_agent_skill_assets_stat.results -%}
       {%- if asset.stat.exists and asset.item[0].path | basename != 'dotfiles' -%}
       {%- for client in ['.gemini/config', '.claude', '.agents'] -%}
+      {%- set _ = targets.append(asset.item[0].path + '/' + asset.item[1]) -%}
       {%- set _ = targets.append(ansible_env.HOME + '/' + client + '/skills/' +
                                 (asset.item[0].path | basename) + '/' + asset.item[1]) -%}
       {%- endfor -%}
       {%- endif -%}
       {%- endfor -%}
-      {{ ['/bin/bash', role_path + '/../../../bin/utils/safe-link-backup.sh'] + targets }}
+      {{ ['/bin/bash', role_path + '/../../../bin/utils/safe-link-backup.sh', '--link-pairs'] + targets }}
   changed_when: false
 
 - name: Gemini 글로벌 스킬 에셋 링크 설정
