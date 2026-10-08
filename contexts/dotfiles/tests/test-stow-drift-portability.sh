@@ -214,7 +214,6 @@ if [ "$status" -ne 0 ] ||
   exit 1
 fi
 
-
 # Test the actual role include -> backup -> drift -> apply order under an
 # injected partial Stow failure. Every path is inside the disposable TMP.
 python3 - "$ROOT" "$TMP" <<'PY'
