@@ -220,3 +220,4 @@ jobs:
           export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
           bash contexts/dotfiles/tests/test-stow-real-failure.sh
           bash contexts/dotfiles/tests/test-stow-real-unlink.sh
+          bash contexts/dotfiles/tests/test-stow-ignore.sh
