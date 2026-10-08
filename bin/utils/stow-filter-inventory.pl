@@ -52,8 +52,15 @@ my $old_cwd = getcwd();
 chdir $home or die "Cannot enter HOME to evaluate Stow ignore rules: $home: $!\n";
 local $ENV{HOME} = $home;
 my $stow = Stow->new(dir => $stow_dir, target => $home);
-warn "Stow ignore trace: pkg=$pkg, stow_path=$stow->{stow_path}, source=$stow_dir\n"
-  if $ENV{STOW_FILTER_TRACE};
+if ($ENV{STOW_FILTER_TRACE}) {
+  my $local_file = "$stow->{stow_path}/$pkg/.stow-local-ignore";
+  my ($path_regex, $segment_regex) =
+    $stow->get_ignore_regexps("$stow->{stow_path}/$pkg");
+  warn "Stow ignore trace: pkg=$pkg, stow_path=$stow->{stow_path}, source=$stow_dir, "
+     . "local_file=$local_file, local_exists=" . (-f $local_file ? 1 : 0)
+     . ", path_regex=" . (defined $path_regex ? $path_regex : '(none)')
+     . ", segment_regex=" . (defined $segment_regex ? $segment_regex : '(none)') . "\n";
+}
 
 sub is_ignored {
   my ($rel) = @_;
