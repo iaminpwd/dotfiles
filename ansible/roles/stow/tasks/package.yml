@@ -1,7 +1,11 @@
 ---
 - name: 기존 파일 백업 (stow 충돌 방지)
   ansible.builtin.command:
-    cmd: /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh" "{{ stow_package.path | basename }}" "{{ role_path }}/../../../stow/" "{{ ansible_env.HOME }}"
+    cmd: >-
+      /bin/bash "{{ role_path }}/../../../bin/utils/stow-backup.sh"
+      "{{ stow_package.path | basename }}"
+      "{{ role_path }}/../../../stow/"
+      "{{ ansible_env.HOME }}"
   changed_when: false
 
 # stow 명령의 verbose stdout 문구("LINK:"/"UNLINK:")로 변경 여부를 판정하면 GNU Stow
