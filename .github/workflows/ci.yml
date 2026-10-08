@@ -207,3 +207,14 @@ jobs:
 
       - name: Verify environment matches README's success criteria (after 2nd run)
         run: bash .github/scripts/verify-bootstrap-env.sh
+
+      # Run only after bootstrap installed GNU Stow + Ansible. Deliberately
+      # inject EIO on the second real symlink syscall in a disposable HOME.
+      - name: Verify real GNU Stow I/O failure recovery
+        env:
+          STOW_REQUIRE_REAL: '1'
+        run: |
+          # bootstrap.sh exports mise shims only in its own process; a new
+          # GitHub Actions step starts with a fresh PATH (notably on macOS).
+          export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+          bash contexts/dotfiles/tests/test-stow-real-failure.sh
