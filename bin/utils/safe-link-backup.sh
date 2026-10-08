@@ -39,7 +39,7 @@ _backup_target() {
 
 if [ "${1:-}" = "--link-pairs" ]; then
   shift
-  if [ "$(( $# % 2 ))" -ne 0 ]; then
+  if [ "$(($# % 2))" -ne 0 ]; then
     echo "usage: $0 --link-pairs <source> <target> [<source> <target> ...]" >&2
     exit 2
   fi
