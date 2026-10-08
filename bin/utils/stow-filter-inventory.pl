@@ -52,15 +52,10 @@ my $old_cwd = getcwd();
 chdir $home or die "Cannot enter HOME to evaluate Stow ignore rules: $home: $!\n";
 local $ENV{HOME} = $home;
 my $stow = Stow->new(dir => $stow_dir, target => $home);
-if ($ENV{STOW_FILTER_TRACE}) {
-  my $local_file = "$stow->{stow_path}/$pkg/.stow-local-ignore";
-  my ($path_regex, $segment_regex) =
-    $stow->get_ignore_regexps("$stow->{stow_path}/$pkg");
-  warn "Stow ignore trace: pkg=$pkg, stow_path=$stow->{stow_path}, source=$stow_dir, "
-     . "local_file=$local_file, local_exists=" . (-f $local_file ? 1 : 0)
-     . ", path_regex=" . (defined $path_regex ? $path_regex : '(none)')
-     . ", segment_regex=" . (defined $segment_regex ? $segment_regex : '(none)') . "\n";
-}
+# Load Stow's package-specific ignore rules before evaluating paths.
+# In particular, the local rule file takes precedence over the user's global
+# file, and the compiled regexes are memoized by the Stow Perl library.
+$stow->get_ignore_regexps("$stow->{stow_path}/$pkg");
 
 sub is_ignored {
   my ($rel) = @_;
@@ -89,7 +84,6 @@ sub filter_inventory {
     my $rel = substr($path, length($source_prefix));
     length($rel) or die "Empty relative Stow path: $path\n";
     my $ignored = is_ignored($rel);
-    warn "Stow ignore trace: rel=$rel, ignored=$ignored\n" if $ENV{STOW_FILTER_TRACE};
     next if $ignored;
     print {$out} "$path\0" or die "Cannot write filtered Stow inventory: $!\n";
   }
