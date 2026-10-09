@@ -6,6 +6,7 @@ This matters if another process swaps a checked directory for a foreign symlink
 between the backup script's preflight and the eventual rename syscall.
 """
 import os
+import secrets
 import stat
 import sys
 
@@ -75,7 +76,48 @@ def backup(home: str, target: str, timestamp: str) -> None:
             for entry in (source_entry, backup_entry)
         ):
             raise RuntimeError("source or backup changed during backup")
-        os.unlink(name, dir_fd=fd)
+        # A checked HOME filename can be replaced before unlink(). Move the
+        # final entry into a private directory first: if it is a concurrent
+        # replacement, preserve it for recovery rather than deleting it.
+        stage_name = f".{name}.stow-stage-{secrets.token_hex(16)}"
+        os.mkdir(stage_name, mode=0o700, dir_fd=fd)
+        stage_fd = None
+        moved = False
+        keep_stage = False
+        try:
+            stage_fd = os.open(stage_name, flags, dir_fd=fd)
+            os.rename(name, "source", src_dir_fd=fd, dst_dir_fd=stage_fd)
+            moved = True
+            staged = os.stat("source", dir_fd=stage_fd, follow_symlinks=False)
+            if (staged.st_dev, staged.st_ino, staged.st_mode) != original:
+                # Restore only when the source name is still vacant. Retain
+                # the staged copy even after restoring, to avoid losing user
+                # data to another concurrent replacement of the HOME name.
+                try:
+                    if not stat.S_ISDIR(staged.st_mode):
+                        os.link(
+                            "source", name, src_dir_fd=stage_fd,
+                            dst_dir_fd=fd, follow_symlinks=False
+                        )
+                except FileExistsError:
+                    pass
+                keep_stage = True
+                raise RuntimeError(
+                    "source changed during final move; replacement preserved at "
+                    + os.path.join(os.path.dirname(target), stage_name, "source")
+                )
+            # This entry is in our private staging directory, not at a
+            # mutable user pathname. The original inode remains at dest.
+            os.unlink("source", dir_fd=stage_fd)
+        except OSError:
+            # If move completed, retain the entry on later I/O failures.
+            keep_stage = moved
+            raise
+        finally:
+            if stage_fd is not None:
+                os.close(stage_fd)
+            if not keep_stage:
+                os.rmdir(stage_name, dir_fd=fd)
     finally:
         os.close(fd)
 
