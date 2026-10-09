@@ -228,12 +228,21 @@ BEGIN {
 1;
 PERL
 RACE_STOW=$(command -v stow)
+# Replay the actual apply mode configured in the Ansible role.
+if grep -Eq 'cmd: stow .* -R --no-folding' "$ROOT/ansible/roles/stow/tasks/package.yml"; then
+  RACE_STOW_MODE=-R
+elif grep -Eq 'cmd: stow .* -S --no-folding' "$ROOT/ansible/roles/stow/tasks/package.yml"; then
+  RACE_STOW_MODE=-S
+else
+  echo 'FAIL: unexpected GNU Stow apply mode in Ansible role'
+  exit 1
+fi
 race_status=0
 (
   cd "$RACE/stow"
   PERL5LIB="$TMP/faultlib" PERL5OPT="-MStowConcurrentSwap" \
     STOW_CONCURRENT_SWAP_MARKER="$RACE/attempted" \
-    "$RACE_STOW" -S --no-folding -t "$RACE/home" demo
+    "$RACE_STOW" "$RACE_STOW_MODE" --no-folding -t "$RACE/home" demo
 ) >"$RACE/output" 2>&1 || race_status=$?
 if [ -f "$RACE/attempted" ]; then
   # A version that does attempt unlink must preserve the injected user file
