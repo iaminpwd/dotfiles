@@ -140,6 +140,19 @@ def _verify_parent(root_fd, parts, pinned_fd):
         raise
 
 
+def _verify_home_root(root_fd, home):
+    """Detect a renamed/replaced HOME inode before and after leaf installation."""
+    try:
+        observed = os.stat(home, follow_symlinks=False)
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+            raise RuntimeError("HOME root moved or replaced during safe Stow apply") from exc
+        raise
+    original = os.fstat(root_fd)
+    if (original.st_dev, original.st_ino) != (observed.st_dev, observed.st_ino):
+        raise RuntimeError("HOME root moved or replaced during safe Stow apply")
+
+
 def install(stow_dir, package, home):
     _require_secure_dirfds()
     stow_dir = os.path.abspath(stow_dir)
@@ -153,6 +166,7 @@ def install(stow_dir, package, home):
     entries = _filtered_files(stow_dir, package, home)
     root_fd = os.open(home, DIR_FLAGS)
     try:
+        _verify_home_root(root_fd, home)
         # Preflight all existing entries before creating any new symlink.
         for parts, source in entries:
             parent_path = os.path.join(home, *parts[:-1])
@@ -170,6 +184,12 @@ def install(stow_dir, package, home):
         for parts, source in entries:
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1], create=True) as parent_fd:
+                # A pinned directory FD remains writable even after the inode
+                # is renamed OUTSIDE HOME. Re-check its ancestry immediately
+                # before every mutation as well as after. This narrows, but
+                # cannot eliminate, a hostile rename during symlinkat itself.
+                _verify_home_root(root_fd, home)
+                _verify_parent(root_fd, parts[:-1], parent_fd)
                 canonical_parent = os.path.join(canonical_home, *parts[:-1])
                 relative = os.path.relpath(
                     os.path.realpath(source), canonical_parent
@@ -180,11 +200,12 @@ def install(stow_dir, package, home):
                     if not _owned(parent_fd, parts[-1], source, parent_path):
                         raise RuntimeError("concurrent HOME entry blocks safe Stow install: "
                                            + os.path.join(parent_path, parts[-1]))
+                # Never automatically unlink here on a move: unlink(dir_fd)
+                # has no inode compare-and-delete primitive, so concurrent
+                # user replacement could itself be destroyed by cleanup.
                 _verify_parent(root_fd, parts[:-1], parent_fd)
-        original = os.fstat(root_fd)
-        actual = os.stat(home, follow_symlinks=False)
-        if (original.st_dev, original.st_ino) != (actual.st_dev, actual.st_ino):
-            raise RuntimeError("HOME directory replaced during safe Stow apply")
+                _verify_home_root(root_fd, home)
+        _verify_home_root(root_fd, home)
     finally:
         os.close(root_fd)
 
