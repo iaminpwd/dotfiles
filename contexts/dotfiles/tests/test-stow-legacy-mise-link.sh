@@ -133,7 +133,6 @@ if [ ! -L "$MANAGED_HOME/.config" ] ||
   exit 1
 fi
 
-
 # Deterministic TOCTOU at the ACTUAL safe role initialization boundary. An
 # open HOME parent can be renamed outside HOME during mkdir(dir_fd=...);
 # the role must detect it, never follow a swapped foreign parent, and retry
