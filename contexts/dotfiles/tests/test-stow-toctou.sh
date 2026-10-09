@@ -424,4 +424,107 @@ PY
 
 echo 'PASS: regular-file snapshots remain detached from open writers and hard-link peers'
 
+# A failed detached copy must never remove user content or overwrite an older
+# backup. Exercise real filesystem calls with just one injected syscall error.
+# Failures after source movement must keep the published copy for recovery.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/partial-copy-failures" "$REAL_PYTHON" - <<'PY'
+import errno
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+cases = (
+    ("read-eio", "read", errno.EIO),
+    ("write-enospc", "write", errno.ENOSPC),
+    ("fsync-eio", "fsync", errno.EIO),
+    ("chmod-eperm", "fchmod", errno.EPERM),
+    ("snapshot-open-eacces", "open", errno.EACCES),
+    ("backup-link-eperm", "link", errno.EPERM),
+    ("final-rename-eio", "rename", errno.EIO),
+    ("source-unlink-eio", "unlink", errno.EIO),
+    ("snapshot-unlink-eio", "unlink", errno.EIO),
+)
+
+for label, operation, error_number in cases:
+    home = root / label
+    home.mkdir()
+    source = home / ".conf"
+    original = b"valuable user content\n"
+    source.write_bytes(original)
+    existing = home / ".conf.backup.fixed"
+    existing.write_bytes(b"existing valuable backup\n")
+    original_call = getattr(os, operation)
+    injection = [False]
+    write_partial = [False]
+
+    def intercept(*args, **kwargs):
+        match = (
+            (operation == "read" and label == "read-eio")
+            or (operation == "write" and label == "write-enospc")
+            or (operation == "fsync" and label == "fsync-eio")
+            or (operation == "fchmod" and label == "chmod-eperm")
+            or (operation == "open" and args[0] == "snapshot")
+            or (operation == "link" and args[0] == "snapshot")
+            or (operation == "rename" and args[:2] == (".conf", "source"))
+            or (operation == "unlink" and (
+                (label == "source-unlink-eio" and args[0] == "source")
+                or (label == "snapshot-unlink-eio" and args[0] == "snapshot")
+            ))
+        )
+        if match and not injection[0]:
+            if label == "write-enospc" and not write_partial[0]:
+                write_partial[0] = True
+                return original_call(args[0], args[1][:3])
+            injection[0] = True
+            raise OSError(error_number, os.strerror(error_number))
+        return original_call(*args, **kwargs)
+
+    setattr(os, operation, intercept)
+    try:
+        try:
+            helper.backup(str(home), str(source), "fixed")
+        except OSError as exc:
+            assert exc.errno == error_number, (label, exc)
+        else:
+            raise AssertionError(f"{label}: backup unexpectedly succeeded")
+    finally:
+        setattr(os, operation, original_call)
+
+    assert injection[0], f"{label}: fault injection did not run"
+    assert existing.read_bytes() == b"existing valuable backup\n", label
+    backups = list(home.glob(".conf.backup.fixed.*"))
+    stages = list(home.glob("..conf.stow-stage-*"))
+    saved = [source] if source.exists() else []
+    saved += backups
+    for stage in stages:
+        saved.extend(stage.iterdir())
+    assert any(path.is_file() and path.read_bytes() == original for path in saved), (
+        label, saved
+    )
+
+    if source.exists():
+        # A retry must not overwrite either the timestamp collision or a
+        # backup already published before the injected syscall failed.
+        previous = {path: path.read_bytes() for path in [existing, *backups]}
+        helper.backup(str(home), str(source), "fixed")
+        assert not source.exists(), label
+        assert all(path.read_bytes() == value for path, value in previous.items()), label
+        assert any(
+            path.read_bytes() == original
+            for path in home.glob(".conf.backup.fixed.*")
+        ), label
+    else:
+        # No automatic rollback after final source movement; the published
+        # copy, rather than a mutable source name, is the recovery artifact.
+        assert backups and any(path.read_bytes() == original for path in backups), label
+
+print("PASS: injected partial-copy failures preserve user data and retry safely")
+PY
+
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
