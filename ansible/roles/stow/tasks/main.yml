@@ -14,7 +14,7 @@
       - "{{ role_path }}/../../.."
       - "{{ '--check' if ansible_check_mode else '--apply' }}"
   register: stow_mise_init_result
-  changed_when: "'CHANGED:' in stow_mise_init_result.stdout"
+  changed_when: "stow_mise_init_result.stdout.startswith('CHANGED:')"
   # Explicit --check is read-only. Run the guard even in Ansible check mode.
   check_mode: false
 
@@ -31,7 +31,7 @@
       - "{{ role_path }}/../../.."
       - "{{ '--check' if ansible_check_mode else '--apply' }}"
   register: stow_legacy_init_result
-  changed_when: "'CHANGED:' in stow_legacy_init_result.stdout"
+  changed_when: "stow_legacy_init_result.stdout.startswith('CHANGED:')"
   check_mode: false
 
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
