@@ -688,7 +688,6 @@ PY
 
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
 
-
 # Round 21: the opened Stow root can be renamed away after source validation.
 # An fd anchored to the moved directory still sees the ORIGINAL source, but
 # the new HOME symlink text resolves through the REPLACEMENT Stow root.
@@ -737,7 +736,6 @@ assert (moved / "demo/.managed").read_bytes() == b"trusted source A\n"
 assert (stow / "demo/.managed").read_bytes() == b"replacement source B\n"
 PY
 echo 'PASS: moved Stow root cannot silently validate a replacement source'
-
 
 # A new package directory can contain the exact same source-file inode after
 # a concurrent move. Pin the PACKAGE directory identity as well as each leaf.
