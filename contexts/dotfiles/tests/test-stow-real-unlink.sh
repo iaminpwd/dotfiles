@@ -133,7 +133,7 @@ if [ "$status" -ne 0 ] ||
   [ "$(readlink "${FOLD_B_BACKUPS[0]}")" != "../repo/stow/demo/.fold-b" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
   [ -s "$TMP/unlinks" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   ! grep -Eq 'changed=1([^0-9]|$)' "$TMP/install.out"; then
   cat "$TMP/install.out"
   echo 'FAIL: safe folded-link migration or no-unlink install failed'
@@ -148,7 +148,7 @@ if [ "$status" -ne 0 ] ||
   [ ! -L "$HOME_DIR/.fold-a/managed" ] ||
   [ ! -L "$HOME_DIR/.fold-b/managed" ] ||
   [ ! -L "$HOME_DIR/.custom" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   [ -s "$TMP/unlinks" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}"; then
   cat "$TMP/check.out"
@@ -166,7 +166,7 @@ if [ "$status" -ne 0 ] ||
   [ ! -L "$HOME_DIR/.custom" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
   [ -s "$TMP/unlinks" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   ! grep -Eq 'changed=0([^0-9]|$)' "$TMP/retry.out"; then
   cat "$TMP/retry.out"
   echo 'FAIL: clean setup changed links or lost a backup'
