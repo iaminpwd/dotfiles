@@ -5,7 +5,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BACKUP="$ROOT/bin/utils/stow-backup.sh"
 HELPER="$ROOT/bin/utils/stow-safe-backup.py"
-REAL_PYTHON=$(command -v python3)
+# A mise shim resolves tools against HOME, which this test intentionally swaps.
+# Capture the real interpreter to avoid an unintended network reinstall.
+REAL_PYTHON=$(python3 -c 'import os, sys; print(os.path.realpath(sys.executable))')
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
