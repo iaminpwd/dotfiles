@@ -75,6 +75,8 @@ shutil.copy2(root / "bin/utils/stow-filter-inventory.pl",
              repo / "bin/utils/stow-filter-inventory.pl")
 shutil.copy2(root / "bin/utils/stow-safe-backup.py",
              repo / "bin/utils/stow-safe-backup.py")
+shutil.copy2(root / "bin/utils/stow-safe-install.py",
+             repo / "bin/utils/stow-safe-install.py")
 (role / "main.yml").write_text("""---
 - name: Run actual package tasks
   ansible.builtin.include_tasks: package.yml
@@ -133,7 +135,7 @@ if [ "$status" -ne 0 ] ||
   [ "$(readlink "${FOLD_B_BACKUPS[0]}")" != "../repo/stow/demo/.fold-b" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
   [ -s "$TMP/unlinks" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   ! grep -Eq 'changed=1([^0-9]|$)' "$TMP/install.out"; then
   cat "$TMP/install.out"
   echo 'FAIL: safe folded-link migration or no-unlink install failed'
@@ -148,7 +150,7 @@ if [ "$status" -ne 0 ] ||
   [ ! -L "$HOME_DIR/.fold-a/managed" ] ||
   [ ! -L "$HOME_DIR/.fold-b/managed" ] ||
   [ ! -L "$HOME_DIR/.custom" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   [ -s "$TMP/unlinks" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}"; then
   cat "$TMP/check.out"
@@ -166,7 +168,7 @@ if [ "$status" -ne 0 ] ||
   [ ! -L "$HOME_DIR/.custom" ] ||
   ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
   [ -s "$TMP/unlinks" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -e "$TMP/calls" ] ||
   ! grep -Eq 'changed=0([^0-9]|$)' "$TMP/retry.out"; then
   cat "$TMP/retry.out"
   echo 'FAIL: clean setup changed links or lost a backup'
@@ -174,82 +176,112 @@ if [ "$status" -ne 0 ] ||
 fi
 echo 'PASS: folded symlinks safely migrated without destructive Stow unlink'
 
-# Simulate a concurrent user installing a regular file into an already-owned
-# Stow symlink location AFTER GNU Stow has decided to unlink the symlink.
-# GNU Stow's unlink cannot conditionally compare inode identity: -R would
-# delete the newly arrived file. -S must not unlink correctly-owned leaves.
-RACE="$TMP/unlink-swap-race"
-mkdir -p "$RACE/stow/demo" "$RACE/home"
-mkdir -p "$RACE/stow/demo/.fold-a"
-printf 'managed owned\n' >"$RACE/stow/demo/.fold-a/managed"
-printf 'managed fresh\n' >"$RACE/stow/demo/.fresh"
-ln -s "../stow/demo/.fold-a" "$RACE/home/.fold-a"
-cat >"$TMP/faultlib/StowConcurrentSwap.pm" <<'PERL'
-package StowConcurrentSwap;
-use strict;
-use warnings;
-BEGIN {
-  *CORE::GLOBAL::unlink = sub {
-    my $path = $_[0];
-    if ($path =~ m{(?:^|/)\.fold-a$} && !$StowConcurrentSwap::swapped) {
-      $StowConcurrentSwap::swapped = 1;
-      rename($path, "$path.saved-managed-link")
-        or die "failed to move disposable symlink: $!";
-      open my $fh, '>', $path or die "failed to install disposable user file: $!";
-      print {$fh} "valuable concurrent user file\n";
-      close $fh;
-      open my $log, '>', $ENV{STOW_CONCURRENT_SWAP_MARKER}
-        or die "cannot record swap: $!";
-      print {$log} "swapped\n";
-      close $log;
-    }
-    return CORE::unlink($_[0]);
-  };
-}
-1;
-PERL
-RACE_STOW=$(command -v stow)
-# Replay the actual apply mode configured in the Ansible role.
-if grep -Eq 'cmd: stow .* -R --no-folding' "$ROOT/ansible/roles/stow/tasks/package.yml"; then
-  RACE_STOW_MODE=-R
-elif grep -Eq 'cmd: stow .* -S --no-folding' "$ROOT/ansible/roles/stow/tasks/package.yml"; then
-  RACE_STOW_MODE=-S
-else
-  echo 'FAIL: unexpected GNU Stow apply mode in Ansible role'
+# The actual role must never delegate mutating apply operations to GNU Stow.
+if ! grep -q 'stow-safe-install.py' "$ROOT/ansible/roles/stow/tasks/package.yml" ||
+  grep -Eq 'cmd: stow .* -(S|R) --no-folding' "$ROOT/ansible/roles/stow/tasks/package.yml"; then
+  echo 'FAIL: role still performs path-based GNU Stow writes'
   exit 1
 fi
-race_status=0
-(
-  cd "$RACE/stow"
-  PERL5LIB="$TMP/faultlib" PERL5OPT="-MStowConcurrentSwap" \
-    STOW_CONCURRENT_SWAP_MARKER="$RACE/attempted" \
-    "$RACE_STOW" "$RACE_STOW_MODE" --no-folding -t "$RACE/home" demo
-) >"$RACE/output" 2>&1 || race_status=$?
-if [ "$RACE_STOW_MODE" = -R ] && [ ! -f "$RACE/attempted" ]; then
-  cat "$RACE/output"
-  echo 'FAIL: real GNU Stow -R did not exercise a managed folded-link unlink'
-  exit 1
-fi
-if [ -f "$RACE/attempted" ]; then
-  # A version that does attempt unlink must preserve the injected user file
-  # and stop, instead of treating it as the old Stow-owned symlink.
-  if [ "$race_status" -eq 0 ] ||
-    [ ! -f "$RACE/home/.fold-a" ] ||
-    ! grep -qx 'valuable concurrent user file' "$RACE/home/.fold-a"; then
-    cat "$RACE/output"
-    echo 'FAIL: GNU Stow deleted a concurrently replaced user file'
-    exit 1
-  fi
-else
-  # A stow-only invocation does not need to remove existing owned symlinks.
-  if [ "$race_status" -ne 0 ] ||
-    [ ! -L "$RACE/home/.fold-a" ] ||
-    [ ! -L "$RACE/home/.fresh" ] ||
-    ! grep -qx 'managed owned' "$RACE/home/.fold-a/managed" ||
-    ! grep -qx 'managed fresh' "$RACE/home/.fresh"; then
-    cat "$RACE/output"
-    echo 'FAIL: non-destructive Stow install did not converge'
-    exit 1
-  fi
-fi
-echo 'PASS: concurrent replacement cannot be deleted by Stow-owned-link removal'
+# The secure installer must not follow a HOME parent swapped to an external
+# symlink between an O_NOFOLLOW directory open and os.symlink(dir_fd=...).
+PARENT_RACE="$TMP/parent-swap"
+mkdir -p "$PARENT_RACE/stow/demo/.config" "$PARENT_RACE/home/.config" \
+  "$PARENT_RACE/external"
+printf 'managed content\n' >"$PARENT_RACE/stow/demo/.config/managed"
+printf 'unrelated external secret\n' >"$PARENT_RACE/external/secret"
+STOW_SAFE_INSTALL="$ROOT/bin/utils/stow-safe-install.py" \
+  STOW_SWAP_TEST_ROOT="$PARENT_RACE" python3 - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_SWAP_TEST_ROOT"])
+home = root / "home"
+external = root / "external"
+helper_path = os.environ["STOW_SAFE_INSTALL"]
+spec = importlib.util.spec_from_file_location("stow_safe_install", helper_path)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+original = os.symlink
+swapped = [False]
+
+def swap_before_create(target, link_name, *args, **kwargs):
+    if link_name == "managed" and kwargs.get("dir_fd") is not None and not swapped[0]:
+        swapped[0] = True
+        os.rename(home / ".config", home / ".config-preserved")
+        original(str(external), home / ".config")
+    return original(target, link_name, *args, **kwargs)
+
+os.symlink = swap_before_create
+try:
+    try:
+        helper.install(str(root / "stow"), "demo", str(home))
+    except RuntimeError as exc:
+        assert "HOME parent replaced" in str(exc), exc
+    else:
+        raise AssertionError("swapped HOME parent did not hard block")
+finally:
+    os.symlink = original
+
+assert swapped[0], "injected race was not exercised"
+assert (external / "secret").read_bytes() == b"unrelated external secret\n"
+assert not (external / "managed").exists()
+assert (home / ".config").is_symlink()
+assert (home / ".config-preserved").is_dir()
+
+# Concurrent user creation after preflight must not be overwritten by install.
+fresh = root / "fresh"
+(fresh / "stow/demo/.config").mkdir(parents=True)
+(fresh / "home/.config").mkdir(parents=True)
+(fresh / "stow/demo/.config/managed").write_bytes(b"managed\n")
+original = os.symlink
+injected = [False]
+
+def create_user_file_first(target, link_name, *args, **kwargs):
+    if link_name == "managed" and kwargs.get("dir_fd") is not None and not injected[0]:
+        injected[0] = True
+        (fresh / "home/.config/managed").write_bytes(b"concurrent user contents\n")
+    return original(target, link_name, *args, **kwargs)
+
+os.symlink = create_user_file_first
+try:
+    try:
+        helper.install(str(fresh / "stow"), "demo", str(fresh / "home"))
+    except RuntimeError as exc:
+        assert "concurrent HOME entry blocks" in str(exc), exc
+    else:
+        raise AssertionError("concurrent new user file was not blocked")
+finally:
+    os.symlink = original
+assert injected[0]
+assert (fresh / "home/.config/managed").read_bytes() == b"concurrent user contents\n"
+
+# A correct owned symlink must remain the very same inode on repeated setup.
+owned = root / "owned"
+(owned / "stow/demo").mkdir(parents=True)
+(owned / "home").mkdir()
+(owned / "stow/demo/.managed").write_bytes(b"managed\n")
+link = owned / "home/.managed"
+link.symlink_to("../stow/demo/.managed")
+prior = link.lstat()
+helper.install(str(owned / "stow"), "demo", str(owned / "home"))
+after = link.lstat()
+assert (prior.st_dev, prior.st_ino) == (after.st_dev, after.st_ino)
+
+# macOS exposes temp roots through aliases such as /var -> /private/var.
+# A symlink in a HOME ancestor (not the HOME leaf) must not make the
+# relative link target dangle when source and target spellings differ.
+alias_root = root / "ancestor-alias"
+real = alias_root / "nested/actual"
+(real / "stow/demo/.config").mkdir(parents=True)
+(real / "home").mkdir()
+(real / "stow/demo/.config/managed").write_bytes(b"alias-managed\n")
+(alias_root / "short").symlink_to("nested/actual", target_is_directory=True)
+helper.install(str(real / "stow"), "demo", str(alias_root / "short/home"))
+installed = real / "home/.config/managed"
+assert installed.is_symlink(), installed
+assert installed.read_bytes() == b"alias-managed\n", os.readlink(installed)
+
+print("PASS: swapped parents, concurrent leaf creation and aliased ancestor paths preserve data")
+PY
