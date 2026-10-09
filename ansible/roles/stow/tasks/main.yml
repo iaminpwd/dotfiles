@@ -1,58 +1,38 @@
 ---
-# Guard the user-owned shared config tree *before* creating .config/mise.
-# Otherwise the mkdir below follows a foreign ~/.config or ~/.config/mise
-# symlink and writes into that external directory before stow-backup blocks it.
-# Preserve historical Stow links only when they resolve to this package's
-# exact managed .config or .config/mise source.
-- name: Mise 설정 경로의 심볼릭 링크 소유권 확인
-  ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/{{ item }}"
-    follow: false
-  loop:
-    - .config
-    - .config/mise
-  register: stow_mise_path_stat
+# Before the ordinary Stow package loop, HOME setup must use the same
+# no-follow directory-fd boundary as the safe link installer. Separate
+# Ansible stat/assert/file tasks leave a writable TOCTOU interval:
+# ~/.config can be swapped after assertion, and ~/.mise.toml can become a
+# foreign user file after its identity was checked but before deletion.
+- name: Mise 설정 경로 안전 생성 (디렉토리 FD 기반)
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ role_path }}/../../../bin/utils/stow-safe-role-init.py"
+      - mise
+      - "{{ ansible_env.HOME }}"
+      - "{{ role_path }}/../../.."
+      - "{{ '--check' if ansible_check_mode else '--apply' }}"
+  register: stow_mise_init_result
+  changed_when: "'CHANGED:' in stow_mise_init_result.stdout"
+  # Explicit --check is read-only. Run the guard even in Ansible check mode.
+  check_mode: false
 
-- name: 외부 Mise 설정 디렉토리 링크 사전 차단
-  ansible.builtin.assert:
-    that:
-      - >-
-        not (item.stat.islnk | default(false)) or
-        (item.stat.lnk_source | default('')) ==
-        ((role_path | dirname | dirname | dirname) ~ '/stow/mise/' ~ item.item)
-    fail_msg: >-
-      사용자 설정 디렉토리의 외부 심볼릭 링크를 변경하지 않습니다:
-      {{ ansible_env.HOME }}/{{ item.item }}
-      (Stow 설치 전에 해당 링크를 수동 확인해야 합니다)
-  loop: "{{ stow_mise_path_stat.results }}"
-  loop_control:
-    label: "{{ ansible_env.HOME }}/{{ item.item }}"
-
-- name: Local 전용 오버라이드 폴더 확보
-  ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.config/mise"
-    state: directory
-    mode: "0755"
-
-- name: 구버전 ~/.mise.toml 심볼릭 링크 존재 여부 확인
-  ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.mise.toml"
-  register: stow_legacy_mise_toml_stat
-
-# state: absent를 무조건 실행하면, 이 파일명으로 이 저장소와 무관한 실제 개인 설정을
-# 갖고 있는 사용자의 파일까지 확인 없이 지워버린다. 심볼릭 링크라는 이유만으로도
-# 삭제하면 사용자가 직접 만든 ~/.mise.toml -> ~/private/mise.toml 같은 설정을 잃는다.
-# 과거 이 저장소가 배포하던 <repo>/mise/.mise.toml 링크와 정확히 일치할 때만 정리한다.
-- name: 구버전 ~/.mise.toml 심볼릭 링크 정리
-  ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.mise.toml"
-    state: absent
-  when:
-    - stow_legacy_mise_toml_stat.stat.exists
-    - stow_legacy_mise_toml_stat.stat.islnk
-    - >-
-      stow_legacy_mise_toml_stat.stat.lnk_source ==
-      ((role_path | dirname | dirname | dirname) ~ '/mise/.mise.toml')
+# Removing a previously checked path with state: absent can delete a new
+# user file that arrived since the stat task. Move to a private stage and
+# verify the moved inode before deleting only the historic Stow-owned link.
+- name: 구버전 Mise 링크의 안전한 정리 (경합 시 원본 보존)
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ role_path }}/../../../bin/utils/stow-safe-role-init.py"
+      - legacy
+      - "{{ ansible_env.HOME }}"
+      - "{{ role_path }}/../../.."
+      - "{{ '--check' if ansible_check_mode else '--apply' }}"
+  register: stow_legacy_init_result
+  changed_when: "'CHANGED:' in stow_legacy_init_result.stdout"
+  check_mode: false
 
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
   ansible.builtin.find:
