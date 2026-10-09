@@ -132,8 +132,35 @@ def _filtered_files(stow_dir, package, home):
         parts = relative.split(os.sep)
         if any(part in ("", ".", "..") for part in parts):
             raise RuntimeError("invalid Stow source path")
-        entries.append((parts, absolute))
+        observed = os.lstat(absolute)
+        if not stat.S_ISREG(observed.st_mode):
+            raise RuntimeError("Stow source is no longer a regular file: " + absolute)
+        entries.append((parts, absolute, (observed.st_dev, observed.st_ino)))
     return entries
+
+
+def _verify_source(stow_fd, package, parts, expected):
+    """Reject source symlink/parent replacement since filtered inventory.
+
+    Resolve components from a pinned Stow root via O_NOFOLLOW directory FDs
+    and inspect the leaf without following symlinks. Never use realpath() on a
+    mutable source leaf to construct the installed symlink text.
+    """
+    try:
+        with _parent(stow_fd, [package, *parts[:-1]]) as source_parent:
+            if source_parent is None:
+                raise RuntimeError("Stow source parent disappeared")
+            _verify_parent(stow_fd, [package, *parts[:-1]], source_parent)
+            entry = os.stat(parts[-1], dir_fd=source_parent,
+                            follow_symlinks=False)
+            if not stat.S_ISREG(entry.st_mode):
+                raise RuntimeError("Stow source changed type after inventory")
+            if (entry.st_dev, entry.st_ino) != expected:
+                raise RuntimeError("Stow source inode changed after inventory")
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+            raise RuntimeError("Stow source path changed after inventory") from exc
+        raise
 
 
 def _owned(entry_fd, name, source, parent_path):
@@ -183,14 +210,21 @@ def install(stow_dir, package, home):
     # Compute link *text* from canonical roots while all filesystem writes
     # still use the original no-follow HOME dirfd.
     canonical_home = os.path.realpath(home)
+    canonical_stow = os.path.realpath(stow_dir)
     if os.path.basename(package) != package or package in ("", ".", ".."):
         raise ValueError("invalid package name")
     entries = _filtered_files(stow_dir, package, home)
     root_fd = os.open(home, DIR_FLAGS)
     try:
+        stow_fd = os.open(stow_dir, DIR_FLAGS)
+    except BaseException:
+        os.close(root_fd)
+        raise
+    try:
         _verify_home_root(root_fd, home)
         # Preflight all existing entries before creating any new symlink.
-        for parts, source in entries:
+        for parts, source, expected in entries:
+            _verify_source(stow_fd, package, parts, expected)
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1]) as parent_fd:
                 if parent_fd is None:
@@ -203,7 +237,8 @@ def install(stow_dir, package, home):
                     raise RuntimeError("foreign HOME entry blocks safe Stow install: "
                                        + os.path.join(parent_path, parts[-1]))
 
-        for parts, source in entries:
+        for parts, source, expected in entries:
+            _verify_source(stow_fd, package, parts, expected)
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1], create=True, home=home) as parent_fd:
                 # A pinned directory FD remains writable even after the inode
@@ -212,16 +247,20 @@ def install(stow_dir, package, home):
                 # cannot eliminate, a hostile rename during symlinkat itself.
                 _verify_home_root(root_fd, home)
                 _verify_parent(root_fd, parts[:-1], parent_fd)
+                _verify_source(stow_fd, package, parts, expected)
                 canonical_parent = os.path.join(canonical_home, *parts[:-1])
-                relative = os.path.relpath(
-                    os.path.realpath(source), canonical_parent
-                )
+                # Use the lexical path underneath the canonical repository
+                # root. A newly introduced source symlink must not redirect
+                # the generated link text directly to an unrelated file.
+                canonical_source = os.path.join(canonical_stow, package, *parts)
+                relative = os.path.relpath(canonical_source, canonical_parent)
                 try:
                     os.symlink(relative, parts[-1], dir_fd=parent_fd)
                 except FileExistsError:
                     if not _owned(parent_fd, parts[-1], source, parent_path):
                         raise RuntimeError("concurrent HOME entry blocks safe Stow install: "
                                            + os.path.join(parent_path, parts[-1]))
+                _verify_source(stow_fd, package, parts, expected)
                 # Never automatically unlink here on a move: unlink(dir_fd)
                 # has no inode compare-and-delete primitive, so concurrent
                 # user replacement could itself be destroyed by cleanup.
@@ -229,6 +268,7 @@ def install(stow_dir, package, home):
                 _verify_home_root(root_fd, home)
         _verify_home_root(root_fd, home)
     finally:
+        os.close(stow_fd)
         os.close(root_fd)
 
 
