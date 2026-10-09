@@ -268,5 +268,20 @@ prior = link.lstat()
 helper.install(str(owned / "stow"), "demo", str(owned / "home"))
 after = link.lstat()
 assert (prior.st_dev, prior.st_ino) == (after.st_dev, after.st_ino)
-print("PASS: parent symlink swaps and concurrent leaf creation preserve external/user files")
+
+# macOS exposes temp roots through aliases such as /var -> /private/var.
+# A symlink in a HOME ancestor (not the HOME leaf) must not make the
+# relative link target dangle when source and target spellings differ.
+alias_root = root / "ancestor-alias"
+real = alias_root / "nested/actual"
+(real / "stow/demo/.config").mkdir(parents=True)
+(real / "home").mkdir()
+(real / "stow/demo/.config/managed").write_bytes(b"alias-managed\n")
+(alias_root / "short").symlink_to("nested/actual", target_is_directory=True)
+helper.install(str(real / "stow"), "demo", str(alias_root / "short/home"))
+installed = real / "home/.config/managed"
+assert installed.is_symlink(), installed
+assert installed.read_bytes() == b"alias-managed\\n", os.readlink(installed)
+
+print("PASS: swapped parents, concurrent leaf creation and aliased ancestor paths preserve data")
 PY
