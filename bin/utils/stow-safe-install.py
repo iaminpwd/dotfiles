@@ -7,6 +7,7 @@ syscall can redirect those writes into an unrelated external directory.
 Use the same GNU Stow Perl ignore matcher, but install leaf links through
 O_NOFOLLOW parent dirfds. Never remove or replace an existing user entry.
 """
+import errno
 import os
 import stat
 import subprocess
@@ -126,12 +127,17 @@ def _owned(entry_fd, name, source, parent_path):
 
 
 def _verify_parent(root_fd, parts, pinned_fd):
-    with _parent(root_fd, parts, create=False) as current:
-        if current is None:
-            raise RuntimeError("HOME parent moved during safe Stow apply")
-        a, b = os.fstat(pinned_fd), os.fstat(current)
-        if (a.st_dev, a.st_ino) != (b.st_dev, b.st_ino):
-            raise RuntimeError("HOME parent replaced during safe Stow apply")
+    try:
+        with _parent(root_fd, parts, create=False) as current:
+            if current is None:
+                raise RuntimeError("HOME parent replaced during safe Stow apply")
+            a, b = os.fstat(pinned_fd), os.fstat(current)
+            if (a.st_dev, a.st_ino) != (b.st_dev, b.st_ino):
+                raise RuntimeError("HOME parent replaced during safe Stow apply")
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+            raise RuntimeError("HOME parent replaced during safe Stow apply") from exc
+        raise
 
 
 def install(stow_dir, package, home):
