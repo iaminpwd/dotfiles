@@ -179,4 +179,127 @@ assert os.readlink(root / ".link.backup.fixed") == "foreign-missing-target"
 assert os.readlink(root / ".link.backup.fixed.1") == "old-missing-target"
 PY
 
+# A replacement installed after inode validation, immediately before the
+# final source move, must not be deleted. Retain its staged copy even if a
+# third writer also claims the original pathname before safe restoration.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/final-move" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+for kind in ("file", "symlink"):
+    for race in ("normal", "replace", "replace-again"):
+        home = root / f"{kind}-{race}"
+        home.mkdir()
+        source = home / ".conf"
+        if kind == "file":
+            source.write_text("original A\n")
+        else:
+            source.symlink_to("old-missing-A")
+
+        real_rename, real_link = os.rename, os.link
+        replaced = [False]
+
+        def swap_before_final_move(src, dst, *args, **kwargs):
+            if src == ".conf" and kwargs.get("src_dir_fd") is not None and not replaced[0]:
+                incoming = home / "incoming"
+                if kind == "file":
+                    incoming.write_text("new user B\n")
+                else:
+                    incoming.symlink_to("new-missing-B")
+                os.replace(incoming, source)
+                replaced[0] = True
+            return real_rename(src, dst, *args, **kwargs)
+
+        def claim_source_during_restore(src, dst, *args, **kwargs):
+            if src == "source" and dst == ".conf" and race == "replace-again":
+                if kind == "file":
+                    source.write_text("newest user C\n")
+                else:
+                    source.symlink_to("new-missing-C")
+            return real_link(src, dst, *args, **kwargs)
+
+        if race != "normal":
+            os.rename = swap_before_final_move
+        if race == "replace-again":
+            os.link = claim_source_during_restore
+        error = None
+        try:
+            try:
+                helper.backup(str(home), str(source), "fixed")
+            except RuntimeError as exc:
+                error = str(exc)
+        finally:
+            os.rename, os.link = real_rename, real_link
+
+        backup = home / ".conf.backup.fixed"
+        if kind == "file":
+            assert backup.read_text() == "original A\n"
+        else:
+            assert os.readlink(backup) == "old-missing-A"
+        stages = list(home.glob("..conf.stow-stage-*"))
+        if race == "normal":
+            assert error is None and not stages and not os.path.lexists(source)
+            continue
+
+        assert replaced[0] and error and "source changed during final move" in error
+        assert len(stages) == 1, (kind, race, stages)
+        saved = stages[0] / "source"
+        if kind == "file":
+            assert saved.read_text() == "new user B\n"
+            assert source.read_text() == (
+                "newest user C\n" if race == "replace-again" else "new user B\n"
+            )
+        else:
+            assert os.readlink(saved) == "new-missing-B"
+            assert os.readlink(source) == (
+                "new-missing-C" if race == "replace-again" else "new-missing-B"
+            )
+PY
+
+# If removal of the verified private staging entry fails, preserve its
+# contents and the original backup instead of blindly cleaning up.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/final-move-io" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+home = Path(os.environ["STOW_TEST_ROOT"])
+home.mkdir()
+(home / ".conf").write_text("original A\n")
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+real_unlink = os.unlink
+
+def fail_staging_unlink(name, *args, **kwargs):
+    if name == "source" and kwargs.get("dir_fd") is not None:
+        raise OSError(5, "injected staging EIO")
+    return real_unlink(name, *args, **kwargs)
+
+os.unlink = fail_staging_unlink
+try:
+    try:
+        helper.backup(str(home), str(home / ".conf"), "fixed")
+    except OSError as exc:
+        assert exc.errno == 5
+    else:
+        raise AssertionError("staging unlink failure must hard block")
+finally:
+    os.unlink = real_unlink
+
+assert (home / ".conf.backup.fixed").read_text() == "original A\n"
+stages = list(home.glob("..conf.stow-stage-*"))
+assert len(stages) == 1
+assert (stages[0] / "source").read_text() == "original A\n"
+PY
+
+echo 'PASS: final move preserves concurrent user files, symlinks and staging I/O failures'
+
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
