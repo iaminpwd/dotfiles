@@ -83,15 +83,18 @@
 # 전부 그 링크를 타고 이 저장소 디렉토리 안으로 흘러들어간다(실측: gh/infracost 인증
 # 정보가 유출된 사고). --no-folding으로 항상 리프 파일 단위로만 링크해 부모 디렉토리는
 # 실제 디렉토리로 남긴다.
-- name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
+# GNU Stow's Perl ignore matcher still determines the managed file inventory,
+# but pathname-based GNU Stow symlink()/mkdir() can follow a swapped HOME parent
+# after its preflight. The installer pins every parent via O_NOFOLLOW dirfds.
+# It never unlinks or overwrites an existing user entry.
+- name: 안전한 파일 단위 심볼릭 링크 적용 (GNU Stow ignore 규칙 준수)
   ansible.builtin.command:
-    cmd: stow -t {{ ansible_env.HOME }} -S --no-folding --verbose {{ stow_package.path | basename }}
-    chdir: "{{ role_path }}/../../../stow/"
-  # GNU Stow -S only adds missing links. -R would unlink existing owned
-  # links and may delete a newly arrived user entry between validation and
-  # unlink. Historical folded directory links are backed up safely first.
-  # Running Stow on a clean package
-  # creates unnecessary filesystem mutations while reporting changed=false.
+    cmd: >-
+      python3 "{{ role_path }}/../../../bin/utils/stow-safe-install.py"
+      "{{ role_path }}/../../../stow"
+      "{{ stow_package.path | basename }}"
+      "{{ ansible_env.HOME }}"
+  # Running on an already clean package would report changed without mutation.
   when:
     - not ansible_check_mode
     - stow_drift_check.stdout is defined
