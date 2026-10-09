@@ -253,3 +253,58 @@ else
   fi
 fi
 echo 'PASS: concurrent replacement cannot be deleted by Stow-owned-link removal'
+# An attacker can swap a user HOME parent for an external symlink immediately
+# before Stow's ordinary path-based symlink call. Use GNU Stow's actual Perl
+# syscall from an isolated tree, never the runner's real HOME.
+PARENT_RACE="$TMP/parent-swap"
+mkdir -p "$PARENT_RACE/stow/demo/.config" "$PARENT_RACE/home/.config" \
+  "$PARENT_RACE/external" "$TMP/faultlib"
+printf 'managed content\n' >"$PARENT_RACE/stow/demo/.config/managed"
+printf 'unrelated external secret\n' >"$PARENT_RACE/external/secret"
+cat >"$TMP/faultlib/StowParentSwap.pm" <<'PERL'
+package StowParentSwap;
+use strict;
+use warnings;
+BEGIN {
+  *CORE::GLOBAL::symlink = sub {
+    my ($target, $dest) = @_;
+    if (!$StowParentSwap::swapped && $dest =~ m{(?:^|/)\.config/managed$}) {
+      $StowParentSwap::swapped = 1;
+      my $home = $ENV{STOW_PARENT_SWAP_HOME};
+      my $external = $ENV{STOW_PARENT_SWAP_EXTERNAL};
+      rename("$home/.config", "$home/.config-preserved")
+        or die "cannot move disposable parent: $!";
+      CORE::symlink($external, "$home/.config")
+        or die "cannot swap disposable parent: $!";
+      open my $marker, '>', $ENV{STOW_PARENT_SWAP_MARKER}
+        or die "cannot record injected swap: $!";
+      print {$marker} "injected\n";
+      close $marker;
+    }
+    return CORE::symlink($target, $dest);
+  };
+}
+1;
+PERL
+(
+  cd "$PARENT_RACE/stow"
+  PERL5LIB="$TMP/faultlib" PERL5OPT="-MStowParentSwap" \
+    STOW_PARENT_SWAP_HOME="$PARENT_RACE/home" \
+    STOW_PARENT_SWAP_EXTERNAL="$PARENT_RACE/external" \
+    STOW_PARENT_SWAP_MARKER="$PARENT_RACE/injected" \
+    "$(command -v stow)" -S --no-folding -t "$PARENT_RACE/home" demo
+) >"$PARENT_RACE/out" 2>&1 || true
+if [ ! -f "$PARENT_RACE/injected" ]; then
+  cat "$PARENT_RACE/out"
+  echo 'FAIL: GNU Stow parent swap injection did not execute'
+  exit 1
+fi
+if [ -L "$PARENT_RACE/external/managed" ]; then
+  echo 'FAIL: GNU Stow followed swapped HOME parent and wrote an external symlink'
+  exit 1
+fi
+if [ ! -f "$PARENT_RACE/external/secret" ]; then
+  echo 'FAIL: an unrelated external file was removed during Stow apply'
+  exit 1
+fi
+echo 'PASS: applying links cannot cross swapped HOME parent'
