@@ -253,58 +253,79 @@ else
   fi
 fi
 echo 'PASS: concurrent replacement cannot be deleted by Stow-owned-link removal'
-# An attacker can swap a user HOME parent for an external symlink immediately
-# before Stow's ordinary path-based symlink call. Use GNU Stow's actual Perl
-# syscall from an isolated tree, never the runner's real HOME.
+# The secure installer must not follow a HOME parent swapped to an external
+# symlink between an O_NOFOLLOW directory open and os.symlink(dir_fd=...).
 PARENT_RACE="$TMP/parent-swap"
 mkdir -p "$PARENT_RACE/stow/demo/.config" "$PARENT_RACE/home/.config" \
-  "$PARENT_RACE/external" "$TMP/faultlib"
+  "$PARENT_RACE/external"
 printf 'managed content\n' >"$PARENT_RACE/stow/demo/.config/managed"
 printf 'unrelated external secret\n' >"$PARENT_RACE/external/secret"
-cat >"$TMP/faultlib/StowParentSwap.pm" <<'PERL'
-package StowParentSwap;
-use strict;
-use warnings;
-BEGIN {
-  *CORE::GLOBAL::symlink = sub {
-    my ($target, $dest) = @_;
-    if (!$StowParentSwap::swapped && $dest =~ m{(?:^|/)\.config/managed$}) {
-      $StowParentSwap::swapped = 1;
-      my $home = $ENV{STOW_PARENT_SWAP_HOME};
-      my $external = $ENV{STOW_PARENT_SWAP_EXTERNAL};
-      rename("$home/.config", "$home/.config-preserved")
-        or die "cannot move disposable parent: $!";
-      CORE::symlink($external, "$home/.config")
-        or die "cannot swap disposable parent: $!";
-      open my $marker, '>', $ENV{STOW_PARENT_SWAP_MARKER}
-        or die "cannot record injected swap: $!";
-      print {$marker} "injected\n";
-      close $marker;
-    }
-    return CORE::symlink($target, $dest);
-  };
-}
-1;
-PERL
-(
-  cd "$PARENT_RACE/stow"
-  PERL5LIB="$TMP/faultlib" PERL5OPT="-MStowParentSwap" \
-    STOW_PARENT_SWAP_HOME="$PARENT_RACE/home" \
-    STOW_PARENT_SWAP_EXTERNAL="$PARENT_RACE/external" \
-    STOW_PARENT_SWAP_MARKER="$PARENT_RACE/injected" \
-    "$(command -v stow)" -S --no-folding -t "$PARENT_RACE/home" demo
-) >"$PARENT_RACE/out" 2>&1 || true
-if [ ! -f "$PARENT_RACE/injected" ]; then
-  cat "$PARENT_RACE/out"
-  echo 'FAIL: GNU Stow parent swap injection did not execute'
-  exit 1
-fi
-if [ -L "$PARENT_RACE/external/managed" ]; then
-  echo 'FAIL: GNU Stow followed swapped HOME parent and wrote an external symlink'
-  exit 1
-fi
-if [ ! -f "$PARENT_RACE/external/secret" ]; then
-  echo 'FAIL: an unrelated external file was removed during Stow apply'
-  exit 1
-fi
-echo 'PASS: applying links cannot cross swapped HOME parent'
+STOW_SAFE_INSTALL="$ROOT/bin/utils/stow-safe-install.py" \
+  STOW_SWAP_TEST_ROOT="$PARENT_RACE" python3 - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_SWAP_TEST_ROOT"])
+home = root / "home"
+external = root / "external"
+helper_path = os.environ["STOW_SAFE_INSTALL"]
+spec = importlib.util.spec_from_file_location("stow_safe_install", helper_path)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+original = os.symlink
+swapped = [False]
+
+def swap_before_create(target, link_name, *args, **kwargs):
+    if link_name == "managed" and kwargs.get("dir_fd") is not None and not swapped[0]:
+        swapped[0] = True
+        os.rename(home / ".config", home / ".config-preserved")
+        original(str(external), home / ".config")
+    return original(target, link_name, *args, **kwargs)
+
+os.symlink = swap_before_create
+try:
+    try:
+        helper.install(str(root / "stow"), "demo", str(home))
+    except RuntimeError as exc:
+        assert "HOME parent replaced" in str(exc), exc
+    else:
+        raise AssertionError("swapped HOME parent did not hard block")
+finally:
+    os.symlink = original
+
+assert swapped[0], "injected race was not exercised"
+assert (external / "secret").read_bytes() == b"unrelated external secret\n"
+assert not (external / "managed").exists()
+assert (home / ".config").is_symlink()
+assert (home / ".config-preserved").is_dir()
+
+# Concurrent user creation after preflight must not be overwritten by install.
+fresh = root / "fresh"
+(fresh / "stow/demo/.config").mkdir(parents=True)
+(fresh / "home/.config").mkdir(parents=True)
+(fresh / "stow/demo/.config/managed").write_bytes(b"managed\n")
+original = os.symlink
+injected = [False]
+
+def create_user_file_first(target, link_name, *args, **kwargs):
+    if link_name == "managed" and kwargs.get("dir_fd") is not None and not injected[0]:
+        injected[0] = True
+        (fresh / "home/.config/managed").write_bytes(b"concurrent user contents\n")
+    return original(target, link_name, *args, **kwargs)
+
+os.symlink = create_user_file_first
+try:
+    try:
+        helper.install(str(fresh / "stow"), "demo", str(fresh / "home"))
+    except RuntimeError as exc:
+        assert "concurrent HOME entry blocks" in str(exc), exc
+    else:
+        raise AssertionError("concurrent new user file was not blocked")
+finally:
+    os.symlink = original
+assert injected[0]
+assert (fresh / "home/.config/managed").read_bytes() == b"concurrent user contents\n"
+print("PASS: parent symlink swaps and concurrent leaf creation preserve external/user files")
+PY
