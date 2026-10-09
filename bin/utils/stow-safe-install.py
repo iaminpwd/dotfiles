@@ -26,6 +26,7 @@ DIR_FLAGS = (
 # injection. Platform capability must be checked against the real builtin
 # recorded at import time, not the transient test intercept.
 SECURE_SYMLINK_SUPPORTED = os.symlink in os.supports_dir_fd
+SECURE_MKDIR_SUPPORTED = os.mkdir in os.supports_dir_fd
 
 
 def _require_secure_dirfds():
@@ -33,7 +34,9 @@ def _require_secure_dirfds():
         raise RuntimeError("secure no-follow directory opens unavailable")
     if not SECURE_SYMLINK_SUPPORTED:
         raise RuntimeError("secure directory-descriptor symlink unavailable")
-    for operation in (os.open, os.mkdir, os.stat, os.readlink):
+    if not SECURE_MKDIR_SUPPORTED:
+        raise RuntimeError("secure directory-descriptor mkdir unavailable")
+    for operation in (os.open, os.stat, os.readlink):
         if operation not in os.supports_dir_fd:
             raise RuntimeError("secure directory-descriptor operation unavailable")
     if os.stat not in os.supports_follow_symlinks:
