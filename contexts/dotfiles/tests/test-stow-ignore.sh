@@ -11,8 +11,17 @@ if ! command -v stow >/dev/null 2>&1; then
   echo '[WARNING] SKIP: GNU Stow is not installed'
   exit 0
 fi
+# A HOME-scoped fixture must not make mise's python3 shim reinstall Python
+# into each disposable HOME. Use the OS interpreter for the backup helper
+# when it is already available; leave other executable resolution unchanged.
+PYTHON_SHIM_DIR=""
+if [ -x /usr/bin/python3 ]; then
+  PYTHON_SHIM_DIR=$(mktemp -d)
+  ln -s /usr/bin/python3 "$PYTHON_SHIM_DIR/python3"
+  export PATH="$PYTHON_SHIM_DIR:$PATH"
+fi
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP" "${PYTHON_SHIM_DIR:-}"' EXIT
 
 # Global ignore: user content excluded by Stow must never be backed up.
 CASE="$TMP/global"
