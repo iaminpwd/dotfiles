@@ -144,6 +144,10 @@ def install(stow_dir, package, home):
     _require_secure_dirfds()
     stow_dir = os.path.abspath(stow_dir)
     home = os.path.abspath(home)
+    # macOS can expose the same temp directory as /var/... and /private/var/...
+    # Compute link *text* from canonical roots while all filesystem writes
+    # still use the original no-follow HOME dirfd.
+    canonical_home = os.path.realpath(home)
     if os.path.basename(package) != package or package in ("", ".", ".."):
         raise ValueError("invalid package name")
     entries = _filtered_files(stow_dir, package, home)
@@ -166,7 +170,10 @@ def install(stow_dir, package, home):
         for parts, source in entries:
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1], create=True) as parent_fd:
-                relative = os.path.relpath(source, parent_path)
+                canonical_parent = os.path.join(canonical_home, *parts[:-1])
+                relative = os.path.relpath(
+                    os.path.realpath(source), canonical_parent
+                )
                 try:
                     os.symlink(relative, parts[-1], dir_fd=parent_fd)
                 except FileExistsError:
