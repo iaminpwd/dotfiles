@@ -283,5 +283,110 @@ installed = real / "home/.config/managed"
 assert installed.is_symlink(), installed
 assert installed.read_bytes() == b"alias-managed\n", os.readlink(installed)
 
+# A directory fd does NOT pin ancestry. A different process can rename an
+# already-open HOME child into another tree. Verify the pinned inode is still
+# reachable under HOME immediately before mutation (not only afterwards).
+before = root / "detached-before"
+(before / "stow/demo/.config").mkdir(parents=True)
+(before / "home/.config").mkdir(parents=True)
+(before / "outside").mkdir()
+(before / "stow/demo/.config/managed").write_bytes(b"managed\n")
+(before / "outside/secret").write_bytes(b"unrelated external user file\n")
+real_verify = helper._verify_parent
+moved_before = [False]
+
+def detach_at_precheck(root_fd, parts, pinned_fd):
+    if list(parts) == [".config"] and not moved_before[0]:
+        moved_before[0] = True
+        os.rename(before / "home/.config", before / "outside/moved")
+    return real_verify(root_fd, parts, pinned_fd)
+
+helper._verify_parent = detach_at_precheck
+try:
+    try:
+        helper.install(str(before / "stow"), "demo", str(before / "home"))
+    except RuntimeError as exc:
+        assert "HOME parent replaced" in str(exc), exc
+    else:
+        raise AssertionError("detached parent passed pre-mutation verification")
+finally:
+    helper._verify_parent = real_verify
+assert moved_before[0]
+assert not (before / "outside/moved/managed").exists()
+assert (before / "outside/secret").read_bytes() == b"unrelated external user file\n"
+
+# A move DURING symlinkat() cannot be made atomic with HOME ancestry checks
+# on portable POSIX. Detect it, preserve unrelated user entries, and ensure
+# retry succeeds once the user restores the displaced directory. Intentionally
+# never unlink entries blindly: that would introduce a second user-data race.
+during = root / "detached-during"
+(during / "stow/demo/.config").mkdir(parents=True)
+(during / "home/.config").mkdir(parents=True)
+(during / "outside").mkdir()
+(during / "stow/demo/.config/managed").write_bytes(b"managed\n")
+(during / "outside/secret").write_bytes(b"unrelated external user file\n")
+real_symlink = os.symlink
+moved_during = [False]
+
+def detach_during_symlink(target, leaf, *args, **kwargs):
+    if (leaf == "managed" and kwargs.get("dir_fd") is not None
+            and not moved_during[0]):
+        moved_during[0] = True
+        os.rename(during / "home/.config", during / "outside/moved")
+    return real_symlink(target, leaf, *args, **kwargs)
+
+os.symlink = detach_during_symlink
+try:
+    try:
+        helper.install(str(during / "stow"), "demo", str(during / "home"))
+    except RuntimeError as exc:
+        assert "HOME parent replaced" in str(exc), exc
+    else:
+        raise AssertionError("detached parent was silently accepted")
+finally:
+    os.symlink = real_symlink
+assert moved_during[0]
+assert (during / "outside/secret").read_bytes() == b"unrelated external user file\n"
+assert (during / "outside/moved/managed").is_symlink()
+os.rename(during / "outside/moved", during / "home/.config")
+helper.install(str(during / "stow"), "demo", str(during / "home"))
+assert (during / "home/.config/managed").read_bytes() == b"managed\n"
+
+# Renaming the HOME *root* during symlinkat() must raise the same fail-closed
+# error rather than leaking a generic missing-path exception. As with a child
+# directory, do not unlink a potentially concurrently replaced user entry.
+home_move = root / "detached-root"
+(home_move / "stow/demo").mkdir(parents=True)
+(home_move / "home").mkdir()
+(home_move / "outside").mkdir()
+(home_move / "stow/demo/.managed").write_bytes(b"managed root\n")
+(home_move / "outside/secret").write_bytes(b"untouched root-move sentinel\n")
+moved_root = [False]
+
+def detach_home_root(target, leaf, *args, **kwargs):
+    if (leaf == ".managed" and kwargs.get("dir_fd") is not None
+            and not moved_root[0]):
+        moved_root[0] = True
+        os.rename(home_move / "home", home_move / "outside/moved-home")
+    return real_symlink(target, leaf, *args, **kwargs)
+
+os.symlink = detach_home_root
+try:
+    try:
+        helper.install(str(home_move / "stow"), "demo", str(home_move / "home"))
+    except RuntimeError as exc:
+        assert "HOME root moved or replaced" in str(exc), exc
+    else:
+        raise AssertionError("detached HOME root was silently accepted")
+finally:
+    os.symlink = real_symlink
+assert moved_root[0]
+assert (home_move / "outside/secret").read_bytes() == b"untouched root-move sentinel\n"
+os.rename(home_move / "outside/moved-home", home_move / "home")
+helper.install(str(home_move / "stow"), "demo", str(home_move / "home"))
+assert (home_move / "home/.managed").read_bytes() == b"managed root\n"
+
+print("PASS: detached parent/root precheck, mid-syscall detection, user data and retry")
+
 print("PASS: swapped parents, concurrent leaf creation and aliased ancestor paths preserve data")
 PY
