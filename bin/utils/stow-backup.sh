@@ -63,7 +63,11 @@ _assert_dir_symlink_safe() {
 _reconcile_dir_symlink() {
   local target=$1 src=$2
   _assert_dir_symlink_safe "$target" "$src" || return 1
-  _reconcile_symlink "$target" "$src"
+  # Historical Stow tree-folded directory symlinks must become real parent
+  # directories under --no-folding. -R can unlink a concurrently replaced
+  # user file; instead preserve the old link with the fd-based backup helper
+  # before safe stow-only (-S) installation of individual leaf links.
+  _safe_backup "$target"
 }
 
 # Bash process substitution hides the exit code of find. Inventory *both*
