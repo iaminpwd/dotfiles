@@ -26,6 +26,7 @@ DIR_FLAGS = (
 # injection. Platform capability must be checked against the real builtin
 # recorded at import time, not the transient test intercept.
 SECURE_SYMLINK_SUPPORTED = os.symlink in os.supports_dir_fd
+SECURE_MKDIR_SUPPORTED = os.mkdir in os.supports_dir_fd
 
 
 def _require_secure_dirfds():
@@ -33,7 +34,9 @@ def _require_secure_dirfds():
         raise RuntimeError("secure no-follow directory opens unavailable")
     if not SECURE_SYMLINK_SUPPORTED:
         raise RuntimeError("secure directory-descriptor symlink unavailable")
-    for operation in (os.open, os.mkdir, os.stat, os.readlink):
+    if not SECURE_MKDIR_SUPPORTED:
+        raise RuntimeError("secure directory-descriptor mkdir unavailable")
+    for operation in (os.open, os.stat, os.readlink):
         if operation not in os.supports_dir_fd:
             raise RuntimeError("secure directory-descriptor operation unavailable")
     if os.stat not in os.supports_follow_symlinks:
@@ -41,24 +44,43 @@ def _require_secure_dirfds():
 
 
 @contextmanager
-def _parent(root_fd, parts, create=False):
-    """Hold each opened parent by inode, never traverse a symlink."""
+def _parent(root_fd, parts, create=False, home=None):
+    """Hold parents by inode; verify ancestry around each directory mutation.
+
+    A pinned dirfd can point to a directory renamed outside HOME. A missing
+    child requires mkdir(dir_fd=...), which is itself a filesystem write.
+    Validate the current parent before mkdir and the newly opened child
+    afterwards, before the caller can create a managed leaf within it.
+    As with symlinkat, POSIX cannot make inode-ancestry validation atomic with
+    a concurrent rename inside the syscall; detect the remaining window.
+    """
+    if create and home is None:
+        raise ValueError("secure parent creation requires the original HOME path")
     fd = os.dup(root_fd)
+    walked = []
     try:
         for component in parts:
+            created = False
             try:
                 child = os.open(component, DIR_FLAGS, dir_fd=fd)
             except FileNotFoundError:
                 if not create:
                     yield None
                     return
+                _verify_home_root(root_fd, home)
+                _verify_parent(root_fd, walked, fd)
                 try:
                     os.mkdir(component, mode=0o755, dir_fd=fd)
                 except FileExistsError:
                     pass
                 child = os.open(component, DIR_FLAGS, dir_fd=fd)
+                created = True
             os.close(fd)
             fd = child
+            walked.append(component)
+            if created:
+                _verify_parent(root_fd, walked, fd)
+                _verify_home_root(root_fd, home)
         yield fd
     finally:
         os.close(fd)
@@ -183,7 +205,7 @@ def install(stow_dir, package, home):
 
         for parts, source in entries:
             parent_path = os.path.join(home, *parts[:-1])
-            with _parent(root_fd, parts[:-1], create=True) as parent_fd:
+            with _parent(root_fd, parts[:-1], create=True, home=home) as parent_fd:
                 # A pinned directory FD remains writable even after the inode
                 # is renamed OUTSIDE HOME. Re-check its ancestry immediately
                 # before every mutation as well as after. This narrows, but
