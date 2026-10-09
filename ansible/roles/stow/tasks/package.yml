@@ -85,9 +85,12 @@
 # 실제 디렉토리로 남긴다.
 - name: GNU Stow 를 통해 홈 디렉토리에 심볼릭 링크 적용
   ansible.builtin.command:
-    cmd: stow -t {{ ansible_env.HOME }} -R --no-folding --verbose {{ stow_package.path | basename }}
+    cmd: stow -t {{ ansible_env.HOME }} -S --no-folding --verbose {{ stow_package.path | basename }}
     chdir: "{{ role_path }}/../../../stow/"
-  # GNU Stow -R unstows and restows the package. Running it on a clean package
+  # GNU Stow -S only adds missing links. -R would unlink existing owned
+  # links and may delete a newly arrived user entry between validation and
+  # unlink. Historical folded directory links are backed up safely first.
+  # Running Stow on a clean package
   # creates unnecessary filesystem mutations while reporting changed=false.
   when:
     - not ansible_check_mode
