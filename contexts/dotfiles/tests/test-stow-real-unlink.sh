@@ -18,9 +18,8 @@ export ANSIBLE_LOCAL_TEMP="$TMP/local"
 export ANSIBLE_REMOTE_TEMP="$TMP/remote"
 mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP" "$ANSIBLE_REMOTE_TEMP" "$TMP/faultlib"
 
-# A real GNU Stow -R --no-folding can unfold old directory links: first unlink
-# succeeds, the second raises EIO. Only intercept matching package-owned links;
-# all other file operations use the system implementation.
+# Unexpected GNU Stow unlink of a package-owned folded link returns EIO;
+# the safe stow-only deployment must never reach this syscall.
 cat >"$TMP/faultlib/StowUnlinkFault.pm" <<'PERL'
 package StowUnlinkFault;
 use strict;
@@ -112,87 +111,68 @@ PY
 
 HOME_DIR="$TMP/home"
 ROLES="$TMP/repo/ansible/roles"
-# First unlink leaves the old folded link absent; second injected EIO must
-# leave the other folder link untouched and the earlier user backup preserved.
-status=0
-STOW_UNLINK_FAULT_AT=2 ANSIBLE_ROLES_PATH="$ROLES" \
-  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/fail.out" 2>&1 || status=$?
-BACKUPS=("$HOME_DIR"/.custom.backup.*)
-# Stow's unlink task order is not necessarily lexical source order.
-# Assert against the actual syscall order observed by the fault wrapper.
-FIRST_UNLINK=$(sed -n '1p' "$TMP/unlinks" 2>/dev/null || true)
-SECOND_UNLINK=$(sed -n '2p' "$TMP/unlinks" 2>/dev/null || true)
-FIRST_LEAF=${FIRST_UNLINK##*/}
-SECOND_LEAF=${SECOND_UNLINK##*/}
-if [ "$status" -eq 0 ] ||
-  [ "$FIRST_LEAF" = "$SECOND_LEAF" ] ||
-  { [ "$FIRST_LEAF" != .fold-a ] && [ "$FIRST_LEAF" != .fold-b ]; } ||
-  { [ "$SECOND_LEAF" != .fold-a ] && [ "$SECOND_LEAF" != .fold-b ]; } ||
-  ! grep -q 'Could not remove link' "$TMP/fail.out" ||
-  ! grep -Eq 'failed=1([^0-9]|$)' "$TMP/fail.out" ||
-  [ -e "$HOME_DIR/$FIRST_LEAF" ] ||
-  [ -L "$HOME_DIR/$FIRST_LEAF" ] ||
-  [ ! -L "$HOME_DIR/$SECOND_LEAF" ] ||
-  [ "$(readlink "$HOME_DIR/$SECOND_LEAF")" != "../repo/stow/demo/$SECOND_LEAF" ] ||
-  [ "$(wc -l <"$TMP/unlinks")" -ne 2 ] ||
-  [ ! -f "${BACKUPS[0]}" ] ||
-  ! grep -qx 'original user custom' "${BACKUPS[0]}" ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ]; then
-  cat "$TMP/fail.out"
-  echo 'FAIL: GNU Stow unlink EIO did not preserve the remaining folded link and backup'
-  exit 1
-fi
 
-# Dry-run must not repair or mutate the failed partial state.
+# Historical folded links must be moved with the safe backup helper, not
+# unlinked by GNU Stow while a user may concurrently replace the pathname.
 status=0
-STOW_UNLINK_FAULT_AT=0 ANSIBLE_ROLES_PATH="$ROLES" \
-  ansible-playbook -i localhost, "$TMP/play.yml" --check >"$TMP/check.out" 2>&1 || status=$?
+STOW_UNLINK_FAULT_AT=1 ANSIBLE_ROLES_PATH="$ROLES" \
+  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/install.out" 2>&1 || status=$?
+FOLD_A_BACKUPS=("$HOME_DIR"/.fold-a.backup.*)
+FOLD_B_BACKUPS=("$HOME_DIR"/.fold-b.backup.*)
+CUSTOM_BACKUPS=("$HOME_DIR"/.custom.backup.*)
 if [ "$status" -ne 0 ] ||
-  [ -e "$HOME_DIR/$FIRST_LEAF" ] ||
-  [ ! -L "$HOME_DIR/$SECOND_LEAF" ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
-  ! grep -q '재링크 예정' "$TMP/check.out" ||
-  ! grep -qx 'original user custom' "${BACKUPS[0]}"; then
-  cat "$TMP/check.out"
-  echo 'FAIL: dry-run mutated the partial unlink failure state'
-  exit 1
-fi
-
-# Normal retry must unfold both directories into real parents and leaf links.
-status=0
-STOW_UNLINK_FAULT_AT=0 ANSIBLE_ROLES_PATH="$ROLES" \
-  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/retry.out" 2>&1 || status=$?
-if [ "$status" -ne 0 ] ||
-  [ ! -d "$HOME_DIR/.fold-a" ] ||
-  [ -L "$HOME_DIR/.fold-a" ] ||
-  [ ! -d "$HOME_DIR/.fold-b" ] ||
-  [ -L "$HOME_DIR/.fold-b" ] ||
+  [ ! -d "$HOME_DIR/.fold-a" ] || [ -L "$HOME_DIR/.fold-a" ] ||
+  [ ! -d "$HOME_DIR/.fold-b" ] || [ -L "$HOME_DIR/.fold-b" ] ||
   [ ! -L "$HOME_DIR/.fold-a/managed" ] ||
   [ ! -L "$HOME_DIR/.fold-b/managed" ] ||
   [ ! -L "$HOME_DIR/.custom" ] ||
-  ! grep -qx 'managed a' "$HOME_DIR/.fold-a/managed" ||
-  ! grep -qx 'managed b' "$HOME_DIR/.fold-b/managed" ||
-  ! grep -qx 'original user custom' "${BACKUPS[0]}" ||
-  [ "$(wc -l <"$TMP/calls")" -ne 2 ] ||
-  ! grep -Eq 'changed=1([^0-9]|$)' "$TMP/retry.out"; then
-  cat "$TMP/retry.out"
-  echo 'FAIL: GNU Stow unlink recovery lost data or did not unfold correctly'
+  [ ! -L "${FOLD_A_BACKUPS[0]}" ] ||
+  [ ! -L "${FOLD_B_BACKUPS[0]}" ] ||
+  [ ! -f "${CUSTOM_BACKUPS[0]}" ] ||
+  [ "$(readlink "${FOLD_A_BACKUPS[0]}")" != "../repo/stow/demo/.fold-a" ] ||
+  [ "$(readlink "${FOLD_B_BACKUPS[0]}")" != "../repo/stow/demo/.fold-b" ] ||
+  ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
+  [ -s "$TMP/unlinks" ] ||
+  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  ! grep -Eq 'changed=1([^0-9]|$)' "$TMP/install.out"; then
+  cat "$TMP/install.out"
+  echo 'FAIL: safe folded-link migration or no-unlink install failed'
   exit 1
 fi
 
-# Clean repeated setup must not unlink/relink existing managed files.
+# --check must not mutate the newly migrated links or older user backups.
 status=0
-STOW_UNLINK_FAULT_AT=0 ANSIBLE_ROLES_PATH="$ROLES" \
-  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/clean.out" 2>&1 || status=$?
+STOW_UNLINK_FAULT_AT=1 ANSIBLE_ROLES_PATH="$ROLES" \
+  ansible-playbook -i localhost, "$TMP/play.yml" --check >"$TMP/check.out" 2>&1 || status=$?
 if [ "$status" -ne 0 ] ||
-  [ "$(wc -l <"$TMP/calls")" -ne 2 ] ||
-  ! grep -Eq 'changed=0([^0-9]|$)' "$TMP/clean.out" ||
-  ! grep -qx 'original user custom' "${BACKUPS[0]}"; then
-  cat "$TMP/clean.out"
-  echo 'FAIL: clean state was unnecessarily re-applied after unlink recovery'
+  [ ! -L "$HOME_DIR/.fold-a/managed" ] ||
+  [ ! -L "$HOME_DIR/.fold-b/managed" ] ||
+  [ ! -L "$HOME_DIR/.custom" ] ||
+  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  [ -s "$TMP/unlinks" ] ||
+  ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}"; then
+  cat "$TMP/check.out"
+  echo 'FAIL: dry-run modified migrated links or user backups'
   exit 1
 fi
-echo 'PASS: real GNU Stow unlink EIO preserves data, dry-run, retry, and idempotency'
+
+# Repeated setup must not invoke GNU Stow or change any existing backup.
+status=0
+STOW_UNLINK_FAULT_AT=1 ANSIBLE_ROLES_PATH="$ROLES" \
+  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/retry.out" 2>&1 || status=$?
+if [ "$status" -ne 0 ] ||
+  [ ! -L "$HOME_DIR/.fold-a/managed" ] ||
+  [ ! -L "$HOME_DIR/.fold-b/managed" ] ||
+  [ ! -L "$HOME_DIR/.custom" ] ||
+  ! grep -qx 'original user custom' "${CUSTOM_BACKUPS[0]}" ||
+  [ -s "$TMP/unlinks" ] ||
+  [ "$(wc -l <"$TMP/calls")" -ne 1 ] ||
+  ! grep -Eq 'changed=0([^0-9]|$)' "$TMP/retry.out"; then
+  cat "$TMP/retry.out"
+  echo 'FAIL: clean setup changed links or lost a backup'
+  exit 1
+fi
+echo 'PASS: folded symlinks safely migrated without destructive Stow unlink'
 
 # Simulate a concurrent user installing a regular file into an already-owned
 # Stow symlink location AFTER GNU Stow has decided to unlink the symlink.
