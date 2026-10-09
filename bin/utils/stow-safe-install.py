@@ -139,6 +139,32 @@ def _filtered_files(stow_dir, package, home):
     return entries
 
 
+def _verify_source_anchors(stow_dir, stow_fd, package, package_fd):
+    """Verify live paths still identify the pinned source root and package.
+
+    Open source dirfds can continue reading a directory after it is renamed;
+    the installed HOME symlink instead resolves through the live source path.
+    """
+    try:
+        root_now = os.stat(stow_dir, follow_symlinks=False)
+        package_now = os.stat(package, dir_fd=stow_fd, follow_symlinks=False)
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
+            raise RuntimeError(
+                "Stow source root moved or package directory replaced during install"
+            ) from exc
+        raise
+    root_was, package_was = os.fstat(stow_fd), os.fstat(package_fd)
+    if (not stat.S_ISDIR(root_now.st_mode)
+            or (root_now.st_dev, root_now.st_ino)
+            != (root_was.st_dev, root_was.st_ino)):
+        raise RuntimeError("Stow source root moved or replaced during install")
+    if (not stat.S_ISDIR(package_now.st_mode)
+            or (package_now.st_dev, package_now.st_ino)
+            != (package_was.st_dev, package_was.st_ino)):
+        raise RuntimeError("Stow package directory moved or replaced during install")
+
+
 def _verify_source(stow_fd, package, parts, expected):
     """Reject source symlink/parent replacement since filtered inventory.
 
@@ -213,17 +239,27 @@ def install(stow_dir, package, home):
     canonical_stow = os.path.realpath(stow_dir)
     if os.path.basename(package) != package or package in ("", ".", ".."):
         raise ValueError("invalid package name")
-    entries = _filtered_files(stow_dir, package, home)
-    root_fd = os.open(home, DIR_FLAGS)
+    # Pin source root/package before the pathname-based GNU Stow inventory.
+    stow_fd = os.open(stow_dir, DIR_FLAGS)
     try:
-        stow_fd = os.open(stow_dir, DIR_FLAGS)
+        package_fd = os.open(package, DIR_FLAGS, dir_fd=stow_fd)
     except BaseException:
-        os.close(root_fd)
+        os.close(stow_fd)
+        raise
+    try:
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+        entries = _filtered_files(stow_dir, package, home)
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+        root_fd = os.open(home, DIR_FLAGS)
+    except BaseException:
+        os.close(package_fd)
+        os.close(stow_fd)
         raise
     try:
         _verify_home_root(root_fd, home)
         # Preflight all existing entries before creating any new symlink.
         for parts, source, expected in entries:
+            _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
             _verify_source(stow_fd, package, parts, expected)
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1]) as parent_fd:
@@ -238,6 +274,7 @@ def install(stow_dir, package, home):
                                        + os.path.join(parent_path, parts[-1]))
 
         for parts, source, expected in entries:
+            _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
             _verify_source(stow_fd, package, parts, expected)
             parent_path = os.path.join(home, *parts[:-1])
             with _parent(root_fd, parts[:-1], create=True, home=home) as parent_fd:
@@ -247,6 +284,7 @@ def install(stow_dir, package, home):
                 # cannot eliminate, a hostile rename during symlinkat itself.
                 _verify_home_root(root_fd, home)
                 _verify_parent(root_fd, parts[:-1], parent_fd)
+                _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
                 _verify_source(stow_fd, package, parts, expected)
                 canonical_parent = os.path.join(canonical_home, *parts[:-1])
                 # Use the lexical path underneath the canonical repository
@@ -260,14 +298,17 @@ def install(stow_dir, package, home):
                     if not _owned(parent_fd, parts[-1], source, parent_path):
                         raise RuntimeError("concurrent HOME entry blocks safe Stow install: "
                                            + os.path.join(parent_path, parts[-1]))
+                _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
                 _verify_source(stow_fd, package, parts, expected)
                 # Never automatically unlink here on a move: unlink(dir_fd)
                 # has no inode compare-and-delete primitive, so concurrent
                 # user replacement could itself be destroyed by cleanup.
                 _verify_parent(root_fd, parts[:-1], parent_fd)
                 _verify_home_root(root_fd, home)
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
         _verify_home_root(root_fd, home)
     finally:
+        os.close(package_fd)
         os.close(stow_fd)
         os.close(root_fd)
 

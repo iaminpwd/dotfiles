@@ -687,3 +687,104 @@ print("PASS: unsupported hard links, read-only and permission errors preserve us
 PY
 
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
+
+# Round 21: the opened Stow root can be renamed away after source validation.
+# An fd anchored to the moved directory still sees the ORIGINAL source, but
+# the new HOME symlink text resolves through the REPLACEMENT Stow root.
+# Detect it rather than reporting a successful installation of another file.
+STOW_INSTALLER="$ROOT/bin/utils/stow-safe-install.py" \
+  STOW_TEST_ROOT="$TMP/source-root-relocation" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+stow, home, moved = root / "stow", root / "home", root / "moved-stow"
+(stow / "demo").mkdir(parents=True)
+home.mkdir()
+(stow / "demo/.managed").write_bytes(b"trusted source A\n")
+spec = importlib.util.spec_from_file_location(
+    "stow_safe_install", os.environ["STOW_INSTALLER"]
+)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+real_symlink = os.symlink
+injected = [False]
+
+def move_root_at_symlink(target, name, *args, **kwargs):
+    if kwargs.get("dir_fd") is not None and not injected[0]:
+        injected[0] = True
+        os.rename(stow, moved)
+        (stow / "demo").mkdir(parents=True)
+        (stow / "demo/.managed").write_bytes(b"replacement source B\n")
+    return real_symlink(target, name, *args, **kwargs)
+
+os.symlink = move_root_at_symlink
+try:
+    try:
+        helper.install(str(stow), "demo", str(home))
+    except RuntimeError as exc:
+        assert "Stow source root moved" in str(exc), exc
+    else:
+        raise AssertionError("renamed Stow root incorrectly accepted as trusted")
+finally:
+    os.symlink = real_symlink
+
+assert injected[0], "root relocation was not injected at symlinkat"
+assert (moved / "demo/.managed").read_bytes() == b"trusted source A\n"
+assert (stow / "demo/.managed").read_bytes() == b"replacement source B\n"
+PY
+echo 'PASS: moved Stow root cannot silently validate a replacement source'
+
+# A new package directory can contain the exact same source-file inode after
+# a concurrent move. Pin the PACKAGE directory identity as well as each leaf.
+STOW_INSTALLER="$ROOT/bin/utils/stow-safe-install.py" \
+  STOW_TEST_ROOT="$TMP/source-package-relocation" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+stow, home = root / "stow", root / "home"
+package = stow / "demo"
+package.mkdir(parents=True)
+home.mkdir()
+(package / ".managed").write_bytes(b"original tracked leaf\n")
+spec = importlib.util.spec_from_file_location(
+    "stow_safe_install", os.environ["STOW_INSTALLER"]
+)
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+real_symlink = os.symlink
+swapped = [False]
+
+def swap_package_keep_leaf(target, name, *args, **kwargs):
+    if kwargs.get("dir_fd") is not None and not swapped[0]:
+        swapped[0] = True
+        old_package = stow / "moved-demo"
+        os.rename(package, old_package)
+        package.mkdir()
+        os.rename(old_package / ".managed", package / ".managed")
+    return real_symlink(target, name, *args, **kwargs)
+
+os.symlink = swap_package_keep_leaf
+try:
+    try:
+        helper.install(str(stow), "demo", str(home))
+    except RuntimeError as exc:
+        assert "Stow package directory moved" in str(exc), exc
+    else:
+        raise AssertionError("replaced package with the same source inode accepted")
+finally:
+    os.symlink = real_symlink
+
+assert swapped[0], "package replacement was not injected at symlinkat"
+assert (package / ".managed").read_bytes() == b"original tracked leaf\n"
+os.rename(package / ".managed", stow / "moved-demo/.managed")
+os.rename(package, stow / "replacement-demo")
+os.rename(stow / "moved-demo", package)
+helper.install(str(stow), "demo", str(home))
+assert (home / ".managed").read_bytes() == b"original tracked leaf\n"
+print("PASS: same-leaf-inode package replacement detected; retry converged")
+PY
