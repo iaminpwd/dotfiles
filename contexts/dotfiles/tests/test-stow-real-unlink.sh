@@ -386,6 +386,59 @@ os.rename(home_move / "outside/moved-home", home_move / "home")
 helper.install(str(home_move / "stow"), "demo", str(home_move / "home"))
 assert (home_move / "home/.managed").read_bytes() == b"managed root\n"
 
+# mkdir(dir_fd=...) is also a mutation: an already-open HOME parent can
+# be detached to an external tree before a missing child directory is made.
+# Probe BOTH before-mkdir precheck and a rename within the mkdir syscall.
+for phase in ("precheck", "during-mkdir"):
+    case = root / ("mkdir-moved-" + phase)
+    (case / "stow/demo/.config/nested").mkdir(parents=True)
+    (case / "home/.config").mkdir(parents=True)
+    (case / "outside").mkdir()
+    (case / "stow/demo/.config/nested/managed").write_bytes(b"managed nested\n")
+    (case / "outside/secret").write_bytes(b"unrelated user secret\n")
+    invoked = [False]
+    actual_verify = helper._verify_parent
+    actual_mkdir = os.mkdir
+
+    def detach_before_check(root_fd, parts, pinned_fd):
+        if phase == "precheck" and list(parts) == [".config"] and not invoked[0]:
+            invoked[0] = True
+            os.rename(case / "home/.config", case / "outside/moved")
+        return actual_verify(root_fd, parts, pinned_fd)
+
+    def detach_inside_mkdir(name, *args, **kwargs):
+        if (phase == "during-mkdir" and name == "nested"
+                and kwargs.get("dir_fd") is not None and not invoked[0]):
+            invoked[0] = True
+            os.rename(case / "home/.config", case / "outside/moved")
+        return actual_mkdir(name, *args, **kwargs)
+
+    helper._verify_parent = detach_before_check
+    os.mkdir = detach_inside_mkdir
+    try:
+        try:
+            helper.install(str(case / "stow"), "demo", str(case / "home"))
+        except RuntimeError as exc:
+            assert "HOME parent replaced" in str(exc), (phase, exc)
+        else:
+            raise AssertionError(f"{phase}: detached mkdir parent silently accepted")
+    finally:
+        helper._verify_parent = actual_verify
+        os.mkdir = actual_mkdir
+
+    assert invoked[0], (phase, "injection never reached")
+    assert (case / "outside/secret").read_bytes() == b"unrelated user secret\n"
+    assert not (case / "outside/moved/nested/managed").exists(), (
+        phase, "leaf symlink was written outside HOME before detecting move"
+    )
+    assert not (case / "home/.config").exists(), phase
+    os.rename(case / "outside/moved", case / "home/.config")
+    helper.install(str(case / "stow"), "demo", str(case / "home"))
+    assert (case / "home/.config/nested/managed").read_bytes() == b"managed nested\n"
+    assert (case / "outside/secret").read_bytes() == b"unrelated user secret\n"
+
+print("PASS: parent detach before and during mkdir avoids off-HOME leaf writes and retries")
+
 print("PASS: detached parent/root precheck, mid-syscall detection, user data and retry")
 
 print("PASS: swapped parents, concurrent leaf creation and aliased ancestor paths preserve data")
