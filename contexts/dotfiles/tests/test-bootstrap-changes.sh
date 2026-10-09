@@ -8,12 +8,13 @@ cd "$TMP"
 git init -q
 git config user.name Test
 git config user.email test@example.com
-mkdir -p ansible contexts/aws/{references,tests,scripts}
+mkdir -p ansible contexts/aws/{references,tests,scripts} contexts/dotfiles/tests
 printf 'base\n' >README.md
 printf 'reference-v1\n' >contexts/aws/references/010-core.md
 printf 'skill-v1\n' >contexts/aws/SKILL.md
 printf 'agents-v1\n' >contexts/base.AGENTS.md
 printf 'test-v1\n' >contexts/aws/tests/test.sh
+printf 'stow-test-v1\n' >contexts/dotfiles/tests/test-stow-toctou.sh
 printf 'script-v1\n' >contexts/aws/scripts/check.sh
 git add .
 git -c core.hooksPath=/dev/null commit -qm 'chore: 초기 상태'
@@ -76,12 +77,21 @@ git -c core.hooksPath=/dev/null commit -qm 'test: 회귀 수정'
 test_modified=$(git rev-parse HEAD)
 check false EVENT_NAME=push BEFORE_SHA="$agents_modified" AFTER_SHA="$test_modified"
 
+# Stow TOCTOU regression directly participates in Debian/macOS smoke.
+# Unlike ordinary non-deployed context tests it must trigger both runners.
+printf 'stow-test-v2\n' >contexts/dotfiles/tests/test-stow-toctou.sh
+git add .
+git -c core.hooksPath=/dev/null commit -qm 'test: Stow 경쟁 조건 회귀 수정'
+stow_test_modified=$(git rev-parse HEAD)
+check true EVENT_NAME=push BEFORE_SHA="$test_modified" AFTER_SHA="$stow_test_modified"
+check true EVENT_NAME=pull_request BASE_SHA="$test_modified" HEAD_SHA="$stow_test_modified"
+
 # scripts는 ~/.local/bin 배포 대상이라 내용 변경도 bootstrap smoke 대상이다.
 printf 'script-v2\n' >contexts/aws/scripts/check.sh
 git add .
 git -c core.hooksPath=/dev/null commit -qm 'fix: 배포 스크립트 수정'
 script_modified=$(git rev-parse HEAD)
-check true EVENT_NAME=push BEFORE_SHA="$test_modified" AFTER_SHA="$script_modified"
+check true EVENT_NAME=push BEFORE_SHA="$stow_test_modified" AFTER_SHA="$script_modified"
 
 # SKILL 추가/삭제는 배포 에셋 존재 여부가 달라지므로 smoke 대상이다.
 mkdir -p contexts/new
