@@ -534,4 +534,156 @@ for label, operation, error_number in cases:
 print("PASS: injected partial-copy failures preserve user data and retry safely")
 PY
 
+# Some filesystems (network shares, FUSE, restricted mounts) cannot publish
+# hard links. Never fall back to a path-based rename/copy that could clobber
+# an existing backup or remove the only user file. Use injected errno rather
+# than requiring a privileged mount or touching the runner's actual HOME.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/filesystem-compat" "$REAL_PYTHON" - <<'PY'
+import errno
+import importlib.util
+import os
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+cases = (
+    ("file-link-enotsup", "link", errno.ENOTSUP, "regular"),
+    ("file-link-eperm", "link", errno.EPERM, "regular"),
+    ("file-link-emlink", "link", errno.EMLINK, "regular"),
+    ("file-link-exdev", "link", errno.EXDEV, "regular"),
+    ("file-link-erofs", "link", errno.EROFS, "regular"),
+    ("file-link-enospc", "link", errno.ENOSPC, "regular"),
+    ("symlink-link-enotsup", "link", errno.ENOTSUP, "symlink"),
+    ("symlink-link-eperm", "link", errno.EPERM, "symlink"),
+    ("stage-mkdir-erofs", "mkdir", errno.EROFS, "regular"),
+    ("stage-mkdir-eacces", "mkdir", errno.EACCES, "regular"),
+    ("stage-open-eacces", "open-stage", errno.EACCES, "regular"),
+    ("stage-open-eloop", "open-stage", errno.ELOOP, "regular"),
+    ("source-open-eacces", "open-source", errno.EACCES, "regular"),
+    ("home-open-eacces", "open-home", errno.EACCES, "regular"),
+    ("nested-parent-eacces", "open-parent", errno.EACCES, "regular"),
+)
+for label, operation, expected_errno, kind in cases:
+    home = root / label
+    home.mkdir()
+    target_parent = home
+    if operation == "open-parent":
+        target_parent = home / ".config"
+        target_parent.mkdir()
+    source = target_parent / ".conf"
+    backup = target_parent / ".conf.backup.fixed"
+    if kind == "symlink":
+        source.symlink_to("missing-original-user-target")
+    else:
+        source.write_bytes(b"valuable original user file\n")
+    backup.write_bytes(b"valuable prior backup\n")
+    syscall = "open" if operation.startswith("open-") else operation
+    original_call = getattr(os, syscall)
+    injected = [False]
+
+    def fail_selected_call(*args, **kwargs):
+        leaf = args[0] if args else None
+        if operation == "link":
+            match = (
+                len(args) >= 2 and
+                args[1].startswith(".conf.backup.fixed") and
+                kwargs.get("dst_dir_fd") is not None
+            )
+        elif operation == "mkdir":
+            match = (
+                isinstance(leaf, str) and
+                leaf.startswith("..conf.stow-stage-") and
+                kwargs.get("dir_fd") is not None
+            )
+        elif operation == "open-stage":
+            match = (
+                isinstance(leaf, str) and
+                leaf.startswith("..conf.stow-stage-") and
+                kwargs.get("dir_fd") is not None
+            )
+        elif operation == "open-source":
+            match = leaf == ".conf" and kwargs.get("dir_fd") is not None
+        elif operation == "open-parent":
+            match = leaf == ".config" and kwargs.get("dir_fd") is not None
+        else:
+            match = leaf == str(home) and kwargs.get("dir_fd") is None
+        if match and not injected[0]:
+            injected[0] = True
+            raise OSError(expected_errno, os.strerror(expected_errno))
+        return original_call(*args, **kwargs)
+
+    setattr(os, syscall, fail_selected_call)
+    try:
+        try:
+            helper.backup(str(home), str(source), "fixed")
+        except OSError as exc:
+            assert exc.errno == expected_errno, (label, exc)
+        else:
+            raise AssertionError(f"{label}: unsupported operation silently succeeded")
+    finally:
+        setattr(os, syscall, original_call)
+
+    assert injected[0], f"{label}: fault injection did not execute"
+    assert backup.read_bytes() == b"valuable prior backup\n", label
+    assert list(target_parent.glob(".conf.backup.fixed.*")) == [], label
+    assert list(target_parent.glob("..conf.stow-stage-*")) == [], label
+    if kind == "symlink":
+        assert os.readlink(source) == "missing-original-user-target", label
+    else:
+        assert source.read_bytes() == b"valuable original user file\n", label
+
+# If this Python build cannot provide no-follow/dirfd hard links, fail before
+# any attempt to stage or delete user content. Do not weaken the capability
+# gate to support restricted filesystems.
+home = root / "no-secure-link-capability"
+home.mkdir()
+source = home / ".conf"
+source.write_bytes(b"valuable original user file\n")
+prior = home / ".conf.backup.fixed"
+prior.write_bytes(b"valuable prior backup\n")
+supported = helper.SECURE_LINK_SUPPORTED
+helper.SECURE_LINK_SUPPORTED = False
+try:
+    try:
+        helper.backup(str(home), str(source), "fixed")
+    except RuntimeError as exc:
+        assert "dirfd/no-follow hard links are unavailable" in str(exc)
+    else:
+        raise AssertionError("missing secure link support must block")
+finally:
+    helper.SECURE_LINK_SUPPORTED = supported
+assert source.read_bytes() == b"valuable original user file\n"
+assert prior.read_bytes() == b"valuable prior backup\n"
+assert not list(home.glob("..conf.stow-stage-*"))
+
+# Exercise a real POSIX permission denial as well (skipped under root,
+# whose DAC override would make a read-only directory writable).
+if hasattr(os, "geteuid") and os.geteuid() != 0:
+    home = root / "real-directory-permission"
+    home.mkdir()
+    source = home / ".conf"
+    source.write_bytes(b"valuable original user file\n")
+    prior = home / ".conf.backup.fixed"
+    prior.write_bytes(b"valuable prior backup\n")
+    home.chmod(0o500)
+    try:
+        try:
+            helper.backup(str(home), str(source), "fixed")
+        except PermissionError:
+            pass
+        else:
+            raise AssertionError("read-only HOME directory must hard block")
+    finally:
+        home.chmod(0o700)
+    assert source.read_bytes() == b"valuable original user file\n"
+    assert prior.read_bytes() == b"valuable prior backup\n"
+    assert not list(home.glob("..conf.stow-stage-*"))
+
+print("PASS: unsupported hard links, read-only and permission errors preserve user content")
+PY
+
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
