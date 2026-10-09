@@ -302,4 +302,126 @@ PY
 
 echo 'PASS: final move preserves concurrent user files, symlinks and staging I/O failures'
 
+# Regular-file hard links share mutable inode contents. A backup must instead
+# hold a separate snapshot, even if a writer has kept the old source fd open.
+STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/detached-backup" "$REAL_PYTHON" - <<'PY'
+import importlib.util
+import os
+import stat
+from pathlib import Path
+
+root = Path(os.environ["STOW_TEST_ROOT"])
+root.mkdir()
+spec = importlib.util.spec_from_file_location("stow_safe_backup", os.environ["STOW_HELPER"])
+helper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(helper)
+
+# Direct old open fd: the source disappears, but the writer can still write.
+home = root / "open-writer"
+home.mkdir()
+source = home / ".conf"
+source.write_bytes(b"original A\n")
+source.chmod(0o600)
+writer = os.open(source, os.O_RDWR)
+try:
+    helper.backup(str(home), str(source), "fixed")
+    backup = home / ".conf.backup.fixed"
+    assert not source.exists()
+    assert backup.read_bytes() == b"original A\n"
+    assert stat.S_IMODE(backup.stat().st_mode) == 0o600
+    assert os.fstat(writer).st_ino != backup.stat().st_ino
+    os.lseek(writer, 0, os.SEEK_SET)
+    os.write(writer, b"changed! B\n")
+    os.fsync(writer)
+    assert backup.read_bytes() == b"original A\n"
+finally:
+    os.close(writer)
+
+# Another user-owned hard link to the source remains writable after backup.
+home = root / "second-link"
+home.mkdir()
+source = home / ".conf"
+source.write_bytes(b"original A\n")
+peer = home / "shared-peer"
+os.link(source, peer)
+helper.backup(str(home), str(source), "fixed")
+backup = home / ".conf.backup.fixed"
+peer.write_bytes(b"updated B!\n")
+assert backup.read_bytes() == b"original A\n"
+assert backup.stat().st_ino != peer.stat().st_ino
+assert peer.read_bytes() == b"updated B!\n"
+
+# A source change while making the copy must abort before claiming a backup
+# filename, without deleting either the original pathname or its new content.
+home = root / "mid-copy-write"
+home.mkdir()
+source = home / ".conf"
+source.write_bytes(b"original A\n")
+real_read = os.read
+swapped = [False]
+
+def modify_during_copy(fd, size):
+    chunk = real_read(fd, size)
+    if not swapped[0] and chunk == b"original A\n":
+        source.write_bytes(b"changed! B\n")
+        swapped[0] = True
+    return chunk
+
+os.read = modify_during_copy
+try:
+    try:
+        helper.backup(str(home), str(source), "fixed")
+    except RuntimeError as exc:
+        assert "changed during backup copy" in str(exc)
+    else:
+        raise AssertionError("in-place write during copy must hard block")
+finally:
+    os.read = real_read
+assert swapped[0]
+assert source.read_bytes() == b"changed! B\n"
+assert not (home / ".conf.backup.fixed").exists()
+assert not list(home.glob("..conf.stow-stage-*"))
+
+# A leaf replacement after snapshot creation must preserve both the old
+# independent snapshot and the newly installed user file.
+home = root / "after-copy-replace"
+home.mkdir()
+source = home / ".conf"
+source.write_bytes(b"original A\n")
+real_link = os.link
+swapped = [False]
+
+def change_before_backup_link(src, dst, *args, **kwargs):
+    if src == "snapshot" and not swapped[0]:
+        os.replace(source, home / "saved-A")
+        source.write_bytes(b"new user B\n")
+        swapped[0] = True
+    return real_link(src, dst, *args, **kwargs)
+
+os.link = change_before_backup_link
+try:
+    try:
+        helper.backup(str(home), str(source), "fixed")
+    except RuntimeError as exc:
+        assert "source changed during backup" in str(exc)
+    else:
+        raise AssertionError("replacement before backup hard link must hard block")
+finally:
+    os.link = real_link
+assert swapped[0]
+assert source.read_bytes() == b"new user B\n"
+assert (home / "saved-A").read_bytes() == b"original A\n"
+assert (home / ".conf.backup.fixed").read_bytes() == b"original A\n"
+
+# Symlinks must continue to back up as symlinks, including broken targets.
+home = root / "broken-link"
+home.mkdir()
+source = home / ".link"
+source.symlink_to("never-existed")
+helper.backup(str(home), str(source), "fixed")
+assert os.readlink(home / ".link.backup.fixed") == "never-existed"
+PY
+
+echo 'PASS: regular-file snapshots remain detached from open writers and hard-link peers'
+
 echo 'PASS: parent swaps, atomic destination collisions, leaf swaps and symlinks are safe'
