@@ -21,12 +21,18 @@ DIR_FLAGS = (
     | getattr(os, "O_DIRECTORY", 0)
     | getattr(os, "O_NOFOLLOW", 0)
 )
+# Test fixtures temporarily intercept symlink() for deterministic TOCTOU
+# injection. Platform capability must be checked against the real builtin
+# recorded at import time, not the transient test intercept.
+SECURE_SYMLINK_SUPPORTED = os.symlink in os.supports_dir_fd
 
 
 def _require_secure_dirfds():
     if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
         raise RuntimeError("secure no-follow directory opens unavailable")
-    for operation in (os.open, os.mkdir, os.symlink, os.stat, os.readlink):
+    if not SECURE_SYMLINK_SUPPORTED:
+        raise RuntimeError("secure directory-descriptor symlink unavailable")
+    for operation in (os.open, os.mkdir, os.stat, os.readlink):
         if operation not in os.supports_dir_fd:
             raise RuntimeError("secure directory-descriptor operation unavailable")
     if os.stat not in os.supports_follow_symlinks:
