@@ -437,6 +437,62 @@ for phase in ("precheck", "during-mkdir"):
     assert (case / "home/.config/nested/managed").read_bytes() == b"managed nested\n"
     assert (case / "outside/secret").read_bytes() == b"unrelated user secret\n"
 
+# A source file is validated as regular during inventory creation, but may
+# become an external symlink before the installer computes the target string.
+# Never let realpath(source) turn an in-repository link into a direct link to
+# an unrelated external user file. Likewise reject source-parent swaps.
+for kind in ("leaf", "parent"):
+    case = root / ("source-swap-" + kind)
+    managed_dir = case / "stow/demo/.config"
+    managed_dir.mkdir(parents=True)
+    (case / "home").mkdir()
+    (case / "outside").mkdir()
+    source = managed_dir / "managed"
+    source.write_bytes(b"managed source\n")
+    secret = case / "outside/secret"
+    secret.write_bytes(b"unrelated external user content\n")
+    initial_inventory = helper._filtered_files
+    swapped = [False]
+
+    def replace_after_inventory(stow_dir, package, home):
+        result = initial_inventory(stow_dir, package, home)
+        swapped[0] = True
+        if kind == "leaf":
+            source.unlink()
+            source.symlink_to(secret)
+        else:
+            os.rename(managed_dir, case / "stow/demo/.config-preserved")
+            managed_dir.symlink_to(case / "outside", target_is_directory=True)
+            (case / "outside/managed").write_bytes(b"foreign source data\n")
+        return result
+
+    helper._filtered_files = replace_after_inventory
+    try:
+        try:
+            helper.install(str(case / "stow"), "demo", str(case / "home"))
+        except RuntimeError as exc:
+            assert "source" in str(exc).lower(), (kind, exc)
+        else:
+            raise AssertionError(f"{kind}: source replacement installed external link")
+    finally:
+        helper._filtered_files = initial_inventory
+
+    assert swapped[0], (kind, "source replacement not injected")
+    assert secret.read_bytes() == b"unrelated external user content\n"
+    assert not (case / "home/.config/managed").exists(), (
+        kind, "untrusted source was linked into HOME"
+    )
+    if kind == "leaf":
+        source.unlink()
+        source.write_bytes(b"managed source\n")
+    else:
+        managed_dir.unlink()
+        os.rename(case / "stow/demo/.config-preserved", managed_dir)
+    helper.install(str(case / "stow"), "demo", str(case / "home"))
+    assert (case / "home/.config/managed").read_bytes() == b"managed source\n"
+    assert secret.read_bytes() == b"unrelated external user content\n"
+print("PASS: source leaf and parent replacements hard-block, preserve data and retry")
+
 print("PASS: parent detach before and during mkdir avoids off-HOME leaf writes and retries")
 
 print("PASS: detached parent/root precheck, mid-syscall detection, user data and retry")
