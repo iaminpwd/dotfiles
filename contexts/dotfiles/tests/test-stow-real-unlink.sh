@@ -193,3 +193,69 @@ if [ "$status" -ne 0 ] ||
   exit 1
 fi
 echo 'PASS: real GNU Stow unlink EIO preserves data, dry-run, retry, and idempotency'
+
+# Simulate a concurrent user installing a regular file into an already-owned
+# Stow symlink location AFTER GNU Stow has decided to unlink the symlink.
+# GNU Stow's unlink cannot conditionally compare inode identity: -R would
+# delete the newly arrived file. -S must not unlink correctly-owned leaves.
+RACE="$TMP/unlink-swap-race"
+mkdir -p "$RACE/stow/demo" "$RACE/home"
+printf 'managed owned\n' >"$RACE/stow/demo/.owned"
+printf 'managed fresh\n' >"$RACE/stow/demo/.fresh"
+ln -s "../stow/demo/.owned" "$RACE/home/.owned"
+cat >"$TMP/faultlib/StowConcurrentSwap.pm" <<'PERL'
+package StowConcurrentSwap;
+use strict;
+use warnings;
+BEGIN {
+  *CORE::GLOBAL::unlink = sub {
+    my $path = $_[0];
+    if ($path =~ m{(?:^|/)\.owned$} && !$StowConcurrentSwap::swapped) {
+      $StowConcurrentSwap::swapped = 1;
+      rename($path, "$path.saved-managed-link")
+        or die "failed to move disposable symlink: $!";
+      open my $fh, '>', $path or die "failed to install disposable user file: $!";
+      print {$fh} "valuable concurrent user file\n";
+      close $fh;
+      open my $log, '>', $ENV{STOW_CONCURRENT_SWAP_MARKER}
+        or die "cannot record swap: $!";
+      print {$log} "swapped\n";
+      close $log;
+    }
+    return CORE::unlink($_[0]);
+  };
+}
+1;
+PERL
+RACE_STOW=$(command -v stow)
+race_status=0
+(
+  cd "$RACE/stow"
+  PERL5LIB="$TMP/faultlib" PERL5OPT="-MStowConcurrentSwap" \
+    STOW_CONCURRENT_SWAP_MARKER="$RACE/attempted" \
+    "$RACE_STOW" -S --no-folding -t "$RACE/home" demo
+) >"$RACE/output" 2>&1 || race_status=$?
+if [ -f "$RACE/attempted" ]; then
+  # A version that does attempt unlink must preserve the injected user file
+  # and stop, instead of treating it as the old Stow-owned symlink.
+  if [ "$race_status" -eq 0 ] ||
+    [ ! -f "$RACE/home/.owned" ] ||
+    ! grep -qx 'valuable concurrent user file' "$RACE/home/.owned"; then
+    cat "$RACE/output"
+    echo 'FAIL: GNU Stow deleted a concurrently replaced user file'
+    exit 1
+  fi
+else
+  # A stow-only invocation does not need to remove existing owned symlinks.
+  if [ "$race_status" -ne 0 ] ||
+    [ ! -L "$RACE/home/.owned" ] ||
+    [ ! -L "$RACE/home/.fresh" ] ||
+    ! grep -qx 'managed owned' "$RACE/home/.owned" ||
+    ! grep -qx 'managed fresh' "$RACE/home/.fresh"; then
+    cat "$RACE/output"
+    echo 'FAIL: non-destructive Stow install did not converge'
+    exit 1
+  fi
+fi
+echo 'PASS: concurrent replacement cannot be deleted by Stow-owned-link removal'
+
