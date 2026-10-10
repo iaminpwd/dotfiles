@@ -147,7 +147,7 @@ dotfiles를 제외한 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude
 | 시점 | 실행 범위 |
 |---|---|
 | 커밋 | 시크릿 검사, `PFC_PROFILE=quick` 등 빠른 검사 |
-| AI Stop | 변경 감지 후 `PFC_PROFILE=stop` 및 선택적 회귀 검사 |
+| AI Stop (Claude/Antigravity/Codex) | 변경 감지 후 공통 `PFC_PROFILE=stop` 및 선택적 회귀 검사 (Codex는 /hooks 신뢰 필요) |
 | 푸시 | 기본 회귀 검사 생략; 필요한 경우 `DOTFILES_PRE_PUSH=1 git push` |
 | CI | `PFC_PROFILE=full just verify`와 조건별 bootstrap smoke |
 | 수동 전체 도메인 | `just check-domain`으로 Terraform/SAM/K8s 등 추가 정책 검사 |

@@ -32,9 +32,11 @@ HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh")"
 
 GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
-mkdir -p "$(dirname "$GEMINI_HOOKS")" "$(dirname "$CLAUDE_SETTINGS")"
+CODEX_HOOKS="$HOME/.codex/hooks.json"
+mkdir -p "$(dirname "$GEMINI_HOOKS")" "$(dirname "$CLAUDE_SETTINGS")" "$(dirname "$CODEX_HOOKS")"
 [ -f "$GEMINI_HOOKS" ] || echo '{}' >"$GEMINI_HOOKS"
 [ -f "$CLAUDE_SETTINGS" ] || echo '{}' >"$CLAUDE_SETTINGS"
+[ -f "$CODEX_HOOKS" ] || echo '{}' >"$CODEX_HOOKS"
 
 # 아래 네 병합은 예전에 각각 `if [ -n "$JQ" ] && "$JQ" empty "$FILE"; then ... fi` 였고
 # else 가 없었다. 그래서 jq 를 해석하지 못하거나 설정 파일이 유효한 JSON 이 아니면
@@ -54,7 +56,7 @@ if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
   exit 1
 fi
 
-for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS"; do
+for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS" "$CODEX_HOOKS"; do
   if ! "$JQ" empty "$_settings" 2>/dev/null; then
     echo "❌ [Hard Block] $_settings 가 유효한 JSON 이 아니어서 에이전트 훅을 등록하지 못했습니다." >&2
     echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
@@ -65,19 +67,29 @@ done
 # 두 파일의 최종 결과를 먼저 만든다. 변환 실패 시 원본은 건드리지 않는다.
 GEMINI_TMP=$(mktemp "${GEMINI_HOOKS}.tmp.XXXXXX")
 CLAUDE_TMP=""
-trap 'rm -f "$GEMINI_TMP" "${CLAUDE_TMP:-}"' EXIT
+CODEX_TMP=""
+trap 'rm -f "$GEMINI_TMP" "${CLAUDE_TMP:-}" "${CODEX_TMP:-}"' EXIT
 CLAUDE_TMP=$(mktemp "${CLAUDE_SETTINGS}.tmp.XXXXXX")
+CODEX_TMP=$(mktemp "${CODEX_HOOKS}.tmp.XXXXXX")
 # 원본 권한을 유지한 임시 파일을 원자적으로 교체한다.
 cp -p "$GEMINI_HOOKS" "$GEMINI_TMP"
 cp -p "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
+cp -p "$CODEX_HOOKS" "$CODEX_TMP"
 
 # 파일은 폐기했지만 이전 설치의 등록을 제거하기 위한 경로는 유지한다.
 LEGACY_LIVE_NAME="pre-flight-live-hook.sh"
 LIVE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME")"
 GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
+ADAPTER_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/agent-stop-adapter.sh")"
+# Serialized commands are executed by a shell, so quote even paths containing
+# spaces, single quotes or shell metacharacters (jq @sh produces POSIX quoting).
+# shellcheck disable=SC2016
+QUOTED_ADAPTER=$("$JQ" -nr --arg path "$ADAPTER_SCRIPT" '$path | @sh')
+ANTIGRAVITY_GATE="$QUOTED_ADAPTER antigravity"
+CODEX_GATE="$QUOTED_ADAPTER codex"
 
 # shellcheck disable=SC2016
-"$JQ" --arg cmd "$HOOK_SCRIPT" '
+"$JQ" --arg cmd "$HOOK_SCRIPT" --arg gate "$ANTIGRAVITY_GATE" '
   ."agent-edits-log".PostToolUse = (
     ((."agent-edits-log".PostToolUse // []) | map(
       .hooks = ((.hooks // []) | map(select(.command != $cmd)))
@@ -87,6 +99,10 @@ GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-h
       hooks: [{type: "command", command: $cmd, timeout: 10}]
     }]
   )
+  | ."pre-flight-stop-gate".Stop = (
+      ((."pre-flight-stop-gate".Stop // []) | map(select(.command != $gate)))
+      + [{type:"command", command:$gate, timeout:60}]
+    )
 ' "$GEMINI_HOOKS" >"$GEMINI_TMP"
 
 # Claude의 편집 이력·폐기 훅 제거·Stop 등록을 한 번에 병합한다.
@@ -107,6 +123,19 @@ GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-h
       + [{hooks: [{type: "command", command: $gate, timeout: 60}]}]
     )
 ' "$CLAUDE_SETTINGS" >"$CLAUDE_TMP"
+
+# Codex uses a top-level hooks object (not Antigravity's named hook groups).
+# Non-managed hooks require an explicit /hooks trust review inside Codex.
+# Preserve other Stop commands, hook groups, and config metadata.
+# shellcheck disable=SC2016
+"$JQ" --arg gate "$CODEX_GATE" '
+  .hooks.Stop = (
+    ((.hooks.Stop // []) | map(
+      .hooks = ((.hooks // []) | map(select(.command != $gate)))
+      | select(.hooks | length > 0)
+    )) + [{hooks:[{type:"command", command:$gate, timeout:60}]}]
+  )
+' "$CODEX_HOOKS" >"$CODEX_TMP"
 
 MAH_CHANGED=0
 replace_if_changed() {
@@ -135,6 +164,7 @@ replace_if_changed() {
 
 replace_if_changed "$GEMINI_HOOKS" "$GEMINI_TMP"
 replace_if_changed "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
+replace_if_changed "$CODEX_HOOKS" "$CODEX_TMP"
 
 if [ "$MAH_CHANGED" -eq 1 ]; then
   echo '[CHANGED] agent hook settings updated'

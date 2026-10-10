@@ -87,7 +87,11 @@ Stow 안전 설치용 Python·Perl 도구는 `bootstrap.sh`와 Ansible의 파일
 ## 자동 실행 시점
 
 편집 직후 검증 훅은 제거했으며 이전 등록을 지우는 마이그레이션만 유지합니다.
-`pre-flight-gate-hook.sh`는 변경 내용 기반의 성공 캐시로 중복 Stop 검사를 생략하고, 문서·테스트 등록 검사는 각 입력의 성공 캐시를 별도로 재사용합니다.
+`pre-flight-gate-hook.sh`는 Claude Stop의 기존 검증 엔진입니다. Antigravity Stop과 Codex Stop도 `agent-stop-adapter.sh`를 통해 동일한 엔진을 호출합니다. 변경 내용 기반 성공 캐시와 문서·테스트 등록 캐시, 검사 정책은 변경하지 않았습니다.
+Antigravity의 공식 글로벌 설정은 `~/.gemini/config/hooks.json`이며 Gemini CLI의 `AfterAgent`와는 별개입니다. 종료 이벤트는 `Stop`이고 검사 실패 시 `decision: "continue"`를 반환합니다. Codex는 `~/.codex/hooks.json`의 `Stop`을 사용하며 실패 시 `decision: "block"`을 반환해 새 후속 턴을 요청합니다.
+Antigravity는 `fullyIdle=true`에서 검사하고 `terminationReason=model_stop`에서 실패하면 계속 실행하도록 요청합니다. 실행 단계가 한도에 도달하거나 오류로 종료된 경우에는 런타임이 계속할 수 없어 stderr에 경고가 남으며, 모델이 실패를 스스로 고칠 때까지 계속될 수 있으므로 필요시 사용자가 중단해야 합니다. `executionNum`은 Stop 재시도 횟수가 아니므로 안전장치로 사용하지 않습니다. Codex는 설정을 설치해도 자동 신뢰되지 않으므로 CLI의 `/hooks`에서 새 훅을 검토·신뢰해야 동작합니다. 플랫폼 CLI가 설치되지 않은 환경의 JSON 계약 회귀 테스트는 실제 이벤트 발생을 증명하지 않습니다.
+Windows Antigravity IDE를 WSL dotfiles와 함께 사용한다면 WSL Bootstrap의 `ai_agent` 역할이 Windows 사용자 프로필 `%USERPROFILE%\.gemini\config\hooks.json`에도 PowerShell→WSL 브리지를 안전 병합합니다. Windows와 WSL의 홈 디렉터리는 서로 다릅니다. 기존 사용자 훅과 설정은 유지하며 변경 시 Windows 설정 원본을 별도 백업합니다. Windows 설치 여부와 무관하게 사용자가 Antigravity의 *Customizations > Hooks*에서 실제 활성 여부를 확인해야 합니다. Windows→WSL 브리지는 WSL UNC 경로나 Windows 드라이브 경로를 WSL 경로로 변환합니다. 지원하지 않는 원격 경로는 실패 사실을 반환합니다.
+검증 엔진은 기존과 동일하게 지원 범위(기본 dotfiles 및 `~/workspace`, 개별 옵트인 저장소) 바깥의 저장소와 변경 사항 없는 저장소를 검사하지 않습니다. 성공 캐시 적중도 무검증 재실행을 뜻하며 실제 앱의 자동 발생을 보증하는 근거가 아닙니다.
 커밋은 `PFC_PROFILE=quick`, Stop은 `PFC_PROFILE=stop`, CI는 `PFC_PROFILE=full`을 사용합니다.
 Stop은 변경 파일과 Ansible 검사, `stop-regression-check.sh`가 선택한 핵심 회귀 테스트를 실행하고 실패 로그·재현 명령을 AI에 반환합니다.
 전체 보안 스캔은 full에서, 인프라·도메인 정책 검사는 `PFC_DOMAIN_CHECKS=1`을 명시할 때 실행합니다.
