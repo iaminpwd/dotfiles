@@ -313,8 +313,10 @@ echo 'PASS: final move preserves concurrent user files, symlinks and staging I/O
 # hold a separate snapshot, even if a writer has kept the old source fd open.
 STOW_HELPER="$HELPER" STOW_TEST_ROOT="$TMP/detached-backup" "$REAL_PYTHON" - <<'PY'
 import importlib.util
+import errno
 import os
 import stat
+import sys
 from pathlib import Path
 
 root = Path(os.environ["STOW_TEST_ROOT"])
@@ -329,6 +331,19 @@ home.mkdir()
 source = home / ".conf"
 source.write_bytes(b"original A\n")
 source.chmod(0o600)
+# Detached snapshots must preserve more than bytes and permissions. A restored
+# config may depend on its original timestamp or per-file xattrs.
+original_mtime_ns = 978307200123456789
+os.utime(source, ns=(original_mtime_ns, original_mtime_ns))
+attr_name = b"user.dotfiles_audit" if sys.platform.startswith("linux") else b"org.dotfiles.audit"
+has_xattr = False
+if hasattr(os, "setxattr"):
+    try:
+        os.setxattr(source, attr_name, b"keep xattr")
+        has_xattr = True
+    except OSError as exc:
+        if exc.errno not in (errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM):
+            raise
 writer = os.open(source, os.O_RDWR)
 try:
     helper.backup(str(home), str(source), "fixed")
@@ -336,6 +351,9 @@ try:
     assert not source.exists()
     assert backup.read_bytes() == b"original A\n"
     assert stat.S_IMODE(backup.stat().st_mode) == 0o600
+    assert backup.stat().st_mtime_ns == original_mtime_ns, "original mtime must survive detached backup"
+    if has_xattr:
+        assert os.getxattr(backup, attr_name) == b"keep xattr", "xattr must survive detached backup"
     assert os.fstat(writer).st_ino != backup.stat().st_ino
     os.lseek(writer, 0, os.SEEK_SET)
     os.write(writer, b"changed! B\n")
