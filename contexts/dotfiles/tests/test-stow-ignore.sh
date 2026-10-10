@@ -107,4 +107,101 @@ if [ "$status" -eq 0 ] ||
   echo 'FAIL: malformed Stow ignore rules did not block before backup'
   exit 1
 fi
-echo 'PASS: GNU Stow ignore parity (global, local, nested directory, invalid regex)'
+
+# Round 22: installation and drift must use an identical GNU Stow ignore
+# inventory. A clean package containing ignored files must stay changed=0.
+if command -v ansible-playbook >/dev/null 2>&1; then
+  ROLE_IGNORE="$TMP/role-ignore"
+  mkdir -p "$ROLE_IGNORE/repo/ansible/roles/stow/tasks" \
+    "$ROLE_IGNORE/repo/bin/utils" "$ROLE_IGNORE/repo/stow/demo" "$ROLE_IGNORE/home"
+  printf 'managed installed\n' >"$ROLE_IGNORE/repo/stow/demo/.install"
+  printf 'managed ignored\n' >"$ROLE_IGNORE/repo/stow/demo/.ignored"
+  printf '^\.ignored$\n' >"$ROLE_IGNORE/repo/stow/demo/.stow-local-ignore"
+  printf 'original installed\n' >"$ROLE_IGNORE/home/.install"
+  printf 'original ignored\n' >"$ROLE_IGNORE/home/.ignored"
+  for path in \
+    ansible/roles/stow/tasks/package.yml \
+    bin/utils/stow-backup.sh \
+    bin/utils/stow-filter-inventory.pl \
+    bin/utils/stow-safe-backup.py \
+    bin/utils/stow-safe-install.py; do
+    cp "$ROOT/$path" "$ROLE_IGNORE/repo/$path"
+  done
+  cat >"$ROLE_IGNORE/repo/ansible/roles/stow/tasks/main.yml" <<'YAML'
+---
+- name: Apply real Stow package tasks
+  ansible.builtin.include_tasks: package.yml
+  loop: "{{ stow_dirs.files }}"
+  loop_control:
+    loop_var: stow_package
+YAML
+  python3 - "$ROLE_IGNORE" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+case = Path(sys.argv[1])
+home = case / "home"
+source = case / "repo/stow/demo"
+play = [{
+    "hosts": "localhost", "connection": "local", "gather_facts": False,
+    "environment": {"HOME": str(home)},
+    "vars": {
+        "ansible_env": {"HOME": str(home)},
+        "stow_dirs": {"files": [{"path": str(source)}]},
+    },
+    "roles": ["stow"],
+}]
+(case / "play.yml").write_text(json.dumps(play))
+PY
+  export ANSIBLE_HOME="$ROLE_IGNORE/ansible"
+  export ANSIBLE_LOCAL_TEMP="$ROLE_IGNORE/local"
+  export ANSIBLE_REMOTE_TEMP="$ROLE_IGNORE/remote"
+  mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP" "$ANSIBLE_REMOTE_TEMP"
+  ROLE_PATH="$ROLE_IGNORE/repo/ansible/roles"
+  status=0
+  ANSIBLE_ROLES_PATH="$ROLE_PATH" ansible-playbook -i localhost, \
+    "$ROLE_IGNORE/play.yml" >"$ROLE_IGNORE/initial.out" 2>&1 || status=$?
+  INSTALL_BACKUPS=("$ROLE_IGNORE/home"/.install.backup.*)
+  IGNORE_BACKUPS=("$ROLE_IGNORE/home"/.ignored.backup.*)
+  if [ "$status" -ne 0 ] ||
+    ! grep -Eq 'changed=1([^0-9]|$)' "$ROLE_IGNORE/initial.out" ||
+    [ ! -L "$ROLE_IGNORE/home/.install" ] ||
+    ! grep -qx 'managed installed' "$ROLE_IGNORE/home/.install" ||
+    ! grep -qx 'original ignored' "$ROLE_IGNORE/home/.ignored" ||
+    [ -e "${IGNORE_BACKUPS[0]}" ] ||
+    [ ! -f "${INSTALL_BACKUPS[0]}" ] ||
+    ! grep -qx 'original installed' "${INSTALL_BACKUPS[0]}"; then
+    cat "$ROLE_IGNORE/initial.out"
+    echo 'FAIL: package install did not preserve ignored user data'
+    exit 1
+  fi
+  installed_inode=$(python3 -c 'import os,sys; s=os.lstat(sys.argv[1]); print(s.st_dev,s.st_ino)' "$ROLE_IGNORE/home/.install")
+  status=0
+  ANSIBLE_ROLES_PATH="$ROLE_PATH" ansible-playbook -i localhost, \
+    "$ROLE_IGNORE/play.yml" >"$ROLE_IGNORE/clean.out" 2>&1 || status=$?
+  after_inode=$(python3 -c 'import os,sys; s=os.lstat(sys.argv[1]); print(s.st_dev,s.st_ino)' "$ROLE_IGNORE/home/.install")
+  if [ "$status" -ne 0 ] ||
+    ! grep -Eq 'changed=0([^0-9]|$)' "$ROLE_IGNORE/clean.out" ||
+    [ "$installed_inode" != "$after_inode" ] ||
+    [ -e "${IGNORE_BACKUPS[0]}" ] ||
+    ! grep -qx 'original ignored' "$ROLE_IGNORE/home/.ignored" ||
+    ! grep -qx 'original installed' "${INSTALL_BACKUPS[0]}"; then
+    cat "$ROLE_IGNORE/clean.out"
+    echo 'FAIL: ignored source falsely triggered drift on clean rerun'
+    exit 1
+  fi
+  status=0
+  ANSIBLE_ROLES_PATH="$ROLE_PATH" ansible-playbook -i localhost, \
+    "$ROLE_IGNORE/play.yml" --check >"$ROLE_IGNORE/dryrun.out" 2>&1 || status=$?
+  if [ "$status" -ne 0 ] ||
+    ! grep -q '드리프트 없음' "$ROLE_IGNORE/dryrun.out" ||
+    [ "$installed_inode" != "$(python3 -c 'import os,sys; s=os.lstat(sys.argv[1]); print(s.st_dev,s.st_ino)' "$ROLE_IGNORE/home/.install")" ] ||
+    ! grep -qx 'original ignored' "$ROLE_IGNORE/home/.ignored"; then
+    cat "$ROLE_IGNORE/dryrun.out"
+    echo 'FAIL: ignored source corrupted dry-run idempotency'
+    exit 1
+  fi
+fi
+
+echo 'PASS: GNU Stow ignore parity (global, local, nested directory, invalid regex, role idempotency)'
