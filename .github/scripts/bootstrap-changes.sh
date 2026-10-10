@@ -38,13 +38,13 @@ if ! git diff --name-only --no-renames -z "$base" "$head" >"$changes"; then
 fi
 
 # 실제 bootstrap 동작·설치 결과에 영향을 주는 경로만 smoke 대상으로 본다.
-# 일반 contexts/*/tests/* 는 배포되지 않아 제외한다. 단 Stow TOCTOU 테스트는
-# Debian/macOS 스모크의 직접 검증 대상이라 변경 시 양쪽 OS 검증을 실행한다.
+# 일반 contexts/*/tests/* 는 배포되지 않아 제외한다. 단 Debian/macOS 스모크가
+# 직접 호출하는 Stow 테스트 5종은 변경 시 양쪽 OS 검증을 실행해야 한다.
 # SKILL.md/base.AGENTS.md 는 고정 경로를 symlink로 노출하므로 내용(M)만 바뀐 경우 링크 설치
 # 결과는 동일하다. 다만 추가/삭제(A/D)는 배포 에셋 존재 여부가 달라지므로 아래에서 별도 감지한다.
 while IFS= read -r -d '' file; do
   case "$file" in
-  bootstrap.sh | .gitignore | Justfile | ansible/* | stow/* | bin/* | .github/* | contexts/*/scripts/* | contexts/dotfiles/tests/test-stow-toctou.sh)
+  bootstrap.sh | .gitignore | Justfile | ansible/* | stow/* | bin/* | .github/* | contexts/*/scripts/* | contexts/dotfiles/tests/test-stow-backup.sh | contexts/dotfiles/tests/test-stow-real-failure.sh | contexts/dotfiles/tests/test-stow-real-unlink.sh | contexts/dotfiles/tests/test-stow-ignore.sh | contexts/dotfiles/tests/test-stow-toctou.sh)
     echo 'run=true'
     exit 0
     ;;
