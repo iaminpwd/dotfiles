@@ -22,7 +22,7 @@ h.mkdir()
 for rel in ['stow/zsh/.zshrc', 'contexts/base.AGENTS.md', 'contexts/dotfiles/SKILL.md',
             'contexts/aws/SKILL.md', 'contexts/k8s/SKILL.md',
             'contexts/aws/references/core.md', 'bin/hooks/agent-edits-hook.sh',
-            'bin/hooks/pre-flight-gate-hook.sh']:
+            'bin/hooks/pre-flight-gate-hook.sh', 'bin/hooks/agent-stop-adapter.sh']:
     p = r / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text('fixture\n')
@@ -53,15 +53,18 @@ def group(name):
     return [{'hooks': [{'command': str(r / 'bin/hooks' / name)}]}]
 (h / '.claude/settings.json').write_text(json.dumps({'hooks': {
     'PostToolUse': group('agent-edits-hook.sh'), 'Stop': group('pre-flight-gate-hook.sh')}}))
+(h / '.codex/hooks.json').write_text(json.dumps({'hooks': {
+    'Stop': [{'hooks': [{'command': "'" + str(r / 'bin/hooks/agent-stop-adapter.sh') + "' codex"}]}]}}))
 (h / '.gemini/config/hooks.json').write_text(json.dumps({'agent-edits-log': {
-    'PostToolUse': group('agent-edits-hook.sh')}}))
+    'PostToolUse': group('agent-edits-hook.sh')}, 'pre-flight-stop-gate': {
+    'Stop': [{'command': "'" + str(r / 'bin/hooks/agent-stop-adapter.sh') + "' antigravity"}]}}))
 PY
 }
 run_sut() {
   HOME="$FAKE" bash "$REPO/.github/scripts/verify-bootstrap-env.sh" >"$TMP/out" 2>&1
 }
 failures=0
-for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook unsafe-mode missing-tool unmanaged-stale stale-asset; do
+for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook missing-codex-stop missing-antigravity-stop unsafe-mode missing-tool unmanaged-stale stale-asset; do
   build_home
   case "$case" in
   wrong-link) ln -sf "$REPO/contexts/base.AGENTS.md" "$FAKE/.zshrc" ;;
@@ -70,6 +73,8 @@ for case in complete wrong-link missing-rule missing-skill missing-asset legacy-
   missing-asset) rm "$FAKE/.claude/skills/aws/references" ;;
   legacy-script) ln -s "$REPO/bin/hooks/agent-edits-hook.sh" "$FAKE/.local/bin/agent-edits-hook.sh" ;;
   missing-hook) echo '{}' >"$FAKE/.claude/settings.json" ;;
+  missing-codex-stop) echo '{}' >"$FAKE/.codex/hooks.json" ;;
+  missing-antigravity-stop) echo '{}' >"$FAKE/.gemini/config/hooks.json" ;;
   unsafe-mode) chmod 644 "$FAKE/.zshrc.local" ;;
   missing-tool) printf '#!/bin/sh\nexit 1\n' >"$FAKE/.local/bin/mise" ;;
   # Deleting the final asset removes its source directory, but Ansible currently

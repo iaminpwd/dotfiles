@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 # Stop 시 마지막 성공 검증 이후 내용이 달라졌을 때만 검사한다.
 # 실패 및 검사 중 변경은 캐시하지 않으며 stop_hook_active로 재응답 루프를 방지한다.
+# The validator's downstream mapfile -d and associative arrays require Bash
+# 4.4+. macOS /bin/bash is 3.2; upgrade the interpreter before reading stdin,
+# so an exec retains the original Stop JSON payload.
+if [ "${BASH_VERSINFO[0]}" -lt 4 ] ||
+  { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 4 ]; }; then
+  for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash "${HOME:-}/.local/share/mise/shims/bash"; do
+    # shellcheck disable=SC2016
+    if [ -x "$candidate" ] &&
+      "$candidate" -c '[[ "${BASH_VERSINFO[0]}" -gt 4 || ( "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 ) ]]' >/dev/null 2>&1; then
+      exec "$candidate" "$0" "$@"
+    fi
+  done
+  echo '[ERROR] AI Stop verification requires Bash 4.4+ (install with Homebrew or mise).' >&2
+  exit 2
+fi
 set -uo pipefail
 
 # GNU readlink -f는 macOS 기본 BSD readlink에 없다. Stop 훅은 Git GUI/에이전트

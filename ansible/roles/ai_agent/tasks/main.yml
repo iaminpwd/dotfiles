@@ -184,11 +184,44 @@
     item.stat.exists and
     item.item[0].path | basename not in ['dotfiles']
 
-- name: Gemini 및 Claude 편집 이력 훅(agent-edits-hook) 병합
+- name: Antigravity / Claude / Codex 편집 이력 및 작업 종료 훅 병합
   ansible.builtin.command:
     cmd: /bin/bash "{{ role_path }}/../../../bin/utils/merge-agent-hooks.sh" "{{ role_path }}/../../../ansible"
   register: ai_agent_hooks_merge_result
   changed_when: "'[CHANGED]' in ai_agent_hooks_merge_result.stdout"
+
+# The Windows Antigravity 2.0 IDE reads the Windows user profile, not the WSL
+# ~/.gemini directory. Only configure that separate profile in an actual WSL
+# environment; on macOS and Linux no Windows hook is touched.
+- name: WSL용 Windows Antigravity 브리지 경로 변환
+  ansible.builtin.command:
+    argv:
+      - wslpath
+      - -w
+      - "{{ role_path }}/../../../bin/utils/antigravity-windows-hook.ps1"
+  register: ai_agent_windows_bridge
+  changed_when: false
+  when: ansible_env.WSL_DISTRO_NAME is defined
+
+- name: Windows Antigravity 작업 종료 훅 안전 병합 (WSL에서만)
+  ansible.builtin.command:
+    argv:
+      - powershell.exe
+      - -NoProfile
+      - -NonInteractive
+      - -ExecutionPolicy
+      - Bypass
+      - -File
+      - "{{ ai_agent_windows_bridge.stdout }}"
+      - -Mode
+      - install
+      - -Distro
+      - "{{ ansible_env.WSL_DISTRO_NAME }}"
+      - -RepoLinux
+      - "{{ role_path }}/../../.."
+  register: ai_agent_windows_bridge_result
+  changed_when: "'[CHANGED]' in ai_agent_windows_bridge_result.stdout"
+  when: ansible_env.WSL_DISTRO_NAME is defined
 
 # 폐기 도메인은 과거 ai_agent가 만든 네 종류의 동일 도메인 에셋 링크만 있고
 # 실제로 관리 링크가 하나 이상 확인된 경우에만 삭제한다. 사용자 에셋, 빈 폴더,

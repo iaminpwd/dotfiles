@@ -62,13 +62,22 @@ local = home / '.zshrc.local'
 require(local.is_file() and stat.S_IMODE(local.stat().st_mode) == 0o600,
         f"시크릿 파일 권한은 0600이어야 합니다: {local}")
 claude = json.loads((home / '.claude/settings.json').read_text())
-gemini = json.loads((home / '.gemini/config/hooks.json').read_text())
+antigravity = json.loads((home / '.gemini/config/hooks.json').read_text())
+codex = json.loads((home / '.codex/hooks.json').read_text())
+adapter = str((root / 'bin/hooks/agent-stop-adapter.sh').resolve())
+# jq @sh always surrounds the command path with single quotes, including
+# paths that contain no shell metacharacters.
+quoted_adapter = "'" + adapter.replace("'", "'\\''") + "'"
 for settings, event, script in [
     (claude.get('hooks', {}), 'PostToolUse', 'agent-edits-hook.sh'),
     (claude.get('hooks', {}), 'Stop', 'pre-flight-gate-hook.sh'),
-    (gemini.get('agent-edits-log', {}), 'PostToolUse', 'agent-edits-hook.sh'),
+    (antigravity.get('agent-edits-log', {}), 'PostToolUse', 'agent-edits-hook.sh'),
+    (codex.get('hooks', {}), 'Stop', 'agent-stop-adapter.sh'),
 ]:
     commands = [h.get('command') for group in settings.get(event, []) for h in group.get('hooks', [])]
-    require(str((root / 'bin/hooks' / script).resolve()) in commands, f"필수 훅 누락: {event}/{script}")
+    expected = quoted_adapter + ' codex' if script == 'agent-stop-adapter.sh' else str((root / 'bin/hooks' / script).resolve())
+    require(expected in commands, f"필수 훅 누락: {event}/{script}")
+ag_stop = [h.get('command') for h in antigravity.get('pre-flight-stop-gate', {}).get('Stop', [])]
+require(quoted_adapter + ' antigravity' in ag_stop, 'Antigravity Stop 훅 누락')
 print('[OK] 설치 도구·링크·스킬·훅·시크릿 파일 권한 확인')
 PY

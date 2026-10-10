@@ -43,7 +43,9 @@ mkdir -p "$PLAYBOOK_DIR"
 
 # Gemini hooks.json에 무관한 기존 키를 미리 심어 병합 시 보존되는지 확인한다.
 mkdir -p "$FAKE_HOME/.gemini/config"
-echo '{"unrelated-key": "keep-me"}' >"$FAKE_HOME/.gemini/config/hooks.json"
+echo '{"unrelated-key":"keep-me","pre-flight-stop-gate":{"Stop":[{"type":"command","command":"ag-user-stop"}]}}' >"$FAKE_HOME/.gemini/config/hooks.json"
+mkdir -p "$FAKE_HOME/.codex"
+echo '{"user-setting":"preserve","hooks":{"Stop":[{"hooks":[{"type":"command","command":"codex-user-stop"}]}]}}' >"$FAKE_HOME/.codex/hooks.json"
 
 # 이전 버전의 live 훅과 같은 항목의 사용자 훅을 함께 심어 마이그레이션을 확인한다.
 mkdir -p "$FAKE_HOME/.claude" "$FAKE_HOME/bin/hooks"
@@ -82,6 +84,23 @@ if [ -f "$GEMINI_JSON" ] && jq -e '.["agent-edits-log"].PostToolUse[0].hooks[0].
   report "gemini (agent-edits-log 훅 생성)" 0
 else
   report "gemini (agent-edits-log 훅 생성)" 1 "$(cat "$GEMINI_JSON" 2>/dev/null || echo '<없음>')"
+fi
+# Antigravity's Stop entries are direct command handlers, not Claude groups.
+if jq -e '([."pre-flight-stop-gate".Stop[].command] |
+  (index("ag-user-stop") != null) and
+  (any(.[]; contains("agent-stop-adapter.sh") and endswith(" antigravity"))))' "$GEMINI_JSON" >/dev/null; then
+  report "Antigravity Stop 등록 및 기존 Stop 명령 보존" 0
+else
+  report "Antigravity Stop 등록 및 기존 Stop 명령 보존" 1
+fi
+CODEX_JSON="$FAKE_HOME/.codex/hooks.json"
+if jq -e '."user-setting" == "preserve" and
+  ([.hooks.Stop[].hooks[].command] |
+   (index("codex-user-stop") != null) and
+   (any(.[]; contains("agent-stop-adapter.sh") and endswith(" codex"))))' "$CODEX_JSON" >/dev/null; then
+  report "Codex Stop 등록 및 기존 설정·Stop 명령 보존" 0
+else
+  report "Codex Stop 등록 및 기존 설정·Stop 명령 보존" 1
 fi
 
 # 2. Gemini: 병합 전 존재하던 무관한 키(unrelated-key)가 보존되어야 한다.
@@ -130,6 +149,7 @@ jq -cS . "$CLAUDE_JSON" >"$TMP/compact.json"
 mv "$TMP/compact.json" "$CLAUDE_JSON"
 ln "$CLAUDE_JSON" "$TMP/claude-before"
 ln "$GEMINI_JSON" "$TMP/gemini-before"
+ln "$CODEX_JSON" "$TMP/codex-before"
 BACKUPS_BEFORE=$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)
 SECOND_OUT="$TMP/second.out"
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FAKE_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >"$SECOND_OUT" 2>&1
@@ -143,6 +163,12 @@ if [ "$BACKUPS_BEFORE" -eq "$(find "$FAKE_HOME" -name '*.bak.*' | wc -l)" ] &&
   report "동일 JSON 재실행은 백업·원본 교체 없음" 0
 else
   report "동일 JSON 재실행은 백업·원본 교체 없음" 1
+fi
+if [ "$CODEX_JSON" -ef "$TMP/codex-before" ] &&
+  [ "$(jq '[.hooks.Stop[].hooks[].command | select(contains("agent-stop-adapter.sh") and endswith(" codex"))] | length' "$CODEX_JSON")" -eq 1 ]; then
+  report "Codex 중복 설치 없음·원본 inode 보존" 0
+else
+  report "Codex 중복 설치 없음·원본 inode 보존" 1
 fi
 COUNT=$(jq '.hooks.PostToolUse | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
 STOP_COUNT=$(jq '.hooks.Stop | length' "$CLAUDE_JSON" 2>/dev/null || echo -1)
@@ -195,21 +221,40 @@ fi
 # 일반 파일로 치환되어 외부 설정 저장소와의 연결이 끊긴다.
 SYMLINK_HOME="$TMP/symlink-home"
 BACKING="$TMP/settings-backing"
-mkdir -p "$SYMLINK_HOME/.claude" "$SYMLINK_HOME/.gemini/config" "$BACKING"
+mkdir -p "$SYMLINK_HOME/.claude" "$SYMLINK_HOME/.gemini/config" "$SYMLINK_HOME/.codex" "$BACKING"
 echo '{"claude-user":"keep"}' >"$BACKING/claude-settings.json"
 echo '{"gemini-user":"keep"}' >"$BACKING/gemini-hooks.json"
+echo '{"codex-user":"keep"}' >"$BACKING/codex-hooks.json"
 ln -s "$BACKING/claude-settings.json" "$SYMLINK_HOME/.claude/settings.json"
 ln -s "$BACKING/gemini-hooks.json" "$SYMLINK_HOME/.gemini/config/hooks.json"
+ln -s "$BACKING/codex-hooks.json" "$SYMLINK_HOME/.codex/hooks.json"
 
 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$SYMLINK_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null
 
 if [ -L "$SYMLINK_HOME/.claude/settings.json" ] &&
   [ -L "$SYMLINK_HOME/.gemini/config/hooks.json" ] &&
+  [ -L "$SYMLINK_HOME/.codex/hooks.json" ] &&
   jq -e '."claude-user" == "keep" and (.hooks.PostToolUse | length > 0) and (.hooks.Stop | length > 0)' "$BACKING/claude-settings.json" >/dev/null &&
-  jq -e '."gemini-user" == "keep" and (."agent-edits-log".PostToolUse | length > 0)' "$BACKING/gemini-hooks.json" >/dev/null; then
+  jq -e '."gemini-user" == "keep" and (."agent-edits-log".PostToolUse | length > 0) and (."pre-flight-stop-gate".Stop | length > 0)' "$BACKING/gemini-hooks.json" >/dev/null &&
+  jq -e '."codex-user" == "keep" and (.hooks.Stop | length > 0)' "$BACKING/codex-hooks.json" >/dev/null; then
   report "symlink-settings (링크 보존 + referent 병합)" 0
 else
   report "symlink-settings (링크 보존 + referent 병합)" 1 "claude-link=$(test -L "$SYMLINK_HOME/.claude/settings.json" && echo yes || echo no) gemini-link=$(test -L "$SYMLINK_HOME/.gemini/config/hooks.json" && echo yes || echo no)"
+fi
+
+BROKEN_CODEX_HOME="$TMP/broken-codex"
+mkdir -p "$BROKEN_CODEX_HOME/.claude" "$BROKEN_CODEX_HOME/.gemini/config" "$BROKEN_CODEX_HOME/.codex"
+echo '{"untouched":true}' >"$BROKEN_CODEX_HOME/.claude/settings.json"
+echo '{"untouched":true}' >"$BROKEN_CODEX_HOME/.gemini/config/hooks.json"
+printf '{not valid' >"$BROKEN_CODEX_HOME/.codex/hooks.json"
+code=0
+MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$BROKEN_CODEX_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null 2>&1 || code=$?
+if [ "$code" -ne 0 ] &&
+  [ "$(cat "$BROKEN_CODEX_HOME/.claude/settings.json")" = '{"untouched":true}' ] &&
+  [ "$(cat "$BROKEN_CODEX_HOME/.gemini/config/hooks.json")" = '{"untouched":true}' ]; then
+  report "broken-codex-hooks (원본 훅 보존, 잘못된 JSON 차단)" 0
+else
+  report "broken-codex-hooks (원본 훅 보존, 잘못된 JSON 차단)" 1
 fi
 
 # -----------------------------------------------------------------------------
