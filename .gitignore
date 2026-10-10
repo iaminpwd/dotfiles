@@ -4,5 +4,9 @@
 /.agent-state/
 /.agents/
 /.codex/
+# 저장소 내부에 임시로 만든 감사·수정용 Git worktree
+/.maintenance-*/
+# FinOps 테스트에서 Infracost가 생성하는 로컬 실행 캐시
+/contexts/pre-flight-check/tests/fixtures-finops/**/.infracost/
 __pycache__/
 *.pyc

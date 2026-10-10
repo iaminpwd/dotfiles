@@ -49,7 +49,12 @@ bin/
 | **`record-provenance.sh`** | 파일 변경 시 근거 룰북 및 수정 목적 1줄을 `.agent-state/edits.log`에 기록 | `bin/utils/record-provenance.sh <file> <rule_source> <purpose>` |
 | **`merge-agent-hooks.sh`** | Claude Code와 Antigravity의 PostToolUse 훅 설정을 안전하게 병합 | `bin/utils/merge-agent-hooks.sh` |
 | **`run-setup.sh`** | 시스템 sudo 정책 변경 없이 Ansible 설치·dry-run 실행 | `bash bin/utils/run-setup.sh --check` |
-| **`stow-backup.sh`** | Stow 심볼릭 링크 생성 전 기존 파일 백업 | `bin/utils/stow-backup.sh` |
+| **`stow-backup.sh`** | Stow 소스 유형·ignore 규칙·충돌을 사전 확인하고 기존 사용자 파일을 안전하게 백업하는 진입점 | (bootstrap/Ansible 내부 호출) |
+| **`stow-filter-inventory.pl`** | GNU Stow의 ignore 규칙을 적용해 실제 배포 대상만 추출. 백업 대상과 설치 대상이 어긋나는 것을 방지 | (`stow-backup.sh` 및 안전 설치기 내부 호출) |
+| **`stow-safe-backup.py`** | 심볼릭 링크 부모 경로를 추적하지 않고 충돌 항목을 백업하며 일반 파일의 독립된 백업 사본을 보존 | (`stow-backup.sh` 내부 호출) |
+| **`stow-safe-install.py`** | 디렉터리 파일 디스크립터와 `O_NOFOLLOW`로 기존 사용자 항목을 덮어쓰지 않고 설정 파일 링크 설치 | (bootstrap/Ansible 내부 호출) |
+| **`stow-safe-role-init.py`** | Ansible Stow 역할 실행 전 mise 설정 부모 디렉터리와 기존 관리 링크를 안전하게 준비 | (Ansible 내부 호출) |
+| **`safe-link-backup.sh` / `safe-link-backup.py`** | AI 에이전트 룰·훅 링크 갱신 시 기존 파일을 충돌 없는 이름으로 백업 | (Ansible 내부 호출) |
 | **`broken-symlink-detector.sh`** | 홈 디렉토리(깊이 5)의 끊긴(Broken) 심볼릭 링크 탐지 — **수동 진단 전용**. 어떤 훅·게이트에서도 자동 호출하지 않는다: 판정 대상이 저장소가 아니라 `$HOME` 전체라, 이 저장소와 무관한 링크 하나가 임의 저장소의 커밋을 막게 된다. 스킬 정리(`prune-orphan-skills.sh`) 후 잔재 확인용으로 직접 실행할 것 | `bin/utils/broken-symlink-detector.sh` |
 
 ---
@@ -73,6 +78,7 @@ bin/
 설치·백업 유틸리티는 bootstrap/Ansible에서, 라이브러리는 훅과 검증기에서 사용합니다.
 `hooks/plugins/`는 파일명을 직접 인용하지 않아도 자동 탐색으로 실행되므로 참조 검색만으로 삭제하지 않습니다.
 `broken-symlink-detector.sh`는 수동 진단 도구이므로 자동 호출이 없다는 이유로 제거하지 않습니다.
+Stow 안전 설치용 Python·Perl 도구는 `bootstrap.sh`와 Ansible의 파일 보존 절차에 연결되어 있으므로 임의로 합치거나 제거하지 않습니다.
 `bin/`과 `contexts/*/scripts/`는 `~/.local/bin`에 평탄화하지 않습니다. 훅·린터·유틸리티는 `~/dotfiles` 정본 경로로 호출하고, context script는 각 에이전트의 Skill asset 경로를 사용합니다. 과거 버전이 만든 dotfiles 소유 global symlink는 Ansible 마이그레이션 단계에서 정리합니다.
 
 폐기한 프롬프트 예외 마커 검사는 제거했습니다. 테스트 파일의 주석이나 호출 문자열만으로
