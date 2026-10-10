@@ -12,7 +12,9 @@ fi
 export ANSIBLE_HOME="$TMP/ansible" ANSIBLE_LOCAL_TEMP="$TMP/local" ANSIBLE_REMOTE_TEMP="$TMP/remote"
 mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP" "$ANSIBLE_REMOTE_TEMP" \
   "$TMP/repo/ansible/roles/stow/tasks" "$TMP/repo/stow/demo/.config/demo" \
-  "$TMP/home" "$TMP/fakebin"
+  "$TMP/repo/bin/utils" "$TMP/home" "$TMP/fakebin"
+# The drift task now reuses the production GNU Stow ignore matcher.
+cp "$ROOT/bin/utils/stow-filter-inventory.pl" "$TMP/repo/bin/utils/"
 printf 'managed\n' >"$TMP/repo/stow/demo/.config/demo/config"
 
 cat >"$TMP/fakebin/readlink" <<'STUB'
