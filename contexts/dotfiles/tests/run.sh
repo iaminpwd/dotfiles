@@ -36,6 +36,7 @@ for suite in \
   test-ci-tool-config \
   test-ci-secret-history \
   test-bootstrap-changes \
+  test-bootstrap-mise-prelink \
   test-bootstrap-idempotency-gate \
   test-tflint-init \
   test-tflint-interrupted-install \

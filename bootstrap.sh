@@ -64,6 +64,28 @@ install_epel_release() {
   run_as_root dnf install -y "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${os_major}.noarch.rpm"
 }
 
+# mise 도구 설치까지는 설정 링크가 아직 없으므로, 저장소의 버전 정본을
+# 임시 글로벌 설정으로 직접 읽는다. Python이 설치된 뒤에만 안전한 dirfd
+# 기반 Stow 설치기로 HOME에 링크를 만든다. 환경 변수는 이 단계에만 적용한다.
+bootstrap_mise_config() {
+  local config_source="$SCRIPT_DIR/stow/mise/.config/mise/config.toml"
+  [ -f "$config_source" ] || {
+    echo "❌ mise 버전 정본을 찾을 수 없습니다: $config_source" >&2
+    return 1
+  }
+
+  # uv를 먼저 준비해야 pipx 계열이 동일한 설치 백엔드를 사용한다.
+  MISE_GLOBAL_CONFIG_FILE="$config_source" "$HOME/.local/bin/mise" install -y uv
+  MISE_GLOBAL_CONFIG_FILE="$config_source" "$HOME/.local/bin/mise" install -y
+
+  # 파일 충돌은 보존 가능한 백업으로 이동하고, 마지막 링크 작업은
+  # O_NOFOLLOW 디렉터리 FD를 사용하는 공통 안전 설치기에 위임한다.
+  MISE_GLOBAL_CONFIG_FILE="$config_source" \
+    bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR/stow" "$HOME"
+  MISE_GLOBAL_CONFIG_FILE="$config_source" \
+    python3 "$SCRIPT_DIR/bin/utils/stow-safe-install.py" "$SCRIPT_DIR/stow" mise "$HOME"
+}
+
 # sudo 정책과 시스템 대체 실행 파일은 변경하지 않는다.
 # Ansible의 sudo 호환성은 run-setup.sh가 해당 실행에만 적용한다.
 
@@ -116,23 +138,9 @@ echo "========================================================="
 echo "=> 🚀 Running 'mise install' automatically..."
 # PATH 는 바로 위(mise 설치 직후)에서 shims 와 함께 이미 확정했다. 여기서 다시 export
 # 하면 진실의 원천이 두 곳이 되고, 앞의 선언이 바뀌어도 이쪽이 조용히 덮어쓴다.
-mkdir -p "$HOME/.config/mise"
-# mise install이 ansible(및 그 안의 stow 역할)보다 먼저 필요해 GNU Stow로 미리
-# 링크해둔다. ansible stow 역할이 나중에 같은 패키지를 다시 stow해도(-R은 멱등) 안전.
-# 기존 사용자 파일이 있으면 stow-backup.sh로 먼저 백업한다.
-# --no-folding 필수: 위 mkdir -p로 ~/.config/mise를 미리 만들어도 GNU Stow는 그게
-# 비어 있으면 여전히 ~/.config 전체를 하나의 심볼릭 링크로 통째 접어버린다(실측
-# 재현됨). 그러면 이후 다른 도구(gh, infracost 등)가 ~/.config/<자기이름>/에 쓰는
-# 설정이 전부 그 심볼릭 링크를 타고 이 저장소 안으로 흘러들어가 커밋 후보가 되거나
-# 저장소 정리 시 유실된다 — 실제로 사고가 난 적이 있다. --no-folding으로 mise가
-# 가진 리프 파일만 개별 심볼릭 링크하도록 강제해 ~/.config는 항상 실제 디렉토리로
-# 남긴다.
-bash "$SCRIPT_DIR/bin/utils/stow-backup.sh" mise "$SCRIPT_DIR/stow" "$HOME"
-(cd "$SCRIPT_DIR/stow" && stow -t "$HOME" -R --no-folding mise)
-# uv를 먼저 단독 설치해 완료시켜야, 이후 병렬 설치되는 pipx 계열 도구(ansible 등)가
-# 레이스 컨디션 없이 처음부터 uvx 경로를 타서 설치됨.
-~/.local/bin/mise install -y uv
-~/.local/bin/mise install -y
+# 홈 설정을 먼저 링크할 필요 없이 MISE_GLOBAL_CONFIG_FILE로 정본을 직접 읽는다.
+# GNU Stow의 경로 기반 쓰기 대신 dirfd 기반 설치를 사용해 symlink 교체 경쟁을 방어한다.
+bootstrap_mise_config
 
 echo "========================================================="
 echo "=> 🚀 Running 'just setup' automatically..."
