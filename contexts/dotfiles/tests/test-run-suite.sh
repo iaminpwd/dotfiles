@@ -202,6 +202,27 @@ else
   report "저장소 검사기 우선 사용 (실행 권한·글로벌 링크 불필요)" 1 "$OUT"
 fi
 
+# CI's domain opt-in must be scoped to preflight, because the independent
+# contexts runners also invoke preflight with their own fixture assumptions.
+cat >"$GATE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "${PFC_DOMAIN_CHECKS:-unset}" >"$RS_PREFLIGHT_LOG"
+EOF
+cat >"$GATE_REPO/contexts/probe/tests/run.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "${PFC_DOMAIN_CHECKS:-unset}" >"$RS_DOMAIN_LOG"
+EOF
+CODE=0
+OUT=$( (cd "$GATE_REPO" && RUN_SUITE_PFC_DOMAIN_CHECKS=1 \
+  RS_PREFLIGHT_LOG="$TMP/pfc-opt-in" RS_DOMAIN_LOG="$TMP/domain-no-leak" \
+  CI=true PATH="/usr/bin:/bin" bash "$GATE_RUNNER") 2>&1) || CODE=$?
+if [ "$CODE" -eq 0 ] && [ "$(cat "$TMP/pfc-opt-in" 2>/dev/null)" = 1 ] &&
+  [ "$(cat "$TMP/domain-no-leak" 2>/dev/null)" = unset ]; then
+  report "CI 도메인 옵션은 상위 preflight에만 전달 (테스트 러너 격리)" 0
+else
+  report "CI 도메인 옵션은 상위 preflight에만 전달 (테스트 러너 격리)" 1 "exit=$CODE out=$OUT"
+fi
+
 echo "--- macOS/BSD 경로 해석 회귀 ---"
 
 # run-suite.sh는 pre-commit/Stop/CI가 공통으로 경유하므로, macOS 기본 BSD readlink처럼
