@@ -17,23 +17,26 @@
 
 set -euo pipefail
 
-_next_backup_path() {
-  local target=$1 timestamp=$2 candidate suffix=0
-  candidate="$target.backup.$timestamp"
-
-  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
-    suffix=$((suffix + 1))
-    candidate="$target.backup.$timestamp.$suffix"
-  done
-
-  printf '%s\n' "$candidate"
-}
+SAFE_LINK_SCRIPT_PATH=${BASH_SOURCE[0]}
+SAFE_LINK_HOPS=0
+while [ -L "$SAFE_LINK_SCRIPT_PATH" ]; do
+  SAFE_LINK_HOPS=$((SAFE_LINK_HOPS + 1))
+  [ "$SAFE_LINK_HOPS" -le 40 ] || {
+    echo "❌ [Hard Block] 백업 스크립트의 링크 경로에 순환이 있습니다." >&2
+    exit 1
+  }
+  link=$(readlink "$SAFE_LINK_SCRIPT_PATH")
+  case "$link" in
+  /*) SAFE_LINK_SCRIPT_PATH=$link ;;
+  *) SAFE_LINK_SCRIPT_PATH="$(dirname "$SAFE_LINK_SCRIPT_PATH")/$link" ;;
+  esac
+done
+SAFE_LINK_SCRIPT_DIR=$(cd -P "$(dirname "$SAFE_LINK_SCRIPT_PATH")" && pwd)
 
 _backup_target() {
   local target=$1 timestamp backup
   timestamp=$(date +%F-%H%M%S)
-  backup=$(_next_backup_path "$target" "$timestamp")
-  mv "$target" "$backup"
+  backup=$(python3 "$SAFE_LINK_SCRIPT_DIR/safe-link-backup.py" "$target" "$timestamp")
   echo "  [BACKUP] $target -> $backup (기존 사용자 파일 또는 링크 보존)"
 }
 

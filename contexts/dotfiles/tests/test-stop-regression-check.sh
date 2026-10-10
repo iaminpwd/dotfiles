@@ -28,6 +28,13 @@ selected=$(bash "$RUNNER" --list)
 [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]
 echo 'PASS: staged·unstaged 중복 제거, 관련 테스트만 선택'
 
+# Shell wrapper delegates its backup safety to this Python helper. A helper
+# change must route back to the same regression suite in Stop checks.
+printf '# helper changed\n' >"$REPO/bin/utils/safe-link-backup.py"
+selected=$(bash "$RUNNER" --list)
+[ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]
+echo 'PASS: 백업 Python 헬퍼 수정도 safe-link 회귀로 라우팅'
+
 # macOS 기본 BSD readlink처럼 -f가 없는 PATH에서도 selector 자체가 시작되어야 한다.
 # Stop gate가 이 스크립트를 호출하므로 여기서 시작 실패하면 변경 영역 회귀가 통째로 빠진다.
 BSD_BIN="$TMP/bsd-bin"
