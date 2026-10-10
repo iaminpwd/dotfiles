@@ -91,7 +91,14 @@ def _filtered_files(stow_dir, package, home):
     source_prefix = source_dir + os.sep
     dirs = []
     files = []
-    for current, names, leaves in os.walk(source_dir, followlinks=False):
+    # os.walk silently skips unreadable directories unless onerror is set.
+    # A partial inventory could incorrectly report "no drift" or omit files.
+    def fail_on_walk_error(error):
+        raise error
+
+    for current, names, leaves in os.walk(
+        source_dir, followlinks=False, onerror=fail_on_walk_error
+    ):
         for name in names:
             path = os.path.join(current, name)
             if stat.S_ISLNK(os.lstat(path).st_mode):
@@ -189,16 +196,83 @@ def _verify_source(stow_fd, package, parts, expected):
         raise
 
 
-def _owned(entry_fd, name, source, parent_path):
+def _owned(entry_fd, name, source, parent_path, allow_absolute=False):
     entry = os.stat(name, dir_fd=entry_fd, follow_symlinks=False)
     if not stat.S_ISLNK(entry.st_mode):
         return False
     raw = os.readlink(name, dir_fd=entry_fd)
-    if os.path.isabs(raw):
+    if os.path.isabs(raw) and not allow_absolute:
         return False
     # Check the link text without following HOME parents. Source may itself
     # contain symlinks from a separate trusted repository checkout.
     return os.path.realpath(os.path.join(parent_path, raw)) == os.path.realpath(source)
+
+
+def check_drift(stow_dir, package, home):
+    """Read-only Stow package drift check. Print 1 if any managed link is missing.
+
+    Ansible previously reimplemented the GNU Stow inventory and canonical
+    symlink comparison in an embedded Bash program. Reuse the installer's
+    filter, source validation and no-follow HOME traversal in one place.
+    Existing absolute links to the same source count as clean for reporting,
+    as they did in the former Ansible check; the installer itself still
+    deliberately refuses to claim absolute links when applying changes.
+    """
+    _require_secure_dirfds()
+    stow_dir = os.path.abspath(stow_dir)
+    home = os.path.abspath(home)
+    if os.path.basename(package) != package or package in ("", ".", ".."):
+        raise ValueError("invalid package name")
+
+    stow_fd = os.open(stow_dir, DIR_FLAGS)
+    try:
+        package_fd = os.open(package, DIR_FLAGS, dir_fd=stow_fd)
+    except BaseException:
+        os.close(stow_fd)
+        raise
+    try:
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+        entries = _filtered_files(stow_dir, package, home)
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+        root_fd = os.open(home, DIR_FLAGS)
+    except BaseException:
+        os.close(package_fd)
+        os.close(stow_fd)
+        raise
+
+    try:
+        _verify_home_root(root_fd, home)
+        drift = False
+        for parts, source, expected in entries:
+            _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+            _verify_source(stow_fd, package, parts, expected)
+            parent_path = os.path.join(home, *parts[:-1])
+            with _parent(root_fd, parts[:-1]) as parent_fd:
+                if parent_fd is None:
+                    drift = True
+                    break
+                _verify_parent(root_fd, parts[:-1], parent_fd)
+                try:
+                    owned = _owned(
+                        parent_fd, parts[-1], source, parent_path,
+                        allow_absolute=True,
+                    )
+                except FileNotFoundError:
+                    owned = False
+                # Reject detached/replaced parents even if the observed
+                # symlink content happened to match the managed source.
+                _verify_parent(root_fd, parts[:-1], parent_fd)
+                _verify_home_root(root_fd, home)
+                if not owned:
+                    drift = True
+                    break
+        _verify_source_anchors(stow_dir, stow_fd, package, package_fd)
+        _verify_home_root(root_fd, home)
+        print("1" if drift else "0")
+    finally:
+        os.close(root_fd)
+        os.close(package_fd)
+        os.close(stow_fd)
 
 
 def _verify_parent(root_fd, parts, pinned_fd):
@@ -333,13 +407,16 @@ def check_package_conflicts(stow_dir, home, packages):
 
 if __name__ == "__main__":
     try:
-        if len(sys.argv) >= 5 and sys.argv[1] == "--check-packages":
+        if len(sys.argv) == 5 and sys.argv[1] == "--check-drift":
+            check_drift(*sys.argv[2:])
+        elif len(sys.argv) >= 5 and sys.argv[1] == "--check-packages":
             check_package_conflicts(sys.argv[2], sys.argv[3], sys.argv[4:])
         elif len(sys.argv) == 4:
             install(*sys.argv[1:])
         else:
             raise ValueError(
                 "usage: stow-safe-install.py STOW_DIR PACKAGE HOME "
+                "| --check-drift STOW_DIR PACKAGE HOME "
                 "| --check-packages STOW_DIR HOME PACKAGE..."
             )
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:

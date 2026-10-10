@@ -1,7 +1,0 @@
----
-- name: Sample play
-  hosts: localhost
-  tasks:
-    - name: Print a message
-      ansible.builtin.debug:
-        msg: "hello"

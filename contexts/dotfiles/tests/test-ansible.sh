@@ -54,7 +54,7 @@ trap 'rm -rf "${PAIR_TMPDIR:-}"' EXIT
 echo "--- ansible-playbook --syntax-check ---"
 if require_tool ansible-playbook; then
   # shellcheck disable=SC2034 # parallel_pair_run 안에서 nameref로 간접 참조됨
-  CMD_OK=(ansible-playbook --syntax-check "$FIXTURES/ok-playbook.yml")
+  CMD_OK=(ansible-playbook --syntax-check "$FIXTURES/lint-ok/playbook.yml")
   # shellcheck disable=SC2034
   CMD_FAIL=(ansible-playbook --syntax-check "$FIXTURES/fail-syntax-playbook.yml")
   ok_status=0
