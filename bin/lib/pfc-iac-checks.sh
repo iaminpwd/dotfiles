@@ -85,10 +85,23 @@ validate_terraform() {
       if [ -f ".tflint.hcl" ] || [ -f "$HOME/.tflint.hcl" ]; then
         tflint --init || true
       fi
-      if ! tflint; then
-        echo "❌ [ERROR] tflint 정적 분석에서 지적 사항이 발견되어 커밋이 중단되었습니다." >&2
-        return 1
-      fi
+      # Terraform root는 파일의 dirname 단위인데, repo root에서 bare tflint
+      # 한 번만 실행하면 infra/dev 같은 하위 root가 누락된다. validate와 같은
+      # 디렉터리 집합을 사용하며, 로컬 설정이 없으면 repo 공통 설정을 적용한다.
+      local tflint_args=()
+      for tf_dir in "${tf_validate_dirs[@]}"; do
+        tflint_args=(--chdir="$tf_dir")
+        if [ -f "$tf_dir/.tflint.hcl" ] && [ "$tf_dir" != "." ]; then
+          tflint --chdir="$tf_dir" --init || true
+        elif [ -f "$REPO_ROOT/.tflint.hcl" ]; then
+          tflint_args+=(--config="$REPO_ROOT/.tflint.hcl")
+        fi
+        log_info "Linting Terraform root: $tf_dir"
+        if ! tflint "${tflint_args[@]}"; then
+          echo "❌ [ERROR] tflint 정적 분석에서 지적 사항이 발견되어 커밋이 중단되었습니다: $tf_dir" >&2
+          return 1
+        fi
+      done
     else
       log_info "[WARNING] tflint is not installed. Skipping static analysis."
     fi
@@ -253,6 +266,25 @@ validate_helm() {
   # 변경된 파일들이 속한 차트 디렉토리(Chart.yaml이 있는 저장소 내 위치)를 중복 없이 수집
   local chart_files=() chart_dirs=() cf d found existing
   mapfile -d '' -t chart_files < <(git ls-files -z -- '*Chart.yaml' 2>/dev/null)
+  # Explicit/--changed/--all에서는 새 Chart.yaml이 아직 git add 전일 수 있다.
+  # 변경 파일의 부모를 따라 올라가 실제 존재하는 가장 가까운 차트를 수집한다.
+  # 이는 Chart.yaml 자체뿐 아니라 새 차트의 templates/ 파일을 지목한 경우도
+  # 포함하며, 루트(.)에서 탐색을 멈춰 저장소 밖의 차트를 건드리지 않는다.
+  local candidate
+  for cf in "${helm_changed[@]}"; do
+    # explicit 파일이 저장소 밖에 있을 수 있다. 이 검증기는 repo의 차트
+    # 탐색만 담당하며, 외부 절대 경로의 부모 디렉터리로는 올라가지 않는다.
+    [[ "$cf" == /* ]] && continue
+    candidate=$(dirname "$cf")
+    while :; do
+      if [ -f "$candidate/Chart.yaml" ]; then
+        chart_files+=("$candidate/Chart.yaml")
+        break
+      fi
+      [ "$candidate" = "." ] && break
+      candidate=$(dirname "$candidate")
+    done
+  done
   for cf in "${chart_files[@]}"; do
     [ -z "$cf" ] && continue
     d=$(dirname "$cf")
