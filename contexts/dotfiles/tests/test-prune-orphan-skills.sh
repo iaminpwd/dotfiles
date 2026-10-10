@@ -163,6 +163,31 @@ else
   report "failed-inventory-preserves-dir (find 실패는 삭제가 아닌 보존)" 1 "output=$OUT_FAIL_FIND"
 fi
 
+# 소유권 조회가 끝난 직후 다른 프로세스가 공유 스킬 폴더에 사용자 파일을
+# 추가할 수 있다. 기존 rm -rf는 조회 시점에 없던 파일까지 삭제한다.
+RACE_SKILLS="$TMP/race-skills"
+RACE_DIR="$RACE_SKILLS/race-managed"
+RACE_BIN="$TMP/race-bin"
+mkdir -p "$RACE_DIR" "$RACE_BIN"
+ln -s "$REPO_ROOT/contexts/race-managed/SKILL.md" "$RACE_DIR/SKILL.md"
+cat >"$RACE_BIN/find" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+/usr/bin/find "$@"
+if [ "${1:-}" = "$PRUNE_RACE_DIR" ]; then
+  printf 'new user data\n' >"$PRUNE_RACE_DIR/user-added.txt"
+fi
+STUB
+chmod +x "$RACE_BIN/find"
+OUT_RACE=$(PRUNE_RACE_DIR="$RACE_DIR" PATH="$RACE_BIN:$PATH" \
+  bash "$SCRIPT" "$RACE_SKILLS" aws k8s 2>&1)
+if [ -f "$RACE_DIR/user-added.txt" ] &&
+  grep -qx 'new user data' "$RACE_DIR/user-added.txt"; then
+  report "concurrent-added-user-file-preserved (조회 후 추가된 사용자 데이터 보존)" 0
+else
+  report "concurrent-added-user-file-preserved (조회 후 추가된 사용자 데이터 보존)" 1 "out=$OUT_RACE"
+fi
+
 # 7. ok-missing-skills-dir: skills 디렉토리 자체가 없으면 무동작 + exit 0.
 status=0
 bash "$SCRIPT" "$TMP/does-not-exist" aws || status=$?

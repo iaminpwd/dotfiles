@@ -38,7 +38,7 @@ _is_valid_domain() {
 
 # The registry is shared. A directory is ours only if it contains at least one
 # exact historical asset symlink and every entry matches the old role's layout.
-# Capture find's exit status: a failed scan must never authorize rm -rf.
+# Capture find's exit status: a failed scan must never authorize pruning.
 SCAN_FILE=$(mktemp)
 trap 'rm -f "$SCAN_FILE"' EXIT
 
@@ -98,8 +98,22 @@ for dir in "$SKILLS_DIR"/*/; do
   done <"$SCAN_FILE"
 
   if [ "$FOREIGN" -eq 0 ] && [ "$OWNED" -eq 1 ]; then
-    rm -rf "$dir"
-    echo "  [PRUNED] $dir (삭제된 contexts/ 도메인의 관리 에셋 링크만 존재)"
+    # A file may arrive after find captured the inventory. Never use rm -rf
+    # on a shared registry: that would erase new user data without inspection.
+    # Remove only exact managed links, then remove the directory *if empty*.
+    # rmdir fails safely when a user file (including a hidden one) arrived.
+    for asset in SKILL.md references scripts examples; do
+      entry="$dir/$asset"
+      managed_source="$MANAGED_CONTEXTS_DIR/$name/$asset"
+      if [ -L "$entry" ] && [ "$(readlink "$entry")" = "$managed_source" ]; then
+        rm "$entry"
+      fi
+    done
+    if rmdir "$dir" 2>/dev/null; then
+      echo "  [PRUNED] $dir (삭제된 contexts/ 도메인의 관리 에셋 링크만 존재)"
+    else
+      echo "  [SKIP] $dir 에 새 항목이 생겨 폴더를 보존 (관리 링크만 정리됨)" >&2
+    fi
   else
     echo "  [SKIP] $dir 는 관리 링크만 있는 폴더로 확인되지 않아 보존 (수동 확인 필요)" >&2
   fi
