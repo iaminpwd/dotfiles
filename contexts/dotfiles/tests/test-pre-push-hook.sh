@@ -126,6 +126,21 @@ else
   report "core-lib-change (bin/lib 변경 시 존재하는 스킬 전체 감지)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# Shared test discovery is consumed by several domain runners, so editing the
+# helper must trigger every domain in the optional pre-push validation as well.
+mkdir -p "$FIXTURE_REPO/tests/lib"
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/tests/lib/run-domain-tests.sh"
+git -C "$FIXTURE_REPO" add tests/lib/run-domain-tests.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "refactor(test): 공용 도메인 테스트 실행기 수정"
+DISCOVERY_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+
+status=$(run_hook_with_refline "refs/heads/main $DISCOVERY_SHA refs/heads/main $CORE_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" && grep -qF "[✓] contexts/azure/tests/run.sh" "$TMP/out"; then
+  report "shared-discovery-change (공용 테스트 실행기 변경 시 스킬 전체 감지)" 0
+else
+  report "shared-discovery-change (공용 테스트 실행기 변경 시 스킬 전체 감지)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 1c. bin/linters/* 는 위 코어 패턴(bin/lib, pre-flight-check.sh)에도, 스킬 전용 경로에도
 #     안 걸린다. 그런데 이런 파일들(bin/linters/*, bin/utils/*, bin/hooks/run-suite.sh,
 #     stow/git/.githooks/*, ansible/roles/*)은 전부 contexts/dotfiles/tests 에 전용 회귀
@@ -138,7 +153,7 @@ git -C "$FIXTURE_REPO" add bin/linters/prompt-lint.sh
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(bin): 린터 판정 로직 수정"
 LINTER_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-status=$(run_hook_with_refline "refs/heads/main $LINTER_SHA refs/heads/main $CORE_SHA")
+status=$(run_hook_with_refline "refs/heads/main $LINTER_SHA refs/heads/main $DISCOVERY_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out" &&
   ! grep -qF "aws/tests/run.sh" "$TMP/out"; then
   report "linter-change (bin/linters 변경 시 dotfiles 스위트만 트리거)" 0

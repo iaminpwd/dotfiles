@@ -1,21 +1,8 @@
 #!/usr/bin/env bash
-# prompt-architect 스킬 회귀 테스트 진입점
-#
-# 사용: bash ~/dotfiles/contexts/prompt-architect/tests/run.sh
-
+# Per-domain wrapper: standalone regressions are discovered by filename.
+# The shared runner preserves fail-all reporting and optional CI timings.
 set -euo pipefail
 export QUIET=0
-
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-FAILED=()
-for suite in test_prompt_lint test-record-provenance; do
-  bash "$TESTS_DIR/$suite.sh" || FAILED+=("$suite")
-  echo
-done
-
-if [ "${#FAILED[@]}" -gt 0 ]; then
-  echo "실패한 스위트: ${FAILED[*]}"
-  exit 1
-fi
-echo "prompt-architect 회귀 테스트 전체 통과"
+ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
+exec bash "$ROOT/tests/lib/run-domain-tests.sh" "$TESTS_DIR" "$@"

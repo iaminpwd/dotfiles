@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-coverage-check.sh - 회귀 테스트 등록 및 SKIP 안내 검사
+# test-coverage-check.sh - 자동 탐색 실행 누락 및 SKIP 안내 검사
 # 기존 훅/CLI 호환을 위해 이름은 유지한다. 파일명 언급이나 bash 호출 패턴으로
 # 테스트 커버리지를 추정하지 않으며, 실제 동작은 회귀 테스트 실행으로 검증한다.
 
@@ -38,69 +38,36 @@ done
 
 log_info "--- Step: Test Registration and SKIP Visibility ---"
 
-# 명시적 스위트 목록을 사용하는 현재 tests/run.sh 관례의 등록 누락을 검사한다.
-# 이름 일치는 정적 검사이며 실제 실행이나 커버리지를 보증하지 않는다.
-UNREGISTERED=()
+# Test files are discovered dynamically by their domain runner, not listed
+# manually. Exercise its read-only --list contract to catch a runner that
+# silently omits an added test. The six fixture-driven domain runners without
+# standalone test-*.sh files keep their existing interfaces.
 MISSING_RUNNERS=()
+DISCOVERY_MISMATCH=()
 for tdir in "${TEST_DIRS[@]}"; do
+  shopt -s nullglob
+  candidates=("$tdir"/test-*.sh "$tdir"/test_*.sh)
+  shopt -u nullglob
+  [ "${#candidates[@]}" -gt 0 ] || continue
   runner="$tdir/run.sh"
-  registered_suites=""
-  if [ -f "$runner" ]; then
-    # for suite in ...; do 목록만 읽는다. 길어진 dotfiles 목록은 Bash의
-    # backslash-newline 이어쓰기 한 줄에 테스트 하나씩 두며, 기존 한 줄 형식도 지원한다.
-    # 주석/echo/dead branch에서 이름을 발견해도 등록으로 인정하지 않는다.
-    # POSIX awk만 사용하여 macOS 기본 도구에서도 동일하게 검사한다.
-    registered_suites=$(awk '
-      /^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]/ {
-        statement = $0
-        while (statement ~ /\\[[:space:]]*$/) {
-          sub(/\\[[:space:]]*$/, "", statement)
-          if ((getline continuation) <= 0) {
-            statement = ""
-            break
-          }
-          statement = statement " " continuation
-        }
-        if (statement ~ /^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+[^;]+;[[:space:]]*do[[:space:]]*$/) {
-          sub(/^[[:space:]]*for[[:space:]]+suite[[:space:]]+in[[:space:]]+/, "", statement)
-          sub(/;[[:space:]]*do[[:space:]]*$/, "", statement)
-          print statement
-        }
-      }
-    ' "$runner" | tr '\n' ' ')
+  if [ ! -f "$runner" ]; then
+    MISSING_RUNNERS+=("${tdir#"$REPO_ROOT"/}")
+    continue
   fi
-  while IFS= read -r -d '' tfile; do
-    if [ ! -f "$runner" ]; then
-      MISSING_RUNNERS+=("${tdir#"$REPO_ROOT"/}")
-      break
-    fi
-    tname="$(basename "$tfile" .sh)"
-    registered=0
-    for suite_name in $registered_suites; do
-      if [ "$suite_name" = "$tname" ]; then
-        registered=1
-        break
-      fi
-    done
-    [ "$registered" -eq 1 ] || UNREGISTERED+=("${tfile#"$REPO_ROOT"/}")
-  done < <(find "$tdir" -maxdepth 1 -type f -name "test[-_]*.sh" -print0 2>/dev/null | sort -z)
+  expected=$(printf "%s\n" "${candidates[@]}")
+  actual=$(bash "$runner" --list 2>/dev/null) || actual=""
+  if [ "$actual" != "$expected" ]; then
+    DISCOVERY_MISMATCH+=("${tdir#"$REPO_ROOT"/}")
+  fi
 done
 
-if [ "${#UNREGISTERED[@]}" -gt 0 ] || [ "${#MISSING_RUNNERS[@]}" -gt 0 ]; then
-  if [ "${#UNREGISTERED[@]}" -gt 0 ]; then
-    echo "[ERROR] 아래 회귀 테스트는 파일은 있지만 같은 스킬의 tests/run.sh 목록에 등록되지 않아, just test/pre-push/CI 어디서도 실행되지 않습니다:" >&2
-    for f in "${UNREGISTERED[@]}"; do
-      echo "  - $f" >&2
-    done
-    echo "  -> 해당 run.sh 의 스위트 목록에 파일명(확장자 제외)을 추가하십시오." >&2
-  fi
-  if [ "${#MISSING_RUNNERS[@]}" -gt 0 ]; then
-    echo "[ERROR] 아래 tests/ 디렉토리에는 회귀 테스트가 있는데 진입점(run.sh)이 없어 스위트가 통째로 실행되지 않습니다:" >&2
-    for f in "${MISSING_RUNNERS[@]}"; do
-      echo "  - $f" >&2
-    done
-    echo "  -> contexts/<skill>/tests/run.sh 를 추가해 각 테스트를 호출하십시오." >&2
-  fi
+if [ "${#MISSING_RUNNERS[@]}" -gt 0 ] || [ "${#DISCOVERY_MISMATCH[@]}" -gt 0 ]; then
+  for d in "${MISSING_RUNNERS[@]}"; do
+    echo "[ERROR] 회귀 테스트가 있지만 tests/run.sh 진입점이 없습니다: $d" >&2
+  done
+  for d in "${DISCOVERY_MISMATCH[@]}"; do
+    echo "[ERROR] tests/run.sh --list가 실제 test[-_]*.sh 목록과 일치하지 않습니다: $d" >&2
+  done
   exit 1
 fi
 

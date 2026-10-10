@@ -38,7 +38,7 @@ bin/
 | **`idempotency-check.sh`** | 셸 스크립트를 정적 분석해 가드 없는 append(`>>`/`tee -a`)를 경고 (재실행 시 설정이 중복 증식하는 비멱등 패턴 탐지). 파일 인자를 받으며, 인자가 없으면 아무것도 하지 않음 | `bin/linters/idempotency-check.sh <파일...>` 또는 `just check-idempotency <파일>` |
 | **`container-hardening-gate.sh`** | 컨테이너 이미지 및 Dockerfile non-root/distroless 하드닝 검증 게이트 | `bin/linters/container-hardening-gate.sh` |
 | **`db-sg-checker.sh`** | IaC 코드 내 DB 보안그룹 인바운드가 인터넷 전체(0.0.0.0/0·::/0)에 열렸는지 검증 (포트 범위·`protocol = "-1"` 로 DB 포트를 포함해 여는 형태 포함) | `bin/linters/db-sg-checker.sh` |
-| **`test-coverage-check.sh`** | 회귀 테스트의 `tests/run.sh` 등록 누락과 숨겨지는 SKIP 안내를 검사. 기존 이름은 호환용이며 실제 커버리지 측정은 아님 | `bin/linters/test-coverage-check.sh` |
+| **`test-coverage-check.sh`** | 개별 회귀 테스트 자동 탐색 결과와 도메인 `tests/run.sh --list` 일치 여부, 빠진 실행기와 숨겨지는 SKIP 안내를 검사. 기존 이름은 호환용이며 실제 커버리지 측정은 아님 | `bin/linters/test-coverage-check.sh` |
 
 ---
 
