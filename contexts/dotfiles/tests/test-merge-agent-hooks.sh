@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # test-merge-agent-hooks.sh
 #
-# merge-agent-hooks.sh는 jq로 ~/.gemini/config/hooks.json 과 ~/.claude/settings.json 을
+# merge-agent-hooks.sh는 jq로 ~/.gemini/config/hooks.json, ~/.claude/settings.json,
+# ~/.codex/hooks.json 을
 # 직접 병합(mutate)한다. 재실행해도 중복 훅이 쌓이지 않는 멱등성과, 기존 무관한 키를
 # 보존하는 병합(. * {...}) 로직이 핵심인데 둘 다 jq 필터가 조용히 깨지기 쉽다.
 # $HOME을 격리된 픽스처 디렉토리로 덮어써 실제 개발 머신 설정을 건드리지 않고 검증한다.
@@ -37,9 +38,9 @@ trap 'rm -rf "$TMP"' EXIT
 # mise 데이터 디렉토리는 그대로 가리키도록 HOME override 전에 미리 고정해둔다.
 REAL_MISE_DATA_DIR="$HOME/.local/share/mise"
 FAKE_HOME="$TMP/home"
-mkdir -p "$FAKE_HOME/ansible/.."
-PLAYBOOK_DIR="$FAKE_HOME/ansible"
-mkdir -p "$PLAYBOOK_DIR"
+# Use the real install source with a fake HOME: a fabricated playbook path
+# would produce a syntactically valid but nonexistent Stop command.
+PLAYBOOK_DIR="$REPO_ROOT/ansible"
 
 # Gemini hooks.json에 무관한 기존 키를 미리 심어 병합 시 보존되는지 확인한다.
 mkdir -p "$FAKE_HOME/.gemini/config"
@@ -92,6 +93,28 @@ if jq -e '([."pre-flight-stop-gate".Stop[].command] |
   report "Antigravity Stop 등록 및 기존 Stop 명령 보존" 0
 else
   report "Antigravity Stop 등록 및 기존 Stop 명령 보존" 1
+fi
+# Verify the exact installed WSL command launches directly with Bash, without
+# PowerShell, Windows profile settings, wsl.exe or a host-side shim.
+WSL_STOP_CMD=$(jq -r '[."pre-flight-stop-gate".Stop[].command |
+  select(contains("agent-stop-adapter.sh") and endswith(" antigravity"))] | last // empty' "$GEMINI_JSON")
+WSL_STOP_OUT=''
+WSL_STOP_RC=0
+if [ -n "$WSL_STOP_CMD" ]; then
+  WSL_STOP_OUT=$(printf '%s\n' '{"fullyIdle":true,"workspacePaths":[],"terminationReason":"model_stop"}' |
+    bash -c "$WSL_STOP_CMD") || WSL_STOP_RC=$?
+fi
+if [ "$WSL_STOP_RC" -eq 0 ] &&
+  jq -e '.decision == "continue" and (.reason | contains("workspacePaths"))' <<<"$WSL_STOP_OUT" >/dev/null 2>&1 &&
+  ! grep -Eq 'powershell\.exe|wsl\.exe|antigravity-windows-hook' <<<"$WSL_STOP_CMD"; then
+  report "Antigravity 등록 명령은 WSL Bash 어댑터를 직접 실행" 0
+else
+  report "Antigravity 등록 명령은 WSL Bash 어댑터를 직접 실행" 1 "$WSL_STOP_OUT"
+fi
+if ! grep -Eq 'antigravity-windows-hook|powershell\.exe|wslpath|ai_agent_windows_bridge' "$AI_ROLE"; then
+  report "Ansible ai_agent 설치는 Windows 브리지 없이 작동" 0
+else
+  report "Ansible ai_agent 설치는 Windows 브리지 없이 작동" 1
 fi
 CODEX_JSON="$FAKE_HOME/.codex/hooks.json"
 if jq -e '."user-setting" == "preserve" and

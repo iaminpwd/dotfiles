@@ -132,6 +132,7 @@ dotfiles를 제외한 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude
 - **Shell / Git:** `stow/zsh/.zshrc`, `stow/zsh/.zshenv`, `stow/git/.gitconfig`, `stow/vim/.vimrc`에서 원본을 관리합니다.
 - **개인 시크릿:** `~/.zshrc.local`과 `~/.gitconfig.local`은 저장소 밖에 두고 Git에 커밋하지 않습니다. `~/.zshrc.local`은 `chmod 600 ~/.zshrc.local`로 권한을 제한합니다.
 - **전역 훅:** `stow/git/.githooks/`가 Git 훅 원본이며, AI 훅 등록은 `bin/utils/merge-agent-hooks.sh`가 사용자 설정을 보존하며 병합합니다.
+- **Antigravity WSL 직접 연결:** WSL의 `~/.gemini/config/hooks.json`에서 Bash Stop 어댑터를 직접 호출합니다. Windows PowerShell 브리지는 사용하지 않습니다. 단, IDE의 훅 실행 프로세스가 실제 WSL에 있는지는 IDE에서 확인해야 합니다.
 
 ---
 
