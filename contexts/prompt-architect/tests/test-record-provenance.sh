@@ -37,6 +37,31 @@ LOG="$TMP/.agent-state/edits.log"
 
 echo "=== record-provenance.sh 근거 보강/모호성 판정 로직 회귀 테스트 ==="
 
+# macOS 기본 BSD readlink에는 -f가 없다. 다른 작업 디렉터리에서 심볼릭
+# 링크로 실행해도 실제 정본의 lib/와 contexts/를 찾아 기록해야 한다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+EOF
+chmod +x "$BSD_BIN/readlink"
+ln -s "$RECORD_PROVENANCE" "$TMP/provenance-link"
+bsd_code=0
+bsd_out=$(cd "$TMP" && PATH="$BSD_BIN:$PATH" bash "$TMP/provenance-link" bsd.tf "dotfiles/010-core.md" "BSD 호환 테스트" 2>&1) || bsd_code=$?
+if [ "$bsd_code" -eq 0 ] &&
+  grep -qF 'bsd.tf | agent:dotfiles/010-core.md | BSD 호환 테스트 | SUCCESS' "$LOG" &&
+  ! grep -qF 'illegal option' <<<"$bsd_out"; then
+  report "BSD readlink 환경에서 symlink 호출" 0
+else
+  report "BSD readlink 환경에서 symlink 호출" 1 "exit=$bsd_code out=$bsd_out"
+fi
+rm -f "$LOG"
+
 # 1. 이미 <스킬>/파일명 형태면 그대로 SUCCESS로 기록되어야 한다.
 status=0
 out=$(cd "$TMP" && bash "$RECORD_PROVENANCE" a.tf "dotfiles/010-core.md" "테스트 목적" 2>&1) || status=$?
