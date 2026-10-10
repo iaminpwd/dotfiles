@@ -75,12 +75,29 @@ _reconcile_dir_symlink() {
 # of leaving a half-migrated home directory.
 STOW_INVENTORY=$(mktemp -d)
 trap 'rm -rf "$STOW_INVENTORY"' EXIT
+if [ -L "$DOTFILES_DIR" ] || [ -L "$DOTFILES_DIR/$PKG" ] || [ ! -d "$DOTFILES_DIR/$PKG" ]; then
+  echo "❌ [Hard Block] 안전 설치기가 사용할 수 없는 Stow 소스 경로: $DOTFILES_DIR/$PKG" >&2
+  exit 1
+fi
 if ! find "$DOTFILES_DIR/$PKG" -mindepth 1 -type d -print0 >"$STOW_INVENTORY/dirs"; then
   echo "❌ [Hard Block] Stow 소스 탐색 실패 (directories): $DOTFILES_DIR/$PKG" >&2
   exit 1
 fi
 if ! find "$DOTFILES_DIR/$PKG" -type f -print0 >"$STOW_INVENTORY/files"; then
   echo "❌ [Hard Block] Stow 소스 탐색 실패 (files): $DOTFILES_DIR/$PKG" >&2
+  exit 1
+fi
+
+# stow-safe-install.py rejects source symlinks and other nonregular entries
+# before installation. Detect the same unsupported types before *any* user
+# file is backed up; find -type f/-type d would otherwise silently omit them.
+if ! find "$DOTFILES_DIR/$PKG" -mindepth 1 ! -type d ! -type f -print0 >"$STOW_INVENTORY/unsupported"; then
+  echo "❌ [Hard Block] Stow 소스 유형 탐색 실패: $DOTFILES_DIR/$PKG" >&2
+  exit 1
+fi
+if [ -s "$STOW_INVENTORY/unsupported" ]; then
+  IFS= read -r -d '' UNSUPPORTED_SOURCE <"$STOW_INVENTORY/unsupported" || true
+  echo "❌ [Hard Block] 안전 설치기가 지원하지 않는 Stow 소스 항목: $UNSUPPORTED_SOURCE" >&2
   exit 1
 fi
 
