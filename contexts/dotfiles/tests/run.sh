@@ -56,6 +56,7 @@ for suite in \
   test-stow-toctou \
   test-safe-link-backup \
   test-agent-batch-backup \
+  test-agent-root-rule-backup \
   test-agent-script-update-prune \
   test-prune-orphan-skills \
   test-git-relpath \
