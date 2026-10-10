@@ -145,8 +145,9 @@ fi
 
 # 2f. find can print entries and then fail. Process-substitution would
 # swallow that status, moving user files even though the inventory is partial.
-# Test failures in both directory and file scans before *any* backup mutation.
-for FAIL_STAGE in 1 2; do
+# Test all three inventories, including the unsupported-type scan, before
+# any backup mutation.
+for FAIL_STAGE in 1 2 3; do
   CASE_FIND="$TMP/find-failure-$FAIL_STAGE"
   mkdir -p "$CASE_FIND/dotfiles/pkg/.hooks" "$CASE_FIND/home" "$CASE_FIND/fake-bin"
   printf 'managed hook\n' >"$CASE_FIND/dotfiles/pkg/.hooks/pre-commit"
@@ -192,14 +193,51 @@ EOF
       moved=1
     fi
   done
+  expected_error="Stow 소스 탐색 실패"
+  if [ "$FAIL_STAGE" -eq 3 ]; then
+    expected_error="Stow 소스 유형 탐색 실패"
+  fi
   if [ "$status" -ne 0 ] && [ "$moved" -eq 0 ] &&
     [ -L "$CASE_FIND/home/.hooks" ] &&
     [ "$(readlink "$CASE_FIND/home/.hooks")" = "../old-stow/.hooks" ] &&
     grep -qx 'user config' "$CASE_FIND/home/.conflict" &&
-    grep -qF "Stow 소스 탐색 실패" <<<"$out"; then
+    grep -qF "$expected_error" <<<"$out"; then
     report "failed-find-stage-$FAIL_STAGE (부분 목록 이후 find 실패 → 사전 차단, 데이터 보존)" 0
   else
     report "failed-find-stage-$FAIL_STAGE (부분 목록 이후 find 실패 → 사전 차단, 데이터 보존)" 1 "exit=$status moved=$moved out=$out"
+  fi
+done
+
+# Safe installer rejects nonregular source entries (symlink, FIFO, etc.).
+# Backup must catch them before moving unrelated user configuration, otherwise
+# a subsequent installer hard-fail leaves HOME needlessly changed.
+for kind in symlink-file symlink-dir fifo; do
+  case_unsupported="$TMP/unsupported-$kind"
+  mkdir -p "$case_unsupported/dotfiles/pkg" "$case_unsupported/home"
+  printf 'managed\n' >"$case_unsupported/dotfiles/pkg/.first"
+  printf 'user configuration\n' >"$case_unsupported/home/.first"
+  case "$kind" in
+  symlink-file)
+    ln -s .first "$case_unsupported/dotfiles/pkg/.unsupported"
+    ;;
+  symlink-dir)
+    mkdir "$case_unsupported/dotfiles/pkg/subdir"
+    ln -s subdir "$case_unsupported/dotfiles/pkg/.unsupported"
+    ;;
+  fifo)
+    mkfifo "$case_unsupported/dotfiles/pkg/.unsupported"
+    ;;
+  esac
+  status=0
+  out=$(bash "$BACKUP" pkg "$case_unsupported/dotfiles" "$case_unsupported/home" 2>&1) || status=$?
+  backups=("$case_unsupported/home/.first".backup.*)
+  if [ "$status" -ne 0 ] &&
+    grep -qF '[Hard Block]' <<<"$out" &&
+    grep -qx 'user configuration' "$case_unsupported/home/.first" &&
+    [ ! -e "${backups[0]}" ] && [ ! -L "${backups[0]}" ]; then
+    report "unsupported-$kind (설치 불가 소스 발견 시 사용자 파일 원위치 보존)" 0
+  else
+    report "unsupported-$kind (설치 불가 소스 발견 시 사용자 파일 원위치 보존)" 1 "exit=$status out=$out"
   fi
 done
 
