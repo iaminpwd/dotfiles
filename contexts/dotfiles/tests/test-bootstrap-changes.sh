@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 SCRIPT="$ROOT/.github/scripts/bootstrap-changes.sh"
+CI="$ROOT/.github/workflows/ci.yml"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 cd "$TMP"
@@ -14,7 +15,20 @@ printf 'reference-v1\n' >contexts/aws/references/010-core.md
 printf 'skill-v1\n' >contexts/aws/SKILL.md
 printf 'agents-v1\n' >contexts/base.AGENTS.md
 printf 'test-v1\n' >contexts/aws/tests/test.sh
-printf 'stow-test-v1\n' >contexts/dotfiles/tests/test-stow-toctou.sh
+# Smoke 워크플로가 실제 호출하는 테스트를 직접 추출해 감지기 계약과 대조한다.
+# 새 테스트를 Smoke에 추가했을 때 detector allowlist 수정 누락도 잡아야 한다.
+mapfile -t smoke_tests < <(
+  grep -E '^[[:space:]]+bash contexts/dotfiles/tests/test-stow-[a-z0-9-]+\.sh[[:space:]]*$' "$CI" |
+    sed -E 's#^[[:space:]]+bash contexts/dotfiles/tests/([^[:space:]]+)[[:space:]]*$#\1#' |
+    sort -u
+)
+[ "${#smoke_tests[@]}" -gt 0 ] || {
+  echo 'FAIL: Bootstrap Smoke에서 직접 호출하는 Stow 테스트를 찾지 못했습니다.' >&2
+  exit 1
+}
+for smoke_test in "${smoke_tests[@]}"; do
+  printf 'stow-test-v1\n' >"contexts/dotfiles/tests/$smoke_test"
+done
 printf 'script-v1\n' >contexts/aws/scripts/check.sh
 git add .
 git -c core.hooksPath=/dev/null commit -qm 'chore: 초기 상태'
@@ -77,14 +91,18 @@ git -c core.hooksPath=/dev/null commit -qm 'test: 회귀 수정'
 test_modified=$(git rev-parse HEAD)
 check false EVENT_NAME=push BEFORE_SHA="$agents_modified" AFTER_SHA="$test_modified"
 
-# Stow TOCTOU regression directly participates in Debian/macOS smoke.
-# Unlike ordinary non-deployed context tests it must trigger both runners.
-printf 'stow-test-v2\n' >contexts/dotfiles/tests/test-stow-toctou.sh
-git add .
-git -c core.hooksPath=/dev/null commit -qm 'test: Stow 경쟁 조건 회귀 수정'
-stow_test_modified=$(git rev-parse HEAD)
-check true EVENT_NAME=push BEFORE_SHA="$test_modified" AFTER_SHA="$stow_test_modified"
-check true EVENT_NAME=pull_request BASE_SHA="$test_modified" HEAD_SHA="$stow_test_modified"
+# Debian/macOS Smoke가 직접 실행하는 모든 테스트는 일반 비배포 테스트와 달리
+# 내용 변경만으로도 두 OS 검증이 다시 실행돼야 한다 (push/PR 모두).
+last_smoke_sha="$test_modified"
+for smoke_test in "${smoke_tests[@]}"; do
+  printf 'stow-test-v2\n' >"contexts/dotfiles/tests/$smoke_test"
+  git add "contexts/dotfiles/tests/$smoke_test"
+  git -c core.hooksPath=/dev/null commit -qm "test: Smoke $smoke_test 수정"
+  stow_test_modified=$(git rev-parse HEAD)
+  check true EVENT_NAME=push BEFORE_SHA="$last_smoke_sha" AFTER_SHA="$stow_test_modified"
+  check true EVENT_NAME=pull_request BASE_SHA="$last_smoke_sha" HEAD_SHA="$stow_test_modified"
+  last_smoke_sha="$stow_test_modified"
+done
 
 # scripts는 ~/.local/bin 배포 대상이라 내용 변경도 bootstrap smoke 대상이다.
 printf 'script-v2\n' >contexts/aws/scripts/check.sh
