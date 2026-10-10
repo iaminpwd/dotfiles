@@ -65,6 +65,7 @@ while IFS= read -r -d '' file; do
     ;;
   bin/hooks/stop-regression-check.sh) dotfiles_test stop-regression-check ;;
   bin/utils/safe-link-backup.py) dotfiles_test safe-link-backup ;;
+  bin/utils/stow-safe-backup.py) dotfiles_test stow-toctou ;;
   bin/hooks/plugins/*) ;; # 도메인 정책은 명시적 실행 또는 CI에서 검증한다.
   bin/hooks/*.sh | bin/utils/*.sh | bin/lib/*.sh)
     name=${file##*/}

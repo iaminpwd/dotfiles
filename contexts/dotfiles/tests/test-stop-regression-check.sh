@@ -11,7 +11,7 @@ cp "$ROOT/bin/lib/script-init.sh" "$REPO/bin/lib/"
 git -C "$REPO" init -q
 git -C "$REPO" config user.name Test
 git -C "$REPO" config user.email test@example.com
-for name in safe-link-backup merge-agent-hooks stop-regression-check; do
+for name in safe-link-backup stow-toctou merge-agent-hooks stop-regression-check; do
   printf '#!/usr/bin/env bash\necho "TEST %s"\n' "$name" >"$REPO/contexts/dotfiles/tests/test-$name.sh"
 done
 printf '#!/bin/bash\n' >"$REPO/bin/utils/safe-link-backup.sh"
@@ -61,6 +61,11 @@ else
   printf '%s\n' "$selected" >&2
   exit 1
 fi
+
+printf '# stow helper changed\n' >"$REPO/bin/utils/stow-safe-backup.py"
+selected=$(bash "$RUNNER" --list)
+[[ "$selected" == *test-stow-toctou.sh* ]]
+echo 'PASS: Stow Python 백업 헬퍼 변경은 TOCTOU 회귀로 라우팅'
 
 printf '# 새 변경\n' >"$REPO/contexts/dotfiles/tests/test-new.sh"
 selected=$(bash "$RUNNER" --list)

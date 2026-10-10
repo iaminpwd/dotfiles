@@ -5,6 +5,7 @@ All path components are opened relative to an O_NOFOLLOW directory descriptor.
 Regular-file backups are detached copies; symlinks retain their link identity.
 This protects backup contents from later writes through another open hard link.
 """
+import errno
 import os
 import secrets
 import stat
@@ -61,6 +62,20 @@ def _copy_regular(parent_fd, stage_fd, name, original):
                     view = view[written:]
                 remaining -= len(chunk)
             os.fchmod(copy_fd, stat.S_IMODE(before.st_mode))
+            # Detached copies must also retain timestamps and supported xattrs
+            # (including POSIX ACL metadata where represented as xattrs).
+            # Use pinned file descriptors: never traverse a potentially raced
+            # HOME pathname when copying metadata.
+            if all(hasattr(os, name) for name in ("listxattr", "getxattr", "setxattr")):
+                try:
+                    attributes = os.listxattr(source_fd)
+                except OSError as exc:
+                    if exc.errno not in (errno.ENOTSUP, errno.EOPNOTSUPP):
+                        raise
+                    attributes = []
+                for attribute in attributes:
+                    os.setxattr(copy_fd, attribute, os.getxattr(source_fd, attribute))
+            os.utime(copy_fd, ns=(before.st_atime_ns, before.st_mtime_ns))
             os.fsync(copy_fd)
         finally:
             os.close(copy_fd)
