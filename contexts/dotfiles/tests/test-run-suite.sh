@@ -96,6 +96,96 @@ check "ok-with-warning (경고 보존)" 0 "FIXTURE_SKIPPED_TOOL" "-" ok-with-war
 # 7. 여러 스크립트가 전부 통과하면 exit 0.
 check "전건 통과" 0 "[✓]" "❌" ok-quiet.sh ok-with-warning.sh
 
+# With two slots, a slow first job and a quick second job must not block the
+# third job until the whole batch finishes. Fixed batches waste an idle slot.
+QUEUE="$TMP/work-conserving-queue"
+mkdir -p "$QUEUE"
+cat >"$QUEUE/slow.sh" <<EOF
+#!/usr/bin/env bash
+sleep 1.5
+touch "$QUEUE/slow-finished"
+EOF
+cat >"$QUEUE/fast.sh" <<'EOF'
+#!/usr/bin/env bash
+sleep 0.1
+EOF
+cat >"$QUEUE/third.sh" <<EOF
+#!/usr/bin/env bash
+if [ -e "$QUEUE/slow-finished" ]; then
+  echo 'THIRD_JOB_STARTED_AFTER_SLOW_BARRIER' >&2
+  exit 5
+fi
+touch "$QUEUE/third-started"
+EOF
+queue_rc=0
+queue_out=$(RUN_SUITE_JOBS=2 bash "$RUNNER" "$QUEUE/slow.sh" "$QUEUE/fast.sh" "$QUEUE/third.sh" 2>&1) || queue_rc=$?
+if [ "$queue_rc" -eq 0 ] && [ -f "$QUEUE/third-started" ]; then
+  report "빈 슬롯 발생 시 후속 테스트 즉시 시작 (배치 대기 병목 제거)" 0
+else
+  report "빈 슬롯 발생 시 후속 테스트 즉시 시작 (배치 대기 병목 제거)" 1 "exit=$queue_rc out=$queue_out"
+fi
+
+# The preflight gate initializes a shared Trivy cache. It must finish before
+# independent suites start their own scanners, otherwise a fresh CI runner
+# can see cache-lock failures rather than policy results.
+cat >"$QUEUE/pre-flight-check.sh" <<EOF
+#!/usr/bin/env bash
+sleep 0.3
+touch "$QUEUE/preflight-ready"
+EOF
+cat >"$QUEUE/after-preflight.sh" <<EOF
+#!/usr/bin/env bash
+test -f "$QUEUE/preflight-ready"
+EOF
+preflight_rc=0
+preflight_out=$(RUN_SUITE_JOBS=2 bash "$RUNNER" "$QUEUE/pre-flight-check.sh" "$QUEUE/after-preflight.sh" 2>&1) || preflight_rc=$?
+if [ "$preflight_rc" -eq 0 ]; then
+  report "공유 Trivy 캐시 초기화 후 독립 스위트 시작" 0
+else
+  report "공유 Trivy 캐시 초기화 후 독립 스위트 시작" 1 "exit=$preflight_rc out=$preflight_out"
+fi
+
+# An aborted worker (SIGKILL, OOM, etc.) cannot release a token. The parent
+# must reap its actual exit status and launch the next script anyway.
+cat >"$QUEUE/kill-worker.sh" <<'EOF'
+#!/usr/bin/env bash
+kill -KILL "$PPID"
+EOF
+cat >"$QUEUE/after-kill.sh" <<EOF
+#!/usr/bin/env bash
+touch "$QUEUE/after-kill-started"
+EOF
+kill_rc=0
+kill_out=$(
+  python3 - "$RUNNER" "$QUEUE" <<'PY'
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+runner, root = sys.argv[1:]
+env = dict(os.environ, RUN_SUITE_JOBS="1")
+try:
+    result = subprocess.run(
+        ["bash", runner, f"{root}/kill-worker.sh", f"{root}/after-kill.sh"],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        env=env, timeout=6,
+    )
+except subprocess.TimeoutExpired:
+    print("RUN_SUITE_WORKER_KILL_DEADLOCK")
+    raise SystemExit(1)
+print(result.stdout)
+if result.returncode == 0 or not Path(root, "after-kill-started").exists():
+    raise SystemExit(1)
+PY
+) || kill_rc=$?
+if [ "$kill_rc" -eq 0 ] && grep -qF 'kill-worker.sh' <<<"$kill_out" &&
+  grep -qF 'after-kill.sh' <<<"$kill_out"; then
+  report "강제 종료된 작업의 슬롯 회수·후속 테스트 진행" 0
+else
+  report "강제 종료된 작업의 슬롯 회수·후속 테스트 진행" 1 "exit=$kill_rc out=$kill_out"
+fi
+
 echo "--- 무검증 통과 통제 ---"
 
 # 8. 실행 대상이 하나도 없으면 exit 0 으로 조용히 넘어가면 안 된다. "전부 통과"와
