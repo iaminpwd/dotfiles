@@ -46,7 +46,7 @@ just setup-dryrun
 |---|---|
 | **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
-| **`stow`** | 기존 설정 파일 안전 백업 후, `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)로 symlink 구성 (`mise`는 `mise install`이 이 단계보다 먼저 필요해 `bootstrap.sh`가 동일한 `stow` 명령으로 한 번 더 앞서 실행 — 멱등이라 안전) |
+| **`stow`** | 기존 설정 파일 안전 백업 후 `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)에 파일 단위로 안전하게 링크. 최초 `bootstrap.sh`는 저장소의 mise 설정을 환경변수로 읽어 도구를 설치한 뒤 동일한 안전 설치기를 사용합니다. |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
 | **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록, 이전 실시간 검사 등록 제거 |
 | **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
