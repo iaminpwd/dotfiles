@@ -36,5 +36,12 @@ for pattern in ('bin/lib/pfc-*.sh', 'bin/hooks/plugins/*.sh', 'contexts/*/tests/
             if key in original:
                 assert key in selected, (path, tool)
 print('PASS: 검사기와 회귀 테스트의 도구 탐색 대상 유지')
+# CI must exercise the domain validators too. The pre-flight gate intentionally
+# leaves them opt-in for fast local execution; an unqualified CI verify would
+# silently skip Terraform, Helm, K8s, conftest and delegated domain policies.
+workflow = (root / '.github/workflows/ci.yml').read_text()
+assert 'RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify' in workflow, (
+    'CI verify must enable the domain policy validators')
+print('PASS: CI 전체 Verify에서 도메인 정책 검사 활성화')
 print(f'설치 대상: {len(original)} -> {len(selected)}')
 PY

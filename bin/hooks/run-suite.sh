@@ -147,8 +147,14 @@ run_script() {
   else
     cmd=("$script")
   fi
-  if [[ "$script" == *"pre-flight-check.sh"* ]] && [ "${#PFC_ARGS[@]}" -gt 0 ]; then
-    "${cmd[@]}" "${PFC_ARGS[@]}" >"$out_file" 2>&1
+  if [[ "$script" == *"pre-flight-check.sh"* ]]; then
+    # CI enables repository-wide policy checks in this one gate only; do not
+    # leak the opt-in flag into independent domain regression runners.
+    if [ "${RUN_SUITE_PFC_DOMAIN_CHECKS:-0}" = 1 ]; then
+      PFC_DOMAIN_CHECKS=1 "${cmd[@]}" "${PFC_ARGS[@]}" >"$out_file" 2>&1
+    else
+      "${cmd[@]}" "${PFC_ARGS[@]}" >"$out_file" 2>&1
+    fi
   else
     "${cmd[@]}" >"$out_file" 2>&1
   fi

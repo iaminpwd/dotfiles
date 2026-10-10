@@ -148,7 +148,13 @@ jobs:
           # order or passing criteria. Preserve the original failure exit code.
           export DOTFILES_SUITE_TIMING_LOG="$RUNNER_TEMP/dotfiles-test-timings.tsv"
           result=0
-          PFC_PROFILE=full just verify || result=$?
+          # All domain policy validators are opt-in in the local preflight.
+          # CI must enable them or just verify remains green while actual
+          # Terraform/Helm/K8s/conftest/delegated checks are never invoked.
+          # Route the flag only to the top-level preflight inside run-suite.
+          # Domain fixtures run in independent contexts; inheriting the flag
+          # in all test runners could change their isolated test contracts.
+          RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify || result=$?
           if [ -f "$DOTFILES_SUITE_TIMING_LOG" ]; then
             echo "=== dotfiles test durations (seconds, slowest first) ==="
             sort -t "$(printf '\t')" -k2,2nr "$DOTFILES_SUITE_TIMING_LOG"
