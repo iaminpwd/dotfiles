@@ -211,6 +211,22 @@
   changed_when: "'[PRUNED]' in ai_agent_prune_result.stdout"
   register: ai_agent_prune_result
 
+# 저장소 루트 AGENTS.md/CLAUDE.md는 이 롤이 생성한 관리 링크일 수도 있지만,
+# 사용자 파일이나 다른 도구의 링크일 수도 있다. force:true 적용 전 원본과
+# 정확히 일치하지 않는 목적지는 복원 가능한 이름으로 이동한다.
+- name: Dotfiles 로컬 룰셋 목적지 충돌 백업
+  ansible.builtin.command:
+    argv:
+      - /bin/bash
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - --link-pairs
+      - "{{ role_path }}/../../../contexts/dotfiles/SKILL.md"
+      - "{{ role_path }}/../../../AGENTS.md"
+      - "{{ role_path }}/../../../contexts/dotfiles/SKILL.md"
+      - "{{ role_path }}/../../../CLAUDE.md"
+  register: ai_agent_local_rules_backup_result
+  changed_when: "'[BACKUP]' in ai_agent_local_rules_backup_result.stdout"
+
 - name: Dotfiles 로컬 룰셋 심볼릭 링크 생성
   ansible.builtin.file:
     src: "{{ role_path }}/../../../contexts/dotfiles/SKILL.md"
