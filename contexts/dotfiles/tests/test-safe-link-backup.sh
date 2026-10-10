@@ -154,6 +154,128 @@ else
   report "same-second-collision (기존 백업 보존 + 새 백업 별도 생성)" 1 "$(ls -la "$TMP" 2>&1)"
 fi
 
+# A competing process may claim the backup name right before our atomic
+# link/mkdir call. sitecustomize injects that exact filesystem interleaving
+# inside the Python helper without touching any global files or user HOME.
+mkdir -p "$TMP/inject"
+cat >"$TMP/inject/sitecustomize.py" <<'PY'
+import os
+
+_link = os.link
+_mkdir = os.mkdir
+_rename = os.rename
+_claimed = False
+
+def _inject(name, parent_fd):
+    global _claimed
+    if _claimed or name != os.environ.get("RACE_CANDIDATE"):
+        return
+    _claimed = True
+    if os.environ.get("RACE_KIND") == "directory":
+        _mkdir(name, dir_fd=parent_fd)
+        with open(os.path.join(os.environ["RACE_PARENT"], name, "competitor.txt"), "w") as out:
+            out.write("new competing backup\n")
+    else:
+        fd = os.open(name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600,
+                     dir_fd=parent_fd)
+        try:
+            os.write(fd, b"new competing backup\n")
+        finally:
+            os.close(fd)
+
+def link(src, dst, *args, **kwargs):
+    _inject(dst, kwargs.get("dst_dir_fd"))
+    return _link(src, dst, *args, **kwargs)
+
+def mkdir(path, *args, **kwargs):
+    _inject(path, kwargs.get("dir_fd"))
+    return _mkdir(path, *args, **kwargs)
+
+def rename(src, dst, *args, **kwargs):
+    if os.environ.get("RACE_SOURCE_SWAP") == "1" and dst == "source":
+        fd = kwargs["src_dir_fd"]
+        os.unlink(src, dir_fd=fd)
+        replacement = os.open(src, os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                              0o600, dir_fd=fd)
+        try:
+            os.write(replacement, b"new user replacement\n")
+        finally:
+            os.close(replacement)
+    return _rename(src, dst, *args, **kwargs)
+
+os.link = link
+os.mkdir = mkdir
+os.rename = rename
+os.supports_dir_fd.add(link)
+os.supports_follow_symlinks.add(link)
+PY
+for kind in file symlink directory; do
+  RACE_TARGET="$TMP/backup-race-$kind"
+  if [ "$kind" = file ]; then
+    printf 'original user file\n' >"$RACE_TARGET"
+  elif [ "$kind" = symlink ]; then
+    ln -s "$TMP/original-user-link" "$RACE_TARGET"
+  else
+    mkdir "$RACE_TARGET"
+    printf 'original nested file\n' >"$RACE_TARGET/child"
+  fi
+  RACE_BACKUP="$RACE_TARGET.backup.2026-10-07-120000"
+  RACE_ARGS=("$RACE_TARGET")
+  if [ "$kind" = symlink ]; then
+    RACE_ARGS=(--link-pairs "$SRC4A" "$RACE_TARGET")
+  fi
+  code=0
+  out=$(RACE_KIND="$kind" RACE_CANDIDATE="$(basename "$RACE_BACKUP")" \
+  RACE_PARENT="$TMP" PYTHONPATH="$TMP/inject" \
+  PATH="$TMP/fixed-date-bin:$PATH" \
+    bash "$SCRIPT" "${RACE_ARGS[@]}" 2>&1) || code=$?
+  preserved=0
+  case "$kind" in
+  file)
+    grep -qx 'original user file' "$RACE_BACKUP.1" && preserved=1
+    ;;
+  symlink)
+    [ -L "$RACE_BACKUP.1" ] && [ "$(readlink "$RACE_BACKUP.1")" = "$TMP/original-user-link" ] && preserved=1
+    ;;
+  directory)
+    grep -qx 'original nested file' "$RACE_BACKUP.1/child" && preserved=1
+    ;;
+  esac
+  competitor_preserved=0
+  if [ "$kind" = directory ]; then
+    grep -qx 'new competing backup' "$RACE_BACKUP/competitor.txt" && competitor_preserved=1
+  else
+    grep -qx 'new competing backup' "$RACE_BACKUP" && competitor_preserved=1
+  fi
+  if [ "$code" -eq 0 ] && [ "$preserved" -eq 1 ] &&
+    [ "$competitor_preserved" -eq 1 ] &&
+    [ ! -e "$RACE_TARGET" ] && [ ! -L "$RACE_TARGET" ]; then
+    report "concurrent-$kind-backup-name (동시 백업 이름 충돌 시 양쪽 사용자 데이터 보존)" 0
+  else
+    report "concurrent-$kind-backup-name (동시 백업 이름 충돌 시 양쪽 사용자 데이터 보존)" 1 "exit=$code out=$out"
+  fi
+done
+
+# A replacement arriving *after* a successful backup-name claim must not be
+# unlinked as if it were the original. Preserve it in the private stage and
+# fail loudly; the original inode remains at the claimed backup path.
+SOURCE_SWAP="$TMP/source-swap"
+printf 'original user source\n' >"$SOURCE_SWAP"
+swap_rc=0
+swap_out=$(RACE_SOURCE_SWAP=1 PYTHONPATH="$TMP/inject" \
+  PATH="$TMP/fixed-date-bin:$PATH" \
+  bash "$SCRIPT" "$SOURCE_SWAP" 2>&1) || swap_rc=$?
+STAGES=("$TMP/.source-swap.safe-stage-"*)
+if [ "$swap_rc" -ne 0 ] &&
+  grep -qx 'original user source' "$SOURCE_SWAP.backup.2026-10-07-120000" &&
+  [ "${#STAGES[@]}" -eq 1 ] &&
+  grep -qx 'new user replacement' "${STAGES[0]}/source" &&
+  grep -qF 'private stage' <<<"$swap_out"; then
+  report "concurrent-source-replacement (교체된 사용자 파일을 삭제하지 않고 별도 보존)" 0
+else
+  report "concurrent-source-replacement (교체된 사용자 파일을 삭제하지 않고 별도 보존)" 1 "exit=$swap_rc out=$swap_out"
+fi
+
 # 백업할 것이 없으면 date도 실행하지 않는다. 빈 대상 목록 역시 정상 무동작이다.
 mkdir "$TMP/tools"
 printf '#!/usr/bin/env bash\nexit 99\n' >"$TMP/tools/date"
