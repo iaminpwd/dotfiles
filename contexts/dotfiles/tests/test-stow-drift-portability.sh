@@ -58,6 +58,11 @@ play = [{
     ],
 }]
 (tmp / "play.yml").write_text(json.dumps(play))
+owned_play = json.loads(json.dumps(play))
+owned_play[0]["tasks"][1]["ansible.builtin.assert"]["that"][1] = (
+    "stow_drift_check.stdout | trim == '0'"
+)
+(tmp / "owned.yml").write_text(json.dumps(owned_play))
 PY
 
 status=0
@@ -67,6 +72,21 @@ if [ "$status" -ne 0 ]; then
   echo 'FAIL: missing link drift not detected with BSD readlink'
   exit 1
 fi
+
+# secure installer는 symlink의 마지막 leaf까지 realpath하여 관리 링크를
+# 판정한다. drift 검사도 같은 링크 체인을 깨끗한 상태로 인정해야 한다.
+mkdir -p "$TMP/home/.config/demo"
+ln -s "$TMP/repo/stow/demo/.config/demo/config" "$TMP/home/.config/demo/.alias"
+ln -s .alias "$TMP/home/.config/demo/config"
+status=0
+ansible-playbook -i localhost, "$TMP/owned.yml" >"$TMP/owned.out" 2>&1 || status=$?
+if [ "$status" -ne 0 ] || [ ! -L "$TMP/home/.config/demo/config" ]; then
+  cat "$TMP/owned.out"
+  echo 'FAIL: secure installer considers the alias chain owned but drift reports changes'
+  exit 1
+fi
+rm "$TMP/home/.config/demo/config" "$TMP/home/.config/demo/.alias"
+echo 'PASS: 관리 대상 symlink 체인에 대한 드리프트 오탐 없음'
 
 cat >"$TMP/fakebin/find" <<'STUB'
 #!/usr/bin/env bash

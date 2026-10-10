@@ -16,7 +16,19 @@
     set -euo pipefail
 
     canonical_existing_file() {
-      local path=$1 dir base
+      local path=$1 dir base link_target hops=0
+      # Match the safe installer owned-link predicate: resolve the final
+      # file symlink as well as parent directories. BSD readlink has no -f.
+      while [ -L "$path" ]; do
+        hops=$((hops + 1))
+        [ "$hops" -le 40 ] || return 1
+        dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
+        link_target=$(readlink "$path") || return 1
+        case "$link_target" in
+        /*) path="$link_target" ;;
+        *) path="$dir/$link_target" ;;
+        esac
+      done
       dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
       base=$(basename "$path")
       [ -e "$dir/$base" ] || return 1
