@@ -174,6 +174,41 @@ else
   report "validate_terraform 하위 root 의미 오류 차단" 1 "기대 exit≠0 + terraform validate 실패 / 실제 exit=$CODE: $(tail -5 <<<"$OUT" | tr '\n' ' ')"
 fi
 
+# Terraform validate는 하위 root에서 실행되더라도 TFLint가 저장소 루트만
+# 검사하면 중첩 디렉터리의 lint 위반이 초록불로 통과한다. 실제 오케스트레이터
+# 경유 여부를 CLI 스텁으로 검증해, 무관한 Terraform provider 다운로드는 피한다.
+SMOKE_TFLINT_SUBDIR="$TMP/smoke-tflint-subdir"
+smoke_repo "$SMOKE_TFLINT_SUBDIR"
+mkdir -p "$SMOKE_TFLINT_SUBDIR/infra/dev" "$TMP/iac-stub-bin"
+printf 'output "example" {\n  value = "ok"\n}\n' >"$SMOKE_TFLINT_SUBDIR/infra/dev/main.tf"
+git -C "$SMOKE_TFLINT_SUBDIR" add infra/dev/main.tf
+cat >"$TMP/iac-stub-bin/terraform" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+cat >"$TMP/iac-stub-bin/tflint" <<'EOF'
+#!/usr/bin/env bash
+case " $* " in
+  *" --chdir=infra/dev "*)
+    echo 'MOCK_NESTED_TFLINT_VIOLATION' >&2
+    exit 2
+    ;;
+esac
+exit 0
+EOF
+chmod +x "$TMP/iac-stub-bin/terraform" "$TMP/iac-stub-bin/tflint"
+CODE=0
+OUT=$( (cd "$SMOKE_TFLINT_SUBDIR" &&
+  PATH="$TMP/iac-stub-bin:/usr/bin:/bin" MISE_DATA_DIR="$TMP/no-mise" \
+    QUIET=0 PFC_DOMAIN_CHECKS=1 bash "$PFC") 2>&1) || CODE=$?
+if [ "$CODE" -ne 0 ] &&
+  grep -qF 'MOCK_NESTED_TFLINT_VIOLATION' <<<"$OUT" &&
+  grep -qF 'tflint 정적 분석' <<<"$OUT"; then
+  report "validate_terraform 하위 root TFLint 위반 차단" 0
+else
+  report "validate_terraform 하위 root TFLint 위반 차단" 1 "exit=$CODE: $(tail -5 <<<"$OUT" | tr '\n' ' ')"
+fi
+
 SMOKE_DOCKER="$TMP/smoke-docker"
 smoke_repo "$SMOKE_DOCKER"
 printf 'FROM ubuntu\nRUN apt-get install -y curl\n' >"$SMOKE_DOCKER/Dockerfile"

@@ -435,6 +435,22 @@ if require_tool helm; then
       report "explicit-mode-chart-is-linted (파일 지정 모드도 staged 와 동일 판정)" 1 "기대 exit≠0 + Helm lint / 실제 exit=$status out=$out"
     fi
     rm -rf "$HELM_SUB_TMP"
+
+    # explicit 모드는 git add 이전의 새 차트도 검사해야 한다. 기존 discovery의
+    # git ls-files만으로는 Chart.yaml 미추적 파일이 누락됐다.
+    HELM_UNTRACKED_TMP=$(mktemp -d)
+    mkdir -p "$HELM_UNTRACKED_TMP/charts/untracked"
+    cp -r "$HELM_FIXTURES/fail-chart/." "$HELM_UNTRACKED_TMP/charts/untracked/"
+    git -C "$HELM_UNTRACKED_TMP" init -q
+    status=0
+    out=$( (cd "$HELM_UNTRACKED_TMP" && QUIET=0 PFC_DOMAIN_CHECKS=1 \
+      bash "$PFC" "$HELM_UNTRACKED_TMP/charts/untracked/Chart.yaml") 2>&1) || status=$?
+    if [ "$status" -ne 0 ] && grep -qF 'Helm lint' <<<"$out"; then
+      report "explicit-untracked-chart-is-linted (git add 전 새 차트도 검사)" 0
+    else
+      report "explicit-untracked-chart-is-linted (git add 전 새 차트도 검사)" 1 "exit=$status out=$out"
+    fi
+    rm -rf "$HELM_UNTRACKED_TMP"
   fi
 fi
 
