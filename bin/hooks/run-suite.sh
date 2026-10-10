@@ -163,26 +163,53 @@ run_script() {
 TOTAL="${#SCRIPTS[@]}"
 declare -a RCS
 
-# NPROC개씩 배치로 묶어 병렬 실행한다. 배치 안의 PID는 그 배치에서만 wait 하므로
-# (wait -n 처럼 이미 reap된 PID를 다시 기다리는 이중 대기 문제가 없다) 종료 코드
-# 캡처가 항상 정확하다.
-i=0
-while [ "$i" -lt "$TOTAL" ]; do
-  BATCH_PIDS=()
-  BATCH_IDX=()
-  end=$((i + NPROC))
-  [ "$end" -le "$TOTAL" ] || end=$TOTAL
-  for ((j = i; j < end; j++)); do
-    run_script "${SCRIPTS[$j]}" "$WORKDIR/out.$j" &
-    BATCH_PIDS+=("$!")
-    BATCH_IDX+=("$j")
+# A fixed-size batch waits for its slowest member before starting the next.
+# Use a work-conserving parent-supervised queue. A worker must NEVER own the
+# slot-release signal: SIGKILL/OOM would lose its token and deadlock every
+# queued job. The parent polls running PIDs and reaps each one, including killed
+# children. Stock macOS Bash 3.2 has no wait -n.
+if [ "$NPROC" -gt "$TOTAL" ]; then
+  NPROC=$TOTAL
+fi
+
+# The shared Trivy cache/policy bundle is initialized by full preflight.
+# Starting the containers suite during that initialization caused Trivy
+# misconfig's clean baseline scan to fail on CI. Run only the preflight gate
+# first, then use all slots for independent regression scripts.
+next=0
+if [[ "${SCRIPTS[0]}" == *"/pre-flight-check.sh" ]]; then
+  rc=0
+  run_script "${SCRIPTS[0]}" "$WORKDIR/out.0" || rc=$?
+  RCS[0]=$rc
+  next=1
+fi
+
+ACTIVE_PIDS=()
+ACTIVE_INDICES=()
+active=0
+while [ "$next" -lt "$TOTAL" ] || [ "$active" -gt 0 ]; do
+  while [ "$next" -lt "$TOTAL" ] && [ "$active" -lt "$NPROC" ]; do
+    run_script "${SCRIPTS[$next]}" "$WORKDIR/out.$next" &
+    ACTIVE_PIDS+=("$!")
+    ACTIVE_INDICES+=("$next")
+    active=$((active + 1))
+    next=$((next + 1))
   done
-  for k in "${!BATCH_PIDS[@]}"; do
-    rc=0
-    wait "${BATCH_PIDS[$k]}" || rc=$?
-    RCS[${BATCH_IDX[$k]}]=$rc
+  any_finished=0
+  for slot in "${!ACTIVE_PIDS[@]}"; do
+    pid=${ACTIVE_PIDS[$slot]}
+    if ! kill -0 "$pid" 2>/dev/null; then
+      rc=0
+      wait "$pid" || rc=$?
+      RCS[${ACTIVE_INDICES[$slot]}]=$rc
+      unset 'ACTIVE_PIDS[slot]' 'ACTIVE_INDICES[slot]'
+      active=$((active - 1))
+      any_finished=1
+    fi
   done
-  i=$end
+  if [ "$any_finished" -eq 0 ]; then
+    sleep 0.1
+  fi
 done
 
 FAILED=()
