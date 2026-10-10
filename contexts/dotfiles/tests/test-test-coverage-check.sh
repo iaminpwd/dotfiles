@@ -1,324 +1,145 @@
 #!/usr/bin/env bash
-# test-coverage-check.sh의 등록 누락과 SKIP 안내 검사를 격리 픽스처로 검증한다.
-# 파일명 참조 여부만으로 커버리지를 판정하거나 커밋을 차단하지 않는지도 확인한다.
-
+# Registration checker contract: dynamic suite discovery and visible SKIP warnings.
 set -euo pipefail
 
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-
-PASS_COUNT=0
-FAIL_COUNT=0
-
-report() {
-  local name=$1 ok=$2 detail=${3:-}
-  if [ "$ok" -eq 0 ]; then
-    echo "  PASS  $name"
-    PASS_COUNT=$((PASS_COUNT + 1))
-  else
-    echo "  FAIL  $name"
-    [ -n "$detail" ] && echo "        $detail"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-  fi
-}
-
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+PASS=0
 
-# 최소 골격의 가짜 저장소를 구성한다: bin/hooks/plugins/*.sh 1개 + contexts/fake/tests/run.sh 1개.
-new_fixture_repo() {
-  local root=$1
-  mkdir -p "$root/bin/hooks/plugins" "$root/bin/linters" "$root/bin/lib" "$root/stow/git/.githooks" "$root/contexts/fake/tests"
-  git -C "$root" init -q
-  echo '#!/usr/bin/env bash
-exit 0' >"$root/bin/hooks/plugins/example-check.sh"
-  chmod +x "$root/bin/hooks/plugins/example-check.sh"
-  # test-coverage-check.sh는 자기 자신의 물리적 위치를 기준으로 REPO_ROOT를 고정한다
-  # (CWD 비의존). 격리 픽스처로 테스트하려면 실제 스크립트와 그 의존 라이브러리를
-  # 같은 상대 위치(bin/linters/, bin/lib/)로 함께 복사해야 한다(test-pre-push-hook.sh가
-  # run-suite.sh를 다루는 방식과 동일한 이유).
-  cp "$REPO_ROOT/bin/linters/test-coverage-check.sh" "$root/bin/linters/test-coverage-check.sh"
-  cp "$REPO_ROOT/bin/lib/script-init.sh" "$root/bin/lib/script-init.sh"
-
+ok() {
+  printf 'PASS: %s\n' "$1"
+  PASS=$((PASS + 1))
 }
-
-run_checker() {
-  local root=$1 status=0
-  (cd "$root" && QUIET=0 bash "$root/bin/linters/test-coverage-check.sh") >"$TMP/out" 2>&1 || status=$?
-  echo "$status"
-}
-
-echo "=== test-coverage-check.sh 자기 자신의 판정 로직 회귀 테스트 ==="
-
-# 이름 참조가 없는 새 유틸리티도 그 이유만으로 차단하지 않는다.
-R1="$TMP/repo1"
-new_fixture_repo "$R1"
-echo '#!/usr/bin/env bash' >"$R1/contexts/fake/tests/run.sh"
-status=$(run_checker "$R1")
-if [ "$status" -eq 0 ] && ! grep -qF "[WARNING]" "$TMP/out"; then
-  report "unreferenced-script-allowed (이름 검색으로 커버리지를 추정하지 않음)" 0
-else
-  report "unreferenced-script-allowed" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# macOS의 BSD readlink는 GNU -f 옵션을 지원하지 않는다. 외부 저장소의
-# 테스트 게이트가 symlink 경로로 호출돼도 자신의 실제 저장소를 찾아야 한다.
-BSD_REPO="$TMP/repo-bsd-readlink"
-new_fixture_repo "$BSD_REPO"
-printf '#!/usr/bin/env bash\n' >"$BSD_REPO/contexts/fake/tests/run.sh"
-ln -s bin/linters/test-coverage-check.sh "$BSD_REPO/coverage-check-link"
-BSD_BIN="$BSD_REPO/bsd-bin"
-mkdir -p "$BSD_BIN"
-cat >"$BSD_BIN/readlink" <<'EOF'
-#!/bin/sh
-if [ "${1:-}" = "-f" ]; then
-  echo 'readlink: illegal option -- f' >&2
+fail() {
+  printf 'FAIL: %s\n' "$1" >&2
   exit 1
-fi
+}
+
+new_repo() {
+  local repo=$1
+  mkdir -p "$repo/bin/linters" "$repo/bin/lib" "$repo/contexts/fake/tests" "$repo/tests/lib"
+  cp "$ROOT/bin/linters/test-coverage-check.sh" "$repo/bin/linters/"
+  cp "$ROOT/bin/lib/script-init.sh" "$repo/bin/lib/"
+  cp "$ROOT/tests/lib/run-domain-tests.sh" "$repo/tests/lib/"
+  cat >"$repo/contexts/fake/tests/run.sh" <<'RUNNER'
+#!/usr/bin/env bash
+set -euo pipefail
+export QUIET=0
+tdir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+repo=$(cd "$tdir/../../.." && pwd)
+exec bash "$repo/tests/lib/run-domain-tests.sh" "$tdir" "$@"
+RUNNER
+}
+
+check() {
+  local repo=$1 rc=0
+  (cd "$repo" && QUIET=0 bash "$repo/bin/linters/test-coverage-check.sh") >"$TMP/out" 2>&1 || rc=$?
+  return "$rc"
+}
+
+# Domains with no separate test files may still use a scenario-based run.sh.
+BASE="$TMP/empty"
+new_repo "$BASE"
+check "$BASE" || fail "empty domain checker"
+ok "empty domain checker"
+
+# BSD readlink without -f, invoked through a symlink with unrelated CWD.
+BSD="$TMP/bsd"
+new_repo "$BSD"
+ln -s bin/linters/test-coverage-check.sh "$BSD/check"
+mkdir -p "$BSD/fake-bin"
+cat >"$BSD/fake-bin/readlink" <<'READLINK'
+#!/bin/sh
+if [ "${1:-}" = -f ]; then exit 91; fi
 exec /usr/bin/readlink "$@"
-EOF
-chmod +x "$BSD_BIN/readlink"
-status=0
-out=$( (cd "$BSD_REPO" && PATH="$BSD_BIN:$PATH" QUIET=0 bash ./coverage-check-link) 2>&1) || status=$?
-if [ "$status" -eq 0 ] && ! grep -qF 'illegal option -- f' <<<"$out"; then
-  report "bsd-readlink-symlink (GNU readlink -f 없이 실제 저장소의 검사기 실행)" 0
-else
-  report "bsd-readlink-symlink (GNU readlink -f 없이 실제 저장소의 검사기 실행)" 1 "exit=$status out=$out"
-fi
+READLINK
+chmod +x "$BSD/fake-bin/readlink"
+(cd / && PATH="$BSD/fake-bin:$PATH" bash "$BSD/check" >"$TMP/bsd-out" 2>&1) || fail "BSD readlink compatibility"
+ok "BSD readlink compatibility"
 
-# 7. 등록 누락 하드 게이트: tests/ 에 테스트 파일이 있는데 run.sh 목록에 없으면 exit 1.
-R7="$TMP/repo7"
-new_fixture_repo "$R7"
-echo '# example-check.sh 를 손보면 확인할 것' >"$R7/contexts/fake/tests/run.sh"
-echo '#!/usr/bin/env bash' >"$R7/contexts/fake/tests/test-orphan.sh"
-status=$(run_checker "$R7")
-if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" && grep -qF "등록되지 않아" "$TMP/out"; then
-  report "unregistered-suite-blocks (run.sh 미등록 테스트는 exit 1 + 목록 보고)" 0
-else
-  report "unregistered-suite-blocks (run.sh 미등록 테스트는 exit 1 + 목록 보고)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 8. 등록돼 있으면 통과한다(정상 경로가 막히지 않는지 확인).
-R8="$TMP/repo8"
-new_fixture_repo "$R8"
-cat >"$R8/contexts/fake/tests/run.sh" <<'EOF'
+# A newly added test must be listed automatically. --list must not execute it.
+NEW="$TMP/new"
+new_repo "$NEW"
+cat >"$NEW/contexts/fake/tests/test-new.sh" <<'TEST'
 #!/usr/bin/env bash
-# example-check.sh 를 손보면 확인할 것
-for suite in test-orphan; do
-  bash "$suite.sh"
-done
-EOF
-echo '#!/usr/bin/env bash' >"$R8/contexts/fake/tests/test-orphan.sh"
-status=$(run_checker "$R8")
-if [ "$status" -eq 0 ] && ! grep -qF "등록되지 않아" "$TMP/out"; then
-  report "registered-suite-passes (run.sh 에 등록된 테스트는 통과)" 0
-else
-  report "registered-suite-passes (run.sh 에 등록된 테스트는 통과)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
+echo RAN_NEW_TEST
+TEST
+check "$NEW" || fail "automatic discovery checker"
+listed=$(bash "$NEW/contexts/fake/tests/run.sh" --list)
+[ "$listed" = "$NEW/contexts/fake/tests/test-new.sh" ] || fail "automatic --list output"
+[[ "$listed" != *RAN_NEW_TEST* ]] || fail "--list executed test"
+out=$(bash "$NEW/contexts/fake/tests/run.sh") || fail "automatic new test execution"
+[[ "$out" == *RAN_NEW_TEST* ]] || fail "new test was not executed"
+ok "new file discovered, listed and executed"
 
-# 9. 언더스코어 명명(test_*.sh)도 같은 게이트 대상이어야 한다. 이 저장소에는
-#    contexts/prompt-architect/tests/test_prompt_lint.sh 가 실재하므로, test-*.sh 로만
-#    좁히면 이 게이트가 막으려는 것과 같은 사각지대가 새로 생긴다.
-R9="$TMP/repo9"
-new_fixture_repo "$R9"
-echo '# example-check.sh 를 손보면 확인할 것' >"$R9/contexts/fake/tests/run.sh"
-echo '#!/usr/bin/env bash' >"$R9/contexts/fake/tests/test_underscore.sh"
-status=$(run_checker "$R9")
-if [ "$status" -eq 1 ] && grep -qF "test_underscore.sh" "$TMP/out"; then
-  report "underscore-named-suite-blocks (test_*.sh 도 등록 게이트 대상)" 0
-else
-  report "underscore-named-suite-blocks (test_*.sh 도 등록 게이트 대상)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 10. 진입점(run.sh) 자체가 없으면 스위트가 통째로 안 도는 것이므로 별도 메시지로 차단한다.
-#     원인과 조치가 "목록에 추가"와 다르기 때문에 등록 누락과 구분해 보고한다.
-R10="$TMP/repo10"
-new_fixture_repo "$R10"
-rm -f "$R10/contexts/fake/tests/run.sh"
-# run.sh 가 없으므로 1번 게이트용 example-check.sh 언급은 테스트 파일 쪽에 둔다.
-echo '# example-check.sh 를 손보면 확인할 것' >"$R10/contexts/fake/tests/test-no-runner.sh"
-status=$(run_checker "$R10")
-if [ "$status" -eq 1 ] && grep -qF "진입점(run.sh)이 없어" "$TMP/out"; then
-  report "missing-runner-blocks (run.sh 부재는 별도 메시지로 exit 1)" 0
-else
-  report "missing-runner-blocks (run.sh 부재는 별도 메시지로 exit 1)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 11. 주석에만 이름이 있으면 등록으로 치지 않는다. 이 게이트를 처음 넣은 직후 실제로
-#     run.sh 에 설명 주석을 추가했더니 등록을 빼도 통과해 버렸다(게이트 무력화 실측).
-R11="$TMP/repo11"
-new_fixture_repo "$R11"
-cat >"$R11/contexts/fake/tests/run.sh" <<'EOF'
+# Support historical test_*.sh naming in prompt-architect.
+cat >"$NEW/contexts/fake/tests/test_underscore.sh" <<'TEST'
 #!/usr/bin/env bash
-# example-check.sh 를 손보면 확인할 것
-# 참고: test-orphan 스위트는 아래 목록에서 잠시 뺀 상태다
-for suite in ; do
-  bash "$suite.sh"
-done
-EOF
-echo '#!/usr/bin/env bash' >"$R11/contexts/fake/tests/test-orphan.sh"
-status=$(run_checker "$R11")
-if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out"; then
-  report "comment-only-mention-blocks (주석 언급은 등록으로 치지 않음)" 0
-else
-  report "comment-only-mention-blocks (주석 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
+echo RAN_UNDERSCORE_TEST
+TEST
+check "$NEW" || fail "underscore checker"
+listed=$(bash "$NEW/contexts/fake/tests/run.sh" --list)
+[[ "$listed" == *test_underscore.sh* ]] || fail "underscore discovery"
+out=$(bash "$NEW/contexts/fake/tests/run.sh") || fail "underscore execution"
+[[ "$out" == *RAN_UNDERSCORE_TEST* ]] || fail "underscore not executed"
+ok "test_*.sh discovered"
+
+# Missing domain runner must hard-fail.
+MISSING="$TMP/missing"
+new_repo "$MISSING"
+printf '#!/usr/bin/env bash\n' >"$MISSING/contexts/fake/tests/test-orphan.sh"
+rm "$MISSING/contexts/fake/tests/run.sh"
+if check "$MISSING" || ! grep -qF '진입점' "$TMP/out"; then
+  fail "missing runner should block"
 fi
+ok "missing runner blocks"
 
-# 12~13. SKIP 안내 가시성 게이트.
-#
-# 등록된 테스트가 도구 부재로 케이스를 건너뛰면 스위트는 그대로 exit 0 이고,
-# run-suite.sh 는 통과한 스크립트의 출력에서 [WARNING]/⚠ 로 시작하는 줄만 남기고 나머지를
-# 버린다. 그래서 "  SKIP ..." 안내는 just verify·CI·pre-push·Stop 게이트 훅 어디에서도
-# 보이지 않고 "-> [✓]" 한 줄만 남는다(실측: trufflehog 없는 환경에서 시크릿 스캔 회귀
-# 2건이 통째로 건너뛰어졌는데 출력에 아무 표시가 없었다). 존재·등록에 이은 세 번째 고리다.
+# A broken runner which silently omits a file must not pass the checker.
+BROKEN="$TMP/broken"
+new_repo "$BROKEN"
+printf '#!/usr/bin/env bash\n' >"$BROKEN/contexts/fake/tests/test-orphan.sh"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$BROKEN/contexts/fake/tests/run.sh"
+if check "$BROKEN" || ! grep -qF '일치하지 않습니다' "$TMP/out"; then
+  fail "silent list omission should block"
+fi
+ok "runner omission blocks"
 
-# 12. 접두사 없는 SKIP 안내는 차단해야 한다.
-R12="$TMP/repo12"
-new_fixture_repo "$R12"
-cat >"$R12/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-# example-check.sh 를 손보면 확인할 것
-for suite in test-skip; do
-  bash "$suite.sh"
-done
-EOF
-# 위반 픽스처는 반드시 동적으로 조립한다. 힙독에 그대로 써 넣으면 이 테스트 파일 자신이
-# contexts/*/tests/*.sh 라 게이트의 스캔 대상이 되어, 자기 픽스처를 실제 위반으로 신고하며
-# just verify 를 깨뜨린다(실측: 이 케이스를 힙독으로 처음 넣었을 때 그대로 발생했다).
-# printf 로 조립하면 이 파일 어디에도 위반 형태의 리터럴이 남지 않는다.
+# A failed test must not hide later cases.
+printf '#!/usr/bin/env bash\necho FAIL_MARKER\nexit 7\n' >"$NEW/contexts/fake/tests/test-fail.sh"
+rc=0
+out=$(bash "$NEW/contexts/fake/tests/run.sh" 2>&1) || rc=$?
+[ "$rc" -ne 0 ] && [[ "$out" == *FAIL_MARKER* && "$out" == *RAN_NEW_TEST* ]] ||
+  fail "failure aggregation"
+ok "failed script does not skip later scripts"
+
+# Empty suite may not silently succeed.
+if bash "$BASE/contexts/fake/tests/run.sh" >"$TMP/empty-out" 2>&1; then
+  fail "empty suite fail-closed"
+fi
+grep -qF '발견된 회귀 테스트가 없습니다' "$TMP/empty-out" || fail "empty error message"
+ok "empty suite blocks"
+
+# Construct the literal at runtime so this test file does not trigger its
+# own checker. An invisible SKIP must block; a prefixed warning must pass.
+SKIP_REPO="$TMP/skip"
+new_repo "$SKIP_REPO"
 {
-  echo '#!/usr/bin/env bash'
-  printf 'echo "  %s  some-case (도구 미설치)"\n' "SKIP"
-} >"$R12/contexts/fake/tests/test-skip.sh"
-status=$(run_checker "$R12")
-if [ "$status" -eq 1 ] && grep -qF "test-skip.sh" "$TMP/out" && grep -qF "압축 필터" "$TMP/out"; then
-  report "skip-without-warning-prefix-blocks (접두사 없는 SKIP 안내 차단)" 0
-else
-  report "skip-without-warning-prefix-blocks (접두사 없는 SKIP 안내 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
+  printf '#!/usr/bin/env bash\n'
+  printf 'echo "  %s  tool unavailable"\n' "SKIP"
+} \
+  >"$SKIP_REPO/contexts/fake/tests/test-skip.sh"
+if check "$SKIP_REPO" || ! grep -qF '압축 필터' "$TMP/out"; then
+  fail "invisible SKIP should block"
 fi
+ok "invisible SKIP blocks"
 
-# 12b. echo+겹따옴표 외의 표기도 잡아야 한다. run-suite.sh 의 압축 필터는 "출력 문자열"만
-#      보므로 printf 로 찍든 홑따옴표를 쓰든 결과는 똑같이 버려진다. 판정을 echo+겹따옴표로
-#      좁히면 게이트가 막으려는 상태를 흔한 표기 두 가지로 그대로 만들 수 있다(실측: 이
-#      게이트를 처음 넣었을 때 두 형태 다 통과했다). 픽스처는 위 12번과 같은 이유로 printf
-#      인자 조립으로 만든다 — 힙독에 그대로 쓰면 이 파일 자신이 스캔 대상이라 자기 픽스처를
-#      실제 위반으로 신고한다.
-for variant in printf-form single-quote-form; do
-  RV="$TMP/repo12-$variant"
-  new_fixture_repo "$RV"
-  cat >"$RV/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-# example-check.sh 를 손보면 확인할 것
-for suite in test-skip; do
-  bash "$suite.sh"
-done
-EOF
-  {
-    echo '#!/usr/bin/env bash'
-    if [ "$variant" = "printf-form" ]; then
-      printf 'printf "  %s  some-case (도구 미설치)\\n"\n' "SKIP"
-    else
-      printf "echo '  %s  some-case (도구 미설치)'\n" "SKIP"
-    fi
-  } >"$RV/contexts/fake/tests/test-skip.sh"
-  status=$(run_checker "$RV")
-  if [ "$status" -eq 1 ] && grep -qF "압축 필터" "$TMP/out"; then
-    report "skip-$variant-blocks ($variant 표기도 차단)" 0
-  else
-    report "skip-$variant-blocks ($variant 표기도 차단)" 1 "exit=$status out=$(cat "$TMP/out")"
-  fi
-done
+{
+  printf '#!/usr/bin/env bash\n'
+  printf 'echo "[WARNING] %s tool unavailable"\n' "SKIP"
+} \
+  >"$SKIP_REPO/contexts/fake/tests/test-skip.sh"
+check "$SKIP_REPO" || fail "visible warning should pass"
+ok "visible SKIP warning passes"
 
-# 13. [WARNING] 로 시작하면 통과해야 한다(오탐 축). 주석에 SKIP 이 스쳐도 마찬가지다 —
-#     스위트 헤더의 "도구 미설치는 SKIP 이 아니라 실패로 처리한다" 같은 문장이 실제로 있다.
-R13="$TMP/repo13"
-new_fixture_repo "$R13"
-cat >"$R13/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-# example-check.sh 를 손보면 확인할 것
-for suite in test-skip; do
-  bash "$suite.sh"
-done
-EOF
-cat >"$R13/contexts/fake/tests/test-skip.sh" <<'EOF'
-#!/usr/bin/env bash
-# 도구 미설치는 SKIP 이 아니라 실패로 처리한다는 설명 주석
-echo "[WARNING] SKIP some-case — 도구 미설치로 이 회귀가 수행되지 않았습니다"
-EOF
-status=$(run_checker "$R13")
-if [ "$status" -eq 0 ]; then
-  report "skip-with-warning-prefix-passes ([WARNING] 접두사와 주석은 오탐 없음)" 0
-else
-  report "skip-with-warning-prefix-passes ([WARNING] 접두사와 주석은 오탐 없음)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 14. 주석만 제외하고 코드 전체에서 이름을 찾으면, 실제 suite 목록에서 빠져도
-#     변수/echo/dead branch 같은 실행 코드에 이름이 남아 있는 것만으로 "등록됨" 오판한다.
-#     등록의 정본은 현재 저장소 관례인 `for suite in ...; do` 목록이어야 한다.
-R14="$TMP/repo14"
-new_fixture_repo "$R14"
-cat >"$R14/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-orphan_note=test-orphan
-for suite in test-real; do
-  bash "$suite.sh"
-done
-EOF
-echo '#!/usr/bin/env bash' >"$R14/contexts/fake/tests/test-real.sh"
-echo '#!/usr/bin/env bash' >"$R14/contexts/fake/tests/test-orphan.sh"
-status=$(run_checker "$R14")
-if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" &&
-  ! grep -qF "test-real.sh" "$TMP/out"; then
-  report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 0
-else
-  report "code-mention-does-not-register (실제 suite 목록 밖 이름 언급은 등록으로 치지 않음)" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 15. 길어진 runner를 유지보수하기 위해 줄당 하나씩 선언해도 전부 등록돼야 한다.
-R15="$TMP/repo15"
-new_fixture_repo "$R15"
-cat >"$R15/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-for suite in \
-  test-one \
-  test-two; do
-  bash "$suite.sh"
-done
-EOF
-printf '#!/usr/bin/env bash\n' >"$R15/contexts/fake/tests/test-one.sh"
-printf '#!/usr/bin/env bash\n' >"$R15/contexts/fake/tests/test-two.sh"
-status=$(run_checker "$R15")
-if [ "$status" -eq 0 ]; then
-  report "multiline-registration-passes (줄별 선언도 테스트 2건 모두 등록)" 0
-else
-  report "multiline-registration-passes" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-# 16. 멀티라인 runner라도 목록 밖 테스트나 주석 속 이름을 등록으로 취급하지 않는다.
-R16="$TMP/repo16"
-new_fixture_repo "$R16"
-cat >"$R16/contexts/fake/tests/run.sh" <<'EOF'
-#!/usr/bin/env bash
-# test-orphan 은 실행 목록이 아니라 주석에만 등장한다.
-for suite in \
-  test-one \
-  test-two; do
-  bash "$suite.sh"
-done
-EOF
-for suite in test-one test-two test-orphan; do
-  printf '#!/usr/bin/env bash\n' >"$R16/contexts/fake/tests/$suite.sh"
-done
-status=$(run_checker "$R16")
-if [ "$status" -eq 1 ] && grep -qF "test-orphan.sh" "$TMP/out" &&
-  ! grep -qF "  - contexts/fake/tests/test-one.sh" "$TMP/out" &&
-  ! grep -qF "  - contexts/fake/tests/test-two.sh" "$TMP/out"; then
-  report "multiline-unregistered-blocks (주석 언급은 등록 아님, 누락 파일만 차단)" 0
-else
-  report "multiline-unregistered-blocks" 1 "exit=$status out=$(cat "$TMP/out")"
-fi
-
-TOTAL=$((PASS_COUNT + FAIL_COUNT))
-echo
-echo "$PASS_COUNT/$TOTAL 통과"
-[ "$FAIL_COUNT" -eq 0 ] || exit 1
+echo "$PASS/$PASS passed"

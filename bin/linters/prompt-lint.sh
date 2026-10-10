@@ -253,7 +253,7 @@ check_readme_skill_counts() {
 #      경로 가드 토큰 `/contexts/.` 를 코드에 갖고 있어야 한다. 제외 조건이 find 태스크가
 #      아니라 그 결과를 loop 하는 별도 태스크의 when: 에 붙는 구조라, 태스크 블록 단위가
 #      아니라 파일 단위로 본다. 주석은 걷어내고 본문만 대조한다 — 주석에 토큰이 스쳐도
-#      통과시키면 그 순간 게이트가 무력화된다(test-coverage-check.sh 의 run.sh 등록 검사와
+#      통과시키면 그 순간 게이트가 무력화된다(test-coverage-check.sh 의 run.sh 목록 일치 검사와
 #      동일한 사유).
 # 두 판정 모두 위 두 결함의 수정 직전 커밋 상태에서 실제로 검출됨을 확인했다.
 check_archive_scope_consistency() {
