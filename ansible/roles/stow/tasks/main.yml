@@ -41,6 +41,17 @@
     recurse: false
   register: stow_dirs
 
+# Preflight the complete set before touching HOME. Sequential per-package
+# backup/install would otherwise repeatedly replace competing managed links.
+- name: Stow 패키지 간 관리 경로 충돌 검사 (읽기 전용)
+  ansible.builtin.command:
+    argv: >-
+      {{ ['python3', role_path + '/../../../bin/utils/stow-safe-install.py',
+          '--check-packages', role_path + '/../../../stow', ansible_env.HOME]
+         + (stow_dirs.files | map(attribute='path') | map('basename') | list) }}
+  changed_when: false
+  check_mode: false
+
 # Back up one package, check drift, and apply it before starting the next.
 # If Stow fails, never preemptively move unrelated packages' user files.
 - name: Stow 패키지별 백업·드리프트 판정·적용

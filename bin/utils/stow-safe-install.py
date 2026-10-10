@@ -313,10 +313,34 @@ def install(stow_dir, package, home):
         os.close(root_fd)
 
 
+def check_package_conflicts(stow_dir, home, packages):
+    """Read-only preflight: two packages must never claim the same HOME path."""
+    owners = {}
+    for package in packages:
+        if os.path.basename(package) != package or package in ("", ".", ".."):
+            raise ValueError("invalid Stow package name")
+        # Reuse the same GNU Stow ignore matcher as backup and safe install.
+        for parts, _, _ in _filtered_files(stow_dir, package, home):
+            key = tuple(parts)
+            for prior, owner in owners.items():
+                if key == prior or key[:len(prior)] == prior or prior[:len(key)] == key:
+                    raise RuntimeError(
+                        "Stow package conflict: " + package + "/" + "/".join(parts)
+                        + " overlaps " + owner + "/" + "/".join(prior)
+                    )
+            owners[key] = package
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        raise SystemExit("usage: stow-safe-install.py STOW_DIR PACKAGE HOME")
     try:
-        install(*sys.argv[1:])
+        if len(sys.argv) >= 5 and sys.argv[1] == "--check-packages":
+            check_package_conflicts(sys.argv[2], sys.argv[3], sys.argv[4:])
+        elif len(sys.argv) == 4:
+            install(*sys.argv[1:])
+        else:
+            raise ValueError(
+                "usage: stow-safe-install.py STOW_DIR PACKAGE HOME "
+                "| --check-packages STOW_DIR HOME PACKAGE..."
+            )
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         raise SystemExit("❌ [Hard Block] 안전한 Stow 링크 설치 실패: " + str(exc))
