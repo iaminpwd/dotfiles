@@ -49,6 +49,7 @@ for suite in \
   test-merge-agent-hooks \
   test-fresh-install-agent-hooks \
   test-stow-backup \
+  test-stow-package-conflicts \
   test-stow-legacy-mise-link \
   test-stow-drift-portability \
   test-stow-real-failure \
