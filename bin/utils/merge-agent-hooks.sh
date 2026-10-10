@@ -92,8 +92,7 @@ GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-h
 # Claude의 편집 이력·폐기 훅 제거·Stop 등록을 한 번에 병합한다.
 # shellcheck disable=SC2016
 "$JQ" --arg cmd "$HOOK_SCRIPT" --arg live "$LIVE_HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" '
-  .attribution.commit = "" | .attribution.pr = ""
-  | .hooks.PostToolUse = (
+  .hooks.PostToolUse = (
       ((.hooks.PostToolUse // []) | map(
         .hooks = ((.hooks // []) | map(select(.command != $cmd and .command != $live)))
         | select(.hooks | length > 0)

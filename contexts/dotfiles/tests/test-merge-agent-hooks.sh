@@ -48,7 +48,7 @@ echo '{"unrelated-key": "keep-me"}' >"$FAKE_HOME/.gemini/config/hooks.json"
 # 이전 버전의 live 훅과 같은 항목의 사용자 훅을 함께 심어 마이그레이션을 확인한다.
 mkdir -p "$FAKE_HOME/.claude" "$FAKE_HOME/bin/hooks"
 LEGACY_LIVE=$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")
-jq -n --arg live "$LEGACY_LIVE" '{hooks:{PostToolUse:[
+jq -n --arg live "$LEGACY_LIVE" '{attribution:{commit:"user commit footer",pr:"user PR footer",custom:"leave unchanged"},hooks:{PostToolUse:[
   {matcher:"Edit|Write|MultiEdit",hooks:[
     {type:"command",command:$live},{type:"command",command:"user-hook"}
   ]}
@@ -93,6 +93,15 @@ fi
 
 # 3. Claude: PostToolUse에 Edit|Write|MultiEdit|NotebookEdit 매처 훅이 추가되어야 한다.
 CLAUDE_JSON="$FAKE_HOME/.claude/settings.json"
+# 설치기는 훅을 관리하므로 기존 사용자의 attribution 설정은 건드리지 않는다.
+# 특히 빈 문자열로 강제 초기화하면 모든 신규 커밋/PR의 사용자 footer가 소실된다.
+if jq -e '.attribution.commit == "user commit footer" and
+  .attribution.pr == "user PR footer" and
+  .attribution.custom == "leave unchanged"' "$CLAUDE_JSON" >/dev/null; then
+  report "claude (기존 사용자 attribution 설정 보존)" 0
+else
+  report "claude (기존 사용자 attribution 설정 보존)" 1 "$(jq -c '.attribution' "$CLAUDE_JSON")"
+fi
 if [ -f "$CLAUDE_JSON" ] && jq -e '.hooks.PostToolUse[] | select(.matcher == "Edit|Write|MultiEdit|NotebookEdit")' "$CLAUDE_JSON" >/dev/null 2>&1; then
   report "claude (PostToolUse 매처 훅 추가)" 0
 else
