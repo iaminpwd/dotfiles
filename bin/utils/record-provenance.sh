@@ -1,9 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-RECORD_PROVENANCE_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# macOS 기본 BSD readlink에는 -f가 없다. symlink로 호출해도 원본 저장소의
+# lib/ 및 contexts/를 찾도록 plain readlink와 물리 경로만 사용한다.
+rp_resolve_script_path() {
+  local path=$1 dir target hops=0
+  while [ -L "$path" ]; do
+    hops=$((hops + 1))
+    [ "$hops" -le 40 ] || return 1
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+RECORD_PROVENANCE_SCRIPT_PATH=$(rp_resolve_script_path "${BASH_SOURCE[0]}") || {
+  echo "[ERROR] provenance 스크립트 경로를 확인하지 못했습니다." >&2
+  exit 1
+}
+RECORD_PROVENANCE_SCRIPT_DIR=$(dirname "$RECORD_PROVENANCE_SCRIPT_PATH")
 # shellcheck source-path=SCRIPTDIR
+# shellcheck disable=SC1091 # 경로는 symlink 해석 후 런타임에 계산한다.
 source "$RECORD_PROVENANCE_SCRIPT_DIR/../lib/git-relpath.sh"
 
 if [ "$#" -lt 3 ]; then

@@ -17,8 +17,29 @@
 
 set -euo pipefail
 
-# lib/ 경로를 리터럴로 분리하여 shellcheck SC1091 오류 회피 (심볼릭 링크 호출 호환성 보장)
-GCI_SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
+# macOS 기본 BSD readlink에는 -f가 없다. 호출 위치와 심볼릭 링크 여부에
+# 관계없이 스크립트의 실제 위치를 찾고, 실패하면 빈 색인을 성공으로 출력하지 않는다.
+gci_resolve_script_path() {
+  local path=$1 dir target hops=0
+  while [ -L "$path" ]; do
+    hops=$((hops + 1))
+    [ "$hops" -le 40 ] || return 1
+    dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+    target=$(readlink "$path") || return 1
+    case "$target" in
+    /*) path="$target" ;;
+    *) path="$dir/$target" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$path")" && pwd) || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+GCI_SCRIPT_PATH=$(gci_resolve_script_path "${BASH_SOURCE[0]}") || {
+  echo "[ERROR] 색인 생성기 경로를 확인하지 못했습니다." >&2
+  exit 1
+}
+GCI_SCRIPT_DIR=$(dirname "$GCI_SCRIPT_PATH")
 
 # 이 스크립트는 pre-flight-check.sh 등 "호출 시점의 현재 저장소"를 대상으로 하는 범용
 # 검증기가 아니라 항상 자기 자신이 속한 dotfiles 저장소의 contexts/만 다루는 전용

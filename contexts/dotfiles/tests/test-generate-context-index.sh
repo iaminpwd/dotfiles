@@ -46,6 +46,20 @@ FAKE="$TMP/fake-repo"
 mkdir -p "$FAKE/bin/utils" "$FAKE/contexts/demo" "$FAKE/contexts/plain"
 cp "$GEN" "$FAKE/bin/utils/generate-context-index.sh"
 
+# macOS 기본 BSD readlink는 -f를 제공하지 않는다. PATH mock으로 환경을
+# 재현하고 생성기가 빈 성공(스킬 0개)을 반환하는 회귀를 방지한다.
+BSD_BIN="$TMP/bsd-bin"
+mkdir -p "$BSD_BIN"
+cat >"$BSD_BIN/readlink" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = "-f" ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+EOF
+chmod +x "$BSD_BIN/readlink"
+
 # 라우팅 테이블이 있는 스킬
 cat >"$FAKE/contexts/demo/SKILL.md" <<'EOF'
 ---
@@ -135,6 +149,19 @@ if grep -qE '^## demo$' <<<"$OUT" && grep -qE '^## plain$' <<<"$OUT"; then
   report "스킬별 제목 절 생성" 0
 else
   report "스킬별 제목 절 생성" 1 "out=$OUT"
+fi
+
+# 외부 디렉터리에서 symlink로 호출한 경우에도 정본의 contexts/를 읽는다.
+ln -s "$FAKE/bin/utils/generate-context-index.sh" "$TMP/index-link"
+bsd_code=0
+bsd_out=$(cd "$TMP" && PATH="$BSD_BIN:$PATH" bash "$TMP/index-link" 2>&1) || bsd_code=$?
+if [ "$bsd_code" -eq 0 ] &&
+  grep -qE '^## demo$' <<<"$bsd_out" &&
+  grep -qF 'references/010-demo-core.md' <<<"$bsd_out" &&
+  ! grep -qF 'illegal option' <<<"$bsd_out"; then
+  report "BSD readlink 환경에서 symlink 호출" 0
+else
+  report "BSD readlink 환경에서 symlink 호출" 1 "exit=$bsd_code out=$bsd_out"
 fi
 
 # 7. 파일을 직접 쓰지 않고 stdout 으로만 낸다는 계약(헤더 주석). 이게 깨지면
