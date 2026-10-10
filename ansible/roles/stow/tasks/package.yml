@@ -26,10 +26,24 @@
     PKG_DIR="{{ role_path }}/../../../stow/{{ stow_package.path | basename }}"
     # Process substitution hides the exit status of find. Do not report "no drift"
     # or proceed to Stow if filesystem discovery is incomplete.
-    STOW_FILE_LIST=$(mktemp)
-    trap 'rm -f "$STOW_FILE_LIST"' EXIT
+    STOW_FILTER_DIR=$(mktemp -d)
+    trap 'rm -rf "$STOW_FILTER_DIR"' EXIT
+    STOW_FILE_LIST="$STOW_FILTER_DIR/files"
     if ! find "$PKG_DIR" -type f -print0 >"$STOW_FILE_LIST"; then
       echo "❌ [Hard Block] Stow 소스 탐색 실패 (drift): $PKG_DIR" >&2
+      exit 1
+    fi
+    # Installation and backup already respect GNU Stow ignore rules. Drift
+    # must inspect exactly that managed subset; otherwise an ignored user
+    # file forces DRIFT=1 on every clean run. Reuse the same Stow Perl matcher
+    # (including local/global patterns and ignored parent directories).
+    : >"$STOW_FILTER_DIR/empty-dirs"
+    if ! HOME="{{ ansible_env.HOME }}" perl "{{ role_path }}/../../../bin/utils/stow-filter-inventory.pl" \
+      "{{ role_path }}/../../../stow" "{{ stow_package.path | basename }}" \
+      "{{ ansible_env.HOME }}" "$PKG_DIR/" \
+      "$STOW_FILTER_DIR/empty-dirs" "$STOW_FILE_LIST" \
+      "$STOW_FILTER_DIR/filtered-dirs" "$STOW_FILTER_DIR/filtered-files"; then
+      echo "❌ [Hard Block] GNU Stow ignore 판정 실패 (drift): $PKG_DIR" >&2
       exit 1
     fi
     DRIFT=0
@@ -64,7 +78,7 @@
         DRIFT=1
         break
       fi
-    done <"$STOW_FILE_LIST"
+    done <"$STOW_FILTER_DIR/filtered-files"
     echo "$DRIFT"
   args:
     executable: /bin/bash
