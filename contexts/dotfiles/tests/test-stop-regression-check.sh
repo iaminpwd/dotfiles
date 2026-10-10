@@ -14,22 +14,22 @@ git -C "$REPO" config user.email test@example.com
 for name in safe-link-backup stow-toctou merge-agent-hooks stop-regression-check; do
   printf '#!/usr/bin/env bash\necho "TEST %s"\n' "$name" >"$REPO/contexts/dotfiles/tests/test-$name.sh"
 done
-printf '#!/bin/bash\n' >"$REPO/bin/utils/safe-link-backup.sh"
+printf '#!/usr/bin/env python3\n' >"$REPO/bin/utils/safe-link-backup.py"
 printf '#!/bin/bash\n' >"$REPO/bin/utils/merge-agent-hooks.sh"
 git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: 테스트 초기 상태'
 RUNNER="$REPO/bin/hooks/stop-regression-check.sh"
 
-printf '#!/bin/bash\n# 수정\n' >"$REPO/bin/utils/safe-link-backup.sh"
-git -C "$REPO" add bin/utils/safe-link-backup.sh
+printf '#!/usr/bin/env python3\n# 수정\n' >"$REPO/bin/utils/safe-link-backup.py"
+git -C "$REPO" add bin/utils/safe-link-backup.py
 # idempotency:bypass (매 실행 새 mktemp Git fixture에서 staged 이후 unstaged 변경을 합성하는 1회성 append)
-printf '# 추가 수정\n' >>"$REPO/bin/utils/safe-link-backup.sh"
+printf '# 추가 수정\n' >>"$REPO/bin/utils/safe-link-backup.py"
 selected=$(bash "$RUNNER" --list)
 [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]
 echo 'PASS: staged·unstaged 중복 제거, 관련 테스트만 선택'
 
-# Shell wrapper delegates its backup safety to this Python helper. A helper
-# change must route back to the same regression suite in Stop checks.
+# Python backup CLI owns both link-pair selection and atomic backup operations.
+# Its changes must route back to the same regression suite in Stop checks.
 printf '# helper changed\n' >"$REPO/bin/utils/safe-link-backup.py"
 selected=$(bash "$RUNNER" --list)
 [ "$selected" = "$REPO/contexts/dotfiles/tests/test-safe-link-backup.sh" ]

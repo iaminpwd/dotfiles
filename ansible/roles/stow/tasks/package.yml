@@ -8,92 +8,17 @@
       "{{ ansible_env.HOME }}"
   changed_when: false
 
-# stow 명령의 verbose stdout 문구("LINK:"/"UNLINK:")로 변경 여부를 판정하면 GNU Stow
-# 버전에 따라 출력 포맷이 달라질 때 조용히 changed=false 오판이 날 수 있다. 대신 stow를
-# 실행하기 전 실제 심볼릭 링크 상태(readlink)를 직접 비교해 드리프트 여부를 판정한다.
+# 설치기와 같은 GNU Stow ignore 필터·소스 검증·no-follow HOME 탐색을 이용한다.
+# Stow verbose 출력에 의존하거나 별도의 쉘 파일 목록/링크 판정을 유지하지 않는다.
 - name: 심볼릭 링크 드리프트(변경 필요 여부) 사전 판정
-  ansible.builtin.shell: |
-    set -euo pipefail
-
-    canonical_existing_file() {
-      local path=$1 dir base link_target hops=0
-      # Match the safe installer owned-link predicate: resolve the final
-      # file symlink as well as parent directories. BSD readlink has no -f.
-      while [ -L "$path" ]; do
-        hops=$((hops + 1))
-        [ "$hops" -le 40 ] || return 1
-        dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
-        link_target=$(readlink "$path") || return 1
-        case "$link_target" in
-        /*) path="$link_target" ;;
-        *) path="$dir/$link_target" ;;
-        esac
-      done
-      dir=$(cd -P "$(dirname "$path")" 2>/dev/null && pwd) || return 1
-      base=$(basename "$path")
-      [ -e "$dir/$base" ] || return 1
-      printf '%s/%s\n' "$dir" "$base"
-    }
-
-    PKG_DIR="{{ role_path }}/../../../stow/{{ stow_package.path | basename }}"
-    # Process substitution hides the exit status of find. Do not report "no drift"
-    # or proceed to Stow if filesystem discovery is incomplete.
-    STOW_FILTER_DIR=$(mktemp -d)
-    trap 'rm -rf "$STOW_FILTER_DIR"' EXIT
-    STOW_FILE_LIST="$STOW_FILTER_DIR/files"
-    if ! find "$PKG_DIR" -type f -print0 >"$STOW_FILE_LIST"; then
-      echo "❌ [Hard Block] Stow 소스 탐색 실패 (drift): $PKG_DIR" >&2
-      exit 1
-    fi
-    # Installation and backup already respect GNU Stow ignore rules. Drift
-    # must inspect exactly that managed subset; otherwise an ignored user
-    # file forces DRIFT=1 on every clean run. Reuse the same Stow Perl matcher
-    # (including local/global patterns and ignored parent directories).
-    : >"$STOW_FILTER_DIR/empty-dirs"
-    if ! HOME="{{ ansible_env.HOME }}" perl "{{ role_path }}/../../../bin/utils/stow-filter-inventory.pl" \
-      "{{ role_path }}/../../../stow" "{{ stow_package.path | basename }}" \
-      "{{ ansible_env.HOME }}" "$PKG_DIR/" \
-      "$STOW_FILTER_DIR/empty-dirs" "$STOW_FILE_LIST" \
-      "$STOW_FILTER_DIR/filtered-dirs" "$STOW_FILTER_DIR/filtered-files"; then
-      echo "❌ [Hard Block] GNU Stow ignore 판정 실패 (drift): $PKG_DIR" >&2
-      exit 1
-    fi
-    DRIFT=0
-    while IFS= read -r -d '' SRC; do
-      REL="${SRC#"$PKG_DIR"/}"
-      TARGET="{{ ansible_env.HOME }}/$REL"
-
-      # --no-folding 정책상 관리 대상은 파일 단위 symlink여야 한다.
-      # macOS 기본 BSD readlink에는 -f가 없으므로 plain readlink로 raw target을 읽고,
-      # 양쪽 부모 디렉토리는 cd -P로 정규화해 실제 파일 경로를 비교한다.
-      if [ ! -L "$TARGET" ]; then
-        DRIFT=1
-        break
-      fi
-      LINK_TARGET=$(readlink "$TARGET" 2>/dev/null) || {
-        DRIFT=1
-        break
-      }
-      case "$LINK_TARGET" in
-      /*) LINK_PATH="$LINK_TARGET" ;;
-      *) LINK_PATH="$(dirname "$TARGET")/$LINK_TARGET" ;;
-      esac
-      SRC_CANON=$(canonical_existing_file "$SRC") || {
-        DRIFT=1
-        break
-      }
-      LINK_CANON=$(canonical_existing_file "$LINK_PATH") || {
-        DRIFT=1
-        break
-      }
-      if [ "$LINK_CANON" != "$SRC_CANON" ]; then
-        DRIFT=1
-        break
-      fi
-    done <"$STOW_FILTER_DIR/filtered-files"
-    echo "$DRIFT"
-  args:
-    executable: /bin/bash
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ role_path }}/../../../bin/utils/stow-safe-install.py"
+      - --check-drift
+      - "{{ role_path }}/../../../stow"
+      - "{{ stow_package.path | basename }}"
+      - "{{ ansible_env.HOME }}"
   register: stow_drift_check
   changed_when: false
   # 상태를 전혀 바꾸지 않는 읽기 전용 판정이라 --check(dry-run)에서도 그대로 실행한다.

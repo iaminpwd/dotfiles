@@ -13,8 +13,9 @@ export ANSIBLE_HOME="$TMP/ansible" ANSIBLE_LOCAL_TEMP="$TMP/local" ANSIBLE_REMOT
 mkdir -p "$ANSIBLE_HOME" "$ANSIBLE_LOCAL_TEMP" "$ANSIBLE_REMOTE_TEMP" \
   "$TMP/repo/ansible/roles/stow/tasks" "$TMP/repo/stow/demo/.config/demo" \
   "$TMP/repo/bin/utils" "$TMP/home" "$TMP/fakebin"
-# The drift task now reuses the production GNU Stow ignore matcher.
-cp "$ROOT/bin/utils/stow-filter-inventory.pl" "$TMP/repo/bin/utils/"
+# The drift task uses the same safe Python inventory/ownership logic as
+# installation; include both the helper and GNU Stow's ignore matcher.
+cp "$ROOT/bin/utils/stow-safe-install.py" "$ROOT/bin/utils/stow-filter-inventory.pl" "$TMP/repo/bin/utils/"
 printf 'managed\n' >"$TMP/repo/stow/demo/.config/demo/config"
 
 cat >"$TMP/fakebin/readlink" <<'STUB'
@@ -41,7 +42,7 @@ play = [{
     "hosts": "localhost", "connection": "local", "gather_facts": False,
     "environment": {
         "PATH": str(tmp / "fakebin") + ":{{ lookup('env', 'PATH') }}",
-        "STOW_TEST_FIND_MODE": "{{ lookup('env', 'STOW_TEST_FIND_MODE') }}",
+        "STOW_TEST_FILTER_MODE": "{{ lookup('env', 'STOW_TEST_FILTER_MODE') }}",
         "STOW_TEST_PARTIAL_FILE": "{{ lookup('env', 'STOW_TEST_PARTIAL_FILE') }}",
     },
     "vars": {
@@ -88,22 +89,22 @@ fi
 rm "$TMP/home/.config/demo/config" "$TMP/home/.config/demo/.alias"
 echo 'PASS: 관리 대상 symlink 체인에 대한 드리프트 오탐 없음'
 
-cat >"$TMP/fakebin/find" <<'STUB'
+cat >"$TMP/fakebin/perl" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
-case "${STOW_TEST_FIND_MODE:-}" in
-partial) printf '%s\0' "$STOW_TEST_PARTIAL_FILE"; exit 77 ;;
+case "${STOW_TEST_FILTER_MODE:-}" in
+partial) printf '%s\0' "$STOW_TEST_PARTIAL_FILE" >"${9}"; exit 77 ;;
 empty) exit 77 ;;
 esac
-exec /usr/bin/find "$@"
+exec /usr/bin/perl "$@"
 STUB
-chmod +x "$TMP/fakebin/find"
+chmod +x "$TMP/fakebin/perl"
 for mode in partial empty; do
   status=0
-  STOW_TEST_FIND_MODE="$mode" STOW_TEST_PARTIAL_FILE="$TMP/repo/stow/demo/.config/demo/config" \
+  STOW_TEST_FILTER_MODE="$mode" STOW_TEST_PARTIAL_FILE="$TMP/repo/stow/demo/.config/demo/config" \
     ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/find-$mode.out" 2>&1 || status=$?
   if [ "$status" -eq 0 ] ||
-    ! grep -qF 'Stow 소스 탐색 실패 (drift)' "$TMP/find-$mode.out" ||
+    ! grep -qF '[Hard Block] 안전한 Stow 링크 설치 실패' "$TMP/find-$mode.out" ||
     [ ! -f "$TMP/repo/stow/demo/.config/demo/config" ]; then
     cat "$TMP/find-$mode.out"
     echo "FAIL: $mode inventory failure bypassed drift gate"
@@ -146,7 +147,7 @@ for path in ("ansible/roles/stow/tasks/package.yml",
     shutil.copy2(root / path, multi / "repo" / path)
 (fakebin / "python3").write_text("""#!/usr/bin/env bash
 set -euo pipefail
-if [[ "${1:-}" == */stow-safe-install.py ]]; then
+if [[ "${1:-}" == */stow-safe-install.py && "${2:-}" != --check-drift ]]; then
   pkg=$3
   printf '%s\\n' "$pkg" >>"$STOW_MULTI_LOG"
   if [ "$pkg" = alpha ] && [ "$STOW_MULTI_FAIL" = 1 ]; then
@@ -239,4 +240,4 @@ if [ "$status" -ne 0 ] ||
   echo 'FAIL: clean setup unnecessarily invoked installer'
   exit 1
 fi
-echo 'PASS: BSD readlink, partial inventory failure, secure apply ordering and retry'
+echo 'PASS: read-only drift, partial inventory failure, secure apply ordering and retry'

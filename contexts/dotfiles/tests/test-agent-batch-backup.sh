@@ -13,7 +13,7 @@ from pathlib import Path
 
 root, tmp = map(Path, sys.argv[1:])
 tasks = json.loads((tmp / "tasks.json").read_text())
-backups = [t for t in tasks if "safe-link-backup.sh" in
+backups = [t for t in tasks if "safe-link-backup.py" in
            t.get("ansible.builtin.command", {}).get("argv", "")]
 assert len(backups) == 1, "global script 평탄화를 제거한 뒤에는 스킬 에셋 백업만 남아야 한다"
 home = tmp / "home space $HOME"

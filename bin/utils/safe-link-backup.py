@@ -7,8 +7,10 @@ overwrites when another process concurrently creates that name.
 """
 
 import os
+import re
 import secrets
 import stat
+import subprocess
 import sys
 
 
@@ -117,10 +119,60 @@ def backup(target, timestamp):
         os.close(parent_fd)
 
 
+def _backup_target(target):
+    # Preserve the historical date(1) format and PATH-based test injection.
+    # Only request a timestamp after verifying there is something to back up.
+    timestamp = subprocess.check_output(
+        ["date", "+%F-%H%M%S"], text=True
+    ).strip()
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}", timestamp):
+        raise ValueError("invalid backup timestamp")
+    destination = backup(target, timestamp)
+    print(f"  [BACKUP] {target} -> {destination} (기존 사용자 파일 또는 링크 보존)")
+
+
+def backup_targets(targets):
+    """Legacy target-only mode: existing symlinks are not touched."""
+    for target in targets:
+        if os.path.exists(target) and not os.path.islink(target):
+            _backup_target(target)
+
+
+def backup_link_pairs(arguments):
+    """Back up only destination entries not already linked to their source."""
+    if len(arguments) % 2:
+        raise ValueError(
+            "usage: safe-link-backup.py --link-pairs SOURCE TARGET [SOURCE TARGET ...]"
+        )
+    for source, target in zip(arguments[::2], arguments[1::2]):
+        if os.path.islink(target):
+            if os.readlink(target) == source:
+                continue
+            _backup_target(target)
+        elif os.path.exists(target):
+            _backup_target(target)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: safe-link-backup.py TARGET TIMESTAMP")
     try:
-        print(backup(sys.argv[1], sys.argv[2]))
-    except (OSError, RuntimeError, ValueError) as exc:
+        args = sys.argv[1:]
+        if args and args[0] == "--link-pairs":
+            if len(args[1:]) % 2:
+                print(
+                    "usage: safe-link-backup.py --link-pairs SOURCE TARGET [SOURCE TARGET ...]",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
+            backup_link_pairs(args[1:])
+        elif args and args[0] == "--targets":
+            backup_targets(args[1:])
+        elif len(args) == 2:
+            # Retain the direct low-level API used by race-injection tests.
+            print(backup(*args))
+        else:
+            raise SystemExit(
+                "usage: safe-link-backup.py --link-pairs SOURCE TARGET ... "
+                "| --targets TARGET ... | TARGET TIMESTAMP"
+            )
+    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         raise SystemExit("❌ [Hard Block] backup failed: " + str(exc))

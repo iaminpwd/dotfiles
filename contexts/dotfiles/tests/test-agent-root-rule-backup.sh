@@ -10,7 +10,6 @@ export ANSIBLE_HOME="$TMP/ansible-cache"
 
 FIXTURE="$TMP/fake-dotfiles"
 mkdir -p "$FIXTURE/ansible/roles/ai_agent" "$FIXTURE/contexts/dotfiles" "$FIXTURE/bin/utils"
-cp "$ROOT/bin/utils/safe-link-backup.sh" "$FIXTURE/bin/utils/"
 cp "$ROOT/bin/utils/safe-link-backup.py" "$FIXTURE/bin/utils/"
 printf 'managed skill\n' >"$FIXTURE/contexts/dotfiles/SKILL.md"
 printf 'keep user AGENTS\n' >"$FIXTURE/AGENTS.md"

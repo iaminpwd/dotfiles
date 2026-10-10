@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test-safe-link-backup.sh
 #
-# safe-link-backup.sh는 ansible.builtin.file(state: link, force: true)로 심볼릭 링크를
+# safe-link-backup.py는 ansible.builtin.file(state: link, force: true)로 심볼릭 링크를
 # 강제 생성하기 전, 목적지에 이미 있는 실제 파일/디렉토리를 백업으로 치우는 안전장치다.
 # "이미 심볼릭 링크면 건드리지 않는다"는 조건이 깨지면 force가 어차피 안전하게 처리할
 # 링크까지 불필요하게 백업해버리고(멱등성 위반), 반대로 "실제 파일이면 백업한다"가
@@ -14,7 +14,7 @@ set -euo pipefail
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTS_DIR/../../.." && pwd)"
-SCRIPT="$REPO_ROOT/bin/utils/safe-link-backup.sh"
+SCRIPT="$REPO_ROOT/bin/utils/safe-link-backup.py"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -34,12 +34,12 @@ report() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-echo "=== safe-link-backup.sh 목적지 충돌 백업 로직 회귀 테스트 ==="
+echo "=== safe-link-backup.py 목적지 충돌 백업 로직 회귀 테스트 ==="
 
 # 1. ok-no-target: 목적지가 아예 없으면 아무 것도 하지 않고 exit 0.
 TARGET1="$TMP/no-target"
 status=0
-bash "$SCRIPT" "$TARGET1" || status=$?
+python3 "$SCRIPT" --targets "$TARGET1" || status=$?
 if [ "$status" -eq 0 ] && [ ! -e "$TARGET1" ]; then
   report "ok-no-target (대상 없으면 무동작 + exit 0)" 0
 else
@@ -49,7 +49,7 @@ fi
 # 2. fail-real-file: 목적지에 실제 파일이 있으면 백업으로 치운다.
 TARGET2="$TMP/real-file"
 echo "사용자 실제 데이터" >"$TARGET2"
-bash "$SCRIPT" "$TARGET2"
+python3 "$SCRIPT" --targets "$TARGET2"
 BACKUPS2=("$TARGET2".backup.*)
 if [ ! -e "$TARGET2" ] && [ -f "${BACKUPS2[0]}" ] && grep -qF "사용자 실제 데이터" "${BACKUPS2[0]}"; then
   report "fail-real-file (실제 파일이면 백업으로 이동)" 0
@@ -61,7 +61,7 @@ fi
 TARGET3="$TMP/real-dir"
 mkdir -p "$TARGET3"
 echo "사용자 실제 데이터" >"$TARGET3/inner.txt"
-bash "$SCRIPT" "$TARGET3"
+python3 "$SCRIPT" --targets "$TARGET3"
 BACKUPS3=("$TARGET3".backup.*)
 if [ ! -e "$TARGET3" ] && [ -d "${BACKUPS3[0]}" ] && [ -f "${BACKUPS3[0]}/inner.txt" ]; then
   report "fail-real-dir (실제 디렉토리는 내용물째 백업)" 0
@@ -73,7 +73,7 @@ fi
 #    force:true가 어차피 안전하게 교체하므로 여기서 손댈 필요가 없다.
 TARGET4="$TMP/already-link"
 ln -s "/some/arbitrary/target" "$TARGET4"
-bash "$SCRIPT" "$TARGET4"
+python3 "$SCRIPT" --targets "$TARGET4"
 if [ -L "$TARGET4" ] && [ "$(readlink "$TARGET4")" = "/some/arbitrary/target" ]; then
   report "ok-already-symlink (이미 심볼릭 링크면 그대로 유지)" 0
 else
@@ -89,7 +89,7 @@ BROKEN4A="$TMP/broken-foreign-link"
 ln -s "$SRC4A" "$OWN4A"
 ln -s "$TMP/external-user-config" "$FOREIGN4A"
 ln -s "$TMP/missing-user-config" "$BROKEN4A"
-bash "$SCRIPT" --link-pairs "$SRC4A" "$OWN4A" "$SRC4A" "$FOREIGN4A" "$SRC4A" "$BROKEN4A"
+python3 "$SCRIPT" --link-pairs "$SRC4A" "$OWN4A" "$SRC4A" "$FOREIGN4A" "$SRC4A" "$BROKEN4A"
 BACKUP_FOREIGN4A=("$FOREIGN4A".backup.*)
 BACKUP_BROKEN4A=("$BROKEN4A".backup.*)
 if [ -L "$OWN4A" ] && [ "$(readlink "$OWN4A")" = "$SRC4A" ] &&
@@ -106,7 +106,7 @@ fi
 ODD4A="$TMP/odd-pairs"
 printf 'do-not-touch\n' >"$ODD4A"
 status=0
-bash "$SCRIPT" --link-pairs "$SRC4A" "$ODD4A" "$SRC4A" >"$TMP/odd-output" 2>&1 || status=$?
+python3 "$SCRIPT" --link-pairs "$SRC4A" "$ODD4A" "$SRC4A" >"$TMP/odd-output" 2>&1 || status=$?
 if [ "$status" -eq 2 ] && grep -qx 'do-not-touch' "$ODD4A"; then
   report "invalid-pairs-fail-closed (홀수 인자는 실행 전 차단)" 0
 else
@@ -119,7 +119,7 @@ TARGET6="$TMP/"$'batch\ndir'
 printf 'batch data\n' >"$TARGET5"
 mkdir "$TARGET6"
 printf 'inner\n' >"$TARGET6/inner.txt"
-bash "$SCRIPT" "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6"
+python3 "$SCRIPT" --targets "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6"
 BACKUPS5=("$TARGET5".backup.*)
 BACKUPS6=("$TARGET6".backup.*)
 if [ ! -e "$TARGET5" ] && [ ! -e "$TARGET6" ] &&
@@ -141,9 +141,9 @@ EOF
 chmod +x "$TMP/fixed-date-bin/date"
 
 printf 'first-version\n' >"$TARGET7"
-PATH="$TMP/fixed-date-bin:$PATH" bash "$SCRIPT" "$TARGET7"
+PATH="$TMP/fixed-date-bin:$PATH" python3 "$SCRIPT" --targets "$TARGET7"
 printf 'second-version\n' >"$TARGET7"
-PATH="$TMP/fixed-date-bin:$PATH" bash "$SCRIPT" "$TARGET7"
+PATH="$TMP/fixed-date-bin:$PATH" python3 "$SCRIPT" --targets "$TARGET7"
 
 BACKUPS7=("$TARGET7".backup.*)
 if [ "${#BACKUPS7[@]}" -eq 2 ] &&
@@ -220,7 +220,7 @@ for kind in file symlink directory; do
     printf 'original nested file\n' >"$RACE_TARGET/child"
   fi
   RACE_BACKUP="$RACE_TARGET.backup.2026-10-07-120000"
-  RACE_ARGS=("$RACE_TARGET")
+  RACE_ARGS=(--targets "$RACE_TARGET")
   if [ "$kind" = symlink ]; then
     RACE_ARGS=(--link-pairs "$SRC4A" "$RACE_TARGET")
   fi
@@ -228,7 +228,7 @@ for kind in file symlink directory; do
   out=$(RACE_KIND="$kind" RACE_CANDIDATE="$(basename "$RACE_BACKUP")" \
   RACE_PARENT="$TMP" PYTHONPATH="$TMP/inject" \
   PATH="$TMP/fixed-date-bin:$PATH" \
-    bash "$SCRIPT" "${RACE_ARGS[@]}" 2>&1) || code=$?
+    python3 "$SCRIPT" "${RACE_ARGS[@]}" 2>&1) || code=$?
   preserved=0
   case "$kind" in
   file)
@@ -264,7 +264,7 @@ printf 'original user source\n' >"$SOURCE_SWAP"
 swap_rc=0
 swap_out=$(RACE_SOURCE_SWAP=1 PYTHONPATH="$TMP/inject" \
   PATH="$TMP/fixed-date-bin:$PATH" \
-  bash "$SCRIPT" "$SOURCE_SWAP" 2>&1) || swap_rc=$?
+  python3 "$SCRIPT" --targets "$SOURCE_SWAP" 2>&1) || swap_rc=$?
 STAGES=("$TMP/.source-swap.safe-stage-"*)
 if [ "$swap_rc" -ne 0 ] &&
   grep -qx 'original user source' "$SOURCE_SWAP.backup.2026-10-07-120000" &&
@@ -280,8 +280,8 @@ fi
 mkdir "$TMP/tools"
 printf '#!/usr/bin/env bash\nexit 99\n' >"$TMP/tools/date"
 chmod +x "$TMP/tools/date"
-if PATH="$TMP/tools:$PATH" bash "$SCRIPT" "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6" &&
-  PATH="$TMP/tools:$PATH" bash "$SCRIPT"; then
+if PATH="$TMP/tools:$PATH" python3 "$SCRIPT" --targets "$TARGET1" "$TARGET4" "$TARGET5" "$TARGET6" &&
+  PATH="$TMP/tools:$PATH" python3 "$SCRIPT" --targets; then
   report "no-op (재실행·빈 목록에서 date 호출 없음)" 0
 else
   report "no-op (재실행·빈 목록에서 date 호출 없음)" 1

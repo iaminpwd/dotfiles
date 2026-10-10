@@ -10,8 +10,8 @@
 - name: Gemini 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
     argv:
-      - /bin/bash
-      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - python3
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.py"
       - --link-pairs
       - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
       - "{{ ansible_env.HOME }}/.gemini/config/AGENTS.md"
@@ -33,8 +33,8 @@
 - name: Claude 글로벌 CLAUDE.md 목적지 충돌 백업
   ansible.builtin.command:
     argv:
-      - /bin/bash
-      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - python3
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.py"
       - --link-pairs
       - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
       - "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
@@ -56,8 +56,8 @@
 - name: Codex 글로벌 AGENTS.md 목적지 충돌 백업
   ansible.builtin.command:
     argv:
-      - /bin/bash
-      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - python3
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.py"
       - --link-pairs
       - "{{ playbook_dir }}/../contexts/base.AGENTS.md"
       - "{{ ansible_env.HOME }}/.codex/AGENTS.md"
@@ -142,7 +142,7 @@
       {%- endfor -%}
       {%- endif -%}
       {%- endfor -%}
-      {{ ['/bin/bash', role_path + '/../../../bin/utils/safe-link-backup.sh', '--link-pairs'] + targets }}
+      {{ ['python3', role_path + '/../../../bin/utils/safe-link-backup.py', '--link-pairs'] + targets }}
   changed_when: false
 
 - name: Gemini 글로벌 스킬 에셋 링크 설정
@@ -217,8 +217,8 @@
 - name: Dotfiles 로컬 룰셋 목적지 충돌 백업
   ansible.builtin.command:
     argv:
-      - /bin/bash
-      - "{{ role_path }}/../../../bin/utils/safe-link-backup.sh"
+      - python3
+      - "{{ role_path }}/../../../bin/utils/safe-link-backup.py"
       - --link-pairs
       - "{{ role_path }}/../../../contexts/dotfiles/SKILL.md"
       - "{{ role_path }}/../../../AGENTS.md"

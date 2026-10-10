@@ -54,7 +54,7 @@ bin/
 | **`stow-safe-backup.py`** | 심볼릭 링크 부모 경로를 추적하지 않고 충돌 항목을 백업하며 일반 파일의 독립된 백업 사본을 보존 | (`stow-backup.sh` 내부 호출) |
 | **`stow-safe-install.py`** | 디렉터리 파일 디스크립터와 `O_NOFOLLOW`로 기존 사용자 항목을 덮어쓰지 않고 설정 파일 링크 설치 | (bootstrap/Ansible 내부 호출) |
 | **`stow-safe-role-init.py`** | Ansible Stow 역할 실행 전 mise 설정 부모 디렉터리와 기존 관리 링크를 안전하게 준비 | (Ansible 내부 호출) |
-| **`safe-link-backup.sh` / `safe-link-backup.py`** | AI 에이전트 룰·훅 링크 갱신 시 기존 파일을 충돌 없는 이름으로 백업 | (Ansible 내부 호출) |
+| **`safe-link-backup.py`** | AI 에이전트 룰·훅 링크 갱신 시 기존 파일·외부 링크를 충돌 없는 이름으로 백업 (`--link-pairs` 지원) | (Ansible 내부 호출) |
 | **`broken-symlink-detector.sh`** | 홈 디렉토리(깊이 5)의 끊긴(Broken) 심볼릭 링크 탐지 — **수동 진단 전용**. 어떤 훅·게이트에서도 자동 호출하지 않는다: 판정 대상이 저장소가 아니라 `$HOME` 전체라, 이 저장소와 무관한 링크 하나가 임의 저장소의 커밋을 막게 된다. 스킬 정리(`prune-orphan-skills.sh`) 후 잔재 확인용으로 직접 실행할 것 | `bin/utils/broken-symlink-detector.sh` |
 
 ---
