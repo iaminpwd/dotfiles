@@ -85,9 +85,10 @@ for name in missing:
     failed.append(name)
     print(f"  FAIL  {name} — 픽스처 파일이 없습니다")
 for name in orphan:
-    print(f"  WARN  {name} — 기대 결과가 등록되지 않은 픽스처입니다")
+    failed.append(name)
+    print(f"  FAIL  {name} — 기대 결과가 등록되지 않은 픽스처입니다")
 
-total = len(EXPECTED)
+total = len(EXPECTED) + len(orphan)
 print(f"\n{total - len(failed)}/{total} 통과")
 sys.exit(1 if failed else 0)
 PY

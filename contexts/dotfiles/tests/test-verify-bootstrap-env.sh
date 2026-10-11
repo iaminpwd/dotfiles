@@ -21,7 +21,8 @@ shutil.rmtree(h, ignore_errors=True)
 h.mkdir()
 for rel in ['stow/zsh/.zshrc', 'contexts/base.AGENTS.md', 'contexts/dotfiles/SKILL.md',
             'contexts/aws/SKILL.md', 'contexts/k8s/SKILL.md',
-            'contexts/aws/references/core.md', 'bin/hooks/agent-edits-hook.sh',
+            'contexts/aws/references/core.md', 'contexts/test-only/scripts/check.sh',
+            'bin/hooks/agent-edits-hook.sh',
             'bin/hooks/pre-flight-gate-hook.sh', 'bin/hooks/agent-stop-adapter.sh']:
     p = r / rel
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +65,7 @@ run_sut() {
   HOME="$FAKE" bash "$REPO/.github/scripts/verify-bootstrap-env.sh" >"$TMP/out" 2>&1
 }
 failures=0
-for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook missing-codex-stop missing-antigravity-stop unsafe-mode missing-tool unmanaged-stale stale-asset; do
+for case in complete wrong-link missing-rule missing-skill missing-asset legacy-script missing-hook missing-codex-stop missing-antigravity-stop unsafe-mode missing-tool unmanaged-stale stale-asset stale-inactive; do
   build_home
   case "$case" in
   wrong-link) ln -sf "$REPO/contexts/base.AGENTS.md" "$FAKE/.zshrc" ;;
@@ -81,6 +82,10 @@ for case in complete wrong-link missing-rule missing-skill missing-asset legacy-
   # leaves its original links behind; verification must not report a clean install.
   unmanaged-stale) ln -s "$TMP/user-owned-examples" "$FAKE/.claude/skills/k8s/examples" ;;
   stale-asset) rm -rf "$REPO/contexts/aws/references" ;;
+  stale-inactive)
+    mkdir -p "$FAKE/.agents/skills/test-only"
+    ln -s "$REPO/contexts/test-only/scripts" "$FAKE/.agents/skills/test-only/scripts"
+    ;;
   esac
   rc=0
   run_sut || rc=$?

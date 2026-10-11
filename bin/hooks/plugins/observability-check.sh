@@ -24,8 +24,8 @@ canonical_path() {
   printf '%s/%s\n' "$dir" "$(basename "$path")"
 }
 
-# scripts/ 디렉토리는 ~/.claude/skills/observability/scripts 로 심볼릭 링크되어 배포될 수
-# 있으므로 BASH_SOURCE의 정본 위치를 먼저 확정한다(k8s-check.sh와 동일 이유).
+# 플러그인은 bin/hooks/plugins/에서 직접 실행된다. 상대 경로로 공용 라이브러리와
+# 검증기를 참조할 수 있도록 BASH_SOURCE의 정본 위치를 먼저 확정한다.
 OBS_CHECK_PATH=$(canonical_path "${BASH_SOURCE[0]}")
 OBS_CHECK_DIR=$(dirname "$OBS_CHECK_PATH")
 # shellcheck source-path=SCRIPTDIR
@@ -41,7 +41,7 @@ log_info "======================================================"
 
 init_repo_root
 
-# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다.
+# 도구 가용성 조회는 bin/lib의 공용 라이브러리를 source 한다.
 # shellcheck source-path=SCRIPTDIR
 if [ -f "$OBS_CHECK_DIR/../../lib/tool-probe.sh" ]; then
   source "$OBS_CHECK_DIR/../../lib/tool-probe.sh"
@@ -63,10 +63,8 @@ fi
 
 # Prometheus Alerting Rule 정책 검증 (PrometheusRule CRD)
 check_alert_rule_policy() {
-  local staged_yaml=() rule_files=() f target_pid
-  mapfile -d '' -t staged_yaml < <(plugin_target_files '*.yaml' '*.yml')
-  target_pid=$!
-  if ! wait "$target_pid"; then
+  local staged_yaml=() rule_files=() f
+  if ! plugin_collect_target_files staged_yaml '*.yaml' '*.yml'; then
     echo "❌ [ERROR] Git에서 Observability 검사 대상을 수집하지 못했습니다." >&2
     return 1
   fi

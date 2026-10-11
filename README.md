@@ -7,7 +7,7 @@
 - **설치·복구:** `bootstrap.sh` → `Justfile` → `ansible/site.yml` 순서로 실행하며, 기존 사용자 파일은 백업하거나 충돌을 보고합니다.
 - **설정의 단일 원본:** 도구와 버전은 [`stow/mise/.config/mise/config.toml`](stow/mise/.config/mise/config.toml), 셸·Git 설정은 `stow/`에서 관리합니다.
 - **검증:** Git 훅, `bin/hooks/pre-flight-check.sh`, `just verify`로 문법·시크릿·회귀 검사를 실행합니다. 도메인별 IaC/보안 정책 검사는 `just check-domain`을 명시해야 합니다.
-- **AI 에이전트:** 공통 지침은 `contexts/base.AGENTS.md`, 도메인 지침은 `contexts/*/SKILL.md`가 원본입니다. 스킬·참조 파일은 에이전트에 링크하고, 테스트와 평가 데이터는 설치하지 않습니다.
+- **AI 에이전트:** 공통 지침은 `contexts/base.AGENTS.md`, 로컬 지침은 `contexts/dotfiles/SKILL.md`, 글로벌 다이어그램 스킬은 `contexts/drawio-gen/SKILL.md`입니다. 그 밖의 도메인 폴더는 검증 스크립트와 회귀 테스트를 유지하지만 스킬로 등록하지 않습니다.
 
 자세한 실행·검증 계약은 [bin 도구 안내](bin/README.md), [contexts 안내](contexts/README.md)와 [스킬 색인](contexts/INDEX.md)을 참고하십시오. 같은 계약을 README에 중복 기재하지 않습니다.
 
@@ -97,13 +97,13 @@ dotfiles/
 ├── contexts/
 │   ├── base.AGENTS.md    # 글로벌 지침 원본
 │   ├── INDEX.md          # 스킬 라우팅 색인
-│   └── <skill>/          # SKILL.md, 필요시 references/scripts/tests
+│   └── <domain>/         # 필요한 스킬 진입점 또는 scripts/tests 검증 자산
 ├── tests/lib/            # 스킬 간 공유 테스트 유틸리티
 ├── assets/               # 아래 아키텍처 이미지
 └── .github/              # CI·Renovate·검증 헬퍼
 ```
 
-도메인별 스킬 목록과 참조 문서는 [contexts/INDEX.md](contexts/INDEX.md), 도구별 호출법은 [bin/README.md](bin/README.md)에 있습니다. `contexts/*/tests/`는 CI·회귀 테스트용 자산이므로 런타임 스킬에 배포하지 않습니다.
+활성 스킬과 참조 문서는 [contexts/INDEX.md](contexts/INDEX.md), 검증 자산은 [contexts 안내](contexts/README.md), 도구별 호출법은 [bin/README.md](bin/README.md)에 있습니다. `contexts/*/tests/`는 CI·회귀 테스트용 자산이므로 런타임 스킬에 배포하지 않습니다.
 
 ---
 
@@ -117,7 +117,7 @@ dotfiles/
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
 
 **글로벌 스킬 적용**
-dotfiles를 제외한 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 직접 라우팅되므로, **로컬 소스코드 저장소가 100% 깔끔하게 유지**됩니다.
+현재 글로벌 `drawio-gen` 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 제공됩니다. 다른 도메인은 스킬 등록 없이 기존 검증 스크립트를 유지합니다.
 
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
@@ -153,7 +153,7 @@ dotfiles를 제외한 도메인 스킬은 `~/.gemini/config/skills/`, `~/.claude
 | CI | `PFC_PROFILE=full just verify`와 조건별 bootstrap smoke |
 | 수동 전체 도메인 | `just check-domain`으로 Terraform/SAM/K8s 등 추가 정책 검사 |
 
-주간·수동 CI 또는 설치 경로 영향 변경 시 bootstrap smoke를 실행합니다. 상세 검증 조건·WARNING/SKIP 의미는 [pre-flight-check 스킬](contexts/pre-flight-check/SKILL.md)과 [bin 도구 안내](bin/README.md)에 있습니다.
+주간·수동 CI 또는 설치 경로 영향 변경 시 bootstrap smoke를 실행합니다. 상세 검증 조건·WARNING/SKIP 의미는 [dotfiles 로컬 지침](contexts/dotfiles/SKILL.md)과 [bin 도구 안내](bin/README.md)에 있습니다.
 
 ---
 

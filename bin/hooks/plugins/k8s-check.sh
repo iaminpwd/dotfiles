@@ -25,9 +25,8 @@ canonical_path() {
   printf '%s/%s\n' "$dir" "$(basename "$path")"
 }
 
-# 이 스크립트는 contexts/<skill>/scripts/preflight/ 배치 규약으로만 존재하며 그 규약의
-# 주인이 pre-flight-check 스킬이므로, 라이브러리도 같은 곳에서 가져온다. scripts/ 디렉토리는
-# ~/.claude/skills/k8s/scripts 로 심볼릭 링크되어 배포될 수 있으므로 정본 위치를 먼저 확정한다.
+# 이 플러그인은 bin/hooks/plugins/에 설치된 정본을 실행하며, 공용 라이브러리는
+# bin/lib에 둔다. 호출 위치가 달라져도 정상 작동하도록 실제 경로를 먼저 확정한다.
 K8S_CHECK_PATH=$(canonical_path "${BASH_SOURCE[0]}")
 K8S_CHECK_DIR=$(dirname "$K8S_CHECK_PATH")
 # shellcheck source-path=SCRIPTDIR
@@ -44,7 +43,7 @@ log_info "======================================================"
 
 init_repo_root
 
-# 도구 가용성 조회는 pre-flight-check 스킬의 공용 라이브러리를 source 한다. 이게 없으면
+# 도구 가용성 조회는 bin/lib의 공용 라이브러리를 source 한다. 이게 없으면
 # promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 검사하지 않고도 "Passed
 # Successfully"를 출력하는 무검증 통과가 생긴다.
 # shellcheck source-path=SCRIPTDIR
@@ -68,10 +67,8 @@ GLOBAL_STAGED_YAML_FILES=()
 
 # 1. Kyverno Native Policy Test
 check_kyverno() {
-  local test_files=() target_pid
-  mapfile -d '' -t test_files < <(plugin_target_files '*kyverno-test.yaml')
-  target_pid=$!
-  if ! wait "$target_pid"; then
+  local test_files=()
+  if ! plugin_collect_target_files test_files '*kyverno-test.yaml'; then
     echo "❌ [ERROR] Git에서 K8s 검사 대상을 수집하지 못했습니다." >&2
     return 1
   fi
@@ -198,10 +195,7 @@ check_deprecated_apis() {
 # Main Orchestration Flow
 # -----------------------------------------------------------------------------
 main() {
-  local target_pid
-  mapfile -d '' -t GLOBAL_STAGED_YAML_FILES < <(plugin_target_files '*.yaml' '*.yml')
-  target_pid=$!
-  if ! wait "$target_pid"; then
+  if ! plugin_collect_target_files GLOBAL_STAGED_YAML_FILES '*.yaml' '*.yml'; then
     echo "❌ [ERROR] Git에서 K8s 검사 대상을 수집하지 못했습니다." >&2
     return 1
   fi

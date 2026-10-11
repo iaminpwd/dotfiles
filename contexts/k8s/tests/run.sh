@@ -583,12 +583,14 @@ REGO
   fi
 fi
 
-# 기대 결과가 등록되지 않은 픽스처는 검증되지 않은 채 방치된다.
+# 기대 결과가 없는 새 픽스처를 성공으로 보고하지 않는다.
 for path in "$FIXTURES"/*.yaml; do
   name=$(basename "$path")
   found=0
   for c in "${CHECKED[@]}"; do [ "$c" = "$name" ] && found=1 && break; done
-  [ "$found" -eq 0 ] && echo "  WARN  $name — 기대 결과가 등록되지 않은 픽스처입니다"
+  if [ "$found" -eq 0 ]; then
+    report "unregistered-fixture: $name" 1 "기대 결과가 등록되지 않은 픽스처입니다"
+  fi
 done
 
 # 문서 수가 늘어도 YAML 변환은 파일당 한 번이어야 한다.

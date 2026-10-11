@@ -95,7 +95,7 @@ echo 'PASS: 회귀 실패와 개별 재현 명령 전달'
 git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: ai agent fixture 준비'
 mkdir -p "$REPO/ansible/roles/ai_agent/tasks"
-for name in agent-batch-backup safe-link-backup merge-agent-hooks prune-orphan-skills; do
+for name in agent-batch-backup agent-root-rule-backup agent-script-update-prune safe-link-backup merge-agent-hooks prune-orphan-skills verify-bootstrap-env; do
   printf '#!/usr/bin/env bash\necho "TEST %s"\n' "$name" >"$REPO/contexts/dotfiles/tests/test-$name.sh"
 done
 printf '%s\n' '---' '- name: fixture' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
@@ -107,9 +107,12 @@ status=0
 selected=$(bash "$RUNNER" --list 2>"$TMP/ai-agent.err") || status=$?
 if [ "$status" -eq 0 ] &&
   [[ "$selected" == *test-agent-batch-backup.sh* ]] &&
+  [[ "$selected" == *test-agent-root-rule-backup.sh* ]] &&
+  [[ "$selected" == *test-agent-script-update-prune.sh* ]] &&
   [[ "$selected" == *test-safe-link-backup.sh* ]] &&
   [[ "$selected" == *test-merge-agent-hooks.sh* ]] &&
   [[ "$selected" == *test-prune-orphan-skills.sh* ]] &&
+  [[ "$selected" == *test-verify-bootstrap-env.sh* ]] &&
   [[ "$selected" != *test-check-agent-collision.sh* ]]; then
   echo 'PASS: ai_agent role 변경은 현재 존재하는 회귀 스위트만 선택'
 else
@@ -119,9 +122,71 @@ else
   exit 1
 fi
 
-# 문서만 바뀐 저장소에서는 회귀 테스트를 실행하지 않는다.
+# Each case starts from the same committed fixture: the only changed file
+# must select exactly its owners, not an unrelated test from a previous case.
+MAPPING_CASES=(
+  '.github/scripts/secret-history-scan.sh|contexts/dotfiles/tests/test-ci-secret-history.sh'
+  '.github/scripts/assert-idempotent-ansible-recap.sh|contexts/dotfiles/tests/test-bootstrap-idempotency-gate.sh'
+  '.github/scripts/lint-commit-messages.sh|contexts/dotfiles/tests/test-lint-commit-messages.sh'
+  'bin/utils/stow-safe-install.py|contexts/dotfiles/tests/test-stow-drift-portability.sh,contexts/dotfiles/tests/test-stow-ignore.sh,contexts/dotfiles/tests/test-stow-package-conflicts.sh,contexts/dotfiles/tests/test-stow-real-failure.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
+  'bin/utils/stow-safe-role-init.py|contexts/dotfiles/tests/test-stow-legacy-mise-link.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
+  'bin/utils/stow-filter-inventory.pl|contexts/dotfiles/tests/test-stow-ignore.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh'
+  'bin/utils/broken-symlink-detector.sh|contexts/dotfiles/tests/test-detector-logic.sh'
+  'bin/utils/prune-orphan-agent-scripts.sh|contexts/dotfiles/tests/test-agent-script-update-prune.sh'
+  'bin/linters/idempotency-check.sh|contexts/pre-flight-check/tests/test-idempotency.sh'
+  'bin/linters/db-sg-checker.sh|contexts/pre-flight-check/tests/test-db-sg.sh'
+  'bin/linters/container-hardening-gate.sh|contexts/containers/tests/run.sh'
+  'bin/linters/semantic-commit-lint.sh|contexts/dotfiles/tests/test-semantic-commit-lint.sh'
+  'bin/linters/prompt-lint.sh|contexts/prompt-architect/tests/test_prompt_lint.sh'
+  'bin/linters/test-coverage-check.sh|contexts/dotfiles/tests/test-test-coverage-check.sh'
+  'tests/lib/parallel-pair.sh|contexts/pre-flight-check/tests/test-parallel-pair.sh'
+  'tests/lib/exit-trap.sh|contexts/pre-flight-check/tests/test-exit-trap.sh'
+  'tests/lib/run-domain-tests.sh|contexts/dotfiles/tests/test-run-suite.sh,contexts/dotfiles/tests/test-test-coverage-check.sh'
+  'ansible/roles/zsh/tasks/main.yml|contexts/dotfiles/tests/test-zsh-updates.sh,contexts/dotfiles/tests/test-zsh-path-probe.sh,contexts/dotfiles/tests/test-zsh-shell-failure.sh,contexts/dotfiles/tests/test-zsh-supply-chain.sh'
+  'ansible/roles/stow/tasks/main.yml|contexts/dotfiles/tests/test-stow-backup.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh,contexts/dotfiles/tests/test-stow-legacy-mise-link.sh,contexts/dotfiles/tests/test-stow-package-conflicts.sh'
+  'stow/zsh/.zshrc|contexts/dotfiles/tests/test-zshrc-activation.sh,contexts/dotfiles/tests/test-zshenv-path.sh'
+  'stow/zsh/.zshenv|contexts/dotfiles/tests/test-zshrc-activation.sh,contexts/dotfiles/tests/test-zshenv-path.sh'
+  'ansible/roles/ai_agent/tasks/main.yml|contexts/dotfiles/tests/test-agent-batch-backup.sh,contexts/dotfiles/tests/test-agent-root-rule-backup.sh,contexts/dotfiles/tests/test-agent-script-update-prune.sh,contexts/dotfiles/tests/test-safe-link-backup.sh,contexts/dotfiles/tests/test-merge-agent-hooks.sh,contexts/dotfiles/tests/test-prune-orphan-skills.sh,contexts/dotfiles/tests/test-verify-bootstrap-env.sh'
+)
+
+# Populate both changed scripts and declared owners, without running them.
+for entry in "${MAPPING_CASES[@]}"; do
+  IFS='|' read -r source owners <<<"$entry"
+  mkdir -p "$REPO/$(dirname "$source")"
+  printf '# baseline\n' >"$REPO/$source"
+  IFS=',' read -r -a owner_paths <<<"$owners"
+  for owner in "${owner_paths[@]}"; do
+    mkdir -p "$REPO/$(dirname "$owner")"
+    printf '#!/usr/bin/env bash\nexit 0\n' >"$REPO/$owner"
+  done
+done
 git -C "$REPO" add -A
-git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: 테스트 상태 저장'
+git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: 변경 경로별 회귀 매핑 픽스처 준비'
+
+for entry in "${MAPPING_CASES[@]}"; do
+  IFS='|' read -r source owners <<<"$entry"
+  IFS=',' read -r -a owner_paths <<<"$owners"
+  # idempotency:bypass (격리된 임시 Git 픽스처를 한 번 dirty하게 만드는 의도적 append)
+  printf '# changed\n' >>"$REPO/$source"
+  status=0
+  selected=$(bash "$RUNNER" --list 2>"$TMP/mapping.err") || status=$?
+  actual=$(printf '%s\n' "$selected" | sed '/^$/d' | LC_ALL=C sort)
+  expected=$(for owner in "${owner_paths[@]}"; do
+    printf '%s\n' "$REPO/$owner"
+  done | LC_ALL=C sort)
+  if [ "$status" -ne 0 ] || [ "$actual" != "$expected" ]; then
+    echo "FAIL: 변경 파일 회귀 매핑: $source (exit=$status)" >&2
+    echo "  expected: $expected" >&2
+    echo "  actual:   $actual" >&2
+    cat "$TMP/mapping.err" >&2
+    exit 1
+  fi
+  git -C "$REPO" restore -- "$source"
+  echo "PASS: 변경 파일 회귀 매핑: $source"
+done
+
+# 문서만 바뀐 저장소에서는 회귀 테스트를 실행하지 않는다.
+[ -z "$(git -C "$REPO" status --porcelain)" ] # 각 매핑 테스트가 원래 상태로 복원되어야 한다.
 printf '# 문서만 변경\n' >"$REPO/README.md"
 [ -z "$(bash "$RUNNER" --list)" ]
 bash "$RUNNER"

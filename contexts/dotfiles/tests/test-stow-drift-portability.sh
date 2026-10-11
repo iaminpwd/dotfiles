@@ -3,6 +3,8 @@
 # per-package backup preservation, retry and idempotency in disposable HOME.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+# shellcheck source=tests/lib/parallel-pair.sh
+source "$ROOT/tests/lib/parallel-pair.sh"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 if ! command -v ansible-playbook >/dev/null 2>&1 || ! command -v stow >/dev/null 2>&1; then
@@ -99,10 +101,22 @@ esac
 exec /usr/bin/perl "$@"
 STUB
 chmod +x "$TMP/fakebin/perl"
-for mode in partial empty; do
-  status=0
+# Both inventory-failure probes are read-only, with distinct environment and
+# output files; run them together rather than starting Ansible sequentially.
+inventory_failure_probe() {
+  local mode=$1
   STOW_TEST_FILTER_MODE="$mode" STOW_TEST_PARTIAL_FILE="$TMP/repo/stow/demo/.config/demo/config" \
-    ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/find-$mode.out" 2>&1 || status=$?
+    ansible-playbook -i localhost, "$TMP/play.yml"
+}
+# shellcheck disable=SC2034 # parallel_pair_run reads command arrays by nameref
+CMD_PARTIAL=(inventory_failure_probe partial)
+# shellcheck disable=SC2034
+CMD_EMPTY=(inventory_failure_probe empty)
+partial_status=0
+empty_status=0
+parallel_pair_run CMD_PARTIAL CMD_EMPTY partial_status empty_status "$TMP/find-partial.out" "$TMP/find-empty.out"
+for mode in partial empty; do
+  if [ "$mode" = partial ]; then status=$partial_status; else status=$empty_status; fi
   if [ "$status" -eq 0 ] ||
     ! grep -qF '[Hard Block] 안전한 Stow 링크 설치 실패' "$TMP/find-$mode.out" ||
     [ ! -f "$TMP/repo/stow/demo/.config/demo/config" ]; then

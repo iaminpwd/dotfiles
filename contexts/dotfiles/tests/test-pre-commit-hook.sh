@@ -66,11 +66,29 @@ git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh
 # 셋업 커밋이므로 훅을 꺼서 격리한다.
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 초기 스텁 커밋"
 
+# Reminder/profile/guard cases exercise the hook's orchestration, not the
+# secret scanner. Keep them isolated from repeated real TruffleHog startup;
+# the two dedicated staged-secret cases below still use the real scanner.
+REAL_HOME=$HOME
+FAST_HOME="$TMP/no-trufflehog-home"
+mkdir -p "$FAST_HOME/.local/bin"
+cat >"$FAST_HOME/.local/bin/trufflehog" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = --version ]; then exit 1; fi
+echo 'unexpected TruffleHog scan in non-secret hook test' >&2
+exit 99
+STUB
+chmod +x "$FAST_HOME/.local/bin/trufflehog"
+
 # The parallel secret cases use distinct Git directories and indexes. Never run two
 # staged-state mutations or scanners concurrently against the same fixture repository.
 run_hook() {
-  local repo=$1
-  (cd "$repo" && bash "$repo/stow/git/.githooks/pre-commit")
+  local repo=$1 mode=${2:-orchestration}
+  if [ "$mode" = real-secret-scan ]; then
+    (cd "$repo" && HOME="$REAL_HOME" bash "$repo/stow/git/.githooks/pre-commit")
+  else
+    (cd "$repo" && HOME="$FAST_HOME" bash "$repo/stow/git/.githooks/pre-commit")
+  fi
 }
 
 run_hook_allow_fail() {
@@ -218,9 +236,9 @@ if command -v trufflehog >/dev/null 2>&1 && trufflehog --version >/dev/null 2>&1
 
   # Both prepared indexes are now immutable until both hook processes finish.
   # shellcheck disable=SC2034 # parallel_pair_run reads commands by nameref
-  CMD_STAGED=(run_hook "$FIXTURE_REPO")
+  CMD_STAGED=(run_hook "$FIXTURE_REPO" real-secret-scan)
   # shellcheck disable=SC2034
-  CMD_RENAMED=(run_hook "$RENAME_REPO")
+  CMD_RENAMED=(run_hook "$RENAME_REPO" real-secret-scan)
   staged_status=0
   renamed_status=0
   parallel_pair_run CMD_STAGED CMD_RENAMED staged_status renamed_status "$TMP/staged.out" "$TMP/renamed.out"
@@ -292,6 +310,45 @@ if [ "$status" -eq 0 ] && grep -qF QUICK_PROFILE "$TMP/out"; then
   report "commit-quick-profile" 0
 else
   report "commit-quick-profile" 1
+fi
+
+# BSD/macOS readlink has no -f. Invoke the hook through two symlinks and
+# actively reject -f, rather than merely searching the hook text. Both the
+# dotfiles-only reminder and the actual PFC invocation must still happen.
+BSD_BIN="$TMP/bsd-bin"
+BSD_HOOK_DIR="$TMP/bsd hook chain"
+BSD_TRACE="$TMP/bsd-readlink.trace"
+mkdir -p "$BSD_BIN" "$BSD_HOOK_DIR"
+ln -s "$HOOK" "$BSD_HOOK_DIR/first"
+ln -s first "$BSD_HOOK_DIR/second"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$BSD_READLINK_TRACE"
+if [ "${1:-}" = -f ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 2
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+cat >"$FIXTURE_REPO/bin/hooks/pre-flight-check.sh" <<'EOF'
+#!/usr/bin/env bash
+[ "${PFC_PROFILE:-}" = quick ] || exit 1
+echo BSD_PFC_EXECUTED
+EOF
+git -C "$FIXTURE_REPO" add bin/hooks/pre-flight-check.sh
+status=0
+(cd "$FIXTURE_REPO" && HOME="$FAST_HOME" PATH="$BSD_BIN:$PATH" \
+  BSD_READLINK_TRACE="$BSD_TRACE" bash "$BSD_HOOK_DIR/second") >"$TMP/bsd.out" 2>&1 || status=$?
+if [ "$status" -eq 0 ] &&
+  grep -qF 'bin/ 핵심 검증 로직 변경이 감지되었습니다' "$TMP/bsd.out" &&
+  grep -qF 'BSD_PFC_EXECUTED' "$TMP/bsd.out" &&
+  [ -s "$BSD_TRACE" ] &&
+  ! grep -qF 'readlink: illegal option -- f' "$TMP/bsd.out" &&
+  ! grep -q '^\-f' "$BSD_TRACE"; then
+  report "bsd-readlink-symlink-chain (리마인더 + PFC 검증 동작)" 0
+else
+  report "bsd-readlink-symlink-chain (리마인더 + PFC 검증 동작)" 1 "exit=$status out=$(cat "$TMP/bsd.out")"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

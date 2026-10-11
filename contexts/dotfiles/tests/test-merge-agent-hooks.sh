@@ -341,6 +341,36 @@ else
   report "no-jq (jq 미해석 시 조용히 통과하지 않고 실패)" 1 "기대 exit!=0 / 실제 exit=$code"
 fi
 
+# Fresh install is distinct from merging existing settings: on macOS an empty
+# HOME and BSD readlink (without -f) must still register the first hooks.
+FRESH_HOME="$TMP/fresh-home"
+FRESH_BIN="$TMP/fresh-bin"
+mkdir -p "$FRESH_HOME" "$FRESH_BIN" "$TMP/fresh-work"
+cat >"$FRESH_BIN/readlink" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = -f ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 1
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$FRESH_BIN/readlink"
+code=0
+(
+  cd "$TMP/fresh-work"
+  MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$FRESH_HOME" PATH="$FRESH_BIN:$PATH" \
+    bash "$MERGER" "$PLAYBOOK_DIR"
+) >"$TMP/fresh.out" 2>&1 || code=$?
+if [ "$code" -eq 0 ] &&
+  jq -e '[.hooks.PostToolUse[].hooks[].command] | any(endswith("agent-edits-hook.sh"))' "$FRESH_HOME/.claude/settings.json" >/dev/null 2>&1 &&
+  jq -e '[.hooks.Stop[].hooks[].command] | any(endswith("pre-flight-gate-hook.sh"))' "$FRESH_HOME/.claude/settings.json" >/dev/null 2>&1 &&
+  jq -e '[."agent-edits-log".PostToolUse[].hooks[].command] | any(endswith("agent-edits-hook.sh"))' "$FRESH_HOME/.gemini/config/hooks.json" >/dev/null 2>&1 &&
+  jq -e '[.hooks.Stop[].hooks[].command] | any(contains("agent-stop-adapter.sh") and endswith(" codex"))' "$FRESH_HOME/.codex/hooks.json" >/dev/null 2>&1; then
+  report "fresh-home-bsd-readlink (빈 HOME + BSD readlink 최초 3클라이언트 훅 설치)" 0
+else
+  report "fresh-home-bsd-readlink (빈 HOME + BSD readlink 최초 3클라이언트 훅 설치)" 1 "exit=$code out=$(cat "$TMP/fresh.out")"
+fi
+
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

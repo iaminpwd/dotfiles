@@ -201,26 +201,28 @@ fi
 #    managed dangling symlink in a global agent registry.
 #    A foreign link and an existing managed asset must remain untouched.
 STALE_SKILLS="$TMP/stale-skills"
-mkdir -p "$STALE_SKILLS/aws" "$TMP/foreign-skill-asset"
-# aws/references has been removed from contexts; it used to be a managed asset.
-if [ -e "$REPO_ROOT/contexts/aws/references" ]; then
-  report "missing-asset-fixture (aws/references must be absent)" 1
+mkdir -p "$STALE_SKILLS/drawio-gen" "$TMP/foreign-skill-asset"
+# drawio-gen is an active skill without optional examples. Its old managed
+# examples link must be removed while its SKILL and a foreign link are kept.
+if [ -e "$REPO_ROOT/contexts/drawio-gen/examples" ]; then
+  report "missing-asset-fixture (drawio-gen/examples must be absent)" 1
 else
-  ln -s "$REPO_ROOT/contexts/aws/references" "$STALE_SKILLS/aws/references"
-  ln -s "$REPO_ROOT/contexts/aws/SKILL.md" "$STALE_SKILLS/aws/SKILL.md"
-  ln -s "$TMP/foreign-skill-asset" "$STALE_SKILLS/aws/examples"
-  OUT_STALE=$(bash "$SCRIPT" "$STALE_SKILLS" aws k8s 2>&1)
-  if [ ! -L "$STALE_SKILLS/aws/references" ] &&
-    [ -L "$STALE_SKILLS/aws/SKILL.md" ] &&
-    [ -L "$STALE_SKILLS/aws/examples" ] &&
+  ln -s "$REPO_ROOT/contexts/drawio-gen/examples" "$STALE_SKILLS/drawio-gen/examples"
+  ln -s "$REPO_ROOT/contexts/drawio-gen/SKILL.md" "$STALE_SKILLS/drawio-gen/SKILL.md"
+  ln -s "$TMP/foreign-skill-asset" "$STALE_SKILLS/drawio-gen/custom-link"
+  OUT_STALE=$(bash "$SCRIPT" "$STALE_SKILLS" drawio-gen 2>&1)
+  if [ ! -L "$STALE_SKILLS/drawio-gen/examples" ] &&
+    [ -L "$STALE_SKILLS/drawio-gen/SKILL.md" ] &&
+    [ -L "$STALE_SKILLS/drawio-gen/custom-link" ] &&
     grep -qF "[PRUNED]" <<<"$OUT_STALE"; then
     report "stale-asset-removed (유효 도메인의 삭제된 관리 에셋만 정리)" 0
   else
     report "stale-asset-removed (유효 도메인의 삭제된 관리 에셋만 정리)" 1 "output=$OUT_STALE"
   fi
-  OUT_STALE_2=$(bash "$SCRIPT" "$STALE_SKILLS" aws k8s 2>&1)
-  if [ ! -L "$STALE_SKILLS/aws/references" ] &&
-    [ -L "$STALE_SKILLS/aws/examples" ] &&
+  OUT_STALE_2=$(bash "$SCRIPT" "$STALE_SKILLS" drawio-gen 2>&1)
+  if [ ! -L "$STALE_SKILLS/drawio-gen/examples" ] &&
+    [ -L "$STALE_SKILLS/drawio-gen/SKILL.md" ] &&
+    [ -L "$STALE_SKILLS/drawio-gen/custom-link" ] &&
     ! grep -qF "[PRUNED]" <<<"$OUT_STALE_2"; then
     report "stale-asset-idempotent (재실행 후 추가 변경 없음)" 0
   else

@@ -36,17 +36,18 @@ for parent, name in [('.gemini/config', 'AGENTS.md'), ('.claude', 'CLAUDE.md'),
 for skill in (root / 'contexts').iterdir():
     if skill.name.startswith('.') or skill.name == 'dotfiles' or not skill.is_dir():
         continue
+    active = (skill / 'SKILL.md').is_file()
     for asset in ['SKILL.md', 'references', 'scripts', 'examples']:
         source = skill / asset
         for parent in ['.gemini/config', '.claude', '.agents']:
             target = home / parent / 'skills' / skill.name / asset
-            if source.exists():
+            if active and source.exists():
                 link(target, source)
             elif target.is_symlink():
-                # Source removal must not leave an old managed asset link unnoticed.
-                # Other user-owned symlinks are not our installation artifacts.
+                # An inactive test-only domain must have no old managed asset links.
+                # Preserve unrelated user-owned symlinks.
                 require(target.resolve(strict=False) != source.resolve(strict=False),
-                        f"삭제된 스킬 에셋 링크 잔존: {target}")
+                        f"비활성 또는 삭제된 스킬 에셋 링크 잔존: {target}")
 local_bin = home / '.local/bin'
 if local_bin.is_dir():
     managed_roots = [root / 'bin', root / 'contexts']

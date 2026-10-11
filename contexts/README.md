@@ -1,17 +1,18 @@
 # 프롬프트와 검증 자산
 
-`contexts/`는 공통 지침, 작업별 SKILL, 저장소 고유 reference와 실행 가능한 검증 자산의 원본입니다.
+`contexts/`는 공통 지침, 로컬/글로벌 스킬, 저장소 고유 reference와 실행 가능한 검증 자산의 원본입니다.
 작업별 진입점과 참조 경로는 [INDEX.md](INDEX.md)에서 확인할 수 있습니다.
 
 ## 적용 방식
 
 - `base.AGENTS.md`: 한국어 선호, 변경 범위, 권한·시크릿 경계, 검증과 커밋 기본값.
 - `dotfiles/SKILL.md`: 이 저장소의 구조·검증 명령과 로컬 계약. 글로벌 등록에서 제외하고 루트 `AGENTS.md`·`CLAUDE.md`로 연결합니다.
-- 그 밖의 `SKILL.md`: 해당 도메인의 사용 조건과 이 저장소가 실제로 강제하는 검증 계약. 일반 기술 지식은 현재 코드와 공식 문서를 기준으로 판단합니다.
+- `drawio-gen/SKILL.md`: 아키텍처 다이어그램용 글로벌 스킬. Claude·Codex·Gemini에 등록합니다.
+- 그 밖의 도메인 디렉터리에는 별도의 스킬 설명 파일 없이 테스트·스크립트만 유지합니다. 기존 훅·`just test`·CI는 경로를 기준으로 검사합니다.
 - `references/`: SKILL 하나로 충분하지 않은 Repo-Specific 또는 정확한 Output Contract만 둡니다. 현재는 dotfiles 3개와 drawio-gen 8개만 유지합니다.
 - `scripts/`, `tests/`, `evals/`, `examples/`: 실행 도구, 회귀 테스트, 평가·예제 자산. 프롬프트 문서를 줄여도 실행 검증 자산은 별도로 유지합니다.
 
-런타임 에이전트에는 SKILL과 존재하는 reference/scripts/examples를 심볼릭 링크로 배포합니다. `tests/`와 `evals/`는 원본 저장소에서만 실행합니다.
+런타임 에이전트에는 활성 `SKILL.md`가 있는 도메인의 SKILL과 존재하는 reference/scripts/examples만 심볼릭 링크로 배포합니다. `tests/`와 `evals/`는 원본 저장소에서만 실행합니다.
 
 ## 유지보수 기준
 

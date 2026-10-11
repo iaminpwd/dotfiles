@@ -117,7 +117,7 @@ if [ -f "$PFC" ] && require_tool ansible-lint; then
   AR1="$ANS_TMP/repo-ok"
   new_ansible_repo "$AR1" "$FIXTURES/lint-ok/playbook.yml"
   status=0
-  out=$( (cd "$AR1" && QUIET=0 bash "$PFC") 2>&1) || status=$?
+  out=$( (cd "$AR1" && PFC_PROFILE=stop QUIET=0 bash "$PFC") 2>&1) || status=$?
   if [ "$status" -eq 0 ]; then
     report "foreign-repo-no-config (설정 파일 없는 저장소 -> 오탐 차단 없음)" 0
   else
@@ -128,7 +128,7 @@ if [ -f "$PFC" ] && require_tool ansible-lint; then
   AR2="$ANS_TMP/repo-fail"
   new_ansible_repo "$AR2" "$FIXTURES/lint-fail/playbook.yml"
   status=0
-  out=$( (cd "$AR2" && QUIET=0 bash "$PFC") 2>&1) || status=$?
+  out=$( (cd "$AR2" && PFC_PROFILE=stop QUIET=0 bash "$PFC") 2>&1) || status=$?
   if [ "$status" -ne 0 ] && grep -qF "ansible-lint 지적 사항이 발견되어" <<<"$out"; then
     report "foreign-repo-no-config-still-lints (설정 파일 없어도 실제 위반은 차단)" 0
   else

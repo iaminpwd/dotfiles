@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 # pre-flight-check.sh - Modular & Fail-safe IaC/Script Validation Pipeline
 
+# `just check` 같은 직접 실행도 macOS 기본 Bash 3.2에서 시작할 수 있다.
+# mapfile -d / nameref를 쓰는 공용 검증기를 실행하기 전에 업그레이드한다.
+if [ "${BASH_VERSINFO[0]}" -lt 4 ] ||
+  { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 4 ]; }; then
+  for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash "${HOME:-}/.local/share/mise/shims/bash"; do
+    # shellcheck disable=SC2016
+    if [ -x "$candidate" ] &&
+      "$candidate" -c '[[ "${BASH_VERSINFO[0]}" -gt 4 || ( "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 ) ]]' >/dev/null 2>&1; then
+      PATH="$(dirname "$candidate"):$PATH"
+      export PATH
+      exec "$candidate" "$0" "$@"
+    fi
+  done
+  echo '[ERROR] pre-flight-check.sh requires Bash 4.4+.' >&2
+  exit 2
+fi
+
 set -euo pipefail
 export ANSIBLE_HOME="$HOME/.cache/ansible"
 

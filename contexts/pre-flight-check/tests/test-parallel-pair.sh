@@ -88,10 +88,17 @@ CMD1=(sleep 1)
 CMD2=(sleep 1)
 rc1=99
 rc2=99
-t0=$(date +%s.%N)
+t0=$(python3 -c 'import time; print(time.monotonic())')
 parallel_pair_run CMD1 CMD2 rc1 rc2 "$TMP/o7" "$TMP/o8"
-t1=$(date +%s.%N)
-elapsed=$(awk -v a="$t0" -v b="$t1" 'BEGIN{printf "%.2f", b-a}')
+# BSD macOS `date` has no %N. Use a monotonic timer so wall-clock jumps do
+# not corrupt the parallelism threshold or silently lose subsecond precision.
+elapsed=$(
+  python3 - "$t0" <<'PY'
+import sys
+import time
+print(f"{time.monotonic() - float(sys.argv[1]):.2f}")
+PY
+)
 if awk -v e="$elapsed" 'BEGIN{exit !(e < 1.5)}'; then
   report "실제 병행 실행 (1초 x2가 ~1초 -> $elapsed 초)" 0
 else

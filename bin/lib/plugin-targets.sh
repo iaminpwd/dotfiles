@@ -25,7 +25,7 @@
 # 사용법:
 #   source "$LIB_PATH/plugin-targets.sh"
 #   PLUGIN_TARGET_FILES=("$@")        # 스크립트 최상단에서 argv 를 그대로 넘길 것
-#   mapfile -d '' -t files < <(plugin_target_files '*.yaml' '*.yml')
+#   plugin_collect_target_files files '*.yaml' '*.yml'
 
 # 호출부가 argv 를 넘기기 전에도 참조될 수 있으므로 빈 배열로 선언해 둔다(set -u 방어).
 PLUGIN_TARGET_FILES=()
@@ -59,4 +59,23 @@ plugin_target_files() {
   # (rename 이 --diff-filter=ACM 에서 통째로 빠져 대상 0건이 된다).
   [ "${GLOBAL_IS_GIT_REPO:-0}" -eq 1 ] || return 0
   git diff --cached --name-only -z --no-renames --diff-filter=ACM -- "$@" 2>/dev/null
+}
+
+# plugin_collect_target_files <array variable> <glob patterns...>
+# A Bash process substitution (`mapfile < <(producer); wait "$!"`) does not
+# reliably provide a waitable PID once a very short-lived child has been reaped.
+# Under concurrent CI load it can fail with "pid is not a child" even when Git
+# succeeded. Materialize the NUL stream and check the producer status directly.
+# This also prevents Git failures from silently becoming an empty array.
+plugin_collect_target_files() {
+  local -n _ptf_result=$1
+  local tmp rc=0
+  shift
+  tmp=$(mktemp) || return 1
+  plugin_target_files "$@" >"$tmp" || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    mapfile -d '' -t _ptf_result <"$tmp" || rc=$?
+  fi
+  rm -f "$tmp"
+  return "$rc"
 }

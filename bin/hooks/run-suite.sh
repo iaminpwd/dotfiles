@@ -7,6 +7,23 @@
 #
 # 항목별 전체 결과를 보여주기 위해 개별 실패 시에도 남은 검증을 계속 진행
 
+# GUI/Stop 훅의 PATH에는 macOS 기본 Bash 3.2만 있을 수 있다. 자식 테스트도
+# `bash script.sh`로 실행되므로 최신 Bash로 재실행할 때 PATH까지 이어 준다.
+if [ "${BASH_VERSINFO[0]}" -lt 4 ] ||
+  { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -lt 4 ]; }; then
+  for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash "${HOME:-}/.local/share/mise/shims/bash"; do
+    # shellcheck disable=SC2016
+    if [ -x "$candidate" ] &&
+      "$candidate" -c '[[ "${BASH_VERSINFO[0]}" -gt 4 || ( "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 ) ]]' >/dev/null 2>&1; then
+      PATH="$(dirname "$candidate"):$PATH"
+      export PATH
+      exec "$candidate" "$0" "$@"
+    fi
+  done
+  echo '[ERROR] run-suite.sh requires Bash 4.4+; install a modern Bash through Homebrew or mise.' >&2
+  exit 2
+fi
+
 set -euo pipefail
 
 # GNU readlink -f는 macOS 기본 BSD readlink에 없다. 이 러너는 Git hook/Stop/CI에서
@@ -242,7 +259,7 @@ done
 if [ "${#MISSING_GATES[@]}" -gt 0 ]; then
   echo "[WARNING] 아래 검증은 PATH에 없어 이번 실행에서 수행되지 않았습니다 — 통과 표시는 이 항목들을 포함하지 않습니다:" >&2
   echo "[WARNING]    ${MISSING_GATES[*]}" >&2
-  echo "[WARNING]    (dotfiles 저장소에서 'just setup' 으로 ai_agent 롤을 돌리면 ~/.local/bin 에 링크됩니다)" >&2
+  echo "[WARNING]    (dotfiles 검증기는 저장소 bin/에서 직접 검색됩니다. 실행 파일·PATH 및 저장소 구성을 확인하십시오)" >&2
 fi
 
 if [ "${#FAILED[@]}" -gt 0 ]; then

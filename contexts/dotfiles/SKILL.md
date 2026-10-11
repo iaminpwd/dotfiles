@@ -35,3 +35,22 @@ description: |
 - context 라우팅 변경: `just docs-index`
 - dotfiles 회귀 묶음은 `bash contexts/dotfiles/tests/run.sh`로 실행한다.
 - tests·evals는 런타임 스킬에 배포되지 않는다. 원본 저장소에서 실행하고 종료 코드와 WARNING/SKIP을 확인한다.
+
+## 사전 검증 실행 및 해석
+
+- `bin/hooks/pre-flight-check.sh`는 기본적으로 staged 파일을 검사한다. `--changed`는 unstaged/untracked도 포함하고, `--all`은 전체 대상이다. 의도적 위반 fixture는 전역 대상에서 제외한다.
+- `PFC_PROFILE=quick`은 가벼운 문법 검사, `stop`은 Ansible 검사 추가, `full`은 문법·보안 기본 검사다. 추가 Terraform/SAM/Helm/Kubernetes/Conftest/FinOps 정책은 `PFC_DOMAIN_CHECKS=1`을 명시해야 한다.
+- 검사 종료 코드와 마지막 요약을 함께 확인한다. `[WARNING]`, `[SKIP]`, 도구 미설치는 검사 축소 가능성을 나타낸다. quick/stop 통과를 full/domain 통과로 보고하지 않는다.
+- 실패 시 훅이나 검증기를 우회하지 말고 원인 수정 후 같은 대상·프로필로 재실행한다.
+
+## 도메인별 검증 스크립트
+
+- 다음 폴더는 글로벌 AI 스킬이 아닌 **테스트·실행 자산**이다. `SKILL.md`가 없어도 `just test`·`just verify`·CI에서 기존 `tests/run.sh`를 호출한다. Git/Stop 훅은 변경 범위별 필수 검사만 선택하며, 모든 도메인 테스트를 실행하지는 않는다.
+- AWS: `contexts/aws/tests/run.sh` (tflint, Checkov, SAM).
+- Kubernetes: `contexts/k8s/tests/run.sh` (kube-linter, promtool, Pluto, Kyverno, Helm, Conftest).
+- 컨테이너: `contexts/containers/tests/run.sh` (hadolint, Trivy, 컨테이너 하드닝 게이트).
+- 관측성: `contexts/observability/tests/run.sh` (PrometheusRule 및 알람 규칙 검증).
+- AIOps: `contexts/aiops/tests/run.sh` (텔레메트리 시크릿 검사, 이상 임계치, PII 마스킹).
+- Pre-flight: `contexts/pre-flight-check/tests/run.sh` (공용 검증 로직 회귀).
+- 프롬프트: `contexts/prompt-architect/tests/run.sh` 및 `bash bin/linters/prompt-lint.sh` (규칙·참조·색인 검증). 라우팅 정답지는 `contexts/prompt-architect/evals/routing/run.sh --check-cases-only`로 확인하고, 유료 실측은 별도 요청 시에만 실행한다.
+- 위 명령의 요구 도구가 없으면 일부 회귀 테스트가 실패할 수 있으므로 실패·미실행을 구분한다. 파괴적 클라우드/Kubernetes 작업은 대상 리소스와 계획을 먼저 검증한다.

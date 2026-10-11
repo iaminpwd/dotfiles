@@ -58,6 +58,21 @@ else
   report "인자 목록을 패턴으로 필터링" 1 "기대='a.yaml e.yml ' 실제='$OUT'"
 fi
 
+# 2b. A very short-lived producer must not be `wait`ed through process
+# substitution: Bash may reap it before the consumer retrieves $! under load.
+# The shared collector keeps the producer status while preserving NUL paths.
+OUT=$(bash -c 'set -euo pipefail
+  source "$1"
+  PLUGIN_TARGET_FILES=("a b.yaml" c.yml skipped.json)
+  result=()
+  plugin_collect_target_files result "*.yaml" "*.yml"
+  printf "<%s> " "${result[@]}"' _ "$LIB")
+if [ "$OUT" = '<a b.yaml> <c.yml> ' ]; then
+  report "Git 대상 수집 함수는 경로 공백·NUL 경계를 보존" 0
+else
+  report "Git 대상 수집 함수는 경로 공백·NUL 경계를 보존" 1 "실제='$OUT'"
+fi
+
 # 3. 한 파일이 여러 패턴에 걸려도 중복 출력하지 않는다(플러그인이 같은 파일을 두 번 검사하면
 #    동일 위반이 두 번 보고돼 노이즈가 된다).
 OUT=$(bash -c 'set -euo pipefail

@@ -32,8 +32,8 @@ canonical_path() {
   printf '%s/%s\n' "$dir" "$(basename "$path")"
 }
 
-# 이 스크립트는 contexts/<skill>/scripts/preflight/ 배치 규약으로만 존재하며 그 규약의
-# 주인이 pre-flight-check 스킬이므로, 라이브러리도 같은 곳에서 가져온다(k8s-check.sh와 동일 이유).
+# 이 플러그인은 bin/hooks/plugins/에서 호출되며, 공용 실행 라이브러리는
+# 스킬 디렉토리가 아닌 bin/lib에 둔다(k8s-check.sh와 동일 경로 규약).
 AIOPS_CHECK_PATH=$(canonical_path "${BASH_SOURCE[0]}")
 AIOPS_CHECK_DIR=$(dirname "$AIOPS_CHECK_PATH")
 # shellcheck source-path=SCRIPTDIR
@@ -68,10 +68,8 @@ fi
 
 # 텔레메트리 매니페스트(시크릿/ISMS-P 가드레일) 검증
 check_telemetry_manifests() {
-  local staged=() manifest_files=() scan_files=() f target_pid
-  mapfile -d '' -t staged < <(plugin_target_files '*.yaml' '*.yml' '*.json' '*.tf')
-  target_pid=$!
-  if ! wait "$target_pid"; then
+  local staged=() manifest_files=() scan_files=() f
+  if ! plugin_collect_target_files staged '*.yaml' '*.yml' '*.json' '*.tf'; then
     echo "❌ [ERROR] Git에서 AIOps 검사 대상을 수집하지 못했습니다." >&2
     return 1
   fi

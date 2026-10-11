@@ -141,6 +141,21 @@ else
   report "shared-discovery-change (공용 테스트 실행기 변경 시 스킬 전체 감지)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
+# The other shared tests/lib helpers must also invalidate every domain, not
+# just the discovery runner. In particular, parallel-pair.sh has consumers
+# in AWS, containers, and dotfiles test suites.
+echo '#!/usr/bin/env bash' >"$FIXTURE_REPO/tests/lib/parallel-pair.sh"
+git -C "$FIXTURE_REPO" add tests/lib/parallel-pair.sh
+git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "test: 공용 병렬 테스트 헬퍼 수정"
+SHARED_LIB_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
+status=$(run_hook_with_refline "refs/heads/main $SHARED_LIB_SHA refs/heads/main $DISCOVERY_SHA")
+if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/aws/tests/run.sh" "$TMP/out" &&
+  grep -qF "[✓] contexts/azure/tests/run.sh" "$TMP/out"; then
+  report "shared-test-helper-change (tests/lib/parallel-pair.sh 변경 시 모든 도메인)" 0
+else
+  report "shared-test-helper-change (tests/lib/parallel-pair.sh 변경 시 모든 도메인)" 1 "exit=$status out=$(cat "$TMP/out")"
+fi
+
 # 1c. bin/linters/* 는 위 코어 패턴(bin/lib, pre-flight-check.sh)에도, 스킬 전용 경로에도
 #     안 걸린다. 그런데 이런 파일들(bin/linters/*, bin/utils/*, bin/hooks/run-suite.sh,
 #     stow/git/.githooks/*, ansible/roles/*)은 전부 contexts/dotfiles/tests 에 전용 회귀
@@ -153,7 +168,7 @@ git -C "$FIXTURE_REPO" add bin/linters/prompt-lint.sh
 git -C "$FIXTURE_REPO" -c core.hooksPath=/dev/null commit -q -m "fix(bin): 린터 판정 로직 수정"
 LINTER_SHA=$(git -C "$FIXTURE_REPO" rev-parse HEAD)
 
-status=$(run_hook_with_refline "refs/heads/main $LINTER_SHA refs/heads/main $DISCOVERY_SHA")
+status=$(run_hook_with_refline "refs/heads/main $LINTER_SHA refs/heads/main $SHARED_LIB_SHA")
 if [ "$status" -eq 0 ] && grep -qF "[✓] contexts/dotfiles/tests/run.sh" "$TMP/out" &&
   ! grep -qF "aws/tests/run.sh" "$TMP/out"; then
   report "linter-change (bin/linters 변경 시 dotfiles 스위트만 트리거)" 0
@@ -313,7 +328,8 @@ echo x >"$OTHER_REPO/a.txt"
 git -C "$OTHER_REPO" add a.txt
 OTHER_SHA=$(git -C "$OTHER_REPO" -c core.hooksPath=/dev/null commit -q -m "chore: 초기 커밋" && git -C "$OTHER_REPO" rev-parse HEAD)
 status=0
-(cd "$OTHER_REPO" && printf '%s\n' "refs/heads/main $OTHER_SHA refs/heads/main $ZERO_SHA" | bash "$HOOK") >"$TMP/out2" 2>&1 || status=$?
+(cd "$OTHER_REPO" && printf '%s\n' "refs/heads/main $OTHER_SHA refs/heads/main $ZERO_SHA" |
+  DOTFILES_PRE_PUSH=1 bash "$HOOK") >"$TMP/out2" 2>&1 || status=$?
 if [ "$status" -eq 0 ] && [ ! -s "$TMP/out2" ]; then
   report "non-dotfiles-repo (dotfiles 밖 저장소는 즉시 무동작 통과)" 0
 else
@@ -326,6 +342,41 @@ if [ -z "$out_default" ]; then
   report "default-push (회귀 테스트 기본 비활성화)" 0
 else
   report "default-push" 1 "$out_default"
+fi
+
+# Force a BSD readlink implementation that rejects -f and invoke the opt-in
+# hook through two symlinks. An incorrect dirname fallback would skip all
+# domain checks and return success, so assert the AWS suite actually ran.
+BSD_BIN="$TMP/bsd-bin"
+BSD_HOOK_DIR="$TMP/bsd hook chain"
+BSD_TRACE="$TMP/bsd-readlink.trace"
+mkdir -p "$BSD_BIN" "$BSD_HOOK_DIR"
+ln -s "$HOOK" "$BSD_HOOK_DIR/first"
+ln -s first "$BSD_HOOK_DIR/second"
+cat >"$BSD_BIN/readlink" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$BSD_READLINK_TRACE"
+if [ "${1:-}" = -f ]; then
+  echo 'readlink: illegal option -- f' >&2
+  exit 2
+fi
+exec /usr/bin/readlink "$@"
+STUB
+chmod +x "$BSD_BIN/readlink"
+
+status=0
+(cd "$FIXTURE_REPO" && printf '%s\n' "refs/heads/main $NEW_SHA refs/heads/main $BASE_SHA" |
+  DOTFILES_PRE_PUSH=1 BSD_READLINK_TRACE="$BSD_TRACE" PATH="$BSD_BIN:$PATH" \
+    bash "$BSD_HOOK_DIR/second") >"$TMP/bsd.out" 2>&1 || status=$?
+if [ "$status" -eq 0 ] &&
+  grep -qF '[✓] contexts/aws/tests/run.sh' "$TMP/bsd.out" &&
+  ! grep -qF 'azure/tests/run.sh' "$TMP/bsd.out" &&
+  [ -s "$BSD_TRACE" ] &&
+  ! grep -qF 'readlink: illegal option -- f' "$TMP/bsd.out" &&
+  ! grep -q '^\-f' "$BSD_TRACE"; then
+  report "bsd-readlink-symlink-chain (opt-in push가 실제 회귀 실행)" 0
+else
+  report "bsd-readlink-symlink-chain (opt-in push가 실제 회귀 실행)" 1 "exit=$status out=$(cat "$TMP/bsd.out")"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

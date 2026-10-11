@@ -105,3 +105,35 @@ Stop은 변경 파일과 Ansible 검사, `stop-regression-check.sh`가 선택한
 문서 린트의 기본 게이트는 참조·색인·구문 정합성입니다. Stop에서는 마크다운 변경이 있을 때만 코드 예제를 검사합니다.
 도메인 도구의 전용 회귀 테스트는 해당 스위트를 명시적으로 실행하거나 CI의 전체 회귀에서 검증합니다.
 pre-push 회귀 테스트는 `DOTFILES_PRE_PUSH=1 git push`로 선택할 수 있습니다. 훅 설정 갱신은 `merge-agent-hooks.sh`가 최종 JSON이 달라진 파일만 백업한 뒤 적용합니다.
+
+### 변경 파일 → 회귀 테스트 확인
+
+테스트의 이름이나 코드에 언급된 경로만으로 실제 검증 범위를 추측하지 않습니다. 자동 검증 진입점마다 적용 범위가 다릅니다.
+
+| 실행 경로 | 트리거 | 자동 검증 범위 |
+|---|---|---|
+| Git `pre-commit` | 스테이징된 변경 | Git 인덱스 기준 TruffleHog(사용 가능할 때) + `PFC_PROFILE=quick`, 필요 시 프롬프트 린트. 일부 `bin/` 변경은 **회귀 테스트 실행 대신 안내**만 출력 |
+| Claude/Codex/Antigravity `Stop` | 지원 저장소의 변경, 성공 캐시 미적중 | `PFC_PROFILE=stop`, 문서·등록 검사와 `stop-regression-check.sh`의 변경 파일 기반 테스트 선택 |
+| 기본 `git push` | 별도 설정 없음 | 로컬 회귀 테스트는 실행하지 않음 |
+| `DOTFILES_PRE_PUSH=1 git push` | push 범위의 변경 파일 | 관련 `contexts/*/tests/run.sh` 스위트. 저장소 핵심 공용 라이브러리 변경은 도메인 전체로 확대 |
+| `just test` | 수동 실행 | `contexts/*/tests/run.sh` 전체 (pre-flight 정책 스캔과 별개) |
+| `just verify` | 수동 실행 | Pre-flight `--all`, 프롬프트·테스트 등록 린트, 모든 도메인 회귀 테스트 |
+| GitHub Actions CI | PR/push 등 | `RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify` + 필요한 OS별 설치 스모크 |
+
+`just verify`는 `just check-domain`의 완전한 대체 명령이 아닙니다. 로컬에서 CI와 같은 도메인 정책 검사를 원하면 `RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify`를 사용합니다. `test-coverage-check.sh`는 **발견된 테스트와 실행기 등록**을 검사할 뿐, 각 소스 변경에 정확한 테스트가 연결됐다는 증명이나 분기 커버리지 측정은 하지 않습니다.
+
+수정 후 선택되는 개별 테스트는 `bash bin/hooks/stop-regression-check.sh --list`로 미리 확인합니다. 실제로 사용되는 핵심 연결 관계는 다음과 같습니다.
+
+| 소스 영역 | 보호해야 할 회귀 테스트 |
+|---|---|
+| `bin/utils/stow-safe-*.py`, `stow-filter-inventory.pl`, `ansible/roles/stow/` | Stow 백업·드리프트·포터빌리티·TOCTOU·실패 복구 |
+| `ansible/roles/zsh/`, `stow/zsh/` | Zsh PATH 권한 경계·`--check`·초기화·활성화 |
+| `ansible/roles/ai_agent/`, `merge-agent-hooks.sh` | 사용자 자산 백업, 훅 최초 설치·병합, 고아 스킬 안전 정리 |
+| `.github/scripts/secret-history-scan.sh` | `test-ci-secret-history.sh` |
+| `.github/scripts/assert-idempotent-ansible-recap.sh` | `test-bootstrap-idempotency-gate.sh` |
+| `bin/hooks/plugins/`, 도메인 `scripts/` | `just test`·`just verify`·CI에서 각 도메인 `tests/run.sh` 검증. 선택적 pre-push는 관련 도메인을 선택하지만, **Stop 선택기는 도메인 플러그인을 의도적으로 제외** |
+| `tests/lib/`, `bin/lib/` | 공용 실행기·테스트 라이브러리의 모든 소비자 (선택적 push에서는 전체 도메인 재검증) |
+
+**매핑을 변경할 때:** 선택기 동작 테스트(`contexts/dotfiles/tests/test-stop-regression-check.sh` 및 `test-pre-push-hook.sh`)에 해당 변경 파일만 단독으로 바꾸는 픽스처를 추가하고, `--list`/실제 실행의 선택 범위를 확인하십시오. 신규 테스트 파일은 도메인의 `tests/run.sh --list`에도 나타나야 합니다.
+
+**경로 해석 공용화 주의:** Git/AI 훅과 설치 도구는 저장소 루트 또는 `bin/lib/`를 알기 전에 자기 실행 파일의 심볼릭 링크를 해석해야 합니다. 이 초기 부트스트랩 함수까지 공용 라이브러리로 옮기면 라이브러리 위치를 찾기 위한 순환 의존성이 생길 수 있습니다. bootstrap 경로 해석은 작게 독립 유지하고, 위치가 결정된 뒤의 도구 탐색·대상 정규화·테스트 병렬화만 `bin/lib/` 및 `tests/lib/`를 재사용합니다.
