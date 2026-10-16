@@ -46,10 +46,10 @@ just setup-dryrun
 |---|---|
 | **`packages`** | OS 패키지 매니저(`apt`/`dnf`/`brew`)로 git, zsh, stow 등 필수 툴체인 및 개발 유틸리티 일괄 설치 |
 | **`docker`** | Docker Engine을 공식 저장소에 등록해 설치하고 사용자 그룹 권한 구성 (macOS는 Docker Desktop 설치 안내) |
-| **`stow`** | 기존 설정 파일 안전 백업 후 `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)에 파일 단위로 안전하게 링크. 최초 `bootstrap.sh`는 저장소의 mise 설정을 환경변수로 읽어 도구를 설치한 뒤 동일한 안전 설치기를 사용합니다. |
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
+| **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 아래 `stow` 역할이 수행 |
+| **`stow`** | 기존 설정 파일 안전 백업 후 `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)에 파일 단위로 안전하게 링크. 최초 `bootstrap.sh`는 저장소의 mise 설정을 환경변수로 읽어 도구를 설치한 뒤 동일한 안전 설치기를 사용합니다. |
 | **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록, 이전 실시간 검사 등록 제거 |
-| **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 위 `stow` 역할이 수행 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -68,16 +68,17 @@ ls -la ~/.zshrc ~/.gitconfig ~/.vimrc ~/.tflint.hcl ~/.config/mise/config.toml
 # AI 글로벌 룰 및 스킬 레지스트리 등록 확인
 cat ~/.gemini/config/AGENTS.md | head -5
 ls ~/.gemini/config/skills/
-readlink -f ~/.codex/AGENTS.md
+readlink ~/.codex/AGENTS.md  # Linux·macOS 공통: 심볼릭 링크의 대상 확인
 ls ~/.agents/skills/
 
 # 통합 사전 검증 및 테스트 통과 확인 (Justfile 활용)
-just check     # pre-flight-check.sh --all: 저장소 전체 파일에 shellcheck/tflint/checkov 등 정적 분석
+just check     # pre-flight-check.sh --all: 저장소 전체의 기본 정적·보안 검사 (도메인 정책은 제외)
 just test      # contexts/*/tests/run.sh 전체: 각 검사 스크립트가 ok/fail 픽스처를 올바르게 판정하는지 회귀 테스트
-just verify    # 위 두 개 + prompt-lint.sh + 테스트 등록 검사를 run-suite.sh로 한 번에 실행 (가장 종합적인 검증, 코드 수정 후 최종 확인용)
+just verify    # 전체 기본 검사 + 프롬프트·테스트 등록 검사 + 모든 도메인 회귀 테스트
+just check-domain  # Terraform/SAM/Helm/K8s 등 도메인 정책 검사까지 명시적으로 실행
 ```
 
-마지막 줄에 `❌`가 하나도 없고 `-> [✓] <경로>`만 쌓여 있으면 통과입니다. 실패한 항목만 원형 로그가 그대로 남으므로 그 부분만 읽으면 됩니다.
+`just verify`는 기본 정책 프로필만 실행하므로 CI와 동일한 도메인 정책까지 검사하려면 `RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify`를 실행합니다. 검증 러너는 성공한 항목을 `-> [✓] <경로>`로 요약하고, 실패한 항목은 상세 로그를 출력합니다. `[WARNING]`·`SKIP`은 실행 환경이나 검사 범위를 확인해야 하며 전체 검증이 완료됐다는 의미가 아닙니다.
 
 ---
 
@@ -113,8 +114,12 @@ dotfiles/
 ### bootstrap.sh & Ansible 설치 파이프라인
 ![bootstrap.sh & Ansible Installation Pipeline](assets/setup-pipeline.png)
 
+[편집용 SVG 원본](assets/setup-pipeline.svg)
+
 ### GNU Stow 심볼릭 링크 구조
 ![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
+
+[편집용 SVG 원본](assets/stow-symlinks.svg)
 
 **글로벌 스킬 적용**
 현재 글로벌 `drawio-gen` 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 제공됩니다. 다른 도메인은 스킬 등록 없이 기존 검증 스크립트를 유지합니다.
@@ -122,7 +127,19 @@ dotfiles/
 ### AI 컨텍스트 빌드 파이프라인
 ![AI Context Build Pipeline](assets/ai-context-pipeline.png)
 
-> `bin/hooks/pre-flight-check.sh`의 검증 항목 및 DX 튜닝 상세는 [핵심 기능 §2](#핵심-기능)를 참고하십시오.
+[편집용 SVG 원본](assets/ai-context-pipeline.svg)
+
+> Pre-flight 프로필과 에이전트 Stop 검증의 상세한 실행 조건은 [bin 도구 안내의 자동 실행 시점](bin/README.md#자동-실행-시점)을 참고하십시오.
+
+### 주요 설계 개선
+
+| 해결하려는 문제 | 구현 방식 | 검증·확인 경로 |
+|---|---|---|
+| 재설치 과정에서 기존 사용자 설정이 덮어써질 위험 | Stow 대상과 충돌을 사전 검사하고, 기존 파일을 백업한 뒤 안전한 심볼릭 링크 설치 수행 | [`stow-safe-install.py`](bin/utils/stow-safe-install.py), [Stow 회귀 테스트](contexts/dotfiles/tests/test-stow-toctou.sh) |
+| AI 에이전트마다 달랐던 검사 시점과 불필요한 반복 검증 | Claude·Codex·Antigravity의 Stop 이벤트를 공통 엔진에 연결하고, 변경 지문·성공 캐시 및 변경 영역별 회귀 테스트 선택 적용 | [`pre-flight-gate-hook.sh`](bin/hooks/pre-flight-gate-hook.sh), [`stop-regression-check.sh`](bin/hooks/stop-regression-check.sh) |
+| 수동 테스트 등록의 유지보수 부담과 누락 위험 | 파일명 기반 회귀 테스트 자동 탐색, 실패 항목 집계, 테스트 등록 정합성 검사 | [`run-domain-tests.sh`](tests/lib/run-domain-tests.sh), [`test-coverage-check.sh`](bin/linters/test-coverage-check.sh) |
+
+위 표는 구현 구조와 검증 진입점을 요약한 것으로, 실행 시간·커버리지 수치를 별도로 측정했다는 의미는 아닙니다.
 
 ---
 
@@ -150,7 +167,7 @@ dotfiles/
 | 커밋 | 시크릿 검사, `PFC_PROFILE=quick` 등 빠른 검사 |
 | AI Stop (Claude/Antigravity/Codex) | 변경 감지 후 공통 `PFC_PROFILE=stop` 및 선택적 회귀 검사 (Codex는 /hooks 신뢰 필요) |
 | 푸시 | 기본 회귀 검사 생략; 필요한 경우 `DOTFILES_PRE_PUSH=1 git push` |
-| CI | `PFC_PROFILE=full just verify`와 조건별 bootstrap smoke |
+| CI | `RUN_SUITE_PFC_DOMAIN_CHECKS=1 PFC_PROFILE=full just verify`와 조건별 bootstrap smoke |
 | 수동 전체 도메인 | `just check-domain`으로 Terraform/SAM/K8s 등 추가 정책 검사 |
 
 주간·수동 CI 또는 설치 경로 영향 변경 시 bootstrap smoke를 실행합니다. 상세 검증 조건·WARNING/SKIP 의미는 [dotfiles 로컬 지침](contexts/dotfiles/SKILL.md)과 [bin 도구 안내](bin/README.md)에 있습니다.
