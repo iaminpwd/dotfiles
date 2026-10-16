@@ -1,157 +1,154 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1630" viewBox="0 0 2400 1630" role="img" aria-labelledby="title desc">
-  <title id="title">AI Context and Hook Pipeline</title>
-  <desc id="desc">Current dotfiles Ansible context deployment to Gemini, Claude, and Codex, followed by separate PostToolUse edit logging and Stop-based conditional validation flows.</desc>
-  <defs>
-    <style>
-      text { font-family: "DejaVu Sans", "Segoe UI", sans-serif; fill:#20314b; }
-      .title { font-size:59px; font-weight:700; fill:#0c2245; }
-      .subtitle { font-size:25px; fill:#526477; }
-      .section { font-size:35px; font-weight:700; }
-      .cardtitle { font-size:25px; font-weight:700; fill:#142a4c; }
-      .body { font-size:21px; fill:#40516c; }
-      .path { font-size:21px; fill:#20314b; }
-      .mini { font-size:19px; fill:#566a80; }
-      .foot { font-size:23px; font-weight:600; fill:#34465a; }
-      .source { fill:#fff; stroke:#8fb8e7; stroke-width:2; }
-      .deploy { fill:#fff; stroke:#9ad0ac; stroke-width:2; }
-      .agent { fill:#fff; stroke:#8fb8e7; stroke-width:2; }
-      .log { fill:#fff; stroke:#ada0e6; stroke-width:2; }
-      .stop { fill:#fff; stroke:#efa5af; stroke-width:2; }
-      .wire { fill:none; stroke:#627388; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
-      .wire-green { fill:none; stroke:#3d9971; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
-      .wire-purple { fill:none; stroke:#8064bc; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
-      .wire-red { fill:none; stroke:#c65e72; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
-    </style>
-    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path fill="#627388" d="M1 1L11 6L1 11Z"/></marker>
-    <marker id="arrow-green" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path fill="#3d9971" d="M1 1L11 6L1 11Z"/></marker>
-    <marker id="arrow-purple" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path fill="#8064bc" d="M1 1L11 6L1 11Z"/></marker>
-    <marker id="arrow-red" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path fill="#c65e72" d="M1 1L11 6L1 11Z"/></marker>
-  </defs>
-  <rect width="2400" height="1630" fill="#ffffff"/>
-  <text class="title" x="1200" y="78" text-anchor="middle">AI Context &amp; Hook Pipeline</text>
-  <text class="subtitle" x="1200" y="125" text-anchor="middle">dotfiles · source-controlled configuration · bootstrap / Ansible · Claude / Antigravity / Codex</text>
-
-  <!-- 1. Sources -->
-  <rect x="80" y="180" width="665" height="660" rx="22" fill="#eaf5ff" stroke="#a3d4f4" stroke-width="2"/>
-  <text class="section" x="413" y="241" fill="#1b548c" text-anchor="middle">1. SOURCE CONTEXTS</text>
-  <rect class="source" x="110" y="285" width="605" height="110" rx="15"/>
-  <text class="cardtitle" x="412" y="328" text-anchor="middle">contexts/base.AGENTS.md</text>
-  <text class="body" x="412" y="363" text-anchor="middle">One shared global rules file</text>
-  <rect class="source" x="110" y="415" width="605" height="110" rx="15"/>
-  <text class="cardtitle" x="412" y="458" text-anchor="middle">contexts/dotfiles/SKILL.md</text>
-  <text class="body" x="412" y="492" text-anchor="middle">Dotfiles-only, repository-local instructions</text>
-  <rect class="source" x="110" y="545" width="605" height="110" rx="15"/>
-  <text class="cardtitle" x="412" y="588" text-anchor="middle">contexts/drawio-gen/SKILL.md</text>
-  <text class="body" x="412" y="622" text-anchor="middle">Only globally deployed domain skill</text>
-  <rect x="110" y="675" width="605" height="132" rx="15" fill="#f7fbff" stroke="#8fb8e7" stroke-width="2" stroke-dasharray="8,8"/>
-  <text class="cardtitle" x="412" y="718" text-anchor="middle">Other contexts/* folders</text>
-  <text class="body" x="412" y="757" text-anchor="middle">Validation scripts / tests / evaluations retained</text>
-  <text class="body" x="412" y="786" text-anchor="middle">Not globally registered as skills</text>
-  <!-- Source files are inputs to Ansible; they are not themselves agent runtimes. -->
-  <path class="wire-green" d="M747 320H791" marker-end="url(#arrow-green)"/>
-
-  <!-- 2. Deployment -->
-  <rect x="773" y="180" width="820" height="660" rx="22" fill="#eafaf1" stroke="#96d3b0" stroke-width="2"/>
-  <text class="section" x="1183" y="241" text-anchor="middle" fill="#196246">2. INSTALL &amp; SYMLINKS</text>
-  <rect class="deploy" x="800" y="282" width="217" height="76" rx="13"/>
-  <rect class="deploy" x="1067" y="282" width="217" height="76" rx="13"/>
-  <rect class="deploy" x="1334" y="282" width="229" height="76" rx="13"/>
-  <text class="cardtitle" x="909" y="328" text-anchor="middle">bootstrap.sh</text>
-  <text class="cardtitle" x="1175" y="328" text-anchor="middle">Justfile</text>
-  <text class="cardtitle" x="1448" y="316" text-anchor="middle">Ansible</text>
-  <text class="body" x="1448" y="343" text-anchor="middle">ai_agent role</text>
-  <path class="wire-green" d="M1019 320H1059" marker-end="url(#arrow-green)"/>
-  <path class="wire-green" d="M1286 320H1326" marker-end="url(#arrow-green)"/>
-  <!-- Ansible fans out through one orthogonal bus, with one arrow per deployed target. -->
-  <path class="wire-green" d="M1448 361V408H910"/>
-  <path class="wire-green" d="M910 408V433" marker-end="url(#arrow-green)"/>
-  <path class="wire-green" d="M1178 408V433" marker-end="url(#arrow-green)"/>
-  <path class="wire-green" d="M1448 408V433" marker-end="url(#arrow-green)"/>
-  <rect x="790" y="440" width="254" height="364" rx="14" fill="#fff" stroke="#9acaf1" stroke-width="2"/>
-  <text class="cardtitle" x="917" y="480" text-anchor="middle" fill="#1b548c">GLOBAL RULES</text>
-  <text class="mini" x="917" y="520" text-anchor="middle">base.AGENTS.md</text>
-  <text class="path" x="917" y="567" text-anchor="middle">~/.gemini/config/</text>
-  <text class="path" x="917" y="595" text-anchor="middle">AGENTS.md</text>
-  <text class="path" x="917" y="657" text-anchor="middle">~/.claude/</text>
-  <text class="path" x="917" y="686" text-anchor="middle">CLAUDE.md</text>
-  <text class="path" x="917" y="747" text-anchor="middle">~/.codex/AGENTS.md</text>
-  <rect x="1057" y="440" width="254" height="364" rx="14" fill="#fff" stroke="#bea9eb" stroke-width="2"/>
-  <text class="cardtitle" x="1184" y="480" text-anchor="middle" fill="#5c378a">REPO LOCAL</text>
-  <text class="mini" x="1184" y="520" text-anchor="middle">dotfiles/SKILL.md</text>
-  <text class="path" x="1184" y="582" text-anchor="middle">&lt;repo&gt;/AGENTS.md</text>
-  <text class="path" x="1184" y="646" text-anchor="middle">&lt;repo&gt;/CLAUDE.md</text>
-  <text class="mini" x="1184" y="715" text-anchor="middle">Links exist only</text>
-  <text class="mini" x="1184" y="744" text-anchor="middle">inside dotfiles repo</text>
-  <rect x="1324" y="440" width="254" height="364" rx="14" fill="#fff" stroke="#ebc48e" stroke-width="2"/>
-  <text class="cardtitle" x="1451" y="480" text-anchor="middle" fill="#965a26">DRAWIO SKILL</text>
-  <text class="mini" x="1451" y="521" text-anchor="middle">drawio-gen/</text>
-  <text class="path" x="1451" y="575" text-anchor="middle">~/.gemini/config/</text>
-  <text class="path" x="1451" y="604" text-anchor="middle">skills/</text>
-  <text class="path" x="1451" y="661" text-anchor="middle">~/.claude/skills/</text>
-  <text class="path" x="1451" y="719" text-anchor="middle">~/.agents/skills/</text>
-  <text class="mini" x="1451" y="777" text-anchor="middle">Assets linked; tests stay</text>
-  <path class="wire-green" d="M1565 320H1615" marker-end="url(#arrow-green)"/>
-
-  <!-- 3. Consumers -->
-  <rect x="1621" y="180" width="699" height="660" rx="22" fill="#eaf5ff" stroke="#a3d4f4" stroke-width="2"/>
-  <text class="section" x="1970" y="241" text-anchor="middle">3. AGENT USE</text>
-  <rect class="agent" x="1656" y="300" width="629" height="142" rx="15"/>
-  <text class="cardtitle" x="1970" y="351" text-anchor="middle">CLAUDE CODE</text>
-  <text class="body" x="1970" y="388" text-anchor="middle">Global + dotfiles-local rules + drawio-gen</text>
-  <rect class="agent" x="1656" y="477" width="629" height="142" rx="15"/>
-  <text class="cardtitle" x="1970" y="528" text-anchor="middle">ANTIGRAVITY</text>
-  <text class="body" x="1970" y="565" text-anchor="middle">Global + dotfiles-local rules + drawio-gen</text>
-  <rect class="agent" x="1656" y="654" width="629" height="142" rx="15"/>
-  <text class="cardtitle" x="1970" y="705" text-anchor="middle">CODEX</text>
-  <text class="body" x="1970" y="742" text-anchor="middle">Global + dotfiles-local rules + drawio-gen</text>
-
-  <!-- Agent events fan-out; PostToolUse only for Claude/Antigravity -->
-  <!-- Event branches are centered over their downstream panels. -->
-  <path class="wire" d="M1970 842V883H620"/>
-  <path class="wire" d="M620 883V912" marker-end="url(#arrow)"/>
-  <path class="wire" d="M1757 883V912" marker-end="url(#arrow)"/>
-
-  <!-- 4A. Edit history -->
-  <rect x="80" y="918" width="1080" height="584" rx="22" fill="#f4f0ff" stroke="#b4a4e9" stroke-width="2"/>
-  <text class="section" x="620" y="973" text-anchor="middle" fill="#594097">4A. PostToolUse — EDIT HISTORY</text>
-  <text class="body" x="620" y="1015" text-anchor="middle">Claude + Antigravity, matched tools only; best-effort logging</text>
-  <rect class="log" x="249" y="1058" width="742" height="98" rx="14"/>
-  <text class="cardtitle" x="620" y="1096" text-anchor="middle">PostToolUse event</text>
-  <text class="body" x="620" y="1128" text-anchor="middle">Supported file write / edit operation</text>
-  <path class="wire-purple" d="M620 1159V1200" marker-end="url(#arrow-purple)"/>
-  <rect class="log" x="249" y="1206" width="742" height="103" rx="14"/>
-  <text class="cardtitle" x="620" y="1250" text-anchor="middle">bin/hooks/agent-edits-hook.sh</text>
-  <text class="body" x="620" y="1283" text-anchor="middle">Record timestamp, path, tool and result</text>
-  <path class="wire-purple" d="M620 1312V1351" marker-end="url(#arrow-purple)"/>
-  <rect class="log" x="249" y="1357" width="742" height="113" rx="14"/>
-  <text class="cardtitle" x="620" y="1400" text-anchor="middle">&lt;repo&gt;/.agent-state/edits.log</text>
-  <text class="body" x="620" y="1435" text-anchor="middle">Path / tool / result or error text · global Git-ignore</text>
-
-  <!-- 4B. Conditional preflight -->
-  <rect x="1194" y="918" width="1126" height="584" rx="22" fill="#fff1f2" stroke="#efa5af" stroke-width="2"/>
-  <text class="section" x="1757" y="973" text-anchor="middle" fill="#92374b">4B. Stop — CONDITIONAL VERIFICATION</text>
-  <text class="body" x="1757" y="1015" text-anchor="middle">Installed Stop hooks; Codex requires explicit /hooks trust</text>
-  <rect class="stop" x="1236" y="1041" width="461" height="78" rx="13"/>
-  <rect class="stop" x="1732" y="1041" width="544" height="78" rx="13"/>
-  <text class="cardtitle" x="1467" y="1087" text-anchor="middle">Claude → native Stop gate</text>
-  <text class="cardtitle" x="2004" y="1073" text-anchor="middle">Antigravity / Codex</text>
-  <text class="mini" x="2004" y="1100" text-anchor="middle">agent-stop-adapter.sh</text>
-  <!-- Each Stop route joins a shared collector before one centered gate arrow. -->
-  <path class="wire-red" d="M1467 1122V1148H1757"/>
-  <path class="wire-red" d="M2004 1122V1148H1757"/>
-  <path class="wire-red" d="M1757 1148V1165" marker-end="url(#arrow-red)"/>
-  <rect class="stop" x="1337" y="1170" width="840" height="74" rx="13"/>
-  <text class="cardtitle" x="1757" y="1215" text-anchor="middle">bin/hooks/pre-flight-gate-hook.sh</text>
-  <path class="wire-red" d="M1757 1247V1262" marker-end="url(#arrow-red)"/>
-  <rect class="stop" x="1337" y="1268" width="840" height="84" rx="13"/>
-  <text class="cardtitle" x="1757" y="1302" text-anchor="middle">Changed files?  Success cache hit?</text>
-  <text class="body" x="1757" y="1332" text-anchor="middle">Skip unchanged / already-verified state</text>
-  <path class="wire-red" d="M1757 1355V1370" marker-end="url(#arrow-red)"/>
-  <rect class="stop" x="1337" y="1377" width="840" height="96" rx="13"/>
-  <text class="cardtitle" x="1757" y="1417" text-anchor="middle">PFC_PROFILE=stop · --changed</text>
-  <text class="mini" x="1757" y="1451" text-anchor="middle">Prompt lint / test registration / targeted regressions (dotfiles)</text>
-
-  <rect x="80" y="1530" width="2240" height="72" rx="14" fill="#eef2f7" stroke="#d7e0eb" stroke-width="2"/>
-  <text class="foot" x="1200" y="1560" text-anchor="middle">No per-edit validation. Stop skips clean/unsupported repos or cached state; applies only when a hook actually runs.</text>
-  <text class="mini" x="1200" y="1589" text-anchor="middle">Detected failure: Claude/Codex block, Antigravity requests continuation if possible. Git pre-commit / CI are separate checks.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1760" viewBox="0 0 2560 1760" role="img" aria-labelledby="t d">
+<title id="t">AI 컨텍스트 · 훅 파이프라인</title>
+<desc id="d">원본 컨텍스트, AI 에이전트별 심볼릭 링크 및 편집 로그/Stop 검사 경로</desc>
+<defs>
+<marker id="blue" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#2779C9"/></marker>
+<marker id="green" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#20956A"/></marker>
+<marker id="purple" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#8160BC"/></marker>
+<marker id="red" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#CF667B"/></marker>
+<marker id="orange" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#E47621"/></marker>
+</defs>
+<rect x="0" y="0" width="2560" height="1760" rx="0" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<rect x="43" y="32" width="90" height="90" rx="20" fill="#163250" stroke="none" stroke-width="0"/>
+<text x="88" y="95" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="43" font-weight="700" fill="#FFFFFF" text-anchor="middle">&gt;_</text>
+<text x="158" y="85" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="53" font-weight="700" fill="#142C4C" text-anchor="start">AI 컨텍스트 · 훅 파이프라인</text>
+<text x="161" y="136" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="400" fill="#576F89" text-anchor="start">Dotfiles | 공통 규칙 · 스킬 링크 · 편집 이력 · 작업 종료 검증</text>
+<rect x="2115" y="37" width="396" height="81" rx="14" fill="#F3F8FE" stroke="#AECDEC" stroke-width="2"/>
+<text x="2314" y="70" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#286599" text-anchor="middle">SOURCE-VERIFIED</text>
+<text x="2314" y="102" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#57738D" text-anchor="middle">HEAD 5ea3a79</text>
+<rect x="48" y="205" width="767" height="720" rx="21" fill="#EAF5FF" stroke="#98C9EE" stroke-width="2"/>
+<rect x="72" y="230" width="64" height="64" rx="32" fill="#2478C4" stroke="none" stroke-width="0"/>
+<text x="104" y="275" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#FFFFFF" text-anchor="middle">1</text>
+<text x="153" y="273" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="34" font-weight="700" fill="#183F60" text-anchor="start">원본 컨텍스트</text>
+<text x="73" y="319" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="400" fill="#5B748B" text-anchor="start">저장소 내 실제 진입점</text>
+<rect x="840" y="205" width="787" height="720" rx="21" fill="#EAFBF2" stroke="#A0D8BB" stroke-width="2"/>
+<rect x="864" y="230" width="64" height="64" rx="32" fill="#1D966A" stroke="none" stroke-width="0"/>
+<text x="896" y="275" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#FFFFFF" text-anchor="middle">2</text>
+<text x="945" y="273" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="34" font-weight="700" fill="#183F60" text-anchor="start">배포 경로 (Ansible)</text>
+<text x="865" y="319" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="400" fill="#5B748B" text-anchor="start">bootstrap.sh → just setup → ai_agent role</text>
+<rect x="1652" y="205" width="857" height="720" rx="21" fill="#EFF5FF" stroke="#A4C6ED" stroke-width="2"/>
+<rect x="1676" y="230" width="64" height="64" rx="32" fill="#2669AE" stroke="none" stroke-width="0"/>
+<text x="1708" y="275" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
+<text x="1757" y="273" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="34" font-weight="700" fill="#183F60" text-anchor="start">에이전트별 적용</text>
+<text x="1677" y="319" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="400" fill="#5B748B" text-anchor="start">등록과 실제 훅 실행을 구분</text>
+<rect x="74" y="351" width="714" height="107" rx="14" fill="#FFFFFF" stroke="#9FC5F1" stroke-width="2"/>
+<text x="92" y="390" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">contexts/base.AGENTS.md</text>
+<text x="92" y="423" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">3개 에이전트에 공유하는 글로벌 규칙 원본</text>
+<rect x="74" y="479" width="714" height="107" rx="14" fill="#FFFFFF" stroke="#9FC5F1" stroke-width="2"/>
+<text x="92" y="518" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">contexts/dotfiles/SKILL.md</text>
+<text x="92" y="551" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">dotfiles 저장소에서만 사용하는 로컬 규칙</text>
+<rect x="74" y="607" width="714" height="107" rx="14" fill="#FFFFFF" stroke="#9FC5F1" stroke-width="2"/>
+<text x="92" y="646" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">contexts/drawio-gen/SKILL.md</text>
+<text x="92" y="679" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">현재 글로벌 배포 대상인 유일한 도메인 스킬</text>
+<rect x="74" y="735" width="714" height="146" rx="14" fill="#FFFFFF" stroke="#9FC5F1" stroke-width="2"/>
+<text x="92" y="774" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">다른 contexts/* 도메인</text>
+<text x="92" y="807" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">SKILL.md 없이 테스트·스크립트·평가 자산 유지</text>
+<text x="92" y="837" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">tests/ · evals/는 에이전트 스킬로 배포하지 않음</text>
+<rect x="862" y="369" width="218" height="70" rx="14" fill="#FFFFFF" stroke="#8DCFAC" stroke-width="2"/>
+<text x="971.0" y="411" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#176044" text-anchor="middle">bootstrap.sh</text>
+<rect x="1126" y="369" width="210" height="70" rx="14" fill="#FFFFFF" stroke="#8DCFAC" stroke-width="2"/>
+<text x="1231.0" y="411" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#176044" text-anchor="middle">just setup</text>
+<rect x="1382" y="369" width="220" height="70" rx="14" fill="#FFFFFF" stroke="#8DCFAC" stroke-width="2"/>
+<text x="1492.0" y="411" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#176044" text-anchor="middle">ai_agent role</text>
+<path d="M1084 404H1121" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<path d="M1339 404H1377" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<path d="M1492 440V476H983" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M981 476V497" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<path d="M1236 476V497" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<path d="M1492 476V497" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="857" y="507" width="233" height="350" rx="14" fill="#FFFFFF" stroke="#A8C6E6" stroke-width="2"/>
+<text x="875" y="546" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="24" font-weight="700" fill="#143657" text-anchor="start">글로벌 규칙</text>
+<text x="875" y="579" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">base.AGENTS.md</text>
+<text x="875" y="609" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.gemini/config/</text>
+<text x="875" y="639" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">  AGENTS.md</text>
+<text x="875" y="669" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.claude/</text>
+<text x="875" y="699" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">  CLAUDE.md</text>
+<text x="875" y="729" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.codex/</text>
+<text x="875" y="759" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">  AGENTS.md</text>
+<rect x="1116" y="507" width="233" height="350" rx="14" fill="#FFFFFF" stroke="#A8C6E6" stroke-width="2"/>
+<text x="1134" y="546" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="24" font-weight="700" fill="#143657" text-anchor="start">저장소 로컬</text>
+<text x="1134" y="579" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">dotfiles/SKILL.md</text>
+<text x="1134" y="609" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">&lt;repo&gt;/AGENTS.md</text>
+<text x="1134" y="639" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">&lt;repo&gt;/CLAUDE.md</text>
+<text x="1134" y="669" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">다른 저장소에는</text>
+<text x="1134" y="699" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">자동 전파되지 않음</text>
+<rect x="1375" y="507" width="233" height="350" rx="14" fill="#FFFFFF" stroke="#A8C6E6" stroke-width="2"/>
+<text x="1393" y="546" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="24" font-weight="700" fill="#143657" text-anchor="start">글로벌 스킬</text>
+<text x="1393" y="579" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">drawio-gen/</text>
+<text x="1393" y="609" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.gemini/config/</text>
+<text x="1393" y="639" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">  skills/</text>
+<text x="1393" y="669" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.claude/skills/</text>
+<text x="1393" y="699" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">~/.agents/skills/</text>
+<text x="1234" y="894" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="400" fill="#53826D" text-anchor="middle">SKILL.md + 존재하는 references/scripts/examples 링크</text>
+<rect x="1677" y="354" width="805" height="158" rx="14" fill="#FFFFFF" stroke="#9CC1F0" stroke-width="2"/>
+<text x="1695" y="393" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">CLAUDE CODE</text>
+<text x="1695" y="426" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">공통 규칙: ~/.claude/CLAUDE.md</text>
+<text x="1695" y="456" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">글로벌 스킬: drawio-gen · 로컬 CLAUDE.md</text>
+<rect x="1699" y="472" width="132" height="31" rx="15" fill="#EAF5FC" stroke="none" stroke-width="0"/>
+<text x="1765" y="495" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#205D87" text-anchor="middle">편집 등록</text>
+<rect x="1846" y="472" width="132" height="31" rx="15" fill="#ECF9F1" stroke="none" stroke-width="0"/>
+<text x="1912" y="495" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#246F51" text-anchor="middle">Stop 등록</text>
+<rect x="1677" y="537" width="805" height="158" rx="14" fill="#FFFFFF" stroke="#9CC1F0" stroke-width="2"/>
+<text x="1695" y="576" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">ANTIGRAVITY</text>
+<text x="1695" y="609" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">공통 규칙: ~/.gemini/config/AGENTS.md</text>
+<text x="1695" y="639" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">글로벌 스킬: drawio-gen · 로컬 AGENTS.md</text>
+<rect x="1699" y="655" width="132" height="31" rx="15" fill="#EAF5FC" stroke="none" stroke-width="0"/>
+<text x="1765" y="678" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#205D87" text-anchor="middle">편집 등록</text>
+<rect x="1846" y="655" width="132" height="31" rx="15" fill="#ECF9F1" stroke="none" stroke-width="0"/>
+<text x="1912" y="678" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#246F51" text-anchor="middle">Stop 등록</text>
+<rect x="1677" y="720" width="805" height="158" rx="14" fill="#FFFFFF" stroke="#9CC1F0" stroke-width="2"/>
+<text x="1695" y="759" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">CODEX</text>
+<text x="1695" y="792" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">공통 규칙: ~/.codex/AGENTS.md</text>
+<text x="1695" y="822" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">글로벌 스킬: drawio-gen · 로컬 AGENTS.md</text>
+<rect x="1699" y="838" width="132" height="31" rx="15" fill="#EAF5FC" stroke="none" stroke-width="0"/>
+<text x="1765" y="861" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#205D87" text-anchor="middle">편집 없음</text>
+<rect x="1846" y="838" width="132" height="31" rx="15" fill="#ECF9F1" stroke="none" stroke-width="0"/>
+<text x="1912" y="861" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="18" font-weight="700" fill="#246F51" text-anchor="middle">Stop 등록*</text>
+<text x="1687" y="912" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#55738A" text-anchor="start">* Codex Stop 훅은 /hooks 신뢰 승인 후 동작</text>
+<rect x="48" y="967" width="1226" height="677" rx="21" fill="#F6F1FF" stroke="#BCA7EB" stroke-width="2"/>
+<rect x="72" y="992" width="64" height="64" rx="32" fill="#8062BF" stroke="none" stroke-width="0"/>
+<text x="104" y="1037" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#FFFFFF" text-anchor="middle">4A</text>
+<text x="153" y="1035" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="37" font-weight="700" fill="#183F60" text-anchor="start">PostToolUse | 편집 이력</text>
+<text x="73" y="1081" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="400" fill="#5B748B" text-anchor="start">Claude·Antigravity의 편집 이벤트에서만 실행 · 오류로 에이전트 차단 안 함</text>
+<rect x="1300" y="967" width="1209" height="677" rx="21" fill="#FFF0F3" stroke="#F0AEB9" stroke-width="2"/>
+<rect x="1324" y="992" width="64" height="64" rx="32" fill="#C75D75" stroke="none" stroke-width="0"/>
+<text x="1356" y="1037" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#FFFFFF" text-anchor="middle">4B</text>
+<text x="1405" y="1035" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="37" font-weight="700" fill="#183F60" text-anchor="start">Stop | 조건부 검증</text>
+<text x="1325" y="1081" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="400" fill="#5B748B" text-anchor="start">Claude 직접 등록 / Antigravity·Codex는 어댑터 경유</text>
+<rect x="155" y="1103" width="1010" height="131" rx="14" fill="#FFFFFF" stroke="#BDA4E9" stroke-width="2"/>
+<text x="173" y="1142" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">PostToolUse 이벤트</text>
+<text x="173" y="1175" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">Claude: Edit / Write / MultiEdit / NotebookEdit</text>
+<text x="173" y="1205" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">Antigravity: 지정된 파일 편집·생성 도구</text>
+<rect x="155" y="1275" width="1010" height="131" rx="14" fill="#FFFFFF" stroke="#BDA4E9" stroke-width="2"/>
+<text x="173" y="1314" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">bin/hooks/agent-edits-hook.sh</text>
+<text x="173" y="1347" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">파일 경로·도구·결과·오류 문자열 기록 (best-effort)</text>
+<rect x="155" y="1447" width="1010" height="131" rx="14" fill="#FFFFFF" stroke="#BDA4E9" stroke-width="2"/>
+<text x="173" y="1486" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">&lt;project&gt;/.agent-state/edits.log</text>
+<text x="173" y="1519" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">프로젝트 단위 로그 · Git ignore · 파일 본문 미기록</text>
+<text x="173" y="1549" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">5000줄 초과 시 최근 2500줄만 보관</text>
+<path d="M660 1237V1265" fill="none" stroke="#8160BC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#purple)"/>
+<path d="M660 1409V1437" fill="none" stroke="#8160BC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#purple)"/>
+<rect x="1341" y="1105" width="537" height="91" rx="14" fill="#FFFFFF" stroke="#E9A5B4" stroke-width="2"/>
+<text x="1359" y="1144" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">Claude Stop</text>
+<text x="1359" y="1177" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">pre-flight-gate-hook.sh 직접</text>
+<rect x="1923" y="1105" width="538" height="91" rx="14" fill="#FFFFFF" stroke="#E9A5B4" stroke-width="2"/>
+<text x="1941" y="1144" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">Antigravity / Codex</text>
+<text x="1941" y="1177" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">agent-stop-adapter.sh 경유</text>
+<path d="M1609 1199V1227H1902" fill="none" stroke="#CF667B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M2192 1199V1227H1902" fill="none" stroke="#CF667B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1902 1227V1243" fill="none" stroke="#CF667B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#red)"/>
+<rect x="1401" y="1248" width="1005" height="83" rx="14" fill="#FFFFFF" stroke="#E9A5B4" stroke-width="2"/>
+<text x="1419" y="1287" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">bin/hooks/pre-flight-gate-hook.sh</text>
+<text x="1419" y="1320" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">미지원 저장소 / 변경 없음 / 성공 캐시 → 검사 생략</text>
+<path d="M1902 1334V1354" fill="none" stroke="#CF667B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#red)"/>
+<rect x="1401" y="1360" width="1005" height="91" rx="14" fill="#FFFFFF" stroke="#E9A5B4" stroke-width="2"/>
+<text x="1419" y="1399" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">PFC_PROFILE=stop · --changed</text>
+<text x="1419" y="1432" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">저장소 범위·변경 감지·검사별 성공 캐시</text>
+<path d="M1902 1454V1480" fill="none" stroke="#CF667B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#red)"/>
+<rect x="1401" y="1485" width="1005" height="114" rx="14" fill="#FFFFFF" stroke="#E9A5B4" stroke-width="2"/>
+<text x="1419" y="1524" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">변경 영역 사전 검사</text>
+<text x="1419" y="1557" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">기본 pre-flight 검사 + dotfiles에서만 문서 lint, 테스트 등록, 선택적 회귀</text>
+<text x="1901" y="1631" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#98516A" text-anchor="middle">실패: Claude·Codex 차단 / Antigravity 모델 종료 시 재작업 요청</text>
+<rect x="48" y="1671" width="2461" height="63" rx="14" fill="#EDF3F8" stroke="#D2E0ED" stroke-width="2"/>
+<text x="1280" y="1711" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="700" fill="#3A5974" text-anchor="middle">참고 | 편집마다 검증하지 않음 · Stop은 실제 훅 실행/대상 저장소/캐시 조건에 종속 · Git pre-commit 및 CI는 별도 경로</text>
 </svg>

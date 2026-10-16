@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1860" viewBox="0 0 2560 1860" role="img" aria-labelledby="t d">
+<title id="t">Stow 심볼릭 링크 · 안전 설치 구조</title>
+<desc id="d">HOME 링크 10개와 5개의 패키지, Stow ignore 기반 안전 백업 및 적용 순서</desc>
+<defs>
+<marker id="blue" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#2779C9"/></marker>
+<marker id="green" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#20956A"/></marker>
+<marker id="purple" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#8160BC"/></marker>
+<marker id="red" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#CF667B"/></marker>
+<marker id="orange" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#E47621"/></marker>
+</defs>
+<rect x="0" y="0" width="2560" height="1860" rx="0" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<rect x="43" y="32" width="90" height="90" rx="20" fill="#163250" stroke="none" stroke-width="0"/>
+<text x="88" y="95" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="43" font-weight="700" fill="#FFFFFF" text-anchor="middle">&gt;_</text>
+<text x="158" y="85" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="53" font-weight="700" fill="#142C4C" text-anchor="start">Stow 심볼릭 링크 · 안전 설치 구조</text>
+<text x="161" y="136" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="400" fill="#576F89" text-anchor="start">HOME에는 파일 단위 링크, 원본은 Dotfiles 저장소에 보관 | 소스 기반 검증</text>
+<rect x="2115" y="37" width="396" height="81" rx="14" fill="#F3F8FE" stroke="#AECDEC" stroke-width="2"/>
+<text x="2314" y="70" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#286599" text-anchor="middle">SOURCE-VERIFIED</text>
+<text x="2314" y="102" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#57738D" text-anchor="middle">HEAD 5ea3a79</text>
+<rect x="39" y="189" width="2482" height="852" rx="21" fill="#F7FAFE" stroke="#D2E3F1" stroke-width="2"/>
+<text x="91" y="263" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="38" font-weight="700" fill="#173C62" text-anchor="start">1  실제 HOME 링크 → 저장소 원본</text>
+<text x="92" y="303" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="400" fill="#58738D" text-anchor="start">GNU Stow의 ignore 규칙으로 선택된 리프 파일을 링크합니다. 원본 파일 수정은 링크를 통해 즉시 반영됩니다.</text>
+<rect x="82" y="321" width="996" height="56" rx="14" fill="#E8F2FE" stroke="#ACCCF0" stroke-width="2"/>
+<rect x="1482" y="321" width="995" height="56" rx="14" fill="#FFF0DF" stroke="#EFC89E" stroke-width="2"/>
+<text x="580" y="358" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#265E98" text-anchor="middle">HOME: 심볼릭 링크</text>
+<text x="1978" y="358" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#A05F2A" text-anchor="middle">DOTFILES: 원본 파일 (&lt;repo&gt;/stow/)</text>
+<rect x="83" y="391" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="391" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="421" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">ZSH</text>
+<text x="104" y="458" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.zshrc · ~/.zshenv</text>
+<text x="1504" y="421" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">ZSH</text>
+<text x="1504" y="458" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">zsh/.zshrc · zsh/.zshenv</text>
+<path d="M1091 436H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="426" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<rect x="83" y="497" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="497" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="527" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">GIT</text>
+<text x="104" y="564" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.gitconfig · ~/.gitignore_global</text>
+<text x="1504" y="527" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">GIT</text>
+<text x="1504" y="564" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">git/.gitconfig · git/.gitignore_global</text>
+<path d="M1091 542H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="532" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<rect x="83" y="603" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="603" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="633" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">GIT HOOKS</text>
+<text x="104" y="670" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.githooks/pre-commit · commit-msg · pre-push</text>
+<text x="1504" y="633" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">GIT HOOKS</text>
+<text x="1504" y="670" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">git/.githooks/pre-commit · commit-msg · pre-push</text>
+<path d="M1091 648H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="638" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<rect x="83" y="709" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="709" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="739" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">VIM</text>
+<text x="104" y="776" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.vimrc</text>
+<text x="1504" y="739" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">VIM</text>
+<text x="1504" y="776" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">vim/.vimrc</text>
+<path d="M1091 754H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="744" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<rect x="83" y="815" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="815" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="845" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">TFLINT</text>
+<text x="104" y="882" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.tflint.hcl</text>
+<text x="1504" y="845" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">TFLINT</text>
+<text x="1504" y="882" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">tflint/.tflint.hcl</text>
+<path d="M1091 860H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="850" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<rect x="83" y="921" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#A8CDF2" stroke-width="2"/>
+<rect x="1483" y="921" width="994" height="88" rx="14" fill="#FFFFFF" stroke="#EDC79E" stroke-width="2"/>
+<text x="104" y="951" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#6A8DB3" text-anchor="start">MISE</text>
+<text x="104" y="988" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#1C4C7B" text-anchor="start">~/.config/mise/config.toml</text>
+<text x="1504" y="951" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="700" fill="#B5885D" text-anchor="start">MISE</text>
+<text x="1504" y="988" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="25" font-weight="700" fill="#81512B" text-anchor="start">mise/.config/mise/config.toml</text>
+<path d="M1091 966H1473" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
+<text x="1281" y="956" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="19" font-weight="400" fill="#64819B" text-anchor="middle">points to</text>
+<text x="1280" y="1032" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#6A7E91" text-anchor="middle">※ 화살표는 링크가 참조하는 방향입니다. 설치 시에는 저장소 원본을 기준으로 HOME 링크를 생성합니다.</text>
+<rect x="39" y="1072" width="2482" height="472" rx="21" fill="#EAF8F0" stroke="#B3D9C3" stroke-width="2"/>
+<text x="91" y="1134" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="37" font-weight="700" fill="#216C4A" text-anchor="start">2  실제 설치 순서</text>
+<text x="92" y="1174" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="24" font-weight="400" fill="#5C7C67" text-anchor="start">mise는 Bootstrap 단계에서 먼저 연결한 후 Ansible Stow 역할에서 같은 패키지로 재검사합니다.</text>
+<rect x="75" y="1222" width="441" height="258" rx="14" fill="#FFFFFF" stroke="#9BD2B4" stroke-width="2"/>
+<text x="93" y="1261" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">01 Bootstrap</text>
+<text x="93" y="1294" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">mise 설치 후</text>
+<text x="93" y="1324" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow/mise 먼저 백업·연결</text>
+<text x="93" y="1354" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow-safe-install.py</text>
+<path d="M522 1354H557" fill="none" stroke="#20956A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="575" y="1222" width="441" height="258" rx="14" fill="#FFFFFF" stroke="#9BD2B4" stroke-width="2"/>
+<text x="593" y="1261" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">02 Stow 역할 준비</text>
+<text x="593" y="1294" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow-safe-role-init.py</text>
+<text x="593" y="1324" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">~/.config/mise 경로 검증</text>
+<text x="593" y="1354" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">소유한 구형 링크만 정리</text>
+<path d="M1022 1354H1057" fill="none" stroke="#20956A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="1075" y="1222" width="441" height="258" rx="14" fill="#FFFFFF" stroke="#9BD2B4" stroke-width="2"/>
+<text x="1093" y="1261" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">03 전체 충돌 검사</text>
+<text x="1093" y="1294" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow/* 패키지 검색</text>
+<text x="1093" y="1324" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">--check-packages (읽기 전용)</text>
+<text x="1093" y="1354" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">경로 겹침은 설치 중단</text>
+<path d="M1522 1354H1557" fill="none" stroke="#20956A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="1575" y="1222" width="441" height="258" rx="14" fill="#FFFFFF" stroke="#9BD2B4" stroke-width="2"/>
+<text x="1593" y="1261" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">04 패키지별 검사</text>
+<text x="1593" y="1294" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow-backup.sh로 백업</text>
+<text x="1593" y="1324" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">--check-drift (읽기 전용)</text>
+<text x="1593" y="1354" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">변경 없음 → 설치 생략</text>
+<path d="M2022 1354H2057" fill="none" stroke="#20956A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="2075" y="1222" width="441" height="258" rx="14" fill="#FFFFFF" stroke="#9BD2B4" stroke-width="2"/>
+<text x="2093" y="1261" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="28" font-weight="700" fill="#143657" text-anchor="start">05 안전 링크 적용</text>
+<text x="2093" y="1294" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">변경 시에만 (dry-run 제외)</text>
+<text x="2093" y="1324" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">stow-safe-install.py</text>
+<text x="2093" y="1354" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="400" fill="#344E68" text-anchor="start">dirfd + O_NOFOLLOW</text>
+<rect x="39" y="1570" width="2482" height="245" rx="21" fill="#F7F1FF" stroke="#D4C3EF" stroke-width="2"/>
+<text x="91" y="1631" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="37" font-weight="700" fill="#634796" text-anchor="start">3  안전장치 및 예외</text>
+<rect x="75" y="1656" width="570" height="132" rx="14" fill="#FFFFFF" stroke="#CDBDE8" stroke-width="2"/>
+<text x="93" y="1695" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">파일 단위 링크</text>
+<text x="93" y="1728" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">부모 ~/.config 및 ~/.githooks는</text>
+<text x="93" y="1758" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">실제 디렉터리 유지 (no-folding)</text>
+<rect x="685" y="1656" width="570" height="132" rx="14" fill="#FFFFFF" stroke="#CDBDE8" stroke-width="2"/>
+<text x="703" y="1695" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">사용자 파일 보호</text>
+<text x="703" y="1728" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">충돌 파일은 .backup.&lt;시간&gt; 보존</text>
+<text x="703" y="1758" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">외부 디렉터리 링크 차단</text>
+<rect x="1295" y="1656" width="570" height="132" rx="14" fill="#FFFFFF" stroke="#CDBDE8" stroke-width="2"/>
+<text x="1313" y="1695" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">동일 필터 사용</text>
+<text x="1313" y="1728" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">GNU Stow Perl ignore 판정</text>
+<text x="1313" y="1758" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">백업·드리프트·설치 공통 적용</text>
+<rect x="1905" y="1656" width="570" height="132" rx="14" fill="#FFFFFF" stroke="#CDBDE8" stroke-width="2"/>
+<text x="1923" y="1695" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="26" font-weight="700" fill="#143657" text-anchor="start">쓰기 경계 보호</text>
+<text x="1923" y="1728" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">O_NOFOLLOW dirfd로 부모 확인</text>
+<text x="1923" y="1758" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">사용자 항목 덮어쓰기 거부</text>
+<text x="1280" y="1842" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#58738F" text-anchor="middle">구현: GNU Stow의 ignore 판정 + Python 안전 설치기 (직접 stow -S 실행과 구별)</text>
+</svg>
