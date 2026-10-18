@@ -39,7 +39,7 @@ description: |
 ## 사전 검증 실행 및 해석
 
 - `bin/hooks/pre-flight-check.sh`는 기본적으로 staged 파일을 검사한다. `--changed`는 unstaged/untracked도 포함하고, `--all`은 전체 대상이다. 의도적 위반 fixture는 전역 대상에서 제외한다.
-- `PFC_PROFILE=quick`은 가벼운 문법 검사, `stop`은 Ansible 검사 추가, `full`은 문법·보안 기본 검사다. 추가 Terraform/SAM/Helm/Kubernetes/Conftest/FinOps 정책은 `PFC_DOMAIN_CHECKS=1`을 명시해야 한다.
+- `PFC_PROFILE=quick`은 가벼운 문법 검사, `stop`은 Ansible 검사 및 변경된 Terraform root의 fmt/validate/TFLint/Checkov 검사, `full`은 문법·보안 기본 검사다. full의 추가 Terraform/SAM/Helm/Kubernetes/Conftest/FinOps 정책은 `PFC_DOMAIN_CHECKS=1`을 명시해야 한다.
 - 검사 종료 코드와 마지막 요약을 함께 확인한다. `[WARNING]`, `[SKIP]`, 도구 미설치는 검사 축소 가능성을 나타낸다. quick/stop 통과를 full/domain 통과로 보고하지 않는다.
 - 실패 시 훅이나 검증기를 우회하지 말고 원인 수정 후 같은 대상·프로필로 재실행한다.
 

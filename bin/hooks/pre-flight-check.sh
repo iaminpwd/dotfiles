@@ -161,6 +161,7 @@ run_delegated_skill_checks() {
 GLOBAL_IS_GIT_REPO=0
 GLOBAL_TF_HASH=""
 GLOBAL_TARGET_TF_FILES=()
+GLOBAL_TARGET_TF_STOP_FILES=()
 GLOBAL_TARGET_YAML_FILES=()
 
 # 검증 대상은 main()에서 한 번만 수집하고, 각 검증 함수는 filter_target_files 로 자기
@@ -175,7 +176,7 @@ GLOBAL_CACHE_ENABLED=0
 print_usage() {
   cat >&2 <<'USAGE'
 사용법: pre-flight-check.sh [모드 | 파일...]
-환경: PFC_PROFILE=quick 은 커밋용, stop 은 변경 파일·Ansible 검사, 기본 full 은 보안 검사 포함.
+환경: PFC_PROFILE=quick 은 커밋용, stop 은 변경 파일·Ansible 및 Terraform 심층 검사, 기본 full 은 보안 검사 포함.
       PFC_DOMAIN_CHECKS=1 을 명시하면 full에서 인프라·도메인 정책 검사도 실행한다.
 
   (인자 없음)   스테이징된 변경분만 검증한다 (커밋 훅과 동일한 기본 동작).
@@ -352,6 +353,7 @@ main() {
   esac
 
   mapfile -d '' -t GLOBAL_TARGET_TF_FILES < <(filter_target_files '*.tf')
+  mapfile -d '' -t GLOBAL_TARGET_TF_STOP_FILES < <(filter_target_files '*.tf' '*.tf.json' '*.tfvars' '*.tfvars.json')
   mapfile -d '' -t GLOBAL_TARGET_YAML_FILES < <(filter_target_files '*.yaml' '*.yml')
 
   # 커밋용 빠른 검사: 네트워크 초기화, 보안 DB 스캔, 비용 API, 회귀 테스트 제외.
@@ -363,7 +365,11 @@ main() {
     if [ "${PFC_PROFILE:-full}" = "stop" ]; then
       validate_ansible
     fi
-    if [ "${#GLOBAL_TARGET_TF_FILES[@]}" -gt 0 ] && has_tool terraform; then
+    if [ "${PFC_PROFILE:-full}" = "stop" ] && [ "${#GLOBAL_TARGET_TF_STOP_FILES[@]}" -gt 0 ]; then
+      # Stop에서는 변경된 Terraform root에만 fmt/validate/TFLint/Checkov를 실행한다.
+      # full 프로필의 저장소 전체 보안·도메인 검사나 CI 정책은 변경하지 않는다.
+      validate_terraform
+    elif [ "${#GLOBAL_TARGET_TF_FILES[@]}" -gt 0 ] && has_tool terraform; then
       terraform fmt -check "${GLOBAL_TARGET_TF_FILES[@]}"
     fi
     print_unavailable_tools

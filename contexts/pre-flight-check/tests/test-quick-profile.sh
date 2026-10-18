@@ -44,9 +44,15 @@ echo 'PASS quick: 문법·포맷 검사만 호출'
 
 : >"$PROFILE_TRACE"
 PFC_PROFILE=stop bash "$PFC" "$TMP/repo/main.tf" "$TMP/repo/main.yaml"
-printf 'shell\nyaml\ndocker\nansible\nterraform fmt -check %s/main.tf\n' "$TMP/repo" >"$TMP/expected"
+printf 'shell\nyaml\ndocker\nansible\nterraform\n' >"$TMP/expected"
 diff -u "$TMP/expected" "$PROFILE_TRACE"
-echo 'PASS stop: 변경 파일·Ansible만 검사하고 전체 보안·도메인 검사는 제외'
+echo 'PASS stop: Terraform만 심층 검사하고 전체 보안·다른 도메인 검사는 제외'
+
+: >"$PROFILE_TRACE"
+PFC_PROFILE=stop bash "$PFC" "$TMP/repo/main.yaml"
+printf 'shell\nyaml\ndocker\nansible\n' >"$TMP/expected"
+diff -u "$TMP/expected" "$PROFILE_TRACE"
+echo 'PASS stop: Terraform 변경이 없으면 기존 빠른 검사 유지'
 
 : >"$PROFILE_TRACE"
 PFC_DOMAIN_CHECKS=0 PFC_PROFILE=full bash "$PFC" "$TMP/repo/main.tf" "$TMP/repo/main.yaml"
