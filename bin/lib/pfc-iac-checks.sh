@@ -15,6 +15,13 @@ validate_terraform() {
   # 검증 대상 중 .tf 파일만 검사 (fmt/validate는 디렉토리 단위 동작이므로 실행 여부만 결정)
   local tf_files=("${GLOBAL_TARGET_TF_FILES[@]}")
 
+  if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+    # .tf 외에 변수·JSON 구성 변경 시에도 해당 Terraform root를 재검증한다.
+    # 별도 .tflint.hcl 도구 설정만 바뀐 경우에는 구성 root가 아닐 수 있으므로 제외한다.
+    # 커밋/CI용 full의 기존 대상 범위는 그대로 유지한다.
+    tf_files=("${GLOBAL_TARGET_TF_STOP_FILES[@]}")
+  fi
+
   if [ "${#tf_files[@]}" -gt 0 ] && [ -n "${tf_files[0]}" ]; then
     log_info "--- Step: Terraform Validation ---"
 
@@ -42,7 +49,9 @@ validate_terraform() {
     for tf in "${tf_files[@]}"; do
       [ -z "$tf" ] && continue
       [[ "$tf" == */tests/fixtures/* ]] && continue
-      tf_fmt_targets+=("$tf")
+      case "$tf" in
+      *.tf | *.tf.json | *.tfvars | *.tfvars.json) tf_fmt_targets+=("$tf") ;;
+      esac
     done
     if [ "${#tf_fmt_targets[@]}" -gt 0 ] && ! terraform fmt -check "${tf_fmt_targets[@]}"; then
       echo "❌ [ERROR] terraform fmt 포맷이 맞지 않아 커밋이 중단되었습니다. 'terraform fmt -recursive'로 정리한 뒤 다시 시도하세요." >&2
@@ -68,6 +77,19 @@ validate_terraform() {
 
     for tf_dir in "${tf_validate_dirs[@]}"; do
       log_info "Validating Terraform root: $tf_dir"
+      if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+        # 변수 파일·TFLint 설정만 바뀐 경우에도 해당 root에 실제 구성이 있어야 한다.
+        # 설정 없는 디렉터리를 검사 성공으로 기록하지 않는다.
+        local root_tf_files=("$tf_dir"/*.tf "$tf_dir"/*.tf.json)
+        local root_configured=0 root_file
+        for root_file in "${root_tf_files[@]}"; do
+          [ -f "$root_file" ] && root_configured=1 && break
+        done
+        if [ "$root_configured" -ne 1 ]; then
+          echo "[ERROR] Terraform 설정 파일이 없는 디렉터리입니다: $tf_dir" >&2
+          return 1
+        fi
+      fi
       if [ ! -d "$tf_dir/.terraform" ]; then
         if ! terraform -chdir="$tf_dir" init -backend=false -input=false >/dev/null; then
           echo "❌ [ERROR] terraform init 초기화에 실패하여 커밋이 중단되었습니다: $tf_dir" >&2
@@ -103,6 +125,10 @@ validate_terraform() {
         fi
       done
     else
+      if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+        echo "[ERROR] AI Stop Terraform 검증에 필요한 tflint를 사용할 수 없습니다." >&2
+        return 1
+      fi
       log_info "[WARNING] tflint is not installed. Skipping static analysis."
     fi
 
@@ -117,11 +143,26 @@ validate_terraform() {
       # (전체 21개 중 12개)는 어디에도 안 걸려 그대로 스캔되고 있었다. checkov의
       # --skip-path는 부분 일치라 이 한 패턴이 중첩 경로와 접미사형을 모두 덮는다
       # (실측: contexts/aws/tests/fixtures, contexts/k8s/tests/fixtures-conftest 둘 다 제외).
-      if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM --skip-path 'tests/fixtures'; then
-        echo "❌ [ERROR] checkov에서 HIGH/CRITICAL 등급의 보안 오구성이 발견되어 커밋이 중단되었습니다." >&2
-        return 1
+      if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+        local checkov_dir
+        for checkov_dir in "${tf_validate_dirs[@]}"; do
+          log_info "Scanning Terraform root with Checkov: $checkov_dir"
+          if ! checkov --directory "$checkov_dir" --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM --skip-path 'tests/fixtures'; then
+            echo "[ERROR] Checkov Terraform 검사 실패: $checkov_dir" >&2
+            return 1
+          fi
+        done
+      else
+        if ! checkov --directory . --framework terraform --compact --quiet --soft-fail-on LOW,MEDIUM --skip-path 'tests/fixtures'; then
+          echo "❌ [ERROR] checkov에서 보안 오구성이 발견되어 커밋이 중단되었습니다." >&2
+          return 1
+        fi
       fi
     else
+      if [ "${PFC_PROFILE:-full}" = "stop" ]; then
+        echo "[ERROR] AI Stop Terraform 검증에 필요한 checkov를 사용할 수 없습니다." >&2
+        return 1
+      fi
       log_info "[WARNING] checkov is not installed. Skipping IaC security misconfiguration scan."
     fi
 

@@ -94,7 +94,7 @@ Antigravity IDE에서 **WSL 연결로 작업하고 훅도 WSL에서 실행되는
 이전 버전의 Windows 브리지를 직접 설치했던 환경은 Windows 글로벌 훅 설정의 `pre-flight-stop-gate` 그룹에서 **dotfiles가 등록한 PowerShell 브리지 명령만** 제거하십시오. 다른 사용자 훅과 설정은 그대로 두어야 합니다.
 검증 엔진은 기존과 동일하게 지원 범위(기본 dotfiles 및 `~/workspace`, 개별 옵트인 저장소) 바깥의 저장소와 변경 사항 없는 저장소를 검사하지 않습니다. 성공 캐시 적중도 무검증 재실행을 뜻하며 실제 앱의 자동 발생을 보증하는 근거가 아닙니다.
 커밋은 `PFC_PROFILE=quick`, Stop은 `PFC_PROFILE=stop`, CI는 `PFC_PROFILE=full`을 사용합니다.
-Stop은 변경 파일과 Ansible 검사, `stop-regression-check.sh`가 선택한 핵심 회귀 테스트를 실행하고 실패 로그·재현 명령을 AI에 반환합니다.
+Stop은 변경 파일·Ansible 검사, Terraform 구성(.tf/.tf.json/.tfvars/.tfvars.json) 변경 시 해당 root의 fmt/validate/TFLint/Checkov, `stop-regression-check.sh`가 선택한 핵심 회귀 테스트를 실행하고 실패 로그·재현 명령을 AI에 반환합니다. Terraform Stop 검사에서는 도구 미설치를 실패로 처리하며, 다른 도메인의 전체 검사는 여전히 별도 정책입니다.
 전체 보안 스캔은 full에서, 인프라·도메인 정책 검사는 `PFC_DOMAIN_CHECKS=1`을 명시할 때 실행합니다.
 
 - `just check-changed`: 변경 영역의 핵심 회귀 테스트
