@@ -1,16 +1,8 @@
 ---
-trigger: dotfiles 변경 범위와 룰 근거 기록을 확인할 때 참조.
+trigger: dotfiles 변경 근거 이력을 확인하거나 룰 출처를 기록할 때 참조.
 ---
-# dotfiles 변경과 근거 기록
+# 선택적 변경 근거 기록
 
-공통 사용자 선호와 실행 경계는 `base.AGENTS.md`를 따른다.
-
-- 현재 작업에 필요한 저장소 계약만 확인한다. 구조·실행·복구·트러블슈팅은 SKILL.md, 도구 관리는 040, 시크릿 경계는 050을 사용한다.
-- 결함 클래스를 수정하는 요청이면 같은 종류의 다른 위치를 한 번 검색한다. 특정 위치만 지정한 요청은 그 범위에 한정하고 범위 밖 발견은 보고한다.
-- 이 저장소의 보안·아키텍처 규칙에 대해 사용자가 예외를 승인하면 `tech-debt-log.md`에 일자·규칙·승인 이유·상환 계획을 기록한다.
-
-## 룰 근거 기록
-
-- 특정 `contexts/` 룰을 근거로 코드를 수정했으면 `bash ~/dotfiles/bin/utils/record-provenance.sh <file_path> <rule_source> <purpose>`로 기록한다. rule_source는 `<스킬>/<파일명>`이며 여러 근거는 콤마로 구분한다. 직접 지시·오타 수정처럼 대응 룰이 없으면 생략한다.
-- 변경 근거를 질문받으면 저장소 루트 `.agent-state/edits.log`의 해당 이력을 확인한다. 룰 관련 실패가 반복되면 최근 20줄과 해당 룰을 확인해 개정안을 제안한다.
-- 룰 수정 제안은 현재 로컬 지침에 따라 작성하고, 프롬프트 회귀는 `bash contexts/prompt-architect/tests/run.sh`와 `bash bin/linters/prompt-lint.sh`로 검사한다.
+- 공통 작업 경계는 `contexts/base.AGENTS.md`를 따른다. 사용자가 지정하지 않은 범위의 발견은 별도로 보고한다.
+- 특정 `contexts/` 룰에 근거한 변경의 기록이 필요할 때만 `bash bin/utils/record-provenance.sh <file_path> <rule_source> <purpose>`를 실행한다. `rule_source` 예: `dotfiles/010-core.md`; 직접 지시·단순 수정에는 강제하지 않는다.
+- 이전 기록은 `.agent-state/edits.log`에서 확인한다. 반복되는 룰 관련 실패는 기존 기록과 해당 룰을 대조한다.
