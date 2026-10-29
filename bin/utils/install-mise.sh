@@ -16,7 +16,7 @@ set -euo pipefail
 # 도구 버전뿐 아니라 그 버전을 해석·설치하는 mise 자체도 저장소에서 고정한다.
 # 공식 installer는 MISE_VERSION이 없으면 실행 시점의 최신 적격 stable release를 선택하므로,
 # 같은 dotfiles commit도 날짜에 따라 다른 mise로 bootstrap될 수 있다.
-MISE_VERSION="2026.9.18"
+MISE_VERSION="2026.10.22"
 MISE_BIN="$HOME/.local/bin/mise"
 
 if [ -x "$MISE_BIN" ]; then
