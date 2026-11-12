@@ -10,9 +10,9 @@
 - `drawio-gen/SKILL.md`: 아키텍처 다이어그램용 글로벌 스킬. Claude·Codex·Gemini에 등록합니다.
 - 그 밖의 도메인 디렉터리에는 별도의 스킬 설명 파일 없이 테스트·스크립트만 유지합니다. 기존 훅·`just test`·CI는 경로를 기준으로 검사합니다.
 - `references/`: SKILL 하나로 충분하지 않은 Repo-Specific 또는 정확한 Output Contract만 둡니다. 현재는 dotfiles 3개와 drawio-gen 8개만 유지합니다.
-- `scripts/`, `tests/`, `evals/`, `examples/`: 실행 도구, 회귀 테스트, 평가·예제 자산. 프롬프트 문서를 줄여도 실행 검증 자산은 별도로 유지합니다.
+- `scripts/`, `tests/`, `examples/`: 실행 도구, 회귀 테스트, 예제 자산. 프롬프트 문서를 줄여도 실행 검증 자산은 별도로 유지합니다.
 
-런타임 에이전트에는 활성 `SKILL.md`가 있는 도메인의 SKILL과 존재하는 reference/scripts/examples만 심볼릭 링크로 배포합니다. `tests/`와 `evals/`는 원본 저장소에서만 실행합니다.
+런타임 에이전트에는 활성 `SKILL.md`가 있는 도메인의 SKILL과 존재하는 reference/scripts/examples만 심볼릭 링크로 배포합니다. `tests/`는 원본 저장소에서만 실행합니다.
 
 ## 유지보수 기준
 
@@ -47,6 +47,3 @@ just docs-index
 ```bash
 just verify
 ```
-
-`contexts/prompt-architect/evals/routing/run.sh --check-cases-only`는 라우팅 정답지의 정합성을 검사합니다.
-실제 모델 측정인 `measure.sh`는 에이전트 세션 비용이 발생하므로 명시적인 실행 요청이 있을 때만 사용합니다.

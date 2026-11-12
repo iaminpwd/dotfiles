@@ -363,19 +363,6 @@ echo '# 예시: contexts/example-skill/custom-role.md 처럼 배치하십시오.
 git -C "$D" add bin/linters/note.sh
 check_clean "ok-placeholder-path" "$D"
 
-echo "--- routing answer key ---"
-D=$(new_case fail-routing-unknown-skill)
-mkdir -p "$D/contexts/prompt-architect/evals/routing"
-cp "$REPO_ROOT_SRC/contexts/prompt-architect/evals/routing/run.sh" "$D/contexts/prompt-architect/evals/routing/run.sh"
-printf 'S01\tremoved-skill\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "routing unknown skill" 1 "라우팅 정답에 없는 스킬" "$D"
-
-printf 'S01\tdemo\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "routing valid skill" 0 "라우팅 케이스 정합성 확인" "$D"
-
-printf 'S01\tdemo\t입력\nS01\tnone\t입력\n' >"$D/contexts/prompt-architect/evals/routing/cases.tsv"
-check "routing duplicate id" 1 "라우팅 케이스 ID 중복" "$D"
-
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo
 echo "$PASS_COUNT/$TOTAL 통과"

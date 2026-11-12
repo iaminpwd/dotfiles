@@ -43,7 +43,7 @@
 <rect x="74" y="735" width="714" height="146" rx="14" fill="#FFFFFF" stroke="#9FC5F1" stroke-width="2"/>
 <text x="92" y="774" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="27" font-weight="700" fill="#143657" text-anchor="start">다른 contexts/* 도메인</text>
 <text x="92" y="807" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">SKILL.md 없이 테스트·스크립트·평가 자산 유지</text>
-<text x="92" y="837" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">tests/ · evals/는 에이전트 스킬로 배포하지 않음</text>
+<text x="92" y="837" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="20" font-weight="400" fill="#344E68" text-anchor="start">tests/는 에이전트 스킬로 배포하지 않음</text>
 <rect x="862" y="369" width="218" height="70" rx="14" fill="#FFFFFF" stroke="#8DCFAC" stroke-width="2"/>
 <text x="971.0" y="411" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#176044" text-anchor="middle">bootstrap.sh</text>
 <rect x="1126" y="369" width="210" height="70" rx="14" fill="#FFFFFF" stroke="#8DCFAC" stroke-width="2"/>

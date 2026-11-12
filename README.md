@@ -235,5 +235,3 @@ Ansible 실행은 시작 시 become 비밀번호를 요청합니다. 비대화�
 그 프로젝트의 `core.hooksPath` 설정과 통합 여부를 확인합니다. 이 저장소 전용
 검사는 현재 저장소와 실행 스크립트 원본의 실제 경로를 비교해 판정합니다.
 디렉토리 이름을 바꾸거나 심볼릭 링크를 통해 실행해도 같은 원본을 식별합니다.
-
-라우팅 정답지 검사는 무료이며 `bash contexts/prompt-architect/evals/routing/run.sh --check-cases-only`로 실행합니다. 실제 모델 측정은 별도 요청이 있을 때만 실행합니다.
