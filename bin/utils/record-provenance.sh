@@ -51,7 +51,7 @@ fi
 # 로그 위치도 REL과 같은 기준(git 최상위)으로 고정한다. 예전엔 CWD 상대(".agent-state")여서
 # 서브디렉토리에서 실행하면 <cwd>/.agent-state/edits.log가 새로 생기는데, 정작 기록되는 경로는
 # git 루트 기준이라 둘이 어긋났다(실측: sub/에서 실행 -> sub/.agent-state/edits.log에
-# "sub/a.txt"가 기록됨). 그러면 감사 로그가 디렉토리마다 쪼개져 base.AGENTS.md 9장이 지시하는
+# "sub/a.txt"가 기록됨). 그러면 감사 로그가 디렉토리마다 쪼개져 contexts/dotfiles/references/010-core.md가 지시하는
 # ".agent-state/edits.log 조회"가 이력의 일부만 보게 되고, 아래 "미확정 라인 보강"도 훅이
 # <git루트>에 남긴 줄을 영영 찾지 못해 중복 append만 쌓인다.
 # git 저장소가 아니면(추적 밖 경로) 종전대로 CWD 기준으로 남긴다.

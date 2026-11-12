@@ -103,7 +103,7 @@ case "$target" in
 *) root="$target_dir" ;;
 esac
 
-# 파일 경로만 남기고 내용은 절대 기록하지 않는다(base.AGENTS.md 7장 민감 데이터 마스킹).
+# 파일 경로만 남기고 내용은 절대 기록하지 않는다(contexts/base.AGENTS.md 민감 값 마스킹 지침).
 if [ "$target" = "$root" ]; then
   rel="$(basename "$target")"
 else
