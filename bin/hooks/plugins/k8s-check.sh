@@ -3,7 +3,7 @@
 # pre-flight-check.sh가 이미 다루는 범용 검증(helm lint, kube-linter/kubectl dry-run,
 # conftest, trivy fs misconfig - Kubernetes 매니페스트의 privileged/루트 실행 등
 # 보안 설정 오류까지 포함)은 여기서 반복하지 않는다. 이 스크립트는 그 파이프라인이
-# 다루지 못하는 K8s 전용 검증(Kyverno 네이티브 정책 테스트, PrometheusRule 문법,
+# 다루지 못하는 K8s 전용 검증(Kyverno 네이티브 정책 테스트,
 # 삭제 예정 API 탐지)만 담당한다.
 
 set -euo pipefail
@@ -44,7 +44,7 @@ log_info "======================================================"
 init_repo_root
 
 # 도구 가용성 조회는 bin/lib의 공용 라이브러리를 source 한다. 이게 없으면
-# promtool/pluto 부재 시 문법이 깨진 PrometheusRule을 검사하지 않고도 "Passed
+# kyverno/pluto 부재 시 매니페스트를 검사하지 않고도 "Passed
 # Successfully"를 출력하는 무검증 통과가 생긴다.
 # shellcheck source-path=SCRIPTDIR
 if [ -f "$K8S_CHECK_DIR/../../lib/tool-probe.sh" ]; then
@@ -105,55 +105,7 @@ check_kyverno() {
   log_info "[SUCCESS] Kyverno policy test passed."
 }
 
-# 2. Prometheus Alerting Rule Validation (PrometheusRule CRD)
-check_prometheus_rules() {
-  local rule_files=() f
-  for f in "${GLOBAL_STAGED_YAML_FILES[@]}"; do
-    [ -z "$f" ] && continue
-    [ -f "$f" ] || continue
-    grep -qE "^kind:[[:space:]]*PrometheusRule" "$f" 2>/dev/null && rule_files+=("$f")
-  done
-  if [ "${#rule_files[@]}" -eq 0 ]; then
-    return 0
-  fi
-
-  log_info "--- Step: Prometheus Alerting Rule Validation ---"
-  if ! has_tool promtool; then
-    log_info "[WARNING] PrometheusRule manifest found but 'promtool' is not installed. Skipping."
-    return 0
-  fi
-  if ! has_tool yq; then
-    log_info "[WARNING] PrometheusRule manifest found but 'yq' is not installed (required to extract .spec from the CRD wrapper before promtool can parse it). Skipping."
-    return 0
-  fi
-
-  # YAML 전체를 한 번에 변환하되 promtool은 문서별로 호출해 뒤 문서도 검증한다.
-  local docs spec tmp
-  for f in "${rule_files[@]}"; do
-    log_info "Checking PrometheusRule: $f"
-    tmp=$(mktemp -d)
-    docs="$tmp/docs.json"
-    if ! yq eval -o=json -I=0 'select(.kind == "PrometheusRule") | .spec' "$f" >"$docs"; then
-      rm -rf "$tmp"
-      echo "❌ [ERROR] PrometheusRule의 .spec 블록 추출에 실패했습니다: $f" >&2
-      return 1
-    fi
-    # yq의 compact JSON은 문서당 한 줄이다. JSON은 YAML의 부분집합이므로
-    # 다시 YAML로 변환하지 않고 promtool에 전달한다.
-    while IFS= read -r spec; do
-      printf '%s\n' "$spec" >"$tmp/rule.yaml"
-      if ! promtool check rules "$tmp/rule.yaml"; then
-        rm -rf "$tmp"
-        echo "❌ [ERROR] PromQL Alerting Rule 문법 검증에 실패하여 커밋이 중단되었습니다: $f" >&2
-        return 1
-      fi
-    done <"$docs"
-    rm -rf "$tmp"
-  done
-  log_info "[SUCCESS] Prometheus rule validation passed."
-}
-
-# 3. Deprecated / Removed K8s API Detection
+# 2. Deprecated / Removed K8s API Detection
 check_deprecated_apis() {
   # 스테이징된 yaml이 실제 K8s 매니페스트인지(kind: 존재) 먼저 걸러낸다. 이 필터는
   # 스캔을 "트리거할지"만 정할 뿐, pluto 자체의 스캔 범위(-d .)는 좁히지 못한다.
@@ -201,14 +153,13 @@ main() {
   fi
 
   check_kyverno
-  check_prometheus_rules
   check_deprecated_apis
 
   log_info "======================================================"
   log_info "=== K8s-Specific Checks Passed Successfully ==="
   # tool-probe.sh 로드는 위에서 조건부라, 못 찾은 환경(구버전 배포본 등)에서 무가드로
   # 호출하면 set -e 가 여기서 스크립트를 죽여 "검증 실패"로 오보고된다.
-  # aiops-check.sh 와 동일하게 존재 확인 후 호출한다.
+  # 존재 확인 후 호출한다.
   if declare -F print_unavailable_tools >/dev/null; then
     print_unavailable_tools
   fi

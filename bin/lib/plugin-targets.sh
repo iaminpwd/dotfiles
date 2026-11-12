@@ -4,7 +4,7 @@
 # [배경 — 실측 재현된 무검증 통과 버그]
 # pre-flight-check.sh 는 대상 파일을 main() 에서 한 번만 수집하고(staged/changed/all/
 # explicit 4가지 모드) 각 검증 함수가 filter_target_files 로 자기 확장자만 골라 쓰는
-# "수집-필터링 분리" 구조다. 그런데 위임 플러그인 3개(k8s/observability/aiops)만 이
+# "수집-필터링 분리" 구조다. 그런데 위임 플러그인(당시 k8s/observability/aiops)만 이
 # 구조 밖에 있었다: run_delegated_skill_checks 가 인자 없이 `bash <plugin>` 으로 호출하고
 # 플러그인은 저마다 `git diff --cached` 를 하드코딩해, 실행 모드와 무관하게 항상
 # "스테이징된 것"만 봤다.

@@ -12,7 +12,7 @@ TOOLS = (
     'terraform', 'tflint', 'checkov', 'ansible', 'pipx:ansible-lint',
     'pipx:aws-sam-cli', 'infracost',
     'trivy', 'trufflehog', 'conftest', 'hadolint',
-    'kubectl', 'helm', 'kube-linter', 'kyverno', 'pluto', 'promtool', 'yq',
+    'kubectl', 'helm', 'kube-linter', 'kyverno', 'pluto', 'yq',
 )
 
 

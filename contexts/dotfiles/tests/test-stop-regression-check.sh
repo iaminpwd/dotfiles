@@ -72,10 +72,10 @@ selected=$(bash "$RUNNER" --list)
 [[ "$selected" == *test-new.sh* && "$selected" != *test-merge-agent-hooks.sh* ]]
 echo 'PASS: untracked 테스트도 선택, 무관한 테스트는 제외'
 
-mkdir -p "$REPO/contexts/observability/scripts"
-printf '# 정책 수정\n' >"$REPO/contexts/observability/scripts/validate-alert-rules.sh"
+mkdir -p "$REPO/contexts/k8s/tests"
+printf '# 정책 수정\n' >"$REPO/contexts/k8s/tests/run.sh"
 selected=$(bash "$RUNNER" --list)
-[[ "$selected" != *observability* ]]
+[[ "$selected" != *contexts/k8s* ]]
 echo 'PASS: 도메인 정책 스위트는 기본 Stop 대상에서 제외'
 
 # 성공 여부를 꾸미는 대신 실제 러너가 선택된 테스트의 실패를 받아야 한다.

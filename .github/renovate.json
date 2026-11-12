@@ -59,7 +59,6 @@
         "k9s",
         "kubectx",
         "pluto",
-        "promtool",
         "syft",
         "tflint"
       ],

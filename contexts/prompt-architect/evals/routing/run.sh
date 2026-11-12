@@ -18,7 +18,7 @@
 #     bash ~/dotfiles/contexts/prompt-architect/evals/routing/measure.sh
 #   기록 형식은 '<id> <TAB> <로드된 스킬 쉼표구분 또는 none>' 이다.
 #   예:  S01	aws
-#        A03	observability,k8s
+#        A03	aws,k8s
 #
 # 사용: bash ~/dotfiles/contexts/prompt-architect/evals/routing/run.sh
 

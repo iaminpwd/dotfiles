@@ -214,8 +214,7 @@ fi
 # 5. 플러그인(bin/hooks/plugins/*.sh)은 tool-probe.sh 를 "조건부"로 source 한다(파일이
 #    없으면 건너뜀). 그런데 print_unavailable_tools 를 무가드로 호출하면, 라이브러리를
 #    못 찾은 환경에서 set -e 가 그 자리에서 스크립트를 죽여 "검증 실패"로 오보고된다.
-#    세 플러그인 중 aiops 만 declare -F 로 감싸고 나머지 둘은 무방비였다 — 같은 패턴을
-#    서로 다르게 방어하던 상태라, 셋 다 가드를 갖추도록 고정한다.
+#    예전엔 플러그인마다 가드 유무가 달랐으므로, 모든 플러그인이 가드를 갖추도록 고정한다.
 unguarded=()
 for plugin in "$REPO_ROOT"/bin/hooks/plugins/*.sh; do
   [ -f "$plugin" ] || continue

@@ -97,8 +97,8 @@ fi
 echo "--- pre-flight-check.sh (bin/hooks, 커밋 시점 배선) ---"
 # 위 CLI 레벨 섹션은 "판정 로직이 맞는가"만 본다. validate_shell 자신의 오케스트레이션
 # (확장자별 분기, .zsh는 zsh -n만 받는지, .sh 위반이 실제로 커밋을 막는지)은 여기서
-# pre-flight-check.sh를 실제로 bash 호출해 검증한다(k8s-check.sh/aiops-check.sh/
-# observability-check.sh와 동일한 패턴으로 격리 저장소에서 실제 호출까지 확인).
+# pre-flight-check.sh를 실제로 bash 호출해 검증한다(k8s-check.sh와 동일한 패턴으로
+# 격리 저장소에서 실제 호출까지 확인).
 if [ -x "$PFC" ]; then
   PLUGIN_TMP=$(mktemp -d)
 

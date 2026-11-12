@@ -2,7 +2,7 @@
 # test-script-init.sh
 #
 # bin/lib/script-init.sh 는 pre-flight-check.sh, prompt-lint.sh, test-coverage-check.sh,
-# k8s-check.sh, observability-check.sh, aiops-check.sh, run-suite.sh 일곱 곳이 공유하는
+# k8s-check.sh, run-suite.sh 다섯 곳이 공유하는
 # QUIET 로깅 + 저장소 루트 판정 SSOT다(generate-context-index.sh는 의도적으로 미사용 —
 # 사유는 bin/lib/script-init.sh와 bin/utils/generate-context-index.sh의 주석 참고).
 # 심볼릭 링크 배포 호환성은 test-tool-probe-ssot.sh 가 pre-flight-check.sh/
@@ -82,15 +82,13 @@ else
   report "init_repo_root -> 저장소 루트로 REPO_ROOT 설정 + cd" 1 "기대 '$EXPECTED' / 실제 '$out'"
 fi
 
-# 5. 소비자 7곳이 옛 인라인 로직(log_info 함수 재정의, REPO_ROOT cd 블록)을 되살리지
+# 5. 소비자 5곳이 옛 인라인 로직(log_info 함수 재정의, REPO_ROOT cd 블록)을 되살리지
 #    않고 실제로 script-init.sh를 source하는지 확인한다.
 CONSUMERS=(
   "$REPO_ROOT/bin/hooks/pre-flight-check.sh"
   "$REPO_ROOT/bin/linters/prompt-lint.sh"
   "$REPO_ROOT/bin/linters/test-coverage-check.sh"
   "$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
-  "$REPO_ROOT/bin/hooks/plugins/observability-check.sh"
-  "$REPO_ROOT/bin/hooks/plugins/aiops-check.sh"
   "$REPO_ROOT/bin/hooks/run-suite.sh"
 )
 dup=0

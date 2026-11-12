@@ -225,9 +225,8 @@ else
   report "stow-package-change (stow/zsh 변경 시 dotfiles 스위트 트리거)" 1 "exit=$status out=$(cat "$TMP/out")"
 fi
 
-# 1g. contexts/<skill>/examples/* 도 그 스킬의 회귀 스위트가 직접 돌리는 대상이다
-#     (contexts/aiops/tests/run.sh 가 examples/anomaly-rag-pipeline.py 의 PII 마스킹을
-#     실행해 검증한다). scripts/·tests/ 만 패턴에 있어 examples/ 의 마스킹 결함을 고쳐도
+# 1g. contexts/<skill>/examples/* 도 그 스킬의 회귀 스위트가 직접 돌릴 수 있는 대상이다.
+#     scripts/·tests/ 만 패턴에 있어 examples/ 의 결함을 고쳐도
 #     push 시 그 스킬 스위트가 돌지 않았다. 해당 스킬"만" 트리거되는지까지 고정한다.
 mkdir -p "$FIXTURE_REPO/contexts/aws/examples"
 echo 'print("x")' >"$FIXTURE_REPO/contexts/aws/examples/sample-pipeline.py"

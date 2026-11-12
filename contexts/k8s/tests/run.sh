@@ -69,24 +69,6 @@ run_kube_linter() {
   fi
 }
 
-# k8s-check.sh 의 check_prometheus_rules 와 동일하게 yq 로 .spec 을 벗겨 promtool 에 넘긴다.
-run_promtool() {
-  local name=$1 want_fail=$2
-  local tmp out status
-  tmp=$(mktemp)
-  yq eval '.spec' "$FIXTURES/$name" >"$tmp"
-  out=$(promtool check rules "$tmp" 2>&1) && status=0 || status=$?
-  rm -f "$tmp"
-
-  if [ "$want_fail" -eq 1 ] && [ "$status" -ne 0 ]; then
-    report "$name" 0
-  elif [ "$want_fail" -eq 0 ] && [ "$status" -eq 0 ]; then
-    report "$name" 0
-  else
-    report "$name" 1 "기대: $([ "$want_fail" -eq 1 ] && echo '문법 오류 검출' || echo '통과') / 실제 exit=$status: $(echo "$out" | tail -1)"
-  fi
-}
-
 # k8s-check.sh 의 check_deprecated_apis 와 동일하게 'pluto detect-files -d <dir>' 를 호출한다.
 # pluto 는 디렉토리 단위로 스캔하므로 픽스처마다 격리된 임시 디렉토리를 쓴다.
 run_pluto() {
@@ -118,12 +100,6 @@ echo "--- kube-linter (pre-flight-check.sh) ---"
 if require_tool kube-linter; then
   run_kube_linter ok-baseline.yaml ""
   run_kube_linter fail-privileged.yaml privileged-container
-fi
-
-echo "--- promtool (k8s-check.sh) ---"
-if require_tool promtool && require_tool yq; then
-  run_promtool ok-prometheus-rule.yaml 0
-  run_promtool fail-promql-syntax.yaml 1
 fi
 
 echo "--- pluto (k8s-check.sh) ---"
@@ -159,10 +135,10 @@ if require_tool kyverno; then
 fi
 
 echo "--- k8s-check.sh (bin/hooks/plugins, 커밋 시점 배선) ---"
-# 위 promtool/pluto 섹션은 "판정 로직이 맞는가"만 본다. k8s-check.sh 자신의
+# 위 pluto 섹션은 "판정 로직이 맞는가"만 본다. k8s-check.sh 자신의
 # 오케스트레이션(스테이징된 yaml 중 어떤 kind:가 어떤 서브체크를 트리거하는지,
 # 격리 tmpdir로 pluto 스캔 범위를 좁히는지)은 여기서 격리 저장소를 만들어
-# 실제 호출까지 검증한다(aiops-check.sh/observability-check.sh와 동일 패턴).
+# 실제 호출까지 검증한다.
 K8S_PLUGIN="$REPO_ROOT/bin/hooks/plugins/k8s-check.sh"
 if [ -x "$K8S_PLUGIN" ]; then
   PLUGIN_TMP=$(mktemp -d)
@@ -180,85 +156,6 @@ if [ -x "$K8S_PLUGIN" ]; then
     git -C "$root" config user.email test@example.com
     git -C "$root" config user.name Test
   }
-
-  if require_tool promtool && require_tool yq; then
-    # Case 1: kind: PrometheusRule + PromQL 문법 오류 -> 커밋 차단.
-    KR1="$PLUGIN_TMP/repo1"
-    new_plugin_repo "$KR1"
-    cp "$FIXTURES/fail-promql-syntax.yaml" "$KR1/rule.yaml"
-    git -C "$KR1" add rule.yaml
-    status=$(run_plugin "$KR1")
-    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
-      report "prometheus-trigger-and-block (PromQL 문법 오류 -> 차단)" 0
-    else
-      report "prometheus-trigger-and-block (PromQL 문법 오류 -> 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
-    fi
-
-    # Case 2: kind: PrometheusRule + 문법 정상 -> 통과.
-    KR2="$PLUGIN_TMP/repo2"
-    new_plugin_repo "$KR2"
-    cp "$FIXTURES/ok-prometheus-rule.yaml" "$KR2/rule.yaml"
-    git -C "$KR2" add rule.yaml
-    status=$(run_plugin "$KR2")
-    if [ "$status" -eq 0 ]; then
-      report "prometheus-trigger-and-pass (PromQL 정상 -> 통과)" 0
-    else
-      report "prometheus-trigger-and-pass (PromQL 정상 -> 통과)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
-    fi
-
-    # Case 2b~2c: 멀티 도큐먼트 매니페스트에서도 게이트가 살아 있어야 한다.
-    #
-    # 예전엔 파일 전체에 `yq eval '.spec'` 을 걸었다. PrometheusRule 이 아닌 문서는
-    # .spec 이 null 로 나오고, 그 null 이 출력의 첫 문서가 되면 promtool 이 "Multiple
-    # document yaml rules files are not supported, only the first document is processed"
-    # 를 경고하며 null 만 보고 "0 rules found / SUCCESS" 로 끝났다. 실측: 같은 깨진
-    # PromQL 이 단독 파일이면 exit 1, 앞에 ConfigMap 문서 하나만 붙이면 exit 0.
-    # K8s 에서 멀티 도큐먼트는 아주 흔하므로 게이트가 사실상 우회 가능했다.
-    KR2B="$PLUGIN_TMP/repo2b"
-    new_plugin_repo "$KR2B"
-    {
-      printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  a: b\n---\n'
-      cat "$FIXTURES/fail-promql-syntax.yaml"
-    } >"$KR2B/rule.yaml"
-    git -C "$KR2B" add rule.yaml
-    status=$(run_plugin "$KR2B")
-    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
-      report "prometheus-multidoc-block (앞 문서에 가려도 차단)" 0
-    else
-      report "prometheus-multidoc-block (앞 문서에 가려도 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
-    fi
-
-    # 두 번째 PrometheusRule 문서만 깨진 경우. 문서별로 돌지 않으면 첫 개만 보고 통과한다.
-    KR2C="$PLUGIN_TMP/repo2c"
-    new_plugin_repo "$KR2C"
-    {
-      cat "$FIXTURES/ok-prometheus-rule.yaml"
-      printf -- '---\n'
-      cat "$FIXTURES/fail-promql-syntax.yaml"
-    } >"$KR2C/rule.yaml"
-    git -C "$KR2C" add rule.yaml
-    status=$(run_plugin "$KR2C")
-    if [ "$status" -eq 1 ] && grep -qF "PromQL Alerting Rule 문법 검증" "$PLUGIN_TMP/out"; then
-      report "prometheus-multidoc-second-rule (뒤 문서 위반도 차단)" 0
-    else
-      report "prometheus-multidoc-second-rule (뒤 문서 위반도 차단)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
-    fi
-
-    # 오탐 회귀: 정상 Rule 이 다른 문서와 함께 있어도 통과해야 한다.
-    KR2D="$PLUGIN_TMP/repo2d"
-    new_plugin_repo "$KR2D"
-    {
-      printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\ndata:\n  a: b\n---\n'
-      cat "$FIXTURES/ok-prometheus-rule.yaml"
-    } >"$KR2D/rule.yaml"
-    git -C "$KR2D" add rule.yaml
-    status=$(run_plugin "$KR2D")
-    if [ "$status" -eq 0 ]; then
-      report "prometheus-multidoc-pass (정상 Rule 은 오탐 없음)" 0
-    else
-      report "prometheus-multidoc-pass (정상 Rule 은 오탐 없음)" 1 "exit=$status out=$(cat "$PLUGIN_TMP/out")"
-    fi
-  fi
 
   if require_tool pluto; then
     # Case 3: 삭제된 API 버전 -> 커밋 차단(격리 tmpdir로 pluto -d 스캔 범위가
@@ -592,33 +489,6 @@ for path in "$FIXTURES"/*.yaml; do
     report "unregistered-fixture: $name" 1 "기대 결과가 등록되지 않은 픽스처입니다"
   fi
 done
-
-# 문서 수가 늘어도 YAML 변환은 파일당 한 번이어야 한다.
-if require_tool yq; then
-  BATCH_TMP=$(mktemp -d)
-  mkdir "$BATCH_TMP/tools"
-  export YAML_REAL_YQ YAML_CALL_TRACE
-  YAML_REAL_YQ=$(command -v yq)
-  YAML_CALL_TRACE="$BATCH_TMP/calls"
-  cat >"$BATCH_TMP/tools/yq" <<'EOF'
-#!/usr/bin/env bash
-printf 'call\n' >>"$YAML_CALL_TRACE"
-exec "$YAML_REAL_YQ" "$@"
-EOF
-  chmod +x "$BATCH_TMP/tools/yq"
-  for ((i = 0; i < 10; i++)); do
-    printf '%s\n' '---'
-    cat "$FIXTURES/ok-prometheus-rule.yaml"
-  done >"$BATCH_TMP/rules.yaml"
-  status=0
-  PATH="$BATCH_TMP/tools:$PATH" bash "$REPO_ROOT/bin/hooks/plugins/k8s-check.sh" "$BATCH_TMP/rules.yaml" >"$BATCH_TMP/out" 2>&1 || status=$?
-  if [ "$status" -eq 0 ] && [ "$(wc -l <"$YAML_CALL_TRACE")" -eq 1 ]; then
-    report "10개 문서도 yq 1회로 검증" 0
-  else
-    report "10개 문서도 yq 1회로 검증" 1 "$(cat "$BATCH_TMP/out")"
-  fi
-  rm -rf "$BATCH_TMP"
-fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))
 echo

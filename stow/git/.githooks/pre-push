@@ -92,9 +92,8 @@ collect_changed_skills_from_range() {
     [ -n "$FILE" ] || continue
     case "$FILE" in
     contexts/*/scripts/* | contexts/*/tests/* | contexts/*/examples/*)
-      # examples/ 도 스킬 회귀 스위트의 검증 대상이다(contexts/aiops/tests/run.sh 가
-      # examples/anomaly-rag-pipeline.py 의 마스킹 로직을 직접 돌린다). 예전엔 이 패턴이
-      # 빠져 있어, 그 파일의 PII 마스킹 결함을 고쳐도 push 시 aiops 스위트가 돌지 않았다.
+      # examples/ 도 스킬 회귀 스위트가 직접 실행할 수 있는 대상이다. 예전엔 이 패턴이
+      # 빠져 있어, 예제 코드의 결함을 고쳐도 push 시 해당 스킬 스위트가 돌지 않았다.
       SKILL=${FILE#contexts/}
       add_skill "${SKILL%%/*}"
       ;;
