@@ -33,7 +33,11 @@ tasks = re.sub(r'    version: .+', '    version: "{{ desired_revision }}"', task
 }]))
 PY
 for revision in v1 v2 v2; do
-  ansible-playbook -i localhost, "$TMP/play.yml" -e "desired_revision=$revision" >"$TMP/out" 2>&1 || {
+  # 역할은 40자 commit SHA로 고정하므로(Renovate도 digest를 갱신) 태그 이름이 아닌 SHA를 넘긴다.
+  # 태그 + depth 경로는 역할이 쓰지 않으며, ansible-core 2.21.6 git 모듈의 shallow 태그 재fetch
+  # 회귀(ansible/ansible#87881)에 걸려 실제 역할과 무관한 실패를 낸다.
+  sha=$(git -C "$TMP/origin" rev-parse "$revision^{commit}")
+  ansible-playbook -i localhost, "$TMP/play.yml" -e "desired_revision=$sha" >"$TMP/out" 2>&1 || {
     cat "$TMP/out"
     exit 1
   }
