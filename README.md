@@ -40,7 +40,7 @@ just setup-dryrun
 
 `bootstrap.sh`는 경량 진입점으로서 필수 패키지 및 `mise`, `just`, `ansible`을 준비한 후 제어권을 `Justfile` 및 Ansible Playbook(`ansible/site.yml`)으로 넘겨 모듈화된 셋업을 완료합니다.
 
-`just setup`(Ansible Playbook)은 아래 6개 역할을 순차적으로 실행합니다:
+`just setup`(Ansible Playbook)은 아래 7개 역할을 순차적으로 실행합니다:
 
 | 역할 (Ansible Role) | 작업 내용 |
 |---|---|
@@ -50,6 +50,7 @@ just setup-dryrun
 | **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 아래 `stow` 역할이 수행 |
 | **`stow`** | 기존 설정 파일 안전 백업 후 `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)에 파일 단위로 안전하게 링크. 최초 `bootstrap.sh`는 저장소의 mise 설정을 환경변수로 읽어 도구를 설치한 뒤 동일한 안전 설치기를 사용합니다. |
 | **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록, 이전 실시간 검사 등록 제거 |
+| **`mise`** | 도구 설치·링크 이후 어떤 추적 설정(`~/.local/state/mise/tracked-configs`)도 쓰지 않는 이전 도구 버전을 `mise prune --tools --yes`로 정리. 다른 프로젝트 설정이 쓰는 버전은 보존하고, `--check`에서는 정리 예정 수만 보고. 글로벌 설정이 저장소 정본 링크가 아니면 건너뛰며, 실패는 경고 후 계속. `DOTFILES_MISE_PRUNE=0` 또는 `--skip-tags mise_prune`로 비활성화 |
 
 ### Step 3. 터미널 재시작
 ```bash
@@ -88,7 +89,7 @@ just check-domain  # Terraform/SAM/Helm/K8s 등 도메인 정책 검사까지 �
 dotfiles/
 ├── bootstrap.sh          # 최초 설치 진입점
 ├── Justfile              # setup/check/test/verify/docs-index
-├── ansible/              # site.yml 및 설치 역할 6개
+├── ansible/              # site.yml 및 설치 역할 7개
 ├── stow/                 # zsh/git/vim/tflint/mise 설정 원본
 ├── bin/
 │   ├── hooks/            # Git·에이전트 훅, 검증 러너, 도메인 플러그인
@@ -202,6 +203,8 @@ bash bin/utils/run-setup.sh --tags stow,ai
 
 `mise install`은 선언된 전체 도구를 설치합니다. 도구를 삭제하거나 새 설치 프로필을
 추가할 때는 실제 사용 여부와 검사 의존성을 먼저 확인합니다.
+Renovate 버전 갱신으로 남은 이전 설치본은 `just setup`의 `mise` 역할이 정리합니다.
+정리 예정 버전은 `mise ls --prunable`로 확인하고, 유지하려면 `DOTFILES_MISE_PRUNE=0 just setup`으로 실행합니다.
 
 ### 기존 파일과 권한 정책
 

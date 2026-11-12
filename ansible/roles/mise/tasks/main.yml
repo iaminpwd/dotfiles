@@ -1,0 +1,92 @@
+---
+# Renovate가 stow/mise/.config/mise/config.toml 버전을 주기적으로 올리면 이전
+# 설치본이 ~/.local/share/mise/installs 에 계속 쌓인다. 도구 설치 자체는
+# bootstrap.sh(mise install)가 just setup 이전에 끝내므로, 이 역할은 stow 역할이
+# 정본 설정을 HOME에 링크한 뒤 playbook 마지막에 미사용 버전만 정리한다.
+#
+# 보존 근거(mise prune --help, 2026.10.x): mise는 로드한 설정 파일을
+# ~/.local/state/mise/tracked-configs 에 기록하고, prune은 그중 어떤 설정도
+# 선택하지 않는 버전만 지운다. 다른 프로젝트의 mise.toml/.tool-versions가 쓰는
+# 버전과 실행 중인 프로세스가 사용하는 버전은 남는다. --tools로 추적 설정 목록
+# 정리(--configs)는 하지 않는다.
+#
+# 비활성화: DOTFILES_MISE_PRUNE=0 또는 --skip-tags mise_prune.
+- name: Mise 미사용 버전 정리 대상 경로 결정
+  ansible.builtin.set_fact:
+    mise_prune_bin: "{{ ansible_env.HOME }}/.local/bin/mise"
+    mise_prune_global_config: "{{ ansible_env.HOME }}/.config/mise/config.toml"
+    mise_prune_source_config: "{{ (role_path ~ '/../../../stow/mise/.config/mise/config.toml') | realpath }}"
+    mise_prune_enabled: "{{ lookup('ansible.builtin.env', 'DOTFILES_MISE_PRUNE', default='1') not in ['0', 'false', 'no', 'off'] }}"
+    mise_prune_env_global: "{{ ansible_env.MISE_GLOBAL_CONFIG_FILE | default('') }}"
+
+- name: Mise 실행 파일과 글로벌 설정 링크 확인
+  when: mise_prune_enabled | bool
+  block:
+    - name: Mise 실행 파일 확인
+      ansible.builtin.stat:
+        path: "{{ mise_prune_bin }}"
+      register: mise_prune_bin_stat
+
+    - name: Mise 글로벌 설정 링크 확인
+      ansible.builtin.stat:
+        path: "{{ mise_prune_global_config }}"
+        follow: false
+      register: mise_prune_link_stat
+
+# 글로벌 설정이 이 저장소 정본을 가리키지 않으면(최초 --check, 다른 체크아웃,
+# MISE_GLOBAL_CONFIG_FILE 재지정 등) prune이 선언 도구까지 미사용으로 볼 수 있다.
+# 그런 상태에서는 지우지 않고 건너뛴다.
+- name: Mise 정리 실행 조건 판정
+  ansible.builtin.set_fact:
+    mise_prune_skip_reason: >-
+      {{ 'DOTFILES_MISE_PRUNE로 비활성화됨' if not (mise_prune_enabled | bool)
+         else 'mise 실행 파일 없음' if not (mise_prune_bin_stat.stat.executable | default(false))
+         else 'MISE_GLOBAL_CONFIG_FILE이 저장소 정본이 아님'
+           if (mise_prune_env_global | length > 0 and (mise_prune_env_global | realpath) != mise_prune_source_config)
+         else '글로벌 설정이 저장소 정본 링크가 아님'
+           if not ((mise_prune_link_stat.stat.islnk | default(false))
+                   and (mise_prune_link_stat.stat.lnk_source | default('')) == mise_prune_source_config)
+         else '' }}
+
+- name: Mise 정리 건너뜀 안내
+  ansible.builtin.debug:
+    msg: "mise prune 건너뜀: {{ mise_prune_skip_reason }}"
+  when: mise_prune_skip_reason | length > 0
+
+# 정리는 디스크 회수용 부가 작업이다. 도구 설치·링크는 이미 끝났으므로 실패해도
+# 전체 setup을 실패시키지 않고 경고 후 계속한다(rescue).
+- name: Mise 미사용 버전 정리
+  when: mise_prune_skip_reason | length == 0
+  block:
+    # 목록 조회는 읽기 전용이라 --check에서도 실행해 정리 예정 수를 보고한다.
+    - name: Mise 정리 대상 버전 조회 (읽기 전용)
+      ansible.builtin.command:
+        argv: ["{{ mise_prune_bin }}", ls, --prunable, --json]
+        chdir: "{{ ansible_env.HOME }}"
+      register: mise_prune_list
+      changed_when: false
+      check_mode: false
+
+    - name: Mise 정리 대상 수 계산
+      ansible.builtin.set_fact:
+        mise_prune_count: "{{ (mise_prune_list.stdout | from_json).values() | map('length') | sum }}"
+
+    - name: Mise 정리 예정 보고 (--check)
+      ansible.builtin.debug:
+        msg: "mise prune 예정: {{ mise_prune_count }}개 버전 (dry-run이라 삭제하지 않음)"
+      when: ansible_check_mode and (mise_prune_count | int) > 0
+      changed_when: true
+
+    - name: Mise 미사용 도구 버전 삭제
+      ansible.builtin.command:
+        argv: ["{{ mise_prune_bin }}", prune, --tools, --yes]
+        chdir: "{{ ansible_env.HOME }}"
+      when: not ansible_check_mode and (mise_prune_count | int) > 0
+      changed_when: true
+  rescue:
+    - name: Mise 정리 실패 경고 (setup은 계속)
+      ansible.builtin.debug:
+        msg: >-
+          [WARNING] mise 미사용 버전 정리에 실패했습니다. 설치 결과에는 영향이 없습니다.
+          'mise ls --prunable' 확인 후 'mise prune --tools'로 수동 정리하십시오.
+          원인: {{ ansible_failed_result.stderr | default(ansible_failed_result.msg | default('알 수 없음')) }}

@@ -31,3 +31,8 @@
 
     - role: ai_agent
       tags: ['ai', 'rules']
+
+    # 도구 설치(bootstrap.sh의 mise install)와 stow 역할의 설정 링크가 끝난 뒤에만
+    # 정리해야 선언된 현재 버전을 미사용으로 오판하지 않는다. 그래서 마지막에 둔다.
+    - role: mise
+      tags: ['mise', 'mise_prune']

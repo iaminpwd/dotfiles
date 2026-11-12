@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1463" height="1075" viewBox="0 0 1463 1075" role="img" aria-labelledby="t d">
 <title id="t">Dotfiles 개발 환경 자동화 파이프라인</title>
-<desc id="d">Bootstrap → six Ansible roles → final configuration; optional security and authentication gates</desc>
+<desc id="d">Bootstrap → seven Ansible roles → final configuration; optional security and authentication gates</desc>
 <defs>
 <marker id="blue" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#2779C9"/></marker>
 <marker id="green" markerWidth="10" markerHeight="10" viewBox="0 0 12 12" refX="10" refY="6" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#20956A"/></marker>
@@ -35,7 +35,7 @@
 <text x="1061" y="156" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="31" font-weight="700" fill="#FFFFFF" text-anchor="middle">3</text>
 <text x="1098" y="151" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="24" font-weight="700" fill="#193854" text-anchor="start">설정 마무리 (Bootstrap 계속)</text>
 <text x="43" y="182" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="15" font-weight="400" fill="#52687D" text-anchor="start">시스템 준비와 도구 검증 후 Ansible 호출</text>
-<text x="542" y="182" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="15" font-weight="400" fill="#52687D" text-anchor="start">6개 역할을 순서대로 실행</text>
+<text x="542" y="182" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="15" font-weight="400" fill="#52687D" text-anchor="start">7개 역할을 순서대로 실행</text>
 <text x="1038" y="182" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="15" font-weight="400" fill="#52687D" text-anchor="start">개인 설정과 설치 확인</text>
 <rect x="37" y="200" width="449" height="116" rx="14" fill="#FFFFFF" stroke="#8ABDF0" stroke-width="2"/>
 <text x="55" y="239" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="700" fill="#143657" text-anchor="start">1.1 OS 패키지 준비</text>
@@ -61,31 +61,35 @@
 <text x="55" y="771" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="700" fill="#143657" text-anchor="start">1.5 Ansible 실행</text>
 <text x="55" y="804" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="17" font-weight="400" fill="#344E68" text-anchor="start">just setup → run-setup.sh</text>
 <text x="55" y="834" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="17" font-weight="400" fill="#344E68" text-anchor="start">ansible/site.yml 실행</text>
-<rect x="535" y="195" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<rect x="535" y="195" width="451" height="84" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
 <text x="553" y="234" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.1 packages</text>
 <text x="553" y="267" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">OS별 공통 유틸리티</text>
-<path d="M759 295V303" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
-<rect x="535" y="308" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
-<text x="553" y="347" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.2 docker</text>
-<text x="553" y="380" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">Debian/RHEL: Docker CE</text>
-<text x="553" y="400" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">macOS: 수동 설치 안내</text>
-<path d="M759 408V416" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
-<rect x="535" y="421" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
-<text x="553" y="460" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.3 zsh</text>
-<text x="553" y="493" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">Oh My Zsh · 고정 플러그인</text>
-<path d="M759 521V529" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
-<rect x="535" y="534" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
-<text x="553" y="573" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.4 tflint</text>
-<text x="553" y="606" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">설치된 경우 플러그인 초기화</text>
-<path d="M759 634V642" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
-<rect x="535" y="647" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
-<text x="553" y="686" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.5 stow</text>
-<text x="553" y="719" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">백업·드리프트·안전 링크</text>
-<path d="M759 747V755" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
-<rect x="535" y="760" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
-<text x="553" y="799" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.6 ai_agent</text>
-<text x="553" y="832" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">3개 에이전트 규칙·스킬·훅</text>
-<text x="553" y="852" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">편집: Claude/Antigravity, Stop: 3개</text>
+<path d="M759 280V288" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="292" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="331" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.2 docker</text>
+<text x="553" y="364" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">Debian/RHEL: Docker CE</text>
+<text x="553" y="384" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">macOS: 수동 설치 안내</text>
+<path d="M759 392V400" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="404" width="451" height="84" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="443" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.3 zsh</text>
+<text x="553" y="476" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">Oh My Zsh · 고정 플러그인</text>
+<path d="M759 489V497" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="501" width="451" height="84" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="540" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.4 tflint</text>
+<text x="553" y="573" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">설치된 경우 플러그인 초기화</text>
+<path d="M759 586V594" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="598" width="451" height="84" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="637" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.5 stow</text>
+<text x="553" y="670" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">백업·드리프트·안전 링크</text>
+<path d="M759 683V691" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="695" width="451" height="99" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="734" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.6 ai_agent</text>
+<text x="553" y="767" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">3개 에이전트 규칙·스킬·훅</text>
+<text x="553" y="787" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">편집: Claude/Antigravity, Stop: 3개</text>
+<path d="M759 795V803" fill="none" stroke="#20956A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<rect x="535" y="807" width="451" height="84" rx="14" fill="#FFFFFF" stroke="#92D4B0" stroke-width="2"/>
+<text x="553" y="846" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="21" font-weight="700" fill="#143657" text-anchor="start">2.7 mise</text>
+<text x="553" y="879" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="16" font-weight="400" fill="#344E68" text-anchor="start">미사용 도구 버전 정리 (prune)</text>
 <rect x="1032" y="201" width="395" height="114" rx="14" fill="#FFFFFF" stroke="#F0BB82" stroke-width="2"/>
 <text x="1050" y="240" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="700" fill="#143657" text-anchor="start">3.1 Git identity</text>
 <text x="1050" y="273" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="17" font-weight="400" fill="#344E68" text-anchor="start">필요 시 이름·이메일 설정 안내</text>
@@ -106,7 +110,7 @@
 <text x="1050" y="772" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="22" font-weight="700" fill="#143657" text-anchor="start">3.5 셸 변경 (사용자)</text>
 <text x="1050" y="805" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="17" font-weight="400" fill="#344E68" text-anchor="start">명령 안내: exec zsh</text>
 <path d="M486 790H511V243H530" fill="none" stroke="#2779C9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#blue)"/>
-<path d="M986 808H1008V253H1028" fill="none" stroke="#20956A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
+<path d="M986 849H1008V253H1028" fill="none" stroke="#20956A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#green)"/>
 <rect x="24" y="937" width="698" height="114" rx="14" fill="#F7F0FF" stroke="#C4AEEA" stroke-width="2"/>
 <text x="39" y="972" font-family="Malgun Gothic,Noto Sans CJK KR,sans-serif" font-size="23" font-weight="700" fill="#573D87" text-anchor="start">Git Hooks (별도 검증 경로)</text>
 <rect x="42" y="981" width="324" height="59" rx="14" fill="#FFFFFF" stroke="#C7B4E9" stroke-width="2"/>
