@@ -49,7 +49,7 @@ just setup-dryrun
 | **`zsh`** | Oh My Zsh 및 `zsh-autosuggestions`, `zsh-syntax-highlighting` 플러그인 구성 |
 | **`tflint`** | IaC 전역 `tflint` 설정(`stow/tflint/.tflint.hcl`)의 플러그인 초기화(`tflint --init`)만 담당 — `~/.tflint.hcl` 배포 자체는 아래 `stow` 역할이 수행 |
 | **`stow`** | 기존 설정 파일 안전 백업 후 `zsh`, `vim`, `git`, `tflint`, `mise` 설정을 홈 디렉토리(`~/`)에 파일 단위로 안전하게 링크. 최초 `bootstrap.sh`는 저장소의 mise 설정을 환경변수로 읽어 도구를 설치한 뒤 동일한 안전 설치기를 사용합니다. |
-| **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록, 이전 실시간 검사 등록 제거 |
+| **`ai_agent`** | 글로벌 룰·스킬 및 워크스페이스 링크 배포, AI 편집 이력 훅과 변경 감지 기반 Stop 검사 등록 |
 | **`mise`** | 도구 설치·링크 이후 어떤 추적 설정(`~/.local/state/mise/tracked-configs`)도 쓰지 않는 이전 도구 버전을 `mise prune --tools --yes`로 정리. 다른 프로젝트 설정이 쓰는 버전은 보존하고, `--check`에서는 정리 예정 수만 보고. 글로벌 설정이 저장소 정본 링크가 아니면 건너뛰며, 실패는 경고 후 계속. `DOTFILES_MISE_PRUNE=0` 또는 `--skip-tags mise_prune`로 비활성화 |
 
 ### Step 3. 터미널 재시작

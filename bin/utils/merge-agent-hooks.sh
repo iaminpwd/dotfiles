@@ -76,9 +76,6 @@ cp -p "$GEMINI_HOOKS" "$GEMINI_TMP"
 cp -p "$CLAUDE_SETTINGS" "$CLAUDE_TMP"
 cp -p "$CODEX_HOOKS" "$CODEX_TMP"
 
-# 파일은 폐기했지만 이전 설치의 등록을 제거하기 위한 경로는 유지한다.
-LEGACY_LIVE_NAME="pre-flight-live-hook.sh"
-LIVE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/$LEGACY_LIVE_NAME")"
 GATE_HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/pre-flight-gate-hook.sh")"
 ADAPTER_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/agent-stop-adapter.sh")"
 # Serialized commands are executed by a shell, so quote even paths containing
@@ -105,12 +102,12 @@ CODEX_GATE="$QUOTED_ADAPTER codex"
     )
 ' "$GEMINI_HOOKS" >"$GEMINI_TMP"
 
-# Claude의 편집 이력·폐기 훅 제거·Stop 등록을 한 번에 병합한다.
+# Claude의 편집 이력·Stop 등록을 한 번에 병합한다.
 # shellcheck disable=SC2016
-"$JQ" --arg cmd "$HOOK_SCRIPT" --arg live "$LIVE_HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" '
+"$JQ" --arg cmd "$HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" '
   .hooks.PostToolUse = (
       ((.hooks.PostToolUse // []) | map(
-        .hooks = ((.hooks // []) | map(select(.command != $cmd and .command != $live)))
+        .hooks = ((.hooks // []) | map(select(.command != $cmd)))
         | select(.hooks | length > 0)
       ))
       + [{matcher: "Edit|Write|MultiEdit|NotebookEdit", hooks: [{type: "command", command: $cmd}]}]

@@ -98,7 +98,7 @@ while IFS= read -r -d '' file; do
     done
     ;;
   bin/utils/stow-safe-role-init.py)
-    dotfiles_test stow-legacy-mise-link
+    dotfiles_test stow-mise-role-init
     dotfiles_test stow-toctou
     ;;
   bin/utils/stow-filter-inventory.pl)
@@ -118,7 +118,6 @@ while IFS= read -r -d '' file; do
     run-setup) dotfiles_test setup-behavior ;;
     tool-probe) dotfiles_test tool-probe-ssot ;;
     broken-symlink-detector) dotfiles_test detector-logic ;;
-    prune-orphan-agent-scripts) dotfiles_test agent-script-update-prune ;;
     *)
       if [ -f "contexts/dotfiles/tests/test-$name.sh" ]; then
         dotfiles_test "$name"
@@ -145,7 +144,6 @@ while IFS= read -r -d '' file; do
   ansible/roles/ai_agent/*)
     dotfiles_test agent-batch-backup
     dotfiles_test agent-root-rule-backup
-    dotfiles_test agent-script-update-prune
     dotfiles_test safe-link-backup
     dotfiles_test merge-agent-hooks
     dotfiles_test prune-orphan-skills
@@ -154,7 +152,7 @@ while IFS= read -r -d '' file; do
   ansible/roles/stow/*)
     dotfiles_test stow-backup
     dotfiles_test stow-drift-portability
-    dotfiles_test stow-legacy-mise-link
+    dotfiles_test stow-mise-role-init
     dotfiles_test stow-package-conflicts
     ;;
   ansible/roles/zsh/*)

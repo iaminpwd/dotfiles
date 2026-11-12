@@ -95,7 +95,7 @@ echo 'PASS: 회귀 실패와 개별 재현 명령 전달'
 git -C "$REPO" add -A
 git -C "$REPO" -c core.hooksPath=/dev/null commit -qm 'chore: ai agent fixture 준비'
 mkdir -p "$REPO/ansible/roles/ai_agent/tasks"
-for name in agent-batch-backup agent-root-rule-backup agent-script-update-prune safe-link-backup merge-agent-hooks prune-orphan-skills verify-bootstrap-env; do
+for name in agent-batch-backup agent-root-rule-backup safe-link-backup merge-agent-hooks prune-orphan-skills verify-bootstrap-env; do
   printf '#!/usr/bin/env bash\necho "TEST %s"\n' "$name" >"$REPO/contexts/dotfiles/tests/test-$name.sh"
 done
 printf '%s\n' '---' '- name: fixture' >"$REPO/ansible/roles/ai_agent/tasks/main.yml"
@@ -108,7 +108,6 @@ selected=$(bash "$RUNNER" --list 2>"$TMP/ai-agent.err") || status=$?
 if [ "$status" -eq 0 ] &&
   [[ "$selected" == *test-agent-batch-backup.sh* ]] &&
   [[ "$selected" == *test-agent-root-rule-backup.sh* ]] &&
-  [[ "$selected" == *test-agent-script-update-prune.sh* ]] &&
   [[ "$selected" == *test-safe-link-backup.sh* ]] &&
   [[ "$selected" == *test-merge-agent-hooks.sh* ]] &&
   [[ "$selected" == *test-prune-orphan-skills.sh* ]] &&
@@ -129,10 +128,9 @@ MAPPING_CASES=(
   '.github/scripts/assert-idempotent-ansible-recap.sh|contexts/dotfiles/tests/test-bootstrap-idempotency-gate.sh'
   '.github/scripts/lint-commit-messages.sh|contexts/dotfiles/tests/test-lint-commit-messages.sh'
   'bin/utils/stow-safe-install.py|contexts/dotfiles/tests/test-stow-drift-portability.sh,contexts/dotfiles/tests/test-stow-ignore.sh,contexts/dotfiles/tests/test-stow-package-conflicts.sh,contexts/dotfiles/tests/test-stow-real-failure.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
-  'bin/utils/stow-safe-role-init.py|contexts/dotfiles/tests/test-stow-legacy-mise-link.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
+  'bin/utils/stow-safe-role-init.py|contexts/dotfiles/tests/test-stow-mise-role-init.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
   'bin/utils/stow-filter-inventory.pl|contexts/dotfiles/tests/test-stow-ignore.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh'
   'bin/utils/broken-symlink-detector.sh|contexts/dotfiles/tests/test-detector-logic.sh'
-  'bin/utils/prune-orphan-agent-scripts.sh|contexts/dotfiles/tests/test-agent-script-update-prune.sh'
   'bin/linters/idempotency-check.sh|contexts/pre-flight-check/tests/test-idempotency.sh'
   'bin/linters/db-sg-checker.sh|contexts/pre-flight-check/tests/test-db-sg.sh'
   'bin/linters/container-hardening-gate.sh|contexts/containers/tests/run.sh'
@@ -143,10 +141,10 @@ MAPPING_CASES=(
   'tests/lib/exit-trap.sh|contexts/pre-flight-check/tests/test-exit-trap.sh'
   'tests/lib/run-domain-tests.sh|contexts/dotfiles/tests/test-run-suite.sh,contexts/dotfiles/tests/test-test-coverage-check.sh'
   'ansible/roles/zsh/tasks/main.yml|contexts/dotfiles/tests/test-zsh-updates.sh,contexts/dotfiles/tests/test-zsh-path-probe.sh,contexts/dotfiles/tests/test-zsh-shell-failure.sh,contexts/dotfiles/tests/test-zsh-supply-chain.sh'
-  'ansible/roles/stow/tasks/main.yml|contexts/dotfiles/tests/test-stow-backup.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh,contexts/dotfiles/tests/test-stow-legacy-mise-link.sh,contexts/dotfiles/tests/test-stow-package-conflicts.sh'
+  'ansible/roles/stow/tasks/main.yml|contexts/dotfiles/tests/test-stow-backup.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh,contexts/dotfiles/tests/test-stow-mise-role-init.sh,contexts/dotfiles/tests/test-stow-package-conflicts.sh'
   'stow/zsh/.zshrc|contexts/dotfiles/tests/test-zshrc-activation.sh,contexts/dotfiles/tests/test-zshenv-path.sh'
   'stow/zsh/.zshenv|contexts/dotfiles/tests/test-zshrc-activation.sh,contexts/dotfiles/tests/test-zshenv-path.sh'
-  'ansible/roles/ai_agent/tasks/main.yml|contexts/dotfiles/tests/test-agent-batch-backup.sh,contexts/dotfiles/tests/test-agent-root-rule-backup.sh,contexts/dotfiles/tests/test-agent-script-update-prune.sh,contexts/dotfiles/tests/test-safe-link-backup.sh,contexts/dotfiles/tests/test-merge-agent-hooks.sh,contexts/dotfiles/tests/test-prune-orphan-skills.sh,contexts/dotfiles/tests/test-verify-bootstrap-env.sh'
+  'ansible/roles/ai_agent/tasks/main.yml|contexts/dotfiles/tests/test-agent-batch-backup.sh,contexts/dotfiles/tests/test-agent-root-rule-backup.sh,contexts/dotfiles/tests/test-safe-link-backup.sh,contexts/dotfiles/tests/test-merge-agent-hooks.sh,contexts/dotfiles/tests/test-prune-orphan-skills.sh,contexts/dotfiles/tests/test-verify-bootstrap-env.sh'
 )
 
 # Populate both changed scripts and declared owners, without running them.

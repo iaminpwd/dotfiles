@@ -18,22 +18,6 @@
   # Explicit --check is read-only. Run the guard even in Ansible check mode.
   check_mode: false
 
-# Removing a previously checked path with state: absent can delete a new
-# user file that arrived since the stat task. Move to a private stage and
-# verify the moved inode before deleting only the historic Stow-owned link.
-- name: 구버전 Mise 링크의 안전한 정리 (경합 시 원본 보존)
-  ansible.builtin.command:
-    argv:
-      - python3
-      - "{{ role_path }}/../../../bin/utils/stow-safe-role-init.py"
-      - legacy
-      - "{{ ansible_env.HOME }}"
-      - "{{ role_path }}/../../.."
-      - "{{ '--check' if ansible_check_mode else '--apply' }}"
-  register: stow_legacy_init_result
-  changed_when: "stow_legacy_init_result.stdout.startswith('CHANGED:')"
-  check_mode: false
-
 - name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔
   ansible.builtin.find:
     paths: "{{ role_path }}/../../../stow/"

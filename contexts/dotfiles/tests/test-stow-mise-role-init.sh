@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# stow role은 이 저장소가 만든 구버전 ~/.mise.toml 링크만 정리해야 한다.
-# 사용자가 별도로 만든 ~/.mise.toml symlink는 사용자 설정이므로 보존한다.
+# stow role의 ~/.config/mise 준비 단계 회귀: 외부 symlink는 건드리지 않고,
+# 관리 링크는 유지하며, mkdir 중 부모 교체(TOCTOU)에도 사용자 데이터를 보존한다.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
@@ -8,7 +8,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 if ! command -v ansible-playbook >/dev/null 2>&1; then
-  echo '[WARNING] SKIP: ansible-playbook 필요 (stow legacy mise link 회귀)'
+  echo '[WARNING] SKIP: ansible-playbook 필요 (stow mise role init 회귀)'
   exit 0
 fi
 
@@ -16,10 +16,7 @@ export ANSIBLE_HOME="$TMP/ansible"
 export ANSIBLE_LOCAL_TEMP="$TMP/local"
 export ANSIBLE_REMOTE_TEMP="$TMP/remote"
 
-mkdir -p "$TMP/repo/ansible/roles/stow/tasks" "$TMP/repo/bin/utils" \
-  "$TMP/repo/mise" "$TMP/private" "$TMP/home-user" "$TMP/home-legacy"
-printf 'legacy=true\n' >"$TMP/repo/mise/.mise.toml"
-printf 'user=true\n' >"$TMP/private/mise.toml"
+mkdir -p "$TMP/repo/ansible/roles/stow/tasks" "$TMP/repo/bin/utils"
 
 python3 - "$ROOT" "$TMP" <<'PY'
 from pathlib import Path
@@ -35,7 +32,7 @@ marker = "- name: Dotfiles 하위의 stow 대상 디렉토리 목록 스캔"
 subset = source[: source.index(marker)].rstrip() + "\n"
 (tmp / "repo/ansible/roles/stow/tasks/main.yml").write_text(subset)
 (tmp / "play.yml").write_text(json.dumps([{
-    "name": "Stow legacy mise symlink regression",
+    "name": "Stow mise role init regression",
     "hosts": "localhost",
     "connection": "local",
     "gather_facts": False,
@@ -47,35 +44,6 @@ subset = source[: source.index(marker)].rstrip() + "\n"
     "roles": ["stow"],
 }]))
 PY
-
-# 사용자 소유의 별도 mise 설정 링크는 절대 삭제하면 안 된다.
-ln -s "../private/mise.toml" "$TMP/home-user/.mise.toml"
-STOW_TEST_HOME="$TMP/home-user" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
-  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/user.out" 2>&1 || {
-  cat "$TMP/user.out"
-  exit 1
-}
-
-if [ ! -L "$TMP/home-user/.mise.toml" ] ||
-  [ "$(readlink "$TMP/home-user/.mise.toml")" != "../private/mise.toml" ]; then
-  cat "$TMP/user.out"
-  echo 'FAIL: unrelated user ~/.mise.toml symlink was removed'
-  exit 1
-fi
-
-# 반대로 이 저장소의 옛 mise/.mise.toml을 가리키는 링크는 업그레이드 잔재라 정리해야 한다.
-ln -s "../repo/mise/.mise.toml" "$TMP/home-legacy/.mise.toml"
-STOW_TEST_HOME="$TMP/home-legacy" ANSIBLE_ROLES_PATH="$TMP/repo/ansible/roles" \
-  ansible-playbook -i localhost, "$TMP/play.yml" >"$TMP/legacy.out" 2>&1 || {
-  cat "$TMP/legacy.out"
-  exit 1
-}
-
-if [ -e "$TMP/home-legacy/.mise.toml" ] || [ -L "$TMP/home-legacy/.mise.toml" ]; then
-  cat "$TMP/legacy.out"
-  echo 'FAIL: repository-owned legacy ~/.mise.toml symlink was not removed'
-  exit 1
-fi
 
 # The role must reject foreign shared-config symlinks before attempting
 # the first mkdir; an external directory must remain untouched on failure.
@@ -186,55 +154,13 @@ os.rename(external / "moved", home / ".config")
 helper.run("mise", str(home), str(repo), False)
 assert (home / ".config/mise").is_dir()
 
-# The Ansible legacy cleanup originally checked source identity in one task,
-# then removed the pathname in a later task. Inject the same swap immediately
-# before the staged rename. A regular user file must be returned, never
-# deleted, and the original repository content must remain unchanged.
-legacy_home = tmp / "race-legacy"
-legacy_home.mkdir()
-owned_target = repo / "mise/.mise.toml"
-entry = legacy_home / ".mise.toml"
-entry.symlink_to(owned_target)
-original_rename = os.rename
-replaced = [False]
-
-def replace_at_move(source, dest, *args, **kwargs):
-    if (source == ".mise.toml" and kwargs.get("src_dir_fd") is not None
-            and not replaced[0]):
-        replaced[0] = True
-        entry.unlink()
-        entry.write_bytes(b"concurrent user-owned mise settings\n")
-    return original_rename(source, dest, *args, **kwargs)
-
-os.rename = replace_at_move
-try:
-    try:
-        helper.run("legacy", str(legacy_home), str(repo), False)
-    except RuntimeError as exc:
-        assert "restored user entry" in str(exc), exc
-    else:
-        raise AssertionError("concurrent user file deleted during legacy cleanup")
-finally:
-    os.rename = original_rename
-assert replaced[0]
-assert entry.read_bytes() == b"concurrent user-owned mise settings\n"
-assert owned_target.read_bytes() == b"legacy=true\n"
-assert not list(legacy_home.glob(".mise.toml.stow-stage-*"))
-
 # Check mode is explicitly read-only and reports intended changes.
 dry_home = tmp / "race-check-mode"
 dry_home.mkdir()
 helper.run("mise", str(dry_home), str(repo), True)
 assert not (dry_home / ".config").exists()
-entry.unlink()
-entry.symlink_to(owned_target)
-helper.run("legacy", str(legacy_home), str(repo), True)
-assert entry.is_symlink(), "dry run removed the owned symlink"
-helper.run("legacy", str(legacy_home), str(repo), False)
-assert not entry.exists() and not entry.is_symlink()
-assert owned_target.read_bytes() == b"legacy=true\n"
 
-print("PASS: Mise mkdir parent swap and legacy file replacement preserve data")
+print("PASS: Mise mkdir parent swap preserves data")
 PY
 
 echo 'PASS: stow role preserves foreign .config/mise links before mkdir and keeps managed links'

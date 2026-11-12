@@ -48,12 +48,11 @@ echo '{"unrelated-key":"keep-me","pre-flight-stop-gate":{"Stop":[{"type":"comman
 mkdir -p "$FAKE_HOME/.codex"
 echo '{"user-setting":"preserve","hooks":{"Stop":[{"hooks":[{"type":"command","command":"codex-user-stop"}]}]}}' >"$FAKE_HOME/.codex/hooks.json"
 
-# 이전 버전의 live 훅과 같은 항목의 사용자 훅을 함께 심어 마이그레이션을 확인한다.
+# 같은 이벤트에 등록된 사용자 훅을 심어 병합 시 보존되는지 확인한다.
 mkdir -p "$FAKE_HOME/.claude" "$FAKE_HOME/bin/hooks"
-LEGACY_LIVE=$(readlink -f "$PLAYBOOK_DIR/../bin/hooks/pre-flight-live-hook.sh")
-jq -n --arg live "$LEGACY_LIVE" '{attribution:{commit:"user commit footer",pr:"user PR footer",custom:"leave unchanged"},hooks:{PostToolUse:[
+jq -n '{attribution:{commit:"user commit footer",pr:"user PR footer",custom:"leave unchanged"},hooks:{PostToolUse:[
   {matcher:"Edit|Write|MultiEdit",hooks:[
-    {type:"command",command:$live},{type:"command",command:"user-hook"}
+    {type:"command",command:"user-hook"}
   ]}
 ]}}' >"$FAKE_HOME/.claude/settings.json"
 
@@ -150,12 +149,11 @@ else
   report "claude (PostToolUse 매처 훅 추가)" 1 "$(cat "$CLAUDE_JSON" 2>/dev/null || echo '<없음>')"
 fi
 
-# 4. 이전 live 훅만 제거하고 같은 항목의 사용자 훅은 보존한다.
-if jq -e '[.hooks.PostToolUse[].hooks[].command] |
-  (all(.[]; endswith("pre-flight-live-hook.sh") | not)) and (index("user-hook") != null)' "$CLAUDE_JSON" >/dev/null; then
-  report "claude (실시간 검사 제거, 사용자 훅 보존)" 0
+# 4. 같은 이벤트의 사용자 훅은 보존한다.
+if jq -e '[.hooks.PostToolUse[].hooks[].command] | index("user-hook") != null' "$CLAUDE_JSON" >/dev/null; then
+  report "claude (사용자 훅 보존)" 0
 else
-  report "claude (실시간 검사 제거, 사용자 훅 보존)" 1
+  report "claude (사용자 훅 보존)" 1
 fi
 
 # 5. Claude: 완료 선언 직전 게이트 훅(pre-flight-gate-hook.sh)이 Stop에 추가되어야 한다.

@@ -79,14 +79,13 @@ bin/
 `hooks/plugins/`는 파일명을 직접 인용하지 않아도 자동 탐색으로 실행되므로 참조 검색만으로 삭제하지 않습니다.
 `broken-symlink-detector.sh`는 수동 진단 도구이므로 자동 호출이 없다는 이유로 제거하지 않습니다.
 Stow 안전 설치용 Python·Perl 도구는 `bootstrap.sh`와 Ansible의 파일 보존 절차에 연결되어 있으므로 임의로 합치거나 제거하지 않습니다.
-`bin/`과 `contexts/*/scripts/`는 `~/.local/bin`에 평탄화하지 않습니다. 훅·린터·유틸리티는 `~/dotfiles` 정본 경로로 호출하고, context script는 각 에이전트의 Skill asset 경로를 사용합니다. 과거 버전이 만든 dotfiles 소유 global symlink는 Ansible 마이그레이션 단계에서 정리합니다.
+`bin/`과 `contexts/*/scripts/`는 `~/.local/bin`에 평탄화하지 않습니다. 훅·린터·유틸리티는 `~/dotfiles` 정본 경로로 호출하고, context script는 각 에이전트의 Skill asset 경로를 사용합니다. CI의 bootstrap 검증이 `~/.local/bin`에 dotfiles 소유 링크가 없는지 확인합니다.
 
 폐기한 프롬프트 예외 마커 검사는 제거했습니다. 테스트 파일의 주석이나 호출 문자열만으로
 커버리지를 추정하는 검사도 제거하고, 테스트 등록·SKIP 안내 검사와 실제 회귀 테스트를 유지합니다.
 
 ## 자동 실행 시점
 
-편집 직후 검증 훅은 제거했으며 이전 등록을 지우는 마이그레이션만 유지합니다.
 `pre-flight-gate-hook.sh`는 Claude Stop의 기존 검증 엔진입니다. Antigravity Stop과 Codex Stop도 `agent-stop-adapter.sh`를 통해 동일한 엔진을 호출합니다. 변경 내용 기반 성공 캐시와 문서·테스트 등록 캐시, 검사 정책은 변경하지 않았습니다.
 Antigravity의 공식 글로벌 설정은 `~/.gemini/config/hooks.json`이며 Gemini CLI의 `AfterAgent`와는 별개입니다. 종료 이벤트는 `Stop`이고 검사 실패 시 `decision: "continue"`를 반환합니다. Codex는 `~/.codex/hooks.json`의 `Stop`을 사용하며 실패 시 `decision: "block"`을 반환해 새 후속 턴을 요청합니다.
 Antigravity는 `fullyIdle=true`에서 검사하고 `terminationReason=model_stop`에서 실패하면 계속 실행하도록 요청합니다. 실행 단계가 한도에 도달하거나 오류로 종료된 경우에는 런타임이 계속할 수 없어 stderr에 경고가 남으며, 모델이 실패를 스스로 고칠 때까지 계속될 수 있으므로 필요시 사용자가 중단해야 합니다. `executionNum`은 Stop 재시도 횟수가 아니므로 안전장치로 사용하지 않습니다. Codex는 설정을 설치해도 자동 신뢰되지 않으므로 CLI의 `/hooks`에서 새 훅을 검토·신뢰해야 동작합니다. 플랫폼 CLI가 설치되지 않은 환경의 JSON 계약 회귀 테스트는 실제 이벤트 발생을 증명하지 않습니다.

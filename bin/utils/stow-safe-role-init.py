@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Safely prepare Mise's HOME directory and retire an owned legacy link.
+"""Safely prepare Mise's HOME directory.
 
 Do not separate an Ansible stat/assert from later path-based mkdir/unlink:
 another writer may replace an already checked HOME entry between tasks.
 Reuse the Stow installer's O_NOFOLLOW dirfds and inode ancestry checks.
-Never traverse or mutate a foreign config symlink. For legacy cleanup,
-move the link into a private stage and verify the *moved* inode before
-unlinking it; restore/preserve any concurrent user replacement.
+Never traverse or mutate a foreign config symlink.
 """
 import importlib.util
 import os
-import secrets
 import stat
 import sys
 
@@ -112,73 +109,6 @@ def _ensure_mise(home, repository, fd, check):
     print("CHANGED: created .config/mise directory")
 
 
-def _identity(obj):
-    return (obj.st_dev, obj.st_ino, obj.st_mode)
-
-
-def _retire_legacy(home, repository, fd, check):
-    name = ".mise.toml"
-    expected = os.path.join(repository, "mise/.mise.toml")
-    current = _entry(fd, name)
-    if current is None or not stat.S_ISLNK(current.st_mode):
-        print("UNCHANGED: no owned legacy Mise symlink")
-        return
-    if not _expected_symlink(fd, name, home, expected):
-        print("UNCHANGED: foreign legacy Mise symlink preserved")
-        return
-    raw = os.readlink(name, dir_fd=fd)
-    if check:
-        print("CHANGED: would retire owned legacy Mise symlink")
-        return
-
-    if (os.link not in os.supports_dir_fd
-            or os.link not in os.supports_follow_symlinks):
-        raise RuntimeError("legacy cleanup requires no-follow linkat support")
-    stage = f".mise.toml.stow-stage-{secrets.token_hex(16)}"
-    secure._verify_home_root(fd, home)
-    os.mkdir(stage, mode=0o700, dir_fd=fd)
-    stage_fd = os.open(stage, secure.DIR_FLAGS, dir_fd=fd)
-    keep_stage = False
-    try:
-        secure._verify_home_root(fd, home)
-        # Recheck the same inode immediately before moving it into private
-        # staging. The post-rename check catches a subsequent replacement.
-        before_move = _entry(fd, name)
-        if (before_move is None
-                or _identity(before_move) != _identity(current)
-                or os.readlink(name, dir_fd=fd) != raw):
-            raise RuntimeError("legacy Mise source changed before staging")
-        os.rename(name, "source", src_dir_fd=fd, dst_dir_fd=stage_fd)
-        moved = _entry(stage_fd, "source")
-        if (moved is None or _identity(moved) != _identity(current)
-                or not stat.S_ISLNK(moved.st_mode)
-                or os.readlink("source", dir_fd=stage_fd) != raw):
-            # Never delete an unexpected user file after a concurrent swap.
-            # linkat is no-clobber: a new user pathname cannot be overwritten.
-            keep_stage = True
-            try:
-                os.link(
-                    "source", name, src_dir_fd=stage_fd, dst_dir_fd=fd,
-                    follow_symlinks=False,
-                )
-            except FileExistsError:
-                raise RuntimeError(
-                    "legacy Mise source replaced; user entry preserved in "
-                    + os.path.join(home, stage, "source")
-                )
-            os.unlink("source", dir_fd=stage_fd)
-            keep_stage = False
-            raise RuntimeError("legacy Mise source replaced; restored user entry")
-        secure._verify_home_root(fd, home)
-        os.unlink("source", dir_fd=stage_fd)
-    finally:
-        os.close(stage_fd)
-        if not keep_stage:
-            os.rmdir(stage, dir_fd=fd)
-    secure._verify_home_root(fd, home)
-    print("CHANGED: retired owned legacy Mise symlink")
-
-
 def run(action, home, repository, check):
     secure._require_secure_dirfds()
     home = os.path.abspath(home)
@@ -188,8 +118,6 @@ def run(action, home, repository, check):
         secure._verify_home_root(fd, home)
         if action == "mise":
             _ensure_mise(home, repository, fd, check)
-        elif action == "legacy":
-            _retire_legacy(home, repository, fd, check)
         else:
             raise ValueError("unknown stow entry action")
         secure._verify_home_root(fd, home)
@@ -200,7 +128,7 @@ def run(action, home, repository, check):
 if __name__ == "__main__":
     if len(sys.argv) != 5 or sys.argv[4] not in ("--check", "--apply"):
         raise SystemExit(
-            "usage: stow-safe-role-init.py mise|legacy HOME REPO_ROOT --check|--apply"
+            "usage: stow-safe-role-init.py mise HOME REPO_ROOT --check|--apply"
         )
     try:
         run(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "--check")
