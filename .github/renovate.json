@@ -16,10 +16,33 @@
       "matchManagers": [
         "mise"
       ],
-      "groupName": "mise 도구 버전 업데이트",
       "labels": [
         "dependencies",
         "mise"
+      ],
+      "separateMinorPatch": true,
+      "description": [
+        "mise 도구 공통 분류. 예전엔 여기서 groupName으로 약 50개 도구의 모든 업데이트를 PR 하나로 묶어, 그 PR의 CI가 깨지면(예: #174 머지 후) 어느 도구가 원인인지 바로 알 수 없었고 리뷰 부담도 컸다.",
+        "separateMinorPatch: 같은 도구에 patch와 minor가 동시에 나와도 patch를 따로 떼어, 안전한 patch는 아래 그룹으로 자동 머지되고 minor만 개별 리뷰로 남게 한다.",
+        "minor/major는 그룹 없이 Renovate 기본대로 도구별 개별 PR이 되며 automerge 하지 않는다. 0.x 도구의 0.y 범프(예: grype 0.121→0.122)는 Renovate semver 규칙상 updateType이 minor이고 0.x에선 breaking일 수 있으므로, 역시 개별 PR·수동 리뷰 대상이다."
+      ]
+    },
+    {
+      "matchManagers": [
+        "mise"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": "mise 도구 patch 업데이트",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": false,
+      "description": [
+        "patch만 하나의 그룹 PR로 묶고 CI가 초록이면 자동 머지한다. 그룹이 깨져도 patch 범위라 원인 후보가 작고, minor/major는 별도 PR이라 섞이지 않는다.",
+        "automergeType=pr: ci.yml은 push 트리거가 main 한정이고 나머지는 pull_request 트리거라, branch 방식(PR 없이 브랜치 push)으로는 CI 체크가 아예 생기지 않아 머지 조건을 판단할 수 없다.",
+        "platformAutomerge=false: main에 브랜치 보호·필수 체크가 없고 저장소의 allow_auto_merge도 꺼져 있어, GitHub 네이티브 auto-merge에 맡기면 체크 대기가 보장되지 않는다. Renovate 자체 머지는 브랜치의 모든 상태 체크가 성공일 때만 머지하고, 체크가 없거나 대기·실패면 머지하지 않는다.",
+        "0.x 도구의 0.x.y patch는 Renovate semver 규칙과 같이 하위 호환 변경으로 보고 이 그룹에 포함한다. patch까지 breaking일 수 있는 0.0.x 도구는 현재 config.toml에 없으며, 추가되면 이 그룹에서 제외할 것."
       ]
     },
     {
