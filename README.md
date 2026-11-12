@@ -112,22 +112,16 @@ dotfiles/
 ## 작동 논리 및 아키텍처
 
 ### bootstrap.sh & Ansible 설치 파이프라인
-![bootstrap.sh & Ansible Installation Pipeline](assets/setup-pipeline.png)
-
-[편집용 SVG 원본](assets/setup-pipeline.svg)
+![bootstrap.sh & Ansible Installation Pipeline](assets/setup-pipeline.svg)
 
 ### GNU Stow 심볼릭 링크 구조
-![GNU Stow Symlink Architecture](assets/stow-symlinks.png)
-
-[편집용 SVG 원본](assets/stow-symlinks.svg)
+![GNU Stow Symlink Architecture](assets/stow-symlinks.svg)
 
 **글로벌 스킬 적용**
 현재 글로벌 `drawio-gen` 스킬은 `~/.gemini/config/skills/`, `~/.claude/skills/`, `~/.agents/skills/`(Codex) 심볼릭 링크 레지스트리를 통해 AI 에이전트에게 제공됩니다. 다른 도메인은 스킬 등록 없이 기존 검증 스크립트를 유지합니다.
 
 ### AI 컨텍스트 빌드 파이프라인
-![AI Context Build Pipeline](assets/ai-context-pipeline.png)
-
-[편집용 SVG 원본](assets/ai-context-pipeline.svg)
+![AI Context Build Pipeline](assets/ai-context-pipeline.svg)
 
 > Pre-flight 프로필과 에이전트 Stop 검증의 상세한 실행 조건은 [bin 도구 안내의 자동 실행 시점](bin/README.md#자동-실행-시점)을 참고하십시오.
 
