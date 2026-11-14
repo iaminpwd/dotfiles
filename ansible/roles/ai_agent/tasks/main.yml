@@ -47,6 +47,16 @@
     state: link
     force: true
 
+# settings.json은 Claude Code가 직접 고쳐 쓰므로 링크하지 않는다.
+# 없을 때만 복사하고, 이미 있는 파일은 덮어쓰지 않는다.
+# hook은 아래 merge-agent-hooks.sh가 넣는다.
+- name: Claude 글로벌 settings.json 초기 복사 (없을 때만)
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../backup/claude/settings.json"
+    dest: "{{ ansible_env.HOME }}/.claude/settings.json"
+    mode: "0644"
+    force: false
+
 - name: Codex 글로벌 룰셋 환경 생성
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.codex"

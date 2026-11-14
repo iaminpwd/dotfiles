@@ -1,0 +1,7 @@
+{
+  "inputNeededNotifEnabled": true,
+  "model": "fable",
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "opus"
+  }
+}
