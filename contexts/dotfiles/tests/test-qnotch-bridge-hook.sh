@@ -121,14 +121,51 @@ cat >>"$TMP/fake.stdin"
 printf '\n' >>"$TMP/fake.stdin"
 STUB
 chmod +x "$FAKE"
+# 링크 줄은 powershell.exe 가 QNotch 파이프에 쓴다. 가짜는 -EncodedCommand 값을 기록한다.
+FAKE_PS="$TMP/fake-powershell"
+cat >"$FAKE_PS" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\${@: -1}" >>"$TMP/fake-ps.args"
+STUB
+chmod +x "$FAKE_PS"
+export QNOTCH_BRIDGE_POWERSHELL="$FAKE_PS"
 rc=0
 out=$(printf '%s' '{"session_id":"real","hook_event_name":"UserPromptSubmit","cwd":"/home/u/proj","transcript_path":"/mnt/c/Users/u/t.jsonl"}' |
-  QNOTCH_BRIDGE_EXE="$FAKE" bash "$HOOK") || rc=$?
+  CLAUDE_CODE_ENTRYPOINT=claude-desktop CLAUDE_CODE_HOST_SESSION_ID=local_abc-1 \
+    QNOTCH_BRIDGE_EXE="$FAKE" bash "$HOOK") || rc=$?
+# 링크 줄은 기다리지 않고 띄우므로 기록될 때까지 잠시 기다린다.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [ -s "$TMP/fake-ps.args" ] && break
+  sleep 0.2
+done
+# 같은 세션의 도구 이벤트는 링크를 다시 보내지 않고, 데스크톱 앱 세션이 아니거나
+# 세션 ID 형식이 다르면 링크를 보내지 않는다.
+printf '%s' '{"session_id":"real","hook_event_name":"PreToolUse","tool_name":"Bash"}' |
+  CLAUDE_CODE_ENTRYPOINT=claude-desktop CLAUDE_CODE_HOST_SESSION_ID=local_abc-1 \
+    QNOTCH_BRIDGE_EXE="$FAKE" bash "$HOOK"
+printf '%s' '{"session_id":"cli","hook_event_name":"UserPromptSubmit"}' |
+  CLAUDE_CODE_ENTRYPOINT=cli CLAUDE_CODE_HOST_SESSION_ID=local_abc-1 QNOTCH_BRIDGE_EXE="$FAKE" bash "$HOOK"
+printf '%s' '{"session_id":"bad","hook_event_name":"UserPromptSubmit"}' |
+  CLAUDE_CODE_ENTRYPOINT=claude-desktop CLAUDE_CODE_HOST_SESSION_ID='local_a&b' QNOTCH_BRIDGE_EXE="$FAKE" bash "$HOOK"
+sleep 0.5
+if "$PYTHON" -I -c '
+import base64, sys
+rows = [base64.b64decode(l).decode("utf-16-le") for l in open(sys.argv[1]) if l.strip()]
+assert len(rows) == 1, rows
+s = rows[0]
+assert "\"session\":\"real\"" in s and "\"event\":\"Link\"" in s, s
+assert "\"link\":\"claude://code/continue?session=local_abc-1\"" in s, s
+assert "QNotch.Agents" in s, s
+' "$TMP/fake-ps.args" 2>"$TMP/link.err"; then
+  report "데스크톱 앱 WSL 세션만 QNotch 파이프에 세션 링크 1회 전달" 0
+else
+  report "데스크톱 앱 WSL 세션만 QNotch 파이프에 세션 링크 1회 전달" 1 "$(cat "$TMP/link.err")"
+fi
 if [ "$rc" -eq 0 ] && [ -z "$out" ] &&
-  [ "$(paste -sd, "$TMP/fake.args")" = "agent,agent" ] &&
+  [ "$(head -2 "$TMP/fake.args" | paste -sd,)" = "agent,agent" ] &&
   "$PYTHON" -I -c '
 import json, sys
-rows = [json.loads(l) for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
+rows = [json.loads(l) for l in open(sys.argv[1], encoding="utf-8") if l.strip()][:2]
 assert [r["hook_event_name"] for r in rows] == ["SessionStart", "UserPromptSubmit"], rows
 assert rows[1]["cwd"] == "\\\\wsl.localhost\\TestDistro\\home\\u\\proj", rows[1]["cwd"]
 assert rows[1]["transcript_path"] == "C:\\Users\\u\\t.jsonl", rows[1]["transcript_path"]

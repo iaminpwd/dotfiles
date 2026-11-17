@@ -11,6 +11,8 @@ exe 위치를 Windows 설정에서 매번 읽으므로 QNotch를 옮겨도 따�
 - Windows 프로그램이 읽을 수 있도록 cwd/transcript_path 를 Windows 경로로 바꾼다.
 - QNotch는 SessionStart 를 받은 세션만 인식하므로, 훅 등록 전에 시작된 세션은
   처음 보는 시점에 SessionStart 를 먼저 보낸다.
+- Claude 데스크톱 앱이 띄운 세션이면 QNotch "Open the session" 버튼용 링크를 붙인다
+  (아래 POWERSHELL 주석 참고).
 - 백그라운드 서브에이전트가 도는 동안 메인 턴이 끝나면 Stop 이 먼저 나가 작업 중에
   '완료'로 보이고, 서브에이전트 완료 알림으로 메인이 재개돼도 UserPromptSubmit 이
   없어 '완료'에 머문다. 세션별 상태로 보정한다.
@@ -22,8 +24,10 @@ QNotch가 꺼져 있거나 어떤 오류가 나도 Claude Code 를 막지 않도
 
 환경 변수(테스트용): QNOTCH_BRIDGE_DRY_RUN=1(전송 생략), QNOTCH_BRIDGE_LOG(전송한
 이벤트 기록 파일), QNOTCH_BRIDGE_STATE_DIR, QNOTCH_BRIDGE_WIN_SETTINGS(Windows
-settings.json 경로), QNOTCH_BRIDGE_EXE(QNotch 실행 파일 경로 직접 지정).
+settings.json 경로), QNOTCH_BRIDGE_EXE(QNotch 실행 파일 경로 직접 지정),
+QNOTCH_BRIDGE_POWERSHELL(링크 줄을 쓰는 powershell.exe 경로).
 """
+import base64
 import fcntl
 import json
 import os
@@ -39,6 +43,16 @@ QNOTCH_EVENTS = {
     "Notification", "Stop", "SessionEnd",
 }
 RESUME_EVENTS = {"PreToolUse", "PostToolUse"}
+# QNotch의 "Open the session" 버튼은 claude://code/continue?session=local_… 링크가 있는
+# 세션에만 생긴다. "QNotch.exe agent"는 Claude Code의 부모가 claude.exe일 때만 링크를
+# 붙이는데, WSL 세션은 사이에 WSL이 끼어 붙지 않는다. QNotch 앱은 파이프로 들어온 줄의
+# 같은 형식 링크를 받아 주므로(알 수 없는 이벤트는 상태를 바꾸지 않음) 데스크톱 앱이 띄운
+# WSL 세션이면 링크 한 줄을 파이프에 직접 쓴다. 파이프는 Windows 쪽에서만 열 수 있어
+# powershell.exe를 기다리지 않고 띄운다. QNotch 재시작에 대비해 프롬프트마다 다시 보낸다.
+POWERSHELL = os.environ.get("QNOTCH_BRIDGE_POWERSHELL",
+                            "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe")
+QNOTCH_PIPE = "QNotch.Agents"
+LINK_EVENTS = {"SessionStart", "UserPromptSubmit"}
 # 이 시간 동안 아무 이벤트도 없는 서브에이전트는 비정상 종료로 보고 무시한다.
 AGENT_STALE_SECONDS = 10 * 60
 
@@ -136,6 +150,41 @@ def send(payloads):
             pass
 
 
+def desktop_link():
+    """데스크톱 앱이 띄운 세션이면 QNotch가 받아 주는 형식의 세션 링크를 돌려준다."""
+    if os.environ.get("CLAUDE_CODE_ENTRYPOINT") != "claude-desktop":
+        return ""
+    host_id = os.environ.get("CLAUDE_CODE_HOST_SESSION_ID", "")
+    # QNotch AgentHook.AppLink 와 같은 검사: local_ + URL 안전 문자, 70자 이하
+    if not re.fullmatch(r"local_[A-Za-z0-9-]{1,64}", host_id):
+        return ""
+    return "claude://code/continue?session=" + host_id
+
+
+def send_link(session, link):
+    """QNotch 파이프에 링크만 담은 줄을 쓴다. 기다리지 않으므로 훅을 늦추지 않는다."""
+    if LOG_PATH:
+        with open(LOG_PATH, "a", encoding="utf-8") as log:
+            log.write("Link\n")
+    if DRY_RUN or not os.access(POWERSHELL, os.X_OK):
+        return
+    # session/link 는 영숫자·-·_ 와 검사한 링크만 들어가므로 따옴표 문자열에 그대로 넣어도 안전하다.
+    script = (
+        "$l='{\"agent\":\"claude\",\"event\":\"Link\",\"session\":\"%s\",\"cwd\":\"\","
+        "\"pid\":0,\"hwnd\":0,\"link\":\"%s\",\"at\":'+[DateTime]::UtcNow.Ticks+'}';"
+        "$p=New-Object System.IO.Pipes.NamedPipeClientStream('.','%s',[System.IO.Pipes.PipeDirection]::Out);"
+        "$p.Connect(2000);$b=[Text.Encoding]::UTF8.GetBytes($l+[char]10);$p.Write($b,0,$b.Length);$p.Dispose()"
+    ) % (session, link, QNOTCH_PIPE)
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    try:
+        subprocess.Popen([POWERSHELL, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+                         cwd="/mnt/c" if os.path.isdir("/mnt/c") else None,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        pass
+
+
 def synthetic(payload, event, **extra):
     base = {key: payload.get(key) for key in ("session_id", "transcript_path", "cwd")}
     return dict(base, hook_event_name=event, **extra)
@@ -161,6 +210,9 @@ def main():
             state = {}
         stopped = bool(state.get("stopped"))
         started = bool(state.get("started"))
+        link = desktop_link()
+        link_due = bool(link) and event != "SessionEnd" and (
+            state.get("link") != link or event in LINK_EVENTS)
         now = time.time()
         agents = {k: v for k, v in state.get("agents", {}).items()
                   if now - v < AGENT_STALE_SECONDS}
@@ -200,9 +252,13 @@ def main():
                     pass
         else:
             with open(state_path, "w", encoding="utf-8") as f:
-                json.dump({"stopped": stopped, "started": started, "agents": agents}, f)
+                json.dump({"stopped": stopped, "started": started, "agents": agents,
+                           "link": link if link_due else state.get("link", "")}, f)
 
     send(outgoing)
+    # 세션 줄이 먼저 생긴 뒤에 링크를 붙이도록 이벤트 전달 다음에 보낸다.
+    if link_due:
+        send_link(session, link)
 
 
 if __name__ == "__main__":
