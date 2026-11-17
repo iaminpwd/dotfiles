@@ -41,6 +41,10 @@ FAKE_HOME="$TMP/home"
 # Use the real install source with a fake HOME: a fabricated playbook path
 # would produce a syntactically valid but nonexistent Stop command.
 PLAYBOOK_DIR="$REPO_ROOT/ansible"
+# QNotch 브리지는 WSL 에서만 등록된다. 이 테스트는 WSL 머신에서도 돌기 때문에 기본
+# 케이스의 훅 개수 단정이 실행 환경에 따라 흔들리지 않도록 비WSL 로 고정하고,
+# WSL 동작은 아래 전용 케이스에서 DOTFILES_FORCE_WSL=1 로 따로 검증한다.
+export DOTFILES_FORCE_WSL=0
 
 # Gemini hooks.json에 무관한 기존 키를 미리 심어 병합 시 보존되는지 확인한다.
 mkdir -p "$FAKE_HOME/.gemini/config"
@@ -367,6 +371,62 @@ if [ "$code" -eq 0 ] &&
   report "fresh-home-bsd-readlink (빈 HOME + BSD readlink 최초 3클라이언트 훅 설치)" 0
 else
   report "fresh-home-bsd-readlink (빈 HOME + BSD readlink 최초 3클라이언트 훅 설치)" 1 "exit=$code out=$(cat "$TMP/fresh.out")"
+fi
+
+# -----------------------------------------------------------------------------
+# QNotch 브리지 (WSL 한정 등록)
+# -----------------------------------------------------------------------------
+# WSL 에서는 QNotch 이벤트 9개에 브리지가 정확히 한 번씩 등록되고 재실행해도 늘지
+# 않아야 한다. WSL 이 아니게 되면 브리지만 지우고 같은 그룹·이벤트의 사용자 훅과
+# 기존 관리 훅은 남아야 한다.
+QNOTCH_EVENTS_JSON='["SessionStart","UserPromptSubmit","PreToolUse","PostToolUse","Notification","Stop","SessionEnd","SubagentStart","SubagentStop"]'
+WSL_HOME="$TMP/wsl-home"
+mkdir -p "$WSL_HOME/.claude"
+jq -n '{hooks:{SessionStart:[{hooks:[{type:"command",command:"user-session-start"}]}]}}' >"$WSL_HOME/.claude/settings.json"
+DOTFILES_FORCE_WSL=1 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$WSL_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null
+WSL_CLAUDE="$WSL_HOME/.claude/settings.json"
+if jq -e --argjson evs "$QNOTCH_EVENTS_JSON" '. as $root | all($evs[];
+    . as $e | ([$root.hooks[$e][]?.hooks[]?.command | select(endswith("/bin/hooks/qnotch-bridge-hook.sh"))] | length) == 1)' \
+  "$WSL_CLAUDE" >/dev/null &&
+  jq -e '([.hooks.PreToolUse[] | select(any(.hooks[]; .command | endswith("qnotch-bridge-hook.sh"))) | .matcher] == ["*"])
+    and ([.hooks.SessionStart[].hooks[].command] | index("user-session-start") != null)' "$WSL_CLAUDE" >/dev/null; then
+  report "qnotch (WSL 에서 이벤트 9개에 브리지 1회씩 등록, 사용자 훅 보존)" 0
+else
+  report "qnotch (WSL 에서 이벤트 9개에 브리지 1회씩 등록, 사용자 훅 보존)" 1 "$(jq -c '.hooks' "$WSL_CLAUDE")"
+fi
+
+WSL_SECOND_OUT="$TMP/wsl-second.out"
+DOTFILES_FORCE_WSL=1 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$WSL_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >"$WSL_SECOND_OUT" 2>&1
+if ! grep -qF '[CHANGED]' "$WSL_SECOND_OUT" &&
+  [ "$(jq '[.hooks[][].hooks[]?.command | select(endswith("qnotch-bridge-hook.sh"))] | length' "$WSL_CLAUDE")" -eq 9 ]; then
+  report "qnotch (WSL 재실행 멱등성)" 0
+else
+  report "qnotch (WSL 재실행 멱등성)" 1 "$(cat "$WSL_SECOND_OUT")"
+fi
+
+# 등록된 명령 그대로를 비WSL 로 실행하면 출력 없이 0으로 끝나야 한다(무해성).
+QNOTCH_CMD=$(jq -r '[.hooks.Stop[].hooks[].command | select(endswith("qnotch-bridge-hook.sh"))][0]' "$WSL_CLAUDE")
+QNOTCH_RC=0
+QNOTCH_OUT=$(printf '%s' '{"session_id":"t","hook_event_name":"Stop"}' |
+  DOTFILES_FORCE_WSL=0 HOME="$WSL_HOME" bash -c "$QNOTCH_CMD") || QNOTCH_RC=$?
+if [ "$QNOTCH_RC" -eq 0 ] && [ -z "$QNOTCH_OUT" ] && [ ! -e "$WSL_HOME/.cache/qnotch-bridge" ]; then
+  report "qnotch (비WSL 에서 등록 명령은 출력·상태 없이 종료)" 0
+else
+  report "qnotch (비WSL 에서 등록 명령은 출력·상태 없이 종료)" 1 "rc=$QNOTCH_RC out=$QNOTCH_OUT"
+fi
+
+# 사용자 명령이 브리지와 같은 그룹에 섞여 있어도 브리지만 지운다.
+jq '.hooks.Stop[-1].hooks += [{type:"command",command:"user-stop-with-bridge"}]' "$WSL_CLAUDE" >"$TMP_JSON"
+mv "$TMP_JSON" "$WSL_CLAUDE"
+DOTFILES_FORCE_WSL=0 MISE_DATA_DIR="$REAL_MISE_DATA_DIR" HOME="$WSL_HOME" bash "$MERGER" "$PLAYBOOK_DIR" >/dev/null
+if jq -e '([.hooks[][].hooks[]?.command | select(endswith("qnotch-bridge-hook.sh"))] | length == 0)
+    and ([.hooks.SessionStart[].hooks[].command] == ["user-session-start"])
+    and ([.hooks.Stop[].hooks[].command] | index("user-stop-with-bridge") != null)
+    and ([.hooks.Stop[].hooks[].command] | any(endswith("pre-flight-gate-hook.sh")))
+    and (.hooks | has("SubagentStart") | not)' "$WSL_CLAUDE" >/dev/null; then
+  report "qnotch (비WSL 전환 시 브리지만 제거, 사용자·관리 훅 보존)" 0
+else
+  report "qnotch (비WSL 전환 시 브리지만 제거, 사용자·관리 훅 보존)" 1 "$(jq -c '.hooks' "$WSL_CLAUDE")"
 fi
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

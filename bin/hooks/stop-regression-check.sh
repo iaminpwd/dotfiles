@@ -105,6 +105,8 @@ while IFS= read -r -d '' file; do
     dotfiles_test stow-ignore
     dotfiles_test stow-drift-portability
     ;;
+  # 훅 래퍼(qnotch-bridge-hook.sh)가 실행하는 Python 본체도 같은 회귀로 보낸다.
+  bin/hooks/qnotch-bridge.py) dotfiles_test qnotch-bridge-hook ;;
   bin/utils/*.py | bin/utils/*.pl)
     # Non-shell Stow helpers must not silently bypass Stop selection when added.
     [ ! -e "$file" ] || echo "[WARNING] Stop 회귀 매핑 없음: $file — 관련 스위트를 명시적으로 실행하십시오."

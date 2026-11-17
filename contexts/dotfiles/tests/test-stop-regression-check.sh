@@ -131,6 +131,7 @@ MAPPING_CASES=(
   'bin/utils/stow-safe-role-init.py|contexts/dotfiles/tests/test-stow-mise-role-init.sh,contexts/dotfiles/tests/test-stow-toctou.sh'
   'bin/utils/stow-filter-inventory.pl|contexts/dotfiles/tests/test-stow-ignore.sh,contexts/dotfiles/tests/test-stow-drift-portability.sh'
   'bin/utils/broken-symlink-detector.sh|contexts/dotfiles/tests/test-detector-logic.sh'
+  'bin/hooks/qnotch-bridge.py|contexts/dotfiles/tests/test-qnotch-bridge-hook.sh'
   'bin/linters/idempotency-check.sh|contexts/pre-flight-check/tests/test-idempotency.sh'
   'bin/linters/db-sg-checker.sh|contexts/pre-flight-check/tests/test-db-sg.sh'
   'bin/linters/container-hardening-gate.sh|contexts/containers/tests/run.sh'

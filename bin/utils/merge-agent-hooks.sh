@@ -29,6 +29,18 @@ source "$MAH_SCRIPT_DIR/../lib/jq-resolve.sh"
 
 PLAYBOOK_DIR="${1:-$HOME/dotfiles/ansible}"
 HOOK_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/agent-edits-hook.sh")"
+QNOTCH_BRIDGE_SCRIPT="$(canonical_path "$PLAYBOOK_DIR/../bin/hooks/qnotch-bridge-hook.sh")"
+
+# QNotch 브리지는 WSL 에서만 의미가 있으므로 WSL 에서만 등록하고, 그 외 환경에서는
+# 이전에 등록된 항목을 지운다. 테스트는 DOTFILES_FORCE_WSL=0/1 로 판정을 고정한다
+# (qnotch-bridge-hook.sh 와 같은 규칙).
+case "${DOTFILES_FORCE_WSL:-}" in
+1) MAH_IS_WSL=1 ;;
+0) MAH_IS_WSL=0 ;;
+*) if grep -qi microsoft /proc/version 2>/dev/null; then MAH_IS_WSL=1; else MAH_IS_WSL=0; fi ;;
+esac
+# QNotch가 받는 이벤트(matcher) + 서브에이전트 상태 보정용 이벤트
+QNOTCH_BRIDGE_EVENTS='{"SessionStart":null,"UserPromptSubmit":null,"PreToolUse":"*","PostToolUse":"*","Notification":null,"Stop":null,"SessionEnd":null,"SubagentStart":null,"SubagentStop":null}'
 
 GEMINI_HOOKS="$HOME/.gemini/config/hooks.json"
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
@@ -51,7 +63,7 @@ mkdir -p "$(dirname "$GEMINI_HOOKS")" "$(dirname "$CLAUDE_SETTINGS")" "$(dirname
 JQ=$(resolve_jq)
 if [ -z "$JQ" ] || ! "$JQ" --version >/dev/null 2>&1; then
   echo "❌ [Hard Block] jq 를 찾을 수 없어 에이전트 훅을 등록하지 못했습니다." >&2
-  echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
+  echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop), qnotch-bridge-hook(WSL 전용)" >&2
   echo "   'mise install -y' 로 jq 를 설치한 뒤 다시 실행하십시오." >&2
   exit 1
 fi
@@ -59,7 +71,7 @@ fi
 for _settings in "$GEMINI_HOOKS" "$CLAUDE_SETTINGS" "$CODEX_HOOKS"; do
   if ! "$JQ" empty "$_settings" 2>/dev/null; then
     echo "❌ [Hard Block] $_settings 가 유효한 JSON 이 아니어서 에이전트 훅을 등록하지 못했습니다." >&2
-    echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop)" >&2
+    echo "   미등록 대상: agent-edits-hook(PostToolUse), pre-flight-gate-hook(Stop), qnotch-bridge-hook(WSL 전용)" >&2
     echo "   해당 파일의 JSON 문법을 고친 뒤 다시 실행하십시오(손상이 심하면 백업 후 '{}' 로 초기화)." >&2
     exit 1
   fi
@@ -102,9 +114,19 @@ CODEX_GATE="$QUOTED_ADAPTER codex"
     )
 ' "$GEMINI_HOOKS" >"$GEMINI_TMP"
 
-# Claude의 편집 이력·Stop 등록을 한 번에 병합한다.
+# Claude의 편집 이력·Stop 등록과 (WSL 한정) QNotch 브리지 등록을 한 번에 병합한다.
+# QNotch 브리지는 먼저 모든 이벤트에서 관리 명령만 지운 뒤 WSL 일 때 다시 붙인다.
+# 같은 그룹의 사용자 명령은 남기고, 브리지만 있던 그룹과 그 때문에 빈 이벤트는 지운다.
 # shellcheck disable=SC2016
-"$JQ" --arg cmd "$HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" '
+"$JQ" --arg cmd "$HOOK_SCRIPT" --arg gate "$GATE_HOOK_SCRIPT" \
+  --arg bridge "$QNOTCH_BRIDGE_SCRIPT" --arg wsl "$MAH_IS_WSL" \
+  --argjson bridge_events "$QNOTCH_BRIDGE_EVENTS" '
+  def strip_bridge:
+    map(
+      if (type == "object") and ((.hooks // []) | any(.command == $bridge)) then
+        (.hooks |= map(select(.command != $bridge))) | select(.hooks | length > 0)
+      else . end
+    );
   .hooks.PostToolUse = (
       ((.hooks.PostToolUse // []) | map(
         .hooks = ((.hooks // []) | map(select(.command != $cmd)))
@@ -119,6 +141,19 @@ CODEX_GATE="$QUOTED_ADAPTER codex"
       ))
       + [{hooks: [{type: "command", command: $gate, timeout: 60}]}]
     )
+  | .hooks |= with_entries(
+      if (.value | type) == "array" and (.value | any((type == "object") and ((.hooks // []) | any(.command == $bridge)))) then
+        (.value |= strip_bridge) | select(.value | length > 0)
+      else . end
+    )
+  | if $wsl == "1" then
+      reduce ($bridge_events | to_entries[]) as $e (.;
+        .hooks[$e.key] = ((.hooks[$e.key] // []) + [
+          (if $e.value then {matcher: $e.value} else {} end)
+          + {hooks: [{type: "command", command: $bridge, timeout: 5}]}
+        ])
+      )
+    else . end
 ' "$CLAUDE_SETTINGS" >"$CLAUDE_TMP"
 
 # Codex uses a top-level hooks object (not Antigravity's named hook groups).
