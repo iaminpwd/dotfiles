@@ -25,6 +25,7 @@ bin/
 | **`pre-flight-check.sh`** | 스테이징/수정된 파일 종류에 맞춰 `shellcheck`, `tflint`, `checkov`, `ansible-lint`, `hadolint`, `trivy`, `infracost` 등을 통합 실행하는 고성능 검증 훅 | `bin/hooks/pre-flight-check.sh` |
 | **`run-suite.sh`** | AI 에이전트의 토큰 폭주를 막기 위해 통과한 검증 항목을 `-> [✓] <경로>` 한 줄로 접고 실패 시 원형 로그를 보존하는 검증 래퍼 | `bin/hooks/run-suite.sh` |
 | **`agent-edits-hook.sh`** | Claude Code 및 Antigravity가 파일을 변경할 때마다 `.agent-state/edits.log`에 편집 사유 및 목적을 기록하는 PostToolUse 훅 | (에이전트 훅 자동 호출) |
+| **`qnotch-bridge-hook.sh`** | WSL의 Claude Code 세션 상태를 Windows 노치 앱 QNotch로 전달하는 훅 래퍼. 본체는 `qnotch-bridge.py`이며 Windows Claude 설정에 QNotch가 등록한 실행 파일을 찾아 호출하고, 백그라운드 서브에이전트로 생기는 잘못된 '완료' 표시를 보정. WSL에서만 등록·동작 | (에이전트 훅 자동 호출) |
 | **`plugins/`** | 워크스페이스 전용 린터(`kyverno`, `pluto` 등)를 자동 탐색하여 위임 실행하는 동적 플러그인 디렉토리 | (내부 위임 호출) |
 
 ---
@@ -47,7 +48,7 @@ bin/
 | 스크립트 | 역할 및 핵심 기능 | 실행 예시 |
 |---|---|---|
 | **`record-provenance.sh`** | 파일 변경 시 근거 룰북 및 수정 목적 1줄을 `.agent-state/edits.log`에 기록 | `bin/utils/record-provenance.sh <file> <rule_source> <purpose>` |
-| **`merge-agent-hooks.sh`** | Claude Code와 Antigravity의 PostToolUse 훅 설정을 안전하게 병합 | `bin/utils/merge-agent-hooks.sh` |
+| **`merge-agent-hooks.sh`** | Claude Code·Antigravity·Codex의 편집 이력·Stop 훅과 WSL 전용 QNotch 브리지 훅 설정을 안전하게 병합 (`DOTFILES_FORCE_WSL=0/1`로 WSL 판정 고정 가능) | `bin/utils/merge-agent-hooks.sh` |
 | **`run-setup.sh`** | 시스템 sudo 정책 변경 없이 Ansible 설치·dry-run 실행 | `bash bin/utils/run-setup.sh --check` |
 | **`stow-backup.sh`** | Stow 소스 유형·ignore 규칙·충돌을 사전 확인하고 기존 사용자 파일을 안전하게 백업하는 진입점 | (bootstrap/Ansible 내부 호출) |
 | **`stow-filter-inventory.pl`** | GNU Stow의 ignore 규칙을 적용해 실제 배포 대상만 추출. 백업 대상과 설치 대상이 어긋나는 것을 방지 | (`stow-backup.sh` 및 안전 설치기 내부 호출) |
