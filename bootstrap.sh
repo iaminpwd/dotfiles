@@ -247,6 +247,24 @@ if [ -x "$HOME/.local/bin/mise" ]; then
   fi
 fi
 
+# 5. Google Cloud CLI(gcloud) 인증 - 계정 전체 권한이므로 기본값은 건너뜀. 앱 코드용 기본 자격 증명(ADC)은 만들지 않는다.
+if [ -x "$HOME/.local/bin/mise" ]; then
+  if ~/.local/share/mise/shims/gcloud --version &>/dev/null; then
+    if [ -z "$(~/.local/share/mise/shims/gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)" ]; then
+      echo ""
+      read -r -p "Google Cloud(gcloud) 로그인을 바로 진행하시겠습니까? (브라우저 링크 방식) (y/N): " run_gcloud_auth || true
+      if [[ "$run_gcloud_auth" =~ ^[Yy]$ ]]; then
+        # WSL에서는 브라우저 자동 열기가 불안정하므로 링크를 띄우고 코드를 붙여 넣는 방식을 쓴다.
+        ~/.local/share/mise/shims/gcloud auth login --no-launch-browser || echo "⚠️ gcloud 로그인 실패 (추후 'gcloud auth login --no-launch-browser' 으로 진행)"
+      else
+        echo "⏭️ gcloud 인증 건너뜀 (추후 'gcloud auth login --no-launch-browser' 으로 진행)"
+      fi
+    else
+      echo "✅ gcloud 인증이 이미 완료되어 있습니다."
+    fi
+  fi
+fi
+
 echo "========================================================="
 bash "$SCRIPT_DIR/.github/scripts/verify-bootstrap-env.sh"
 echo "✅ Bootstrap 및 전체 환경 셋업(Ansible & mise)이 성공적으로 완료되었습니다!"

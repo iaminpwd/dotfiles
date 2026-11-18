@@ -35,6 +35,8 @@ terraform-docs = "0.24.0"
 
 # Cloud Services
 awscli = "2.39.7"
+# gcloud는 tidia 앱의 Google Cloud 프로젝트(API 켜기·할당량 보기)에 쓴다. 레지스트리 백엔드는 vfox:jdx/vfox-gcloud.
+gcloud = "593.0.0"
 "pipx:aws-sam-cli" = "1.170.0"
 
 # Kubernetes & Containers
