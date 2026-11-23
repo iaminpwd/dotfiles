@@ -44,6 +44,10 @@ for rule in mise_rules:
         if applies_to(rule, update_type) and rule.get("automerge"):
             fail(f"mise {update_type} 업데이트는 automerge하면 안 됩니다")
 
+python_caps = [r for r in mise_rules if r.get("matchDepNames") == ["python"]]
+if len(python_caps) != 1 or python_caps[0].get("allowedVersions") != "<3.15":
+    fail("ansible-core 호환을 위해 mise python은 allowedVersions <3.15로 제한되어야 합니다")
+
 base = [r for r in mise_rules if "matchUpdateTypes" not in r and "matchDepNames" not in r]
 if len(base) != 1:
     fail("mise 공통 분류 규칙이 정확히 하나여야 합니다")

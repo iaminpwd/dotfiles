@@ -73,6 +73,19 @@
     },
     {
       "matchManagers": [
+        "mise"
+      ],
+      "matchDepNames": [
+        "python"
+      ],
+      "allowedVersions": "<3.15",
+      "description": [
+        "ansible-core가 Python 3.15에서 제거된 dataclasses._is_type을 패치하려다 AttributeError로 시작 직후 죽는다. 2026-11 초 renovate/mise PR이 python 3.15로 올라가 Ansible 문법 검사·관련 테스트가 매 rebase마다 실패했다(fix 64762de에서 3.14로 되돌림).",
+        "ansible-core가 Python 3.15를 지원하는 릴리스가 나오고 CI에서 통과를 확인하면 이 규칙을 제거할 것. 3.14.x patch 업데이트는 계속 받는다."
+      ]
+    },
+    {
+      "matchManagers": [
         "custom.regex"
       ],
       "groupName": "zsh 플러그인 버전 업데이트",
