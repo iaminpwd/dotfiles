@@ -22,6 +22,10 @@ def fail(msg):
 # 기존 전역 정책(스케줄·취약점 알림·Actions digest pin) 보존
 if config.get("schedule") != ["before 6am on monday"]:
     fail("주간 스케줄(before 6am on monday)이 유지되어야 합니다")
+# Renovate 기본값(updateNotScheduled=true)은 열린 PR을 스케줄 밖에서도 갱신한다.
+# 2026-11-01~07 renovate/mise PR이 하루 2~4회 rebase되며 CI가 18회 실패한 원인이다.
+if config.get("updateNotScheduled") is not False:
+    fail("열린 PR도 주간 스케줄 안에서만 갱신되도록 updateNotScheduled=false가 필요합니다")
 if config.get("osvVulnerabilityAlerts") is not True:
     fail("osvVulnerabilityAlerts가 유지되어야 합니다")
 if "helpers:pinGitHubActionDigests" not in config.get("extends", []):
